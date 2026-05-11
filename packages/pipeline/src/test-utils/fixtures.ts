@@ -1,5 +1,6 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { timestampInSeconds } from "@gbos/core/timeline";
 
 const FIXTURES_ROOT = new URL("../../test-fixtures/", import.meta.url).pathname;
 
@@ -34,25 +35,13 @@ export interface MeetingFixture {
 type InterestingSegmentRaw = Omit<InterestingSegment, "start" | "end"> & { start: number | string; end: number | string };
 type GoldenFileRaw = Omit<GoldenFile, "interesting_segments"> & { interesting_segments: InterestingSegmentRaw[] };
 
-function loadTimestamp(timestamp: number | string) {
-  if (typeof timestamp === 'number') {
-    return timestamp
-  }
-  const parts = timestamp.split(":").map(Number) as [number, number] | [number, number, number];
-  if (parts.length === 2) {
-    return parts[0] * 60 + parts[1];
-  } else if (parts.length === 3) {
-    return parts[0] * 3600 + parts[1] * 60 + parts[2];
-  } else {
-    throw new Error(`Invalid timestamp format: ${timestamp}`);
-  }
-}
+
 
 function loadInterestingSegment(raw: InterestingSegmentRaw) {
   const result = {
     ...raw,
-    start: loadTimestamp(raw.start),
-    end: loadTimestamp(raw.end),
+    start: timestampInSeconds(raw.start),
+    end: timestampInSeconds(raw.end),
   };
   // if (result.start >= result.end) {
   //   throw new Error(`Invalid segment with start >= end for raw segment: ${JSON.stringify(raw)}`);
