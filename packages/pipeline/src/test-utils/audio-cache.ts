@@ -4,13 +4,12 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import sherpa from "sherpa-onnx-node";
 import { downloadVideoAudio } from "@gbos/core/youtube";
-import { getMeetingFixture, type MeetingFixture } from "./fixtures";
+import type { MeetingFixture } from "./fixtures";
 
 const CACHE_ROOT = join(homedir(), ".cache", "gbos-transcripts", "meetings");
 
 interface AudioManifest {
-  meeting_id: number;
-  source: { type: "youtube"; id: string };
+  youtube_id: string;
   sha256: string;
   sample_rate: number;
   duration_sec: number;
@@ -21,21 +20,13 @@ export interface CachedAudio {
   manifest: AudioManifest;
 }
 
-export function meetingCacheDir(meeting_id: number): string {
-  return join(CACHE_ROOT, String(meeting_id));
-}
-
-// Returns the cached path for `meeting_id`, downloading on miss and verifying
-// the cached file's sha256 against the manifest. Throws if a stored manifest's
-// sha doesn't match the file on disk, or if the manifest's sha doesn't match
-// the golden's audio_sha256.
-export async function getCachedAudio(meeting_id: number): Promise<CachedAudio> {
-  const fixture = getMeetingFixture(meeting_id);
-  return getCachedAudioForFixture(fixture);
+export function meetingCacheDir(youtube_id: string): string {
+  return join(CACHE_ROOT, youtube_id);
 }
 
 export async function getCachedAudioForFixture(fixture: MeetingFixture): Promise<CachedAudio> {
-  const dir = meetingCacheDir(fixture.meeting_id);
+  const { youtube_id, _audio_sha256 } = fixture.meeting;
+  const dir = meetingCacheDir(youtube_id);
   const audioPath = join(dir, "audio.wav");
   const manifestPath = join(dir, "manifest.json");
   mkdirSync(dir, { recursive: true });
@@ -45,33 +36,29 @@ export async function getCachedAudioForFixture(fixture: MeetingFixture): Promise
     const actual = await sha256File(audioPath);
     if (actual !== manifest.sha256) {
       throw new Error(
-        `Cached audio at ${audioPath} sha256 ${actual} does not match manifest ${manifest.sha256}; delete the cache directory to redownload.`,
+        `Cached audio sha256 ${actual} does not match manifest ${manifest.sha256}; delete ${dir} to re-download.`,
       );
     }
-    if (manifest.sha256 !== fixture.golden.audio_sha256) {
+    if (manifest.sha256 !== _audio_sha256) {
       throw new Error(
-        `Cached audio sha256 ${manifest.sha256} does not match golden audio_sha256 ${fixture.golden.audio_sha256} for meeting ${fixture.meeting_id}.`,
+        `Cached audio sha256 ${manifest.sha256} does not match golden _audio_sha256 ${_audio_sha256} for ${youtube_id}.`,
       );
     }
     return { path: audioPath, manifest };
   }
 
-  if (fixture.golden.source.type !== "youtube") {
-    throw new Error(`Unsupported source type ${fixture.golden.source.type} for meeting ${fixture.meeting_id}`);
-  }
-  downloadVideoAudio(fixture.golden.source.id, audioPath, "skip");
+  downloadVideoAudio(youtube_id, audioPath, "skip");
 
   const sha256 = await sha256File(audioPath);
-  if (sha256 !== fixture.golden.audio_sha256) {
+  if (sha256 !== _audio_sha256) {
     throw new Error(
-      `Downloaded audio sha256 ${sha256} does not match golden audio_sha256 ${fixture.golden.audio_sha256} for meeting ${fixture.meeting_id}. Did the YouTube source change?`,
+      `Downloaded audio sha256 ${sha256} does not match golden _audio_sha256 ${_audio_sha256} for ${youtube_id}. Did the YouTube source change?`,
     );
   }
 
   const wave = sherpa.readWave(audioPath);
   const manifest: AudioManifest = {
-    meeting_id: fixture.meeting_id,
-    source: fixture.golden.source,
+    youtube_id,
     sha256,
     sample_rate: wave.sampleRate,
     duration_sec: wave.samples.length / wave.sampleRate,
@@ -80,8 +67,8 @@ export async function getCachedAudioForFixture(fixture: MeetingFixture): Promise
   return { path: audioPath, manifest };
 }
 
-export function isCached(meeting_id: number): boolean {
-  const dir = meetingCacheDir(meeting_id);
+export function isCached(youtube_id: string): boolean {
+  const dir = meetingCacheDir(youtube_id);
   return existsSync(join(dir, "audio.wav")) && existsSync(join(dir, "manifest.json"));
 }
 

@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "test": "vitest run",
     "check": "pnpm run format:check && pnpm run lint && pnpm run test",
+    "db:setup": "pnpm --filter gbos-core run db:setup",
     "pipeline:fixtures": "pnpm --filter gbos-pipeline run fixtures"
   },
   "devDependencies": {

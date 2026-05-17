@@ -16,6 +16,7 @@ export async function identifyAndInsertSegments(
     start: number;
     end: number;
     speaker: number;
+    words: Array<{ text: string; start: number; end: number }>;
   }>,
   speakerEmbeddings: Map<number, Float32Array>,
 ): Promise<void> {
@@ -32,6 +33,7 @@ export async function identifyAndInsertSegments(
       text: seg.text,
       start_secs: sql`make_interval(secs => ${seg.start})`,
       end_secs: sql`make_interval(secs => ${seg.end})`,
+      words: seg.words,
     });
   }
 }

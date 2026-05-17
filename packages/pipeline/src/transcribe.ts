@@ -4,6 +4,7 @@ import { execSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 import sherpa_onnx, { type OfflineRecognizer, type OfflineRecognizerResult } from "sherpa-onnx-node";
+import type { TranscriptSegment, TranscriptWord } from "./types.ts";
 
 const HERE = new URL(".", import.meta.url);
 const MODEL_DIR = join(HERE.pathname, "models", "sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8");
@@ -44,16 +45,93 @@ export function transcribeSamples(
   return recognizer.getResult(stream);
 }
 
-export async function transcribeAudio(audioPath: string) {
-  const start = Date.now();
+// NeMo Parakeet uses space-prefixed tokens (e.g. " Ask", "sk") where a leading
+// space marks a word boundary. Punctuation tokens (e.g. ",") have no leading
+// space and attach to the preceding word.
+export function tokensToWords(tokens: string[], timestamps: number[]): TranscriptWord[] {
+  const words: TranscriptWord[] = [];
+  let currentText = "";
+  let currentStart = 0;
+
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i]!;
+    const ts = timestamps[i]!;
+    // Also accept ▁ (U+2581) for models that use SentencePiece word-start marker.
+    const isWordStart = token.startsWith(" ") || token.startsWith("▁") || i === 0;
+
+    if (isWordStart && currentText) {
+      words.push({ text: currentText, start: currentStart, end: ts });
+      currentText = token.replace(/^[ ▁]+/, "");
+      currentStart = ts;
+    } else if (isWordStart) {
+      currentText = token.replace(/^[ ▁]+/, "");
+      currentStart = ts;
+    } else {
+      currentText += token;
+    }
+  }
+
+  if (currentText) {
+    words.push({ text: currentText, start: currentStart, end: timestamps.at(-1) ?? currentStart });
+  }
+
+  return words.filter((w) => w.text.length > 0);
+}
+
+// Parakeet TDT is a transducer model that processes audio as a single pass.
+// Very long files (~3 hrs) can hit memory limits or produce degraded output.
+// We split into fixed-size chunks and adjust timestamps by the chunk offset.
+// 30-minute chunks are well within the model's reliable range on typical hardware.
+export const CHUNK_SEC = 30 * 60;
+
+export async function transcribeAudio(
+  audioPath: string,
+  chunkSec: number = CHUNK_SEC,
+): Promise<TranscriptSegment[]> {
+  const wallStart = Date.now();
   const wave = sherpa_onnx.readWave(audioPath);
-  const result = transcribeSamples(wave.samples, wave.sampleRate);
-  const elapsed = (Date.now() - start) / 1000;
   const duration = wave.samples.length / wave.sampleRate;
+  const nChunks = Math.max(1, Math.ceil(duration / chunkSec));
+
   console.log(
-    `transcribed ${audioPath}: ${duration.toFixed(1)}s audio in ${elapsed.toFixed(1)}s (RTF=${(elapsed / duration).toFixed(2)})`,
+    `Transcribing ${audioPath} (${duration.toFixed(1)}s) in ${nChunks} chunk(s) of up to ${chunkSec}s...`,
   );
-  return result;
+
+  const segments: TranscriptSegment[] = [];
+
+  for (let i = 0; i < nChunks; i++) {
+    const chunkStart = i * chunkSec;
+    const chunkEnd = Math.min(chunkStart + chunkSec, duration);
+    const startIdx = Math.round(chunkStart * wave.sampleRate);
+    const endIdx = Math.round(chunkEnd * wave.sampleRate);
+    const chunk = wave.samples.subarray(startIdx, endIdx);
+
+    if (nChunks > 1) {
+      console.log(`  chunk ${i + 1}/${nChunks}: ${chunkStart.toFixed(0)}s – ${chunkEnd.toFixed(0)}s`);
+    }
+
+    const result = transcribeSamples(chunk, wave.sampleRate);
+    const text = result.text.trim();
+    if (!text) continue;
+
+    const words = tokensToWords(result.tokens ?? [], result.timestamps ?? []).map((w) => ({
+      ...w,
+      start: w.start + chunkStart,
+      end: w.end + chunkStart,
+    }));
+
+    segments.push({
+      text,
+      start: words[0]?.start ?? chunkStart,
+      end: words.at(-1)?.end ?? chunkEnd,
+      words,
+    });
+  }
+
+  const elapsed = (Date.now() - wallStart) / 1000;
+  console.log(`Done: ${duration.toFixed(1)}s audio in ${elapsed.toFixed(1)}s (RTF=${(elapsed / duration).toFixed(2)})`);
+
+  return segments;
 }
 
 function ensureModelFiles(downloadDir: string) {
@@ -72,7 +150,7 @@ async function cli() {
     process.exit(1);
   }
   const result = await transcribeAudio(audioPath);
-  console.log("Transcription result:", result);
+  console.log("Transcription result:", JSON.stringify(result, null, 2));
 }
 
 const isDirectRun =

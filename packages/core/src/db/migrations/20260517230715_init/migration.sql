@@ -1,10 +1,20 @@
 CREATE EXTENSION IF NOT EXISTS "vector";
 
+CREATE TYPE "meeting_status" AS ENUM(
+	'discovered',
+	'downloaded',
+	'transcribed',
+	'diarized',
+	'aligned',
+	'identified',
+	'embedded'
+);
+
 --> statement-breakpoint
 CREATE TABLE "meetings" (
 	"id" serial PRIMARY KEY,
 	"municipality_id" integer NOT NULL,
-	"youtube_id" varchar DEFAULT '' NOT NULL,
+	"youtube_id" varchar DEFAULT '' NOT NULL UNIQUE,
 	"youtube_url" varchar GENERATED ALWAYS AS (
 		CASE
 			WHEN "meetings"."youtube_id" != '' THEN 'https://www.youtube.com/watch?v=' || "meetings"."youtube_id"
@@ -15,7 +25,7 @@ CREATE TABLE "meetings" (
 	"description" varchar DEFAULT '' NOT NULL,
 	"start_time" timestamp,
 	"duration_secs" INTERVAL SECOND(3),
-	"status" varchar DEFAULT 'discovered' NOT NULL,
+	"status" "meeting_status" DEFAULT 'discovered' :: "meeting_status" NOT NULL,
 	"transcription" jsonb,
 	"diarization" jsonb,
 	"created_at" timestamp DEFAULT NOW() NOT NULL
@@ -55,6 +65,7 @@ CREATE TABLE "segments" (
 	"start_secs" INTERVAL SECOND(3),
 	"end_secs" INTERVAL SECOND(3),
 	"duration_secs" INTERVAL SECOND(3) GENERATED ALWAYS AS ("segments"."end_secs" - "segments"."start_secs") STORED,
+	"words" jsonb,
 	"text_embedding" vector(384),
 	"created_at" timestamp DEFAULT NOW() NOT NULL
 );

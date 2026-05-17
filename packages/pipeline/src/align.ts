@@ -1,10 +1,11 @@
-import type { TranscriptSegment, DiarizationTurn } from "./types.ts";
+import type { TranscriptSegment, TranscriptWord, DiarizationTurn } from "./types.ts";
 
 export interface AlignedSegment {
   text: string;
   start: number;
   end: number;
   speaker: number;
+  words: TranscriptWord[];
 }
 
 // Assign each transcript segment to the diarization speaker with the most overlap.
@@ -30,6 +31,7 @@ export function alignTranscriptWithSpeakers(
         start: group.words[0]!.start,
         end: group.words.at(-1)!.end,
         speaker: group.speaker,
+        words: group.words,
       });
     }
   }

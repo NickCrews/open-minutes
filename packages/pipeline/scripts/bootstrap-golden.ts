@@ -1,43 +1,84 @@
-// One-shot helper: slice the cached audio at a few time windows and print
-// what sherpa transcribes for each. Use the output as a STARTING POINT for
-// hand-curating golden.json — listen to the audio and correct text + speaker
-// before committing.
-import { resolve } from "node:path";
+/**
+ * Generates (or regenerates) segments.jsonl for a fixture by running the full
+ * transcribe → diarize → align pipeline on the cached audio. The output
+ * replaces the existing segments.jsonl completely; use `git diff` afterwards to
+ * review changes and make manual corrections.
+ *
+ * Usage:
+ *   tsx scripts/bootstrap-golden.ts <municipality>/<meeting_dir>
+ *   # e.g.:
+ *   tsx scripts/bootstrap-golden.ts girdwood/1
+ */
+
+import { resolve, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { transcribeSamples } from "../src/transcribe";
-import { readWave, sliceWave } from "../src/test-utils/wav-window";
+import { writeFileSync } from "node:fs";
+import { loadAllFixtures, type GoldenSegment } from "../src/test-utils/fixtures";
+import { getCachedAudioForFixture } from "../src/test-utils/audio-cache";
+import { transcribeAudio } from "../src/transcribe";
+import { diarizeAudio } from "../src/diarize";
+import { alignTranscriptWithSpeakers } from "../src/align";
 
 async function main() {
-  const audioPath = process.argv[2];
-  const windowsArg = process.argv.slice(3);
-  if (!audioPath || windowsArg.length === 0) {
-    console.error("Usage: tsx bootstrap-golden.ts <audio.wav> <start-end> [<start-end> ...]");
-    console.error("Example: tsx bootstrap-golden.ts audio.wav 60-90 600-630");
+  const target = process.argv[2];
+  if (!target) {
+    console.error("Usage: tsx scripts/bootstrap-golden.ts <municipality>/<meeting_dir>");
+    console.error("  e.g.: tsx scripts/bootstrap-golden.ts girdwood/1");
     process.exit(1);
   }
-  const wave = readWave(audioPath);
-  console.error(
-    `loaded ${audioPath}: ${wave.sampleRate} Hz, ${(wave.samples.length / wave.sampleRate).toFixed(1)}s`,
+
+  const [muniSlug, meetingDir] = target.split("/");
+  const fixtures = loadAllFixtures();
+  const fixture = fixtures.find(
+    (f) => f.municipality_slug === muniSlug && f.meeting_dir === meetingDir,
   );
-  const out = [];
-  for (const w of windowsArg) {
-    const [a, b] = w.split("-").map((s) => Number(s));
-    if (!Number.isFinite(a) || !Number.isFinite(b) || (a as number) >= (b as number)) {
-      throw new Error(`Bad window ${w}, expected start-end in seconds`);
-    }
-    const start = a as number;
-    const end = b as number;
-    const slice = sliceWave(wave, start, end);
-    const t0 = Date.now();
-    const result = transcribeSamples(slice.samples, slice.sampleRate);
-    const elapsed = (Date.now() - t0) / 1000;
-    console.error(`[${start}-${end}] ${elapsed.toFixed(1)}s -> ${result.text}`);
-    out.push({ start, end, text: result.text, timestamps: result.timestamps });
+  if (!fixture) {
+    console.error(`No fixture found for ${target}. Available fixtures:`);
+    for (const f of fixtures) console.error(`  ${f.municipality_slug}/${f.meeting_dir}`);
+    process.exit(1);
   }
-  console.log(JSON.stringify(out, null, 2));
+
+  console.log(`Bootstrapping golden segments for ${target} (youtube: ${fixture.meeting.youtube_id})`);
+
+  console.log("  Ensuring audio is cached...");
+  const cached = await getCachedAudioForFixture(fixture);
+  console.log(`  Audio: ${cached.path}`);
+
+  console.log("  Transcribing (full meeting — this may take a while)...");
+  const transcriptSegments = await transcribeAudio(cached.path);
+  console.log(`  Got ${transcriptSegments.length} transcript segment(s) with ${transcriptSegments.reduce((n, s) => n + s.words.length, 0)} words.`);
+
+  console.log("  Diarizing...");
+  const { turns: diarizationTurns } = await diarizeAudio(cached.path);
+  console.log(`  Got ${diarizationTurns.length} speaker turns.`);
+
+  console.log("  Aligning...");
+  const aligned = alignTranscriptWithSpeakers(transcriptSegments, diarizationTurns);
+  console.log(`  Got ${aligned.length} aligned segments.`);
+
+  const segmentRows: GoldenSegment[] = aligned.map((seg) => ({
+    person_slug: null,
+    text: seg.text,
+    start_secs: seg.start,
+    end_secs: seg.end,
+    words: seg.words,
+  }));
+
+  const outputPath = join(fixture.fixtureDir, "segments.jsonl");
+  const content = segmentRows.map((row) => JSON.stringify(row)).join("\n") + "\n";
+  writeFileSync(outputPath, content);
+  console.log(`\nWrote ${segmentRows.length} segments to ${outputPath}`);
+  console.log("Review with: git diff -- " + outputPath);
+  console.log("Then set person_slug on segments and _curated: true on reference segments.");
 }
 
 const isDirectRun =
   process.argv[1] !== undefined &&
   resolve(process.argv[1]) === fileURLToPath(import.meta.url);
-if (isDirectRun) main();
+
+if (isDirectRun) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}

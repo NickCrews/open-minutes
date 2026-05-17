@@ -1,9 +1,25 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "2c0745be-c5f3-4b1f-9cf3-531d27cf6d0a",
-  "prevIds": ["00000000-0000-0000-0000-000000000000"],
+  "id": "67872160-777f-45c5-8223-5917da50bb83",
+  "prevIds": [
+    "00000000-0000-0000-0000-000000000000"
+  ],
   "ddl": [
+    {
+      "values": [
+        "discovered",
+        "downloaded",
+        "transcribed",
+        "diarized",
+        "aligned",
+        "identified",
+        "embedded"
+      ],
+      "name": "meeting_status",
+      "entityType": "enums",
+      "schema": "public"
+    },
     {
       "isRlsEnabled": false,
       "name": "meetings",
@@ -136,8 +152,8 @@
       "table": "meetings"
     },
     {
-      "type": "varchar",
-      "typeSchema": null,
+      "type": "meeting_status",
+      "typeSchema": "public",
       "notNull": true,
       "dimensions": 0,
       "default": "'discovered'",
@@ -441,6 +457,19 @@
       "table": "segments"
     },
     {
+      "type": "jsonb",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "words",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "segments"
+    },
+    {
       "type": "vector(384)",
       "typeSchema": null,
       "notNull": false,
@@ -492,10 +521,14 @@
     },
     {
       "nameExplicit": false,
-      "columns": ["municipality_id"],
+      "columns": [
+        "municipality_id"
+      ],
       "schemaTo": "public",
       "tableTo": "municipalities",
-      "columnsTo": ["id"],
+      "columnsTo": [
+        "id"
+      ],
       "onUpdate": "NO ACTION",
       "onDelete": "NO ACTION",
       "name": "meetings_municipality_id_municipalities_id_fkey",
@@ -505,10 +538,14 @@
     },
     {
       "nameExplicit": false,
-      "columns": ["meeting_id"],
+      "columns": [
+        "meeting_id"
+      ],
       "schemaTo": "public",
       "tableTo": "meetings",
-      "columnsTo": ["id"],
+      "columnsTo": [
+        "id"
+      ],
       "onUpdate": "NO ACTION",
       "onDelete": "NO ACTION",
       "name": "segments_meeting_id_meetings_id_fkey",
@@ -518,10 +555,14 @@
     },
     {
       "nameExplicit": false,
-      "columns": ["person_id"],
+      "columns": [
+        "person_id"
+      ],
       "schemaTo": "public",
       "tableTo": "people",
-      "columnsTo": ["id"],
+      "columnsTo": [
+        "id"
+      ],
       "onUpdate": "NO ACTION",
       "onDelete": "NO ACTION",
       "name": "segments_person_id_people_id_fkey",
@@ -530,7 +571,9 @@
       "table": "segments"
     },
     {
-      "columns": ["id"],
+      "columns": [
+        "id"
+      ],
       "nameExplicit": false,
       "name": "meetings_pkey",
       "schema": "public",
@@ -538,7 +581,9 @@
       "entityType": "pks"
     },
     {
-      "columns": ["id"],
+      "columns": [
+        "id"
+      ],
       "nameExplicit": false,
       "name": "municipalities_pkey",
       "schema": "public",
@@ -546,7 +591,9 @@
       "entityType": "pks"
     },
     {
-      "columns": ["id"],
+      "columns": [
+        "id"
+      ],
       "nameExplicit": false,
       "name": "people_pkey",
       "schema": "public",
@@ -554,12 +601,25 @@
       "entityType": "pks"
     },
     {
-      "columns": ["id"],
+      "columns": [
+        "id"
+      ],
       "nameExplicit": false,
       "name": "segments_pkey",
       "schema": "public",
       "table": "segments",
       "entityType": "pks"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "youtube_id"
+      ],
+      "nullsNotDistinct": false,
+      "name": "meetings_youtube_id_key",
+      "schema": "public",
+      "table": "meetings",
+      "entityType": "uniques"
     }
   ],
   "renames": []

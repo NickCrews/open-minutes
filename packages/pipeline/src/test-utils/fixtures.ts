@@ -1,100 +1,111 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { timestampInSeconds } from "@gbos/core/timeline";
 
 const FIXTURES_ROOT = new URL("../../test-fixtures/", import.meta.url).pathname;
 
-export interface SpeakerEntry {
-  slug: string;
-  display_name: string;
+// DB-shaped row types (mirrors schema.ts columns that are relevant to fixtures).
+// Fields prefixed with _ are test-only and do not exist in the DB.
+
+export interface GoldenMunicipality {
+  name: string;
+  name_short: string;
+  state: string;
+  youtube_channel_id: string;
 }
 
-export interface InterestingSegment {
+export interface GoldenPerson {
+  slug: string;
+  name: string;
+}
+
+export interface GoldenMeeting {
+  youtube_id: string;
+  title: string;
+  duration_secs: number;
+  /** SHA-256 of the canonical WAV file — used to validate the audio cache. Not a DB column. */
+  _audio_sha256: string;
+}
+
+export interface GoldenWord {
+  text: string;
   start: number;
   end: number;
-  speaker_id: string;
-  text: string;
-  notes?: string;
 }
 
-export interface GoldenFile {
-  meeting_id: number;
-  source: { type: "youtube"; id: string };
-  audio_sha256: string;
-  duration_sec: number;
-  interesting_segments: InterestingSegment[];
+export interface GoldenSegment {
+  person_slug: string | null;
+  text: string;
+  start_secs: number;
+  end_secs: number;
+  words: GoldenWord[] | null;
+  /** When true, this segment's text has been hand-verified and is used for WER spot-checks. */
+  _curated?: boolean;
 }
 
 export interface MeetingFixture {
-  meeting_id: number;
-  municipality: string;
+  municipality_slug: string;
+  meeting_dir: string;
   fixtureDir: string;
-  golden: GoldenFile;
+  municipality: GoldenMunicipality;
+  people: GoldenPerson[];
+  meeting: GoldenMeeting;
+  segments: GoldenSegment[];
 }
 
-type InterestingSegmentRaw = Omit<InterestingSegment, "start" | "end"> & { start: number | string; end: number | string };
-type GoldenFileRaw = Omit<GoldenFile, "interesting_segments"> & { interesting_segments: InterestingSegmentRaw[] };
-
-
-
-function loadInterestingSegment(raw: InterestingSegmentRaw) {
-  const result = {
-    ...raw,
-    start: timestampInSeconds(raw.start),
-    end: timestampInSeconds(raw.end),
-  };
-  // if (result.start >= result.end) {
-  //   throw new Error(`Invalid segment with start >= end for raw segment: ${JSON.stringify(raw)}`);
-  // }
-  return result;
-}
-
-function loadGoldenFile(path: string): GoldenFile {
-  const raw = JSON.parse(readFileSync(path, "utf8")) as GoldenFileRaw;
-  return {
-    ...raw,
-    interesting_segments: raw.interesting_segments.map(loadInterestingSegment),
-  };
+function parseJsonl<T>(path: string): T[] {
+  return readFileSync(path, "utf8")
+    .split("\n")
+    .filter((line) => line.trim().length > 0)
+    .map((line) => JSON.parse(line) as T);
 }
 
 export function loadAllFixtures(): MeetingFixture[] {
   if (!existsSync(FIXTURES_ROOT)) return [];
   const fixtures: MeetingFixture[] = [];
-  for (const muni of listDirs(FIXTURES_ROOT)) {
-    const muniDir = join(FIXTURES_ROOT, muni);
-    for (const meetingDirName of listDirs(muniDir)) {
-      const fixtureDir = join(muniDir, meetingDirName);
-      const goldenPath = join(fixtureDir, "golden.json");
-      if (!existsSync(goldenPath)) continue;
-      const golden = loadGoldenFile(goldenPath);
+
+  for (const muniSlug of listDirs(FIXTURES_ROOT)) {
+    const muniDir = join(FIXTURES_ROOT, muniSlug);
+
+    const muniPath = join(muniDir, "municipalities.jsonl");
+    if (!existsSync(muniPath)) continue;
+    const [municipality] = parseJsonl<GoldenMunicipality>(muniPath);
+    if (!municipality) continue;
+
+    const peoplePath = join(muniDir, "people.jsonl");
+    const people = existsSync(peoplePath) ? parseJsonl<GoldenPerson>(peoplePath) : [];
+
+    for (const meetingDir of listDirs(muniDir)) {
+      const fixtureDir = join(muniDir, meetingDir);
+      const meetingsPath = join(fixtureDir, "meetings.jsonl");
+      if (!existsSync(meetingsPath)) continue;
+
+      const [meeting] = parseJsonl<GoldenMeeting>(meetingsPath);
+      if (!meeting) continue;
+
+      const segmentsPath = join(fixtureDir, "segments.jsonl");
+      const segments = existsSync(segmentsPath) ? parseJsonl<GoldenSegment>(segmentsPath) : [];
+
       fixtures.push({
-        meeting_id: golden.meeting_id,
-        municipality: muni,
+        municipality_slug: muniSlug,
+        meeting_dir: meetingDir,
         fixtureDir,
-        golden,
+        municipality,
+        people,
+        meeting,
+        segments,
       });
     }
   }
+
   return fixtures;
 }
 
-export function getMeetingFixture(meeting_id: number): MeetingFixture {
-  const found = loadAllFixtures().find((f) => f.meeting_id === meeting_id);
-  if (!found) {
-    throw new Error(`No fixture found for meeting_id ${meeting_id}`);
-  }
+export function getMeetingFixture(youtube_id: string): MeetingFixture {
+  const found = loadAllFixtures().find((f) => f.meeting.youtube_id === youtube_id);
+  if (!found) throw new Error(`No fixture found for youtube_id ${youtube_id}`);
   return found;
 }
 
-export function loadSpeakers(municipality: string): SpeakerEntry[] {
-  const path = join(FIXTURES_ROOT, municipality, "speakers.json");
-  if (!existsSync(path)) return [];
-  return JSON.parse(readFileSync(path, "utf8")) as SpeakerEntry[];
-}
-
 function listDirs(parent: string): string[] {
-  return readdirSync(parent).filter((entry) => {
-    const p = join(parent, entry);
-    return statSync(p).isDirectory();
-  });
+  return readdirSync(parent).filter((entry) => statSync(join(parent, entry)).isDirectory());
 }
