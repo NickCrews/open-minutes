@@ -22,7 +22,7 @@ beforeEach(() => {
 describe("transcribe", () => {
   it("transcribes a 4 second audio sample", async () => {
     const modelFiles = ensureModelFiles();
-    const result = await transcribeAudio(modelFiles.testWav);
+    const result = await transcribeAudio(modelFiles.test_wavs['en.wav']);
     expect(result.length).toBe(1);
     const firstSegment = result[0]!;
 
@@ -57,7 +57,7 @@ describe("transcribe", () => {
     // Force the 4s sample into multiple chunks so we can observe overlap.
     const chunkSec = 1;
     const wallStart = Date.now();
-    await transcribeAudio(modelFiles.testWav, chunkSec);
+    await transcribeAudio(modelFiles.test_wavs["en.wav"], chunkSec);
     const wallElapsed = Date.now() - wallStart;
 
     const events = getTraceEvents();
