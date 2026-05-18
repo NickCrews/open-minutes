@@ -1,0 +1,30 @@
+# any lines starting with `#` are comments
+start_sec|end_sec|event_type|event_data
+# 'identified' speakers are those that we actually know their IDs in the DB of people.
+0:00:00.00||meta|{"begin_speaker": "identified:alice-jones"}
+0:00:00.08|0:00:00.64|text|Uh
+0:00:00.64|0:00:01.04|text|certainly
+0:00:01.04|0:00:01.28|text|not
+0:00:01.28|0:00:02.00|text|$10
+0:00:02.00|0:00:02.08|text|a
+0:00:02.08|0:00:02.16|text|load
+...
+# 'segmented' speakers are those that we don't know their IDs, but we can at least segment them as distinct speakers.
+# eg this speaker talks multiple times in this conversation, and we can tell that it's the same person, but we don't know their name.
+2:45:21.28||meta|{"begin_speaker": "segmented:spk-4"}
+2:45:21.28|2:45:22.24|text|What
+2:45:22.24|2:45:22.88|text|do
+2:45:22.88|2:45:23.36|text|you
+2:45:23.36|2:45:23.68|text|think
+2:45:23.68|2:45:24.16|text|Bob?
+2:45:24.16||meta|{"begin_speaker": "identified:bob-smith"}
+2:45:24.16|2:45:24.48|text|I
+2:45:24.48|2:45:24.80|text|think
+2:45:24.80|2:45:25.28|text|it's
+2:45:25.28|2:45:25.60|text|great!
+# 'unlabeled' speakers are those that we can't even segment as distinct speakers.
+# eg they say such a short utterance that we can't even get an embedding for it.
+2:45:25.60||meta|{"begin_speaker": "unlabeled"}
+2:45:25.60|2:45:25.68|text|Nice!
+2:45:25.68||meta|{"begin_speaker": "segmented:spk-4"}
+2:45:25.68|2:45:26.24|text|Thanks!
