@@ -82,7 +82,7 @@ describe("transcribe", () => {
 
 function extractClip(inputPath: string, outputPath: string, startSec: number, durationSec: number): void {
   execSync(
-    `ffmpeg -y -i "${inputPath}" -ss ${startSec} -t ${durationSec} -ar 16000 -ac 1 "${outputPath}"`,
+    `ffmpeg -y -loglevel error -i "${inputPath}" -ss ${startSec} -t ${durationSec} -ar 16000 -ac 1 "${outputPath}"`,
     { stdio: "inherit" },
   );
 }
