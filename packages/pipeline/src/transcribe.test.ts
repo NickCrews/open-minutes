@@ -37,7 +37,7 @@ describe("transcribe", () => {
     expect(firstSegment.words.at(-1)!.end).toBeLessThanOrEqual(firstSegment.end + BOUNDARY_SLOP);
   });
 
-  it("can handle a hour long clip", { timeout: 1 * 60 * 1000 }, async () => {
+  it("can handle a hour long clip", { timeout: 15 * 60 * 1000 }, async () => {
     // longer clips can cause out-of-memory errors, so verify that we can handle it.
     const youtubeId = "9HoIM5INxpI" // ~3 hour youtube video
     const { path: fullPath } = await getCachedAudio({ youtubeId });

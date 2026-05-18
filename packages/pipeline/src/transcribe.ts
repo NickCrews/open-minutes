@@ -12,10 +12,12 @@ const MODEL_URL =
   "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8.tar.bz2";
 
 // Parakeet TDT is a transducer model that processes audio as a single pass.
-// Very long files (~3 hrs) can hit memory limits or produce degraded output.
-// We split into fixed-size chunks and adjust timestamps by the chunk offset.
-// 10-minute chunks are well within the model's reliable range on typical hardware.
-export const CHUNK_SEC = 10 * 60;
+// Its encoder uses a learned positional embedding with 2500 positions; at the
+// encoder's ~12.5 frames/sec output rate that caps a single pass at ~200s of
+// audio before ONNX broadcasts the positional embedding against a longer
+// sequence and crashes. We chunk well under that limit and adjust timestamps
+// by the chunk offset.
+export const CHUNK_SEC = 2 * 60;
 
 export async function transcribeAudio(
   audio: string | sherpa_onnx.WaveForm,
