@@ -65,7 +65,6 @@ export async function diarizeAudio(
     },
     embedding: {
       model: ensureCamp().files["model.onnx"],
-      numThreads: 1,
     },
     clustering: {
       numClusters: -1,
@@ -85,7 +84,6 @@ export async function diarizeAudio(
       speaker: s.speaker,
     }),
   );
-  sd.free?.();
 
   // Extract per-speaker voice fingerprints via CAM++ (512-dim, mean-pooled over segments)
   const speakerEmbeddings = new Map<number, Float32Array>();
