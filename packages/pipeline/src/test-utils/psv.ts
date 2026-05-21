@@ -28,16 +28,6 @@ type PsvEvent =
 
 const COLUMN_HEADER = "start_sec|end_sec|event_type|event_data";
 
-const FILE_HEADER = [
-  "# Pipe-separated golden transcript. Lines starting with '#' are comments.",
-  "# Columns: " + COLUMN_HEADER,
-  "# 'text' rows are transcribed words; event_data is the word text.",
-  "# 'meta' rows open a segment for a speaker; event_data is JSON, e.g.",
-  '#   {"begin_speaker": "unlabeled"}              (cannot be segmented)',
-  '#   {"begin_speaker": "segmented:spk-3"}        (distinct but unknown speaker)',
-  '#   {"begin_speaker": "identified:alice-jones"} (known person in the DB)',
-];
-
 /** Format seconds as `H:MM:SS.ss` (rounded to the nearest hundredth). */
 export function formatTimestamp(sec: number): string {
   const totalCs = Math.round(sec * 100);
@@ -190,7 +180,7 @@ export function serializePsv(
       rows.push(`${formatTimestamp(w.start)}|${formatTimestamp(w.end)}|text|${w.text}`);
     }
   }
-  const content = [...FILE_HEADER, COLUMN_HEADER, ...rows].join("\n") + "\n";
+  const content = [COLUMN_HEADER, ...rows].join("\n") + "\n";
   if (options?.path !== undefined) {
     writeFileSync(options.path, content);
   }

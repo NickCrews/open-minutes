@@ -1,16 +1,15 @@
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { existsSync, mkdirSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, symlinkSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { ensureModelFiles, getTraceEvents, resetTrace, transcribeAudio } from "./transcribe";
-import { getCachedAudio } from "./test-utils/audio-cache";
 import { compareTranscripts } from "./test-utils/wer";
-import { parsePsv, serializePsv } from "./test-utils/psv";
-import type { TranscriptSegment, TranscriptWord } from "./types";
-import { execSync } from "child_process";
+import { serializePsv } from "./test-utils/psv";
+import { getMeetingData } from "./test-utils/test-data";
+import type { TranscriptWord } from "./types";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const FIXTURES_DIR = join(HERE, "..", "test-fixtures");
+const RUNS_DIR = join(HERE, "..", "test-runs");
 
 beforeAll(() => {
   process.env.TRANSCRIBE_TRACE = "1";
@@ -68,70 +67,47 @@ describe("transcribe", () => {
     expect(wallElapsed).toBeLessThan(sumPerChunk);
   });
 
-  it("can handle a hour long clip", { timeout: 15 * 60 * 1000 }, async () => {
-    // longer clips can cause out-of-memory errors, so verify that we can handle it.
-    const youtubeId = "9HoIM5INxpI" // ~3 hour youtube video
-    const { path: fullPath } = await getCachedAudio({ youtubeId });
-    const shortenedPath = fullPath.replace(".wav", "-short.wav");
-    extractClip(fullPath, shortenedPath, 2 * 60, 60 * 60);
-    const result = await transcribeAudio(shortenedPath)
-    expect(result.length).toBeGreaterThan(20);
-  });
+  const meetingSlugs = [
+    "gbos_9HoIM5INxpI",
+    "gbos_xTDznaSElgY",
+  ];
+  for (const slug of meetingSlugs) {
+    it(`can transcribe meeting ${slug}, passing our accuracy limits`, { tags: ["slow5min"] }, async () => {
+      const meeting = getMeetingData(slug);
+      const runDir = join(RUNS_DIR, slug);
+      cpDirSymlinked(meeting.meetingDir, runDir);
+      const result = await transcribeAudio(await meeting.getAudio().then(a => a.path));
+      serializePsv(result, { path: join(runDir, "transcribed.gen.psv") });
+      if (process.env.SNAPSHOT_UPDATE === "1") {
+        serializePsv(result, { path: join(meeting.meetingDir, "golden.psv") });
+        return;
+      }
 
-  // Verifies accuracy of the transcribe pipeline against a golden snapshot of
-  // word-level timestamps. Set UPDATE_TRANSCRIBE_GOLDEN=1 to regenerate the
-  // golden file (like vitest --update for inline snapshots).
-  it("matches the golden transcript for a 3-minute multi-speaker clip", { timeout: 10 * 60 * 1000 }, async () => {
-    const FIXTURE_DIR = join(FIXTURES_DIR, "three-minute-multi-speaker");
-    mkdirSync(FIXTURE_DIR, { recursive: true });
-    const youtubeId = "9HoIM5INxpI";
-    const startSec = 30 * 60; // skip preamble — start mid-meeting for multiple speakers
-    const durationSec = 3 * 60;
-    const goldenPath = join(FIXTURE_DIR, `golden.psv`);
-    const { path: fullPath } = await getCachedAudio({ youtubeId });
-    const clipPath = join(FIXTURE_DIR, `clip.gen.wav`);
-    extractClip(fullPath, clipPath, startSec, durationSec);
+      const refWords = meeting.segments.flatMap((s) => s.words);
+      const hypWords = result.flatMap((s) => s.words);
+      // First: confirm the check actually has teeth. With strict thresholds the
+      // current transcribe output should never pass, so the assertion below MUST
+      // throw. If it doesn't, our metric is broken (or the model is suspiciously
+      // perfect — also worth knowing).
+      expect(() => assertWithinThresholds(refWords, hypWords, { maxWER: 0, maxTimestampError: 0 })).toThrow();
 
-    const segments = await transcribeAudio(clipPath);
-    writeGoldenPsv(join(FIXTURE_DIR, `hypothesis.gen.psv`), segments);
-    const hypWords = flattenWords(segments);
-    expect(hypWords.length).toBeGreaterThan(100);
-
-    if (process.env.UPDATE_TRANSCRIBE_GOLDEN === "1") {
-      writeGoldenPsv(goldenPath, segments);
-      return;
-    }
-
-    if (!existsSync(goldenPath)) {
-      throw new Error(
-        `Golden file missing: ${goldenPath}\nRun with UPDATE_TRANSCRIBE_GOLDEN=1 to bootstrap it.`,
-      );
-    }
-    const refWords = flattenWords(parsePsv({ path: goldenPath }));
-    expect(refWords.length).toBeGreaterThan(100);
-
-    // First: confirm the check actually has teeth. With strict thresholds the
-    // current transcribe output should never pass, so the assertion below MUST
-    // throw. If it doesn't, our metric is broken (or the model is suspiciously
-    // perfect — also worth knowing).
-    expect(() => assertWithinThresholds(refWords, hypWords, { maxWER: 0, maxTimestampError: 0 })).toThrow();
-
-    // Then the real check: lax-but-meaningful thresholds we expect to pass.
-    // WER < 15% and matched-word p95 timestamp error < 0.5s are realistic for
-    // this model on noisy multi-speaker audio.
-    assertWithinThresholds(refWords, hypWords, { maxWER: 0.15, maxTimestampError: 0.5 });
-  });
+      // Then the real check: lax-but-meaningful thresholds we expect to pass.
+      // WER < 15% and matched-word p95 timestamp error < 0.5s are realistic for
+      // this model on noisy multi-speaker audio.
+      assertWithinThresholds(refWords, hypWords, { maxWER: 0.15, maxTimestampError: 0.5 });
+    });
+  }
 });
 
-function flattenWords(segments: readonly TranscriptSegment[]): TranscriptWord[] {
-  return segments.flatMap((s) => s.words);
-}
-
-function writeGoldenPsv(path: string, segments: TranscriptSegment[]) {
-  mkdirSync(dirname(path), { recursive: true });
-  serializePsv(segments, { path });
-  const nWords = flattenWords(segments).length;
-  console.log(`Wrote golden: ${path} (${nWords} words across ${segments.length} segment(s))`);
+function cpDirSymlinked(srcDir: string, destDir: string): void {
+  mkdirSync(destDir, { recursive: true });
+  for (const entry of readdirSync(srcDir)) {
+    const srcPath = join(srcDir, entry);
+    const destPath = join(destDir, entry);
+    if (!existsSync(destPath)) {
+      symlinkSync(srcPath, destPath);
+    }
+  }
 }
 
 function assertWithinThresholds(
@@ -153,12 +129,4 @@ function assertWithinThresholds(
   if (failures.length > 0) {
     throw new Error(`Transcript outside thresholds:\n  - ${failures.join("\n  - ")}`);
   }
-}
-
-
-function extractClip(inputPath: string, outputPath: string, startSec: number, durationSec: number): void {
-  execSync(
-    `ffmpeg -y -loglevel error -i "${inputPath}" -ss ${startSec} -t ${durationSec} -ar 16000 -ac 1 "${outputPath}"`,
-    { stdio: "inherit" },
-  );
 }

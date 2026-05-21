@@ -1,6 +1,7 @@
 # Data
 data/
 .cache
+test-runs/
 
 # anyythin with .gen. in the name is a generated file, eg clip.gen.wav or golden.gen.jsonl
 *.gen.*

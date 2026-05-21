@@ -1,8 +1,8 @@
-import { loadAllFixtures } from "../src/test-utils/fixtures";
+import { loadAllTestData } from "../src/test-utils/test-data";
 import { meetingCacheDir, isCached } from "../src/test-utils/audio-cache";
 
 function status() {
-  const fixtures = loadAllFixtures();
+  const fixtures = loadAllTestData();
   if (fixtures.length === 0) {
     console.log("No fixtures found. Add municipalities.jsonl/people.jsonl/meetings.jsonl/segments.jsonl under test-fixtures/<municipality>/<meeting_dir>/");
     return;

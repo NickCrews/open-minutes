@@ -13,7 +13,7 @@
 import { resolve, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { writeFileSync } from "node:fs";
-import { loadAllFixtures, type GoldenSegment } from "../src/test-utils/fixtures";
+import { loadAllTestData, type GoldenSegment } from "../src/test-utils/test-data";
 import { transcribeAudio } from "../src/transcribe";
 import { diarizeAudio } from "../src/diarize";
 import { alignTranscriptWithSpeakers } from "../src/align";
@@ -27,7 +27,7 @@ async function main() {
   }
 
   const [muniSlug, meetingDir] = target.split("/");
-  const fixtures = loadAllFixtures();
+  const fixtures = loadAllTestData();
   const fixture = fixtures.find(
     (f) => f.municipality_slug === muniSlug && f.meeting_dir === meetingDir,
   );

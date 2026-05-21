@@ -10,5 +10,13 @@ export default defineConfig({
   test: {
     environment: "node",
     setupFiles: [join(ROOT, "test-setup.ts")],
+    tags: [
+      {
+        name: 'slow5min',
+        description: 'Tests that are expected to take ~5 minutes to run',
+        timeout: 15 * 60 * 1000, // more to be safe
+        skip: process.env.SKIP_SLOW === "1",
+      },
+    ],
   },
 });
