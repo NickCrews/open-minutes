@@ -27,21 +27,14 @@ describe("transcribe", () => {
     expect(result.length).toBe(1);
     const firstSegment = result[0]!;
 
-    expect(firstSegment.text).toMatchInlineSnapshot(
-      `"Ask not what your country can do for you, ask what you can do for your country."`,
-    );
     expect(firstSegment.words.map((w) => w.text)).toEqual([
       "Ask", "not", "what", "your", "country", "can", "do", "for", "you,",
       "ask", "what", "you", "can", "do", "for", "your", "country.",
     ]);
 
-    // Segment timing: starts at/near 0, ends within a plausible window.
-    expect(firstSegment.start).toBeGreaterThanOrEqual(0);
-    expect(firstSegment.end).toBeGreaterThan(firstSegment.start);
-    expect(firstSegment.end).toBeLessThan(5);
+    expect(firstSegment.speaker.type).toBe("unlabeled");
 
-    // Word timings are monotonic, non-overlapping, and fall inside the segment.
-    const BOUNDARY_SLOP = 0.05;
+    // Word timings are monotonic and non-overlapping
     for (let i = 0; i < firstSegment.words.length; i++) {
       const w = firstSegment.words[i]!;
       expect(w.end).toBeGreaterThanOrEqual(w.start);
@@ -49,8 +42,6 @@ describe("transcribe", () => {
         expect(w.start).toBeGreaterThanOrEqual(firstSegment.words[i - 1]!.start);
       }
     }
-    expect(firstSegment.words[0]!.start).toBeGreaterThanOrEqual(firstSegment.start - BOUNDARY_SLOP);
-    expect(firstSegment.words.at(-1)!.end).toBeLessThanOrEqual(firstSegment.end + BOUNDARY_SLOP);
   });
 
   it("processes chunks in parallel", async () => {

@@ -101,9 +101,7 @@ export async function transcribeAudio(
     }));
 
     return {
-      text,
-      start: words[0]?.start ?? chunkStart,
-      end: words.at(-1)?.end ?? chunkEnd,
+      speaker: { type: "unlabeled" },
       words,
     };
   });
