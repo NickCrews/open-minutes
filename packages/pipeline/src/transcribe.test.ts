@@ -1,11 +1,11 @@
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { ensureModelFiles, getTraceEvents, resetTrace, transcribeAudio } from "./transcribe";
 import { getCachedAudio } from "./test-utils/audio-cache";
 import { compareTranscripts } from "./test-utils/wer";
-import { parsePsv, psvWords, serializePsv, wordsToPsvEvents } from "./test-utils/psv";
+import { parsePsv, serializePsv } from "./test-utils/psv";
 import type { TranscriptSegment, TranscriptWord } from "./types";
 import { execSync } from "child_process";
 
@@ -107,7 +107,7 @@ describe("transcribe", () => {
         `Golden file missing: ${goldenPath}\nRun with UPDATE_TRANSCRIBE_GOLDEN=1 to bootstrap it.`,
       );
     }
-    const refWords = readGoldenPsv(goldenPath);
+    const refWords = flattenWords(parsePsv({ path: goldenPath }));
     expect(refWords.length).toBeGreaterThan(100);
 
     // First: confirm the check actually has teeth. With strict thresholds the
@@ -127,15 +127,11 @@ function flattenWords(segments: readonly TranscriptSegment[]): TranscriptWord[] 
   return segments.flatMap((s) => s.words);
 }
 
-function readGoldenPsv(path: string): TranscriptWord[] {
-  return psvWords(parsePsv(readFileSync(path, "utf8")));
-}
-
 function writeGoldenPsv(path: string, segments: TranscriptSegment[]) {
   mkdirSync(dirname(path), { recursive: true });
-  const words = flattenWords(segments);
-  writeFileSync(path, serializePsv(wordsToPsvEvents(words)));
-  console.log(`Wrote golden: ${path} (${words.length} words across ${segments.length} segment(s))`);
+  serializePsv(segments, { path });
+  const nWords = flattenWords(segments).length;
+  console.log(`Wrote golden: ${path} (${nWords} words across ${segments.length} segment(s))`);
 }
 
 function assertWithinThresholds(

@@ -12,12 +12,12 @@ export interface SegmentedSpeaker {
   type: "segmented";
   speakerNumber: number;
 }
-/** A speaker with a known identity (e.g. "Alice") that can be linked across segments. */
-export interface LabeledSpeaker {
-  type: "labeled";
+/** A speaker with a known global identity (e.g. "Cathy Giessel, AK Senator"). */
+export interface IdentifiedSpeaker {
+  type: "identified";
   personId: string;
 }
-export type Speaker = UnlabeledSpeaker | SegmentedSpeaker | LabeledSpeaker;
+export type Speaker = UnlabeledSpeaker | SegmentedSpeaker | IdentifiedSpeaker;
 
 export interface TranscriptSegment {
   speaker: Speaker;

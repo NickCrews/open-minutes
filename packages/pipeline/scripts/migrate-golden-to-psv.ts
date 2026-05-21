@@ -3,20 +3,20 @@
  * format (`{"words": [{text, start, end}, ...]}` per line) to the git-diffable
  * pipe-separated format (golden.psv).
  *
- * The old format carries no speaker information, so the migrated PSV contains
- * only `text` events (no `begin_speaker` meta markers). Word data is preserved
- * exactly. Run `git diff` afterwards to review, then delete the stale .jsonl.
+ * The old format carries no speaker information, so each JSONL line becomes one
+ * `unlabeled` segment (preserving the original segment boundaries). Word data is
+ * preserved exactly. Run `git diff` afterwards to review, then delete the .jsonl.
  *
  * Usage:
  *   tsx scripts/migrate-golden-to-psv.ts            # convert every golden.jsonl
  *   tsx scripts/migrate-golden-to-psv.ts <path>     # convert one golden.jsonl
  */
 
-import { readFileSync, writeFileSync, readdirSync, existsSync } from "node:fs";
+import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join, resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { TranscriptWord } from "../src/types.ts";
-import { serializePsv, wordsToPsvEvents } from "../src/test-utils/psv";
+import type { TranscriptSegment } from "../src/types.ts";
+import { serializePsv } from "../src/test-utils/psv";
 
 const FIXTURES_ROOT = resolve(fileURLToPath(import.meta.url), "../../test-fixtures");
 
@@ -30,18 +30,22 @@ function findGoldenJsonl(dir: string): string[] {
   return found;
 }
 
-function readJsonlWords(path: string): TranscriptWord[] {
+function readJsonlSegments(path: string): TranscriptSegment[] {
   return readFileSync(path, "utf8")
     .split("\n")
     .filter((line) => line.trim().length > 0)
-    .flatMap((line) => (JSON.parse(line) as { words: TranscriptWord[] }).words);
+    .map((line) => ({
+      speaker: { type: "unlabeled" as const },
+      words: (JSON.parse(line) as { words: TranscriptSegment["words"] }).words,
+    }));
 }
 
 function migrate(jsonlPath: string): void {
-  const words = readJsonlWords(jsonlPath);
+  const segments = readJsonlSegments(jsonlPath);
+  const nWords = segments.reduce((n, s) => n + s.words.length, 0);
   const psvPath = join(dirname(jsonlPath), "golden.psv");
-  writeFileSync(psvPath, serializePsv(wordsToPsvEvents(words)));
-  console.log(`  ${jsonlPath}\n  -> ${psvPath} (${words.length} words)`);
+  serializePsv(segments, { path: psvPath });
+  console.log(`  ${jsonlPath}\n  -> ${psvPath} (${segments.length} segments, ${nWords} words)`);
 }
 
 function main(): void {

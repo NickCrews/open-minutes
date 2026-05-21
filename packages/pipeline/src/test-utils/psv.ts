@@ -2,20 +2,27 @@
 // way to store golden transcripts: one event per line, so a re-transcription
 // produces a clean word-level diff instead of a single mangled JSON blob.
 //
+// A TranscriptSegment is serialized as a `meta` begin_speaker line followed by
+// one `text` line per word; parsing inverts that grouping.
+//
 // Grammar (see test-fixtures/*/golden.psv for a worked example):
 //   - Lines starting with `#` are comments; blank lines are ignored.
 //   - The column header `start_sec|end_sec|event_type|event_data` is optional.
 //   - Each remaining line is `start_sec|end_sec|event_type|event_data`.
 //       * event_type "text": a transcribed word. start/end are timestamps and
 //         event_data is the raw word text.
-//       * event_type "meta": a marker with an empty end. event_data is JSON,
-//         e.g. {"begin_speaker": "identified:alice-jones"}.
+//       * event_type "meta": a marker with an empty end. event_data is JSON.
+//         {"begin_speaker": "<label>"} opens a new segment for that speaker.
+//   - Speaker labels: "unlabeled", "segmented:spk-<n>", "identified:<personId>".
 //   - Timestamps are `H:MM:SS.ss` (hours:minutes:seconds.hundredths).
 //   - event_data is the final field, so it may itself contain `|`.
 
-import type { TranscriptWord } from "../types.ts";
+import { readFileSync, writeFileSync } from "node:fs";
 
-export type PsvEvent =
+import type { Speaker, TranscriptSegment } from "../types.ts";
+
+// Internal line-level representation. Not part of the public API.
+type PsvEvent =
   | { type: "text"; start: number; end: number; text: string }
   | { type: "meta"; start: number; data: Record<string, unknown> };
 
@@ -24,8 +31,11 @@ const COLUMN_HEADER = "start_sec|end_sec|event_type|event_data";
 const FILE_HEADER = [
   "# Pipe-separated golden transcript. Lines starting with '#' are comments.",
   "# Columns: " + COLUMN_HEADER,
-  "# event_type 'text' = a transcribed word (event_data is the word text).",
-  "# event_type 'meta' = a marker (event_data is JSON), e.g. {\"begin_speaker\": \"...\"}.",
+  "# 'text' rows are transcribed words; event_data is the word text.",
+  "# 'meta' rows open a segment for a speaker; event_data is JSON, e.g.",
+  '#   {"begin_speaker": "unlabeled"}              (cannot be segmented)',
+  '#   {"begin_speaker": "segmented:spk-3"}        (distinct but unknown speaker)',
+  '#   {"begin_speaker": "identified:alice-jones"} (known person in the DB)',
 ];
 
 /** Format seconds as `H:MM:SS.ss` (rounded to the nearest hundredth). */
@@ -60,7 +70,36 @@ function pad2(n: number): string {
   return n.toString().padStart(2, "0");
 }
 
-export function parsePsv(content: string): PsvEvent[] {
+function parseSpeaker(label: string): Speaker {
+  if (label === "unlabeled") return { type: "unlabeled" };
+  if (label.startsWith("segmented:")) {
+    const m = label.slice("segmented:".length).match(/^spk-(\d+)$/);
+    if (!m) throw new Error(`Invalid segmented speaker label: ${JSON.stringify(label)}`);
+    return { type: "segmented", speakerNumber: Number(m[1]) };
+  }
+  if (label.startsWith("identified:")) {
+    const personId = label.slice("identified:".length);
+    if (!personId) throw new Error(`Invalid identified speaker label (no id): ${JSON.stringify(label)}`);
+    return { type: "identified", personId };
+  }
+  throw new Error(`Unknown speaker label: ${JSON.stringify(label)}`);
+}
+
+function formatSpeaker(speaker: Speaker): string {
+  const type = speaker.type;
+  switch (type) {
+    case "unlabeled":
+      return "unlabeled";
+    case "segmented":
+      return `segmented:spk-${speaker.speakerNumber}`;
+    case "identified":
+      return `identified:${speaker.personId}`;
+    default:
+      throw new Error(`Unknown speaker type: ${type satisfies never} `);
+  }
+}
+
+function parseEvents(content: string): PsvEvent[] {
   const events: PsvEvent[] = [];
   const lines = content.split("\n");
   for (let i = 0; i < lines.length; i++) {
@@ -104,23 +143,56 @@ export function parsePsv(content: string): PsvEvent[] {
   return events;
 }
 
-export function serializePsv(events: readonly PsvEvent[]): string {
-  const rows = events.map((e) =>
-    e.type === "text"
-      ? `${formatTimestamp(e.start)}|${formatTimestamp(e.end)}|text|${e.text}`
-      : `${formatTimestamp(e.start)}||meta|${JSON.stringify(e.data)}`,
-  );
-  return [...FILE_HEADER, COLUMN_HEADER, ...rows].join("\n") + "\n";
+/**
+ * Parse a PSV golden transcript into speaker-grouped segments.
+ *
+ * Pass a content string to parse it directly, or `{ path }` to read and parse
+ * the file at that path.
+ */
+export function parsePsv(source: string | { path: string }): TranscriptSegment[] {
+  const content = typeof source === "string" ? source : readFileSync(source.path, "utf8");
+  const segments: TranscriptSegment[] = [];
+  let current: TranscriptSegment | null = null;
+
+  for (const event of parseEvents(content)) {
+    if (event.type === "meta") {
+      const label = event.data["begin_speaker"];
+      if (typeof label !== "string") {
+        throw new Error(`Unsupported meta event (expected begin_speaker): ${JSON.stringify(event.data)}`);
+      }
+      current = { speaker: parseSpeaker(label), words: [] };
+      segments.push(current);
+    } else {
+      if (!current) {
+        throw new Error(`text event before any begin_speaker meta (word: ${JSON.stringify(event.text)})`);
+      }
+      current.words.push({ text: event.text, start: event.start, end: event.end });
+    }
+  }
+  return segments;
 }
 
-/** Extract the transcribed words (text events) from a parsed PSV. */
-export function psvWords(events: readonly PsvEvent[]): TranscriptWord[] {
-  return events
-    .filter((e): e is Extract<PsvEvent, { type: "text" }> => e.type === "text")
-    .map((e) => ({ text: e.text, start: e.start, end: e.end }));
-}
-
-/** Build text events from a flat word list (no speaker meta). */
-export function wordsToPsvEvents(words: readonly TranscriptWord[]): PsvEvent[] {
-  return words.map((w) => ({ type: "text", start: w.start, end: w.end, text: w.text }));
+/**
+ * Serialize speaker-grouped segments to the PSV golden transcript format.
+ *
+ * Always returns the serialized string. If `options.path` is given, the string
+ * is also written to that file.
+ */
+export function serializePsv(
+  segments: readonly TranscriptSegment[],
+  options?: { path?: string },
+): string {
+  const rows: string[] = [];
+  for (const segment of segments) {
+    const start = segment.words[0]?.start ?? 0;
+    rows.push(`${formatTimestamp(start)}||meta|${JSON.stringify({ begin_speaker: formatSpeaker(segment.speaker) })}`);
+    for (const w of segment.words) {
+      rows.push(`${formatTimestamp(w.start)}|${formatTimestamp(w.end)}|text|${w.text}`);
+    }
+  }
+  const content = [...FILE_HEADER, COLUMN_HEADER, ...rows].join("\n") + "\n";
+  if (options?.path !== undefined) {
+    writeFileSync(options.path, content);
+  }
+  return content;
 }

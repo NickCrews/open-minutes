@@ -1,13 +1,6 @@
 import { describe, it, expect } from "vitest";
-import {
-  formatTimestamp,
-  parseTimestamp,
-  parsePsv,
-  serializePsv,
-  psvWords,
-  wordsToPsvEvents,
-  type PsvEvent,
-} from "./psv";
+import { formatTimestamp, parseTimestamp, parsePsv, serializePsv } from "./psv";
+import type { TranscriptSegment } from "../types";
 
 describe("psv timestamps", () => {
   it("formats seconds as H:MM:SS.ss", () => {
@@ -25,7 +18,7 @@ describe("psv timestamps", () => {
 });
 
 describe("psv parse/serialize", () => {
-  it("parses text and meta events, ignoring comments and the column header", () => {
+  it("groups text events under the preceding begin_speaker into segments", () => {
     const content = [
       "# a comment",
       "start_sec|end_sec|event_type|event_data",
@@ -33,34 +26,56 @@ describe("psv parse/serialize", () => {
       "0:00:00.08|0:00:00.64|text|Uh",
       "",
       "0:00:00.64|0:00:01.04|text|certainly",
+      '2:45:21.28||meta|{"begin_speaker": "segmented:spk-4"}',
+      "2:45:21.28|2:45:22.24|text|What",
+      '2:45:25.60||meta|{"begin_speaker": "unlabeled"}',
+      "2:45:25.60|2:45:25.68|text|Nice!",
     ].join("\n");
-    const events = parsePsv(content);
-    expect(events).toEqual<PsvEvent[]>([
-      { type: "meta", start: 0, data: { begin_speaker: "identified:alice-jones" } },
-      { type: "text", start: 0.08, end: 0.64, text: "Uh" },
-      { type: "text", start: 0.64, end: 1.04, text: "certainly" },
+    expect(parsePsv(content)).toEqual<TranscriptSegment[]>([
+      {
+        speaker: { type: "identified", personId: "alice-jones" },
+        words: [
+          { text: "Uh", start: 0.08, end: 0.64 },
+          { text: "certainly", start: 0.64, end: 1.04 },
+        ],
+      },
+      {
+        speaker: { type: "segmented", speakerNumber: 4 },
+        words: [{ text: "What", start: 9921.28, end: 9922.24 }],
+      },
+      {
+        speaker: { type: "unlabeled" },
+        words: [{ text: "Nice!", start: 9925.6, end: 9925.68 }],
+      },
     ]);
   });
 
-  it("preserves '|' inside event_data", () => {
-    const events = parsePsv("0:00:01.00|0:00:02.00|text|a|b");
-    expect(events).toEqual<PsvEvent[]>([{ type: "text", start: 1, end: 2, text: "a|b" }]);
+  it("preserves '|' inside a word", () => {
+    const content = [
+      '0:00:00.00||meta|{"begin_speaker": "unlabeled"}',
+      "0:00:01.00|0:00:02.00|text|a|b",
+    ].join("\n");
+    expect(parsePsv(content)[0]!.words).toEqual([{ text: "a|b", start: 1, end: 2 }]);
   });
 
-  it("round-trips events through serialize/parse", () => {
-    const events: PsvEvent[] = [
-      { type: "meta", start: 0, data: { begin_speaker: "unlabeled" } },
-      { type: "text", start: 0.08, end: 0.64, text: "Uh" },
-      { type: "text", start: 0.64, end: 1.28, text: "$10" },
-    ];
-    expect(parsePsv(serializePsv(events))).toEqual(events);
+  it("rejects text before any begin_speaker", () => {
+    expect(() => parsePsv("0:00:01.00|0:00:02.00|text|orphan")).toThrow(/begin_speaker/);
   });
 
-  it("extracts words and rebuilds events", () => {
-    const words = [
-      { text: "hello", start: 0, end: 0.5 },
-      { text: "world", start: 0.5, end: 1 },
+  it("round-trips segments through serialize/parse", () => {
+    const segments: TranscriptSegment[] = [
+      {
+        speaker: { type: "unlabeled" },
+        words: [
+          { text: "Uh", start: 0.08, end: 0.64 },
+          { text: "$10", start: 0.64, end: 1.28 },
+        ],
+      },
+      {
+        speaker: { type: "segmented", speakerNumber: 2 },
+        words: [{ text: "Thanks!", start: 1.28, end: 1.6 }],
+      },
     ];
-    expect(psvWords(parsePsv(serializePsv(wordsToPsvEvents(words))))).toEqual(words);
+    expect(parsePsv(serializePsv(segments))).toEqual(segments);
   });
 });

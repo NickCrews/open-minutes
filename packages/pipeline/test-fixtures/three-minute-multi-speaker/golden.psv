@@ -1,8 +1,12 @@
 # Pipe-separated golden transcript. Lines starting with '#' are comments.
 # Columns: start_sec|end_sec|event_type|event_data
-# event_type 'text' = a transcribed word (event_data is the word text).
-# event_type 'meta' = a marker (event_data is JSON), e.g. {"begin_speaker": "..."}.
+# 'text' rows are transcribed words; event_data is the word text.
+# 'meta' rows open a segment for a speaker; event_data is JSON, e.g.
+#   {"begin_speaker": "unlabeled"}              (cannot be segmented)
+#   {"begin_speaker": "segmented:spk-3"}        (distinct but unknown speaker)
+#   {"begin_speaker": "identified:alice-jones"} (known person in the DB)
 start_sec|end_sec|event_type|event_data
+0:00:00.08||meta|{"begin_speaker":"unlabeled"}
 0:00:00.08|0:00:00.64|text|Uh
 0:00:00.64|0:00:01.04|text|certainly
 0:00:01.04|0:00:01.28|text|not
@@ -333,6 +337,7 @@ start_sec|end_sec|event_type|event_data
 0:01:59.12|0:01:59.36|text|bill
 0:01:59.36|0:01:59.60|text|from
 0:01:59.60|0:01:59.60|text|the
+0:02:00.16||meta|{"begin_speaker":"unlabeled"}
 0:02:00.16|0:02:00.72|text|Standpoint
 0:02:00.72|0:02:00.88|text|that
 0:02:00.88|0:02:01.28|text|it
