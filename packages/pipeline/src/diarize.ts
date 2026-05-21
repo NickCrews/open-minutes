@@ -135,9 +135,9 @@ export async function diarizeAudio(
     // Mean pooling over all of this speaker's segments
     const mean = new Float32Array(EMBEDDING_DIM);
     for (const emb of embeddings) {
-      for (let i = 0; i < EMBEDDING_DIM; i++) mean[i] += emb[i];
+      for (let i = 0; i < EMBEDDING_DIM; i++) mean[i] = mean[i]! + emb[i]!;
     }
-    for (let i = 0; i < EMBEDDING_DIM; i++) mean[i] /= embeddings.length;
+    for (let i = 0; i < EMBEDDING_DIM; i++) mean[i] = mean[i]! / embeddings.length;
     speakerEmbeddings.set(speakerId, mean);
   }
 
