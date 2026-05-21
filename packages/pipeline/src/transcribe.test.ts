@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { ensureModelFiles, getTraceEvents, resetTrace, transcribeAudio } from "./transcribe";
 import { getCachedAudio } from "./test-utils/audio-cache";
 import { compareTranscripts } from "./test-utils/wer";
+import { parsePsv, psvWords, serializePsv, wordsToPsvEvents } from "./test-utils/psv";
 import type { TranscriptSegment, TranscriptWord } from "./types";
 import { execSync } from "child_process";
 
@@ -95,18 +96,18 @@ describe("transcribe", () => {
     const youtubeId = "9HoIM5INxpI";
     const startSec = 30 * 60; // skip preamble — start mid-meeting for multiple speakers
     const durationSec = 3 * 60;
-    const goldenPath = join(FIXTURE_DIR, `golden.jsonl`);
+    const goldenPath = join(FIXTURE_DIR, `golden.psv`);
     const { path: fullPath } = await getCachedAudio({ youtubeId });
     const clipPath = join(FIXTURE_DIR, `clip.gen.wav`);
     extractClip(fullPath, clipPath, startSec, durationSec);
 
     const segments = await transcribeAudio(clipPath);
-    writeTranscription(join(FIXTURE_DIR, `hypothesis.gen.jsonl`), segments);
+    writeGoldenPsv(join(FIXTURE_DIR, `hypothesis.gen.psv`), segments);
     const hypWords = flattenWords(segments);
     expect(hypWords.length).toBeGreaterThan(100);
 
     if (process.env.UPDATE_TRANSCRIBE_GOLDEN === "1") {
-      writeTranscription(goldenPath, segments);
+      writeGoldenPsv(goldenPath, segments);
       return;
     }
 
@@ -115,7 +116,7 @@ describe("transcribe", () => {
         `Golden file missing: ${goldenPath}\nRun with UPDATE_TRANSCRIBE_GOLDEN=1 to bootstrap it.`,
       );
     }
-    const refWords = readTranscription(goldenPath);
+    const refWords = readGoldenPsv(goldenPath);
     expect(refWords.length).toBeGreaterThan(100);
 
     // First: confirm the check actually has teeth. With strict thresholds the
@@ -135,20 +136,15 @@ function flattenWords(segments: readonly TranscriptSegment[]): TranscriptWord[] 
   return segments.flatMap((s) => s.words);
 }
 
-function readTranscription(path: string): TranscriptWord[] {
-  return readFileSync(path, "utf8")
-    .split("\n")
-    .filter((line) => line.trim().length > 0)
-    .flatMap((line) => (JSON.parse(line) as { words: TranscriptWord[] }).words);
+function readGoldenPsv(path: string): TranscriptWord[] {
+  return psvWords(parsePsv(readFileSync(path, "utf8")));
 }
 
-function writeTranscription(path: string, segments: TranscriptSegment[]) {
+function writeGoldenPsv(path: string, segments: TranscriptSegment[]) {
   mkdirSync(dirname(path), { recursive: true });
-  const content =
-    segments.map((s) => JSON.stringify({ words: s.words })).join("\n") + "\n";
-  writeFileSync(path, content);
-  const nWords = flattenWords(segments).length;
-  console.log(`Wrote golden: ${path} (${nWords} words across ${segments.length} segment(s))`);
+  const words = flattenWords(segments);
+  writeFileSync(path, serializePsv(wordsToPsvEvents(words)));
+  console.log(`Wrote golden: ${path} (${words.length} words across ${segments.length} segment(s))`);
 }
 
 function assertWithinThresholds(
