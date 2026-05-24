@@ -6,7 +6,8 @@
     "./db": "./src/db/index.ts",
     "./youtube": "./src/youtube/index.ts",
     "./munis": "./src/munis/index.ts",
-    "./timeline": "./src/timeline.ts"
+    "./timeline": "./src/timeline.ts",
+    "./voice_embeddings": "./src/voice_embeddings/index.ts"
   },
   "scripts": {
     "test": "vitest run",
