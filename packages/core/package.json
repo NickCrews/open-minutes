@@ -11,7 +11,7 @@
   },
   "scripts": {
     "test": "vitest run",
-    "typecheck": "pnpm run typecheck",
+    "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:setup": "docker compose -f ../../docker-compose.yml up -d --wait && pnpm db:migrate"
