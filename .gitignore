@@ -6,7 +6,7 @@ test-runs/
 # anyythin with .gen. in the name is a generated file, eg clip.gen.wav or golden.gen.jsonl
 *.gen.*
 
-# Downloaded ONNX models (~45MB, fetched via pnpm download-models)
+# Downloaded ONNX models
 models/
 
 # Node
