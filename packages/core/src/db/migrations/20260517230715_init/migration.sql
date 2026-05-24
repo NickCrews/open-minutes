@@ -53,7 +53,7 @@ CREATE TABLE "people" (
 	"id" serial PRIMARY KEY,
 	"name" varchar DEFAULT '' NOT NULL,
 	"created_at" timestamp DEFAULT NOW() NOT NULL,
-	"voice_embedding" vector(512) NOT NULL
+	"voice_embedding" vector(192) NOT NULL
 );
 
 --> statement-breakpoint

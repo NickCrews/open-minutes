@@ -30,18 +30,22 @@ declare module 'sherpa-onnx-node' {
         segmentation: {
             pyannote: {
                 model: string;
-                debug?: number;
             },
+            numThreads?: number;
+            provider?: string;
+            debug?: number;
         };
         embedding: {
             model: string;
+            numThreads?: number;
+            provider?: string;
             debug?: number;
         };
         clustering: {
             /** Number of clusters for speaker diarization. If set to -1, the number of clusters will be determined automatically. */
             numClusters: number;
             /** Threshold for merging segments into clusters. A larger threshold leads to fewer clusters, a smaller threshold leads to more clusters.
-             * 
+             *
              * Only used if numClusters is -1.
             */
             threshold: number;
@@ -52,12 +56,6 @@ declare module 'sherpa-onnx-node' {
         minDurationOff: number;
     };
 
-    export interface OfflineSpeakerDiarization {
-        sampleRate: number;
-        /* You must provide samples at the same sample rate as self.sampleRate */
-        process(samples: Float32Array): OfflineSpeakerDiarizationSegment[];
-    }
-
     // https://github.com/k2-fsa/sherpa-onnx/blob/a703cf6560bf1b617be33734e2c7b980bada0903/sherpa-onnx/c-api/c-api.h#L3944
     export interface OfflineSpeakerDiarizationSegment {
         start: number;
@@ -65,6 +63,36 @@ declare module 'sherpa-onnx-node' {
         speaker: number;
     }
 
-    export function createOfflineSpeakerDiarization(config: OfflineSpeakerDiarizationConfig): OfflineSpeakerDiarization;
+    export class OfflineSpeakerDiarization {
+        constructor(config: OfflineSpeakerDiarizationConfig);
+        /** The sample rate the segmentation model expects; samples passed to process() must match. */
+        readonly sampleRate: number;
+        /** @param samples 1-D float32 array in [-1, 1] at this.sampleRate */
+        process(samples: Float32Array): OfflineSpeakerDiarizationSegment[];
+    }
+
+    // The speaker-embedding extractor reuses the OnlineStream from the streaming
+    // ASR module: feed it audio, mark input finished, then compute().
+    export interface OnlineStream {
+        acceptWaveform(obj: WaveForm): void;
+        inputFinished(): void;
+    }
+
+    export interface SpeakerEmbeddingExtractorConfig {
+        model: string;
+        numThreads?: number;
+        provider?: string;
+        debug?: number;
+    }
+
+    export class SpeakerEmbeddingExtractor {
+        constructor(config: SpeakerEmbeddingExtractorConfig);
+        /** Embedding dimension (192 for the 3D-Speaker CAM++ zh_en-common_advanced model). */
+        readonly dim: number;
+        createStream(): OnlineStream;
+        isReady(stream: OnlineStream): boolean;
+        /** Returns the speaker embedding as a Float32Array of length `dim`. */
+        compute(stream: OnlineStream, enableExternalBuffer?: boolean): Float32Array;
+    }
 
 }

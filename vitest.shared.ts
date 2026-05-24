@@ -13,8 +13,10 @@ export default defineConfig({
     tags: [
       {
         name: 'slow5min',
-        description: 'Tests that are expected to take ~5 minutes to run',
-        timeout: 15 * 60 * 1000, // more to be safe
+        description: 'Slow diarization/transcription tests over full meetings (~10 min each on CPU)',
+        // WARNING: the timeout might not actually have an effect for the ML-heavy tests:
+        // Vitest cannot interrupt synchronous native code (like in sherpa-onnx), it only can abort within the JS event loop.
+        timeout: 25 * 60 * 1000, // a full 166-min meeting diarizes in ~8-10 min; headroom for CI/background
         skip: process.env.SKIP_SLOW === "1",
       },
     ],

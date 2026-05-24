@@ -6,6 +6,7 @@ import { ensureModelFiles, getTraceEvents, resetTrace, transcribeAudio } from ".
 import { compareTranscripts } from "./test-utils/wer";
 import { serializePsv } from "./test-utils/psv";
 import { getMeetingData } from "./test-utils/test-data";
+import { alignSpeakers, segmentsToTurns } from "./align";
 import type { TranscriptWord } from "./types";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -79,7 +80,14 @@ describe("transcribe", () => {
       const result = await transcribeAudio(await meeting.getAudio().then(a => a.path));
       serializePsv(result, { path: join(runDir, "transcribed.gen.psv") });
       if (process.env.SNAPSHOT_UPDATE === "1") {
-        serializePsv(result, { path: join(meeting.meetingDir, "golden.psv") });
+        // golden.psv is shared with diarize.test.ts. This test owns only the
+        // transcription, so preserve the existing speaker boundaries (the
+        // diarization layer) instead of overwriting them with `unlabeled`:
+        // re-apply the golden's turns to the freshly transcribed words.
+        const turns = segmentsToTurns(meeting.segments);
+        const words = result.flatMap((s) => s.words);
+        const merged = turns.length > 0 ? alignSpeakers(words, turns) : result;
+        serializePsv(merged, { path: join(meeting.meetingDir, "golden.psv") });
         return;
       }
 

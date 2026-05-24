@@ -350,7 +350,7 @@
       "table": "people"
     },
     {
-      "type": "vector(512)",
+      "type": "vector(192)",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,

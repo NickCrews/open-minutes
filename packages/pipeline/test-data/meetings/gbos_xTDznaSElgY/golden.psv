@@ -1,5 +1,5 @@
 start_sec|end_sec|event_type|event_data
-0:00:08.16||meta|{"begin_speaker":"unlabeled"}
+0:00:08.16||meta|{"begin_speaker":"segmented:spk-0"}
 0:00:08.16|0:00:08.48|text|The
 0:00:08.48|0:00:08.88|text|Gordon
 0:00:08.88|0:00:09.04|text|Board
@@ -192,7 +192,6 @@ start_sec|end_sec|event_type|event_data
 0:01:59.36|0:01:59.44|text|be
 0:01:59.44|0:01:59.68|text|filled
 0:01:59.68|0:01:59.68|text|by
-0:02:00.16||meta|{"begin_speaker":"unlabeled"}
 0:02:00.16|0:02:00.48|text|registered
 0:02:00.48|0:02:00.72|text|voters
 0:02:00.72|0:02:00.80|text|in
@@ -279,8 +278,10 @@ start_sec|end_sec|event_type|event_data
 0:02:32.40|0:02:32.80|text|approve
 0:02:32.80|0:02:33.20|text|tonight's
 0:02:33.20|0:02:35.12|text|agenda
+0:02:35.12||meta|{"begin_speaker":"segmented:spk-7"}
 0:02:35.12|0:02:37.92|text|second
 0:02:37.92|0:02:38.24|text|it's
+0:02:38.24||meta|{"begin_speaker":"segmented:spk-0"}
 0:02:38.24|0:02:43.04|text|good
 0:02:43.04|0:02:43.28|text|all
 0:02:43.28|0:02:43.52|text|right
@@ -436,7 +437,6 @@ start_sec|end_sec|event_type|event_data
 0:03:59.12|0:03:59.20|text|have
 0:03:59.20|0:03:59.60|text|any
 0:03:59.60|0:03:59.60|text|any
-0:04:00.24||meta|{"begin_speaker":"unlabeled"}
 0:04:00.24|0:04:00.48|text|Other
 0:04:00.48|0:04:00.64|text|uh
 0:04:00.64|0:04:01.12|text|changes
@@ -683,7 +683,6 @@ start_sec|end_sec|event_type|event_data
 0:05:59.04|0:05:59.60|text|Gurwood
 0:05:59.60|0:05:59.68|text|and
 0:05:59.68|0:05:59.68|text|the
-0:06:00.32||meta|{"begin_speaker":"unlabeled"}
 0:06:00.32|0:06:00.80|text|Anchorage
 0:06:00.80|0:06:01.20|text|area
 0:06:01.20|0:06:01.36|text|in
@@ -991,7 +990,6 @@ start_sec|end_sec|event_type|event_data
 0:07:58.80|0:07:59.36|text|Guru
 0:07:59.36|0:07:59.52|text|Parks
 0:07:59.52|0:07:59.52|text|and
-0:08:00.24||meta|{"begin_speaker":"unlabeled"}
 0:08:00.24|0:08:00.88|text|department
 0:08:00.88|0:08:01.44|text|Hulton
 0:08:01.44|0:08:01.76|text|Hills
@@ -1242,7 +1240,6 @@ start_sec|end_sec|event_type|event_data
 0:09:59.44|0:09:59.60|text|day
 0:09:59.60|0:09:59.68|text|right
 0:09:59.68|0:09:59.68|text|now
-0:10:00.56||meta|{"begin_speaker":"unlabeled"}
 0:10:00.56|0:10:00.88|text|Okay,
 0:10:00.88|0:10:01.04|text|so
 0:10:01.04|0:10:01.20|text|that
@@ -1269,6 +1266,7 @@ start_sec|end_sec|event_type|event_data
 0:10:10.32|0:10:10.48|text|hear
 0:10:10.48|0:10:10.64|text|from
 0:10:10.64|0:10:12.64|text|Zach.
+0:10:12.64||meta|{"begin_speaker":"segmented:spk-3"}
 0:10:12.64|0:10:12.88|text|All
 0:10:12.88|0:10:13.12|text|right.
 0:10:13.12|0:10:13.44|text|Hey,
@@ -1596,7 +1594,6 @@ start_sec|end_sec|event_type|event_data
 0:11:59.12|0:11:59.36|text|It's
 0:11:59.36|0:11:59.60|text|also
 0:11:59.60|0:11:59.84|text|normal.
-0:12:00.16||meta|{"begin_speaker":"unlabeled"}
 0:12:00.16|0:12:00.40|text|It's
 0:12:00.40|0:12:00.56|text|uh
 0:12:00.56|0:12:01.44|text|co-sponsored,
@@ -1786,6 +1783,7 @@ start_sec|end_sec|event_type|event_data
 0:13:04.80|0:13:04.88|text|to
 0:13:04.88|0:13:05.28|text|answer
 0:13:05.28|0:13:08.00|text|questions.
+0:13:08.00||meta|{"begin_speaker":"segmented:spk-0"}
 0:13:08.00|0:13:08.24|text|Thank
 0:13:08.24|0:13:08.40|text|you
 0:13:08.40|0:13:08.56|text|so
@@ -1928,7 +1926,6 @@ start_sec|end_sec|event_type|event_data
 0:13:58.80|0:13:59.04|text|of
 0:13:59.04|0:13:59.52|text|you.
 0:13:59.52|0:13:59.52|text|And
-0:14:00.08||meta|{"begin_speaker":"unlabeled"}
 0:14:00.08|0:14:00.96|text|And
 0:14:00.96|0:14:01.92|text|welcome,
 0:14:01.92|0:14:03.52|text|congratulations
@@ -2228,7 +2225,6 @@ start_sec|end_sec|event_type|event_data
 0:15:58.72|0:15:59.04|text|to
 0:15:59.04|0:15:59.36|text|less
 0:15:59.36|0:15:59.76|text|weight.
-0:16:00.16||meta|{"begin_speaker":"unlabeled"}
 0:16:00.16|0:16:00.32|text|Time
 0:16:00.32|0:16:00.48|text|for
 0:16:00.48|0:16:01.04|text|restaurant
@@ -2499,7 +2495,6 @@ start_sec|end_sec|event_type|event_data
 0:17:59.28|0:17:59.44|text|out
 0:17:59.44|0:17:59.60|text|to
 0:17:59.60|0:17:59.76|text|people.
-0:18:00.40||meta|{"begin_speaker":"unlabeled"}
 0:18:00.40|0:18:00.64|text|in
 0:18:00.64|0:18:01.20|text|crisis
 0:18:01.20|0:18:01.60|text|before
@@ -2785,7 +2780,6 @@ start_sec|end_sec|event_type|event_data
 0:19:58.80|0:19:59.04|text|It's
 0:19:59.04|0:19:59.60|text|strands
 0:19:59.60|0:19:59.84|text|funding
-0:20:00.24||meta|{"begin_speaker":"unlabeled"}
 0:20:00.24|0:20:02.08|text|Balance.
 0:20:02.08|0:20:02.48|text|That
 0:20:02.48|0:20:02.96|text|quarter
@@ -3032,7 +3026,6 @@ start_sec|end_sec|event_type|event_data
 0:21:41.12|0:21:41.36|text|that
 0:21:41.36|0:21:41.60|text|will
 0:21:41.60|0:21:42.16|text|help.
-0:22:00.08||meta|{"begin_speaker":"unlabeled"}
 0:22:00.08|0:22:00.64|text|Taxpayers
 0:22:00.64|0:22:00.80|text|in
 0:22:00.80|0:22:00.88|text|a
@@ -3308,7 +3301,6 @@ start_sec|end_sec|event_type|event_data
 0:23:57.84|0:23:58.56|text|tougher
 0:23:58.56|0:23:58.80|text|and
 0:23:58.80|0:23:59.60|text|tougher.
-0:24:00.08||meta|{"begin_speaker":"unlabeled"}
 0:24:00.08|0:24:00.40|text|Um
 0:24:00.40|0:24:00.72|text|with
 0:24:00.72|0:24:00.88|text|the
@@ -3556,7 +3548,6 @@ start_sec|end_sec|event_type|event_data
 0:25:57.76|0:25:58.08|text|around
 0:25:58.08|0:25:59.20|text|Anchorage.
 0:25:59.20|0:25:59.20|text|Um
-0:26:00.16||meta|{"begin_speaker":"unlabeled"}
 0:26:00.16|0:26:00.48|text|Will
 0:26:00.48|0:26:00.72|text|your
 0:26:00.72|0:26:01.28|text|team
@@ -3825,7 +3816,6 @@ start_sec|end_sec|event_type|event_data
 0:27:59.12|0:27:59.36|text|mean
 0:27:59.36|0:27:59.52|text|that
 0:27:59.52|0:27:59.52|text|they
-0:28:00.16||meta|{"begin_speaker":"unlabeled"}
 0:28:00.16|0:28:00.40|text|Are
 0:28:00.40|0:28:00.72|text|going
 0:28:00.72|0:28:00.96|text|to
@@ -3860,6 +3850,7 @@ start_sec|end_sec|event_type|event_data
 0:28:14.56|0:28:14.88|text|add
 0:28:14.88|0:28:15.12|text|to
 0:28:15.12|0:28:16.88|text|that?
+0:28:16.88||meta|{"begin_speaker":"segmented:spk-3"}
 0:28:16.88|0:28:17.12|text|I
 0:28:17.12|0:28:17.28|text|I
 0:28:17.28|0:28:17.44|text|think
@@ -3920,6 +3911,7 @@ start_sec|end_sec|event_type|event_data
 0:28:30.24|0:28:30.40|text|it
 0:28:30.40|0:28:30.80|text|pretty
 0:28:30.80|0:28:33.68|text|well.
+0:28:33.68||meta|{"begin_speaker":"segmented:spk-0"}
 0:28:33.68|0:28:34.80|text|And
 0:28:34.80|0:28:35.52|text|one
 0:28:35.52|0:28:35.84|text|last
@@ -4156,7 +4148,6 @@ start_sec|end_sec|event_type|event_data
 0:29:58.56|0:29:58.96|text|Um,
 0:29:58.96|0:29:59.20|text|but
 0:29:59.20|0:29:59.36|text|it's
-0:30:00.16||meta|{"begin_speaker":"unlabeled"}
 0:30:00.16|0:30:00.40|text|Very
 0:30:00.40|0:30:00.88|text|flexible.
 0:30:00.88|0:30:01.04|text|And
@@ -4204,6 +4195,7 @@ start_sec|end_sec|event_type|event_data
 0:30:14.56|0:30:14.72|text|be
 0:30:14.72|0:30:15.20|text|answering
 0:30:15.20|0:30:19.28|text|this.
+0:30:19.28||meta|{"begin_speaker":"segmented:spk-4"}
 0:30:19.28|0:30:19.60|text|Hi
 0:30:19.60|0:30:20.00|text|Bob
 0:30:20.00|0:30:20.48|text|Bill,
@@ -4339,6 +4331,7 @@ start_sec|end_sec|event_type|event_data
 0:31:06.48|0:31:06.72|text|up
 0:31:06.72|0:31:06.80|text|on
 0:31:06.80|0:31:08.24|text|that?
+0:31:08.24||meta|{"begin_speaker":"segmented:spk-0"}
 0:31:08.24|0:31:08.56|text|Okay,
 0:31:08.56|0:31:08.96|text|that's
 0:31:08.96|0:31:10.88|text|good.
@@ -4413,6 +4406,7 @@ start_sec|end_sec|event_type|event_data
 0:31:36.00|0:31:36.16|text|All
 0:31:36.16|0:31:36.48|text|right,
 0:31:36.48|0:31:38.00|text|Rachel.
+0:31:38.00||meta|{"begin_speaker":"segmented:spk-1"}
 0:31:38.00|0:31:38.40|text|Hi
 0:31:38.40|0:31:39.04|text|everyone.
 0:31:39.04|0:31:39.44|text|Yeah,
@@ -4420,8 +4414,10 @@ start_sec|end_sec|event_type|event_data
 0:31:39.68|0:31:39.76|text|you
 0:31:39.76|0:31:40.00|text|guys
 0:31:40.00|0:31:40.32|text|hear
+0:31:40.32||meta|{"begin_speaker":"segmented:spk-0"}
 0:31:40.32|0:31:41.20|text|me?
 0:31:41.20|0:31:42.00|text|Yes.
+0:31:42.00||meta|{"begin_speaker":"segmented:spk-1"}
 0:31:42.00|0:31:42.40|text|Okay,
 0:31:42.40|0:31:42.88|text|great.
 0:31:42.88|0:31:43.20|text|Uh
@@ -4465,7 +4461,6 @@ start_sec|end_sec|event_type|event_data
 0:31:57.52|0:31:57.84|text|School
 0:31:57.84|0:31:58.56|text|Board.
 0:31:58.56|0:31:58.56|text|Um
-0:32:00.24||meta|{"begin_speaker":"unlabeled"}
 0:32:00.24|0:32:00.80|text|Blakeesley,
 0:32:00.80|0:32:00.88|text|for
 0:32:00.88|0:32:01.04|text|those
@@ -4771,7 +4766,6 @@ start_sec|end_sec|event_type|event_data
 0:33:57.52|0:33:58.40|text|also
 0:33:58.40|0:33:59.28|text|recently
 0:33:59.28|0:33:59.28|text|we
-0:34:00.16||meta|{"begin_speaker":"unlabeled"}
 0:34:00.16|0:34:00.24|text|The
 0:34:00.24|0:34:00.48|text|school
 0:34:00.48|0:34:00.88|text|board
@@ -5023,7 +5017,6 @@ start_sec|end_sec|event_type|event_data
 0:35:57.76|0:35:58.80|text|allocating
 0:35:58.80|0:35:59.20|text|for
 0:35:59.20|0:35:59.60|text|fuel.
-0:36:00.24||meta|{"begin_speaker":"unlabeled"}
 0:36:00.24|0:36:00.72|text|energy
 0:36:00.72|0:36:00.88|text|that
 0:36:00.88|0:36:01.12|text|then
@@ -5326,7 +5319,6 @@ start_sec|end_sec|event_type|event_data
 0:37:59.04|0:37:59.28|text|that
 0:37:59.28|0:37:59.36|text|I
 0:37:59.36|0:37:59.36|text|have
-0:38:00.00||meta|{"begin_speaker":"unlabeled"}
 0:38:00.00|0:38:00.16|text|And
 0:38:00.16|0:38:00.32|text|I'm
 0:38:00.32|0:38:00.56|text|happy
@@ -5334,6 +5326,7 @@ start_sec|end_sec|event_type|event_data
 0:38:00.64|0:38:00.88|text|answer
 0:38:00.88|0:38:01.12|text|any
 0:38:01.12|0:38:03.68|text|questions.
+0:38:03.68||meta|{"begin_speaker":"segmented:spk-0"}
 0:38:03.68|0:38:03.92|text|Very
 0:38:03.92|0:38:04.08|text|much
 0:38:04.08|0:38:04.24|text|in
@@ -5584,7 +5577,6 @@ start_sec|end_sec|event_type|event_data
 0:39:57.28|0:39:57.84|text|management
 0:39:57.84|0:39:58.88|text|plan.
 0:39:58.88|0:39:59.44|text|However,
-0:40:01.12||meta|{"begin_speaker":"unlabeled"}
 0:40:01.12|0:40:01.28|text|It
 0:40:01.28|0:40:01.60|text|doesn't
 0:40:01.60|0:40:01.84|text|sound
@@ -5876,7 +5868,6 @@ start_sec|end_sec|event_type|event_data
 0:41:54.16|0:41:54.48|text|at
 0:41:54.48|0:41:54.96|text|land
 0:41:54.96|0:41:58.24|text|use.
-0:42:00.16||meta|{"begin_speaker":"unlabeled"}
 0:42:00.16|0:42:00.32|text|Uh
 0:42:00.32|0:42:00.48|text|Mr.
 0:42:00.48|0:42:00.88|text|Ballsy
@@ -6211,7 +6202,6 @@ start_sec|end_sec|event_type|event_data
 0:43:59.04|0:43:59.44|text|months.
 0:43:59.44|0:43:59.60|text|Uh
 0:43:59.60|0:43:59.60|text|we
-0:44:00.32||meta|{"begin_speaker":"unlabeled"}
 0:44:00.32|0:44:00.48|text|have
 0:44:00.48|0:44:00.96|text|23
 0:44:00.96|0:44:01.68|text|calls
@@ -6538,7 +6528,6 @@ start_sec|end_sec|event_type|event_data
 0:45:59.44|0:45:59.52|text|are
 0:45:59.52|0:45:59.68|text|coming
 0:45:59.68|0:45:59.68|text|down
-0:46:00.24||meta|{"begin_speaker":"unlabeled"}
 0:46:00.24|0:46:00.56|text|Tuesday
 0:46:00.56|0:46:00.80|text|is
 0:46:00.80|0:46:00.96|text|we're
@@ -6721,6 +6710,7 @@ start_sec|end_sec|event_type|event_data
 0:47:07.36|0:47:07.52|text|Is
 0:47:07.52|0:47:07.68|text|that
 0:47:07.68|0:47:08.16|text|correct?
+0:47:08.16||meta|{"begin_speaker":"segmented:spk-2"}
 0:47:08.16|0:47:18.64|text|Correct.
 0:47:18.64|0:47:19.12|text|Majority
 0:47:19.12|0:47:19.20|text|of
@@ -6832,7 +6822,6 @@ start_sec|end_sec|event_type|event_data
 0:47:58.56|0:47:59.12|text|time,
 0:47:59.12|0:47:59.52|text|additionally
 0:47:59.52|0:47:59.84|text|two.
-0:48:00.24||meta|{"begin_speaker":"unlabeled"}
 0:48:00.24|0:48:00.64|text|personnel
 0:48:00.64|0:48:00.80|text|is
 0:48:00.80|0:48:01.20|text|Lieutenant
@@ -6942,6 +6931,7 @@ start_sec|end_sec|event_type|event_data
 0:48:39.92|0:48:40.16|text|may
 0:48:40.16|0:48:40.48|text|have
 0:48:40.48|0:48:40.88|text|thank
+0:48:40.88||meta|{"begin_speaker":"segmented:spk-0"}
 0:48:40.88|0:48:42.56|text|you
 0:48:42.56|0:48:42.88|text|any
 0:48:42.88|0:48:43.20|text|questions
@@ -7168,7 +7158,6 @@ start_sec|end_sec|event_type|event_data
 0:49:58.40|0:49:58.88|text|shipping
 0:49:58.88|0:49:59.52|text|there
 0:49:59.52|0:49:59.52|text|and
-0:50:00.16||meta|{"begin_speaker":"unlabeled"}
 0:50:00.16|0:50:00.96|text|And
 0:50:00.96|0:50:02.96|text|uh
 0:50:02.96|0:50:03.60|text|Alaska
@@ -7502,7 +7491,6 @@ start_sec|end_sec|event_type|event_data
 0:51:58.64|0:51:59.12|text|uh
 0:51:59.12|0:51:59.36|text|uh
 0:51:59.36|0:51:59.36|text|about
-0:52:00.16||meta|{"begin_speaker":"unlabeled"}
 0:52:00.16|0:52:00.40|text|60
 0:52:00.40|0:52:00.72|text|days
 0:52:00.72|0:52:00.96|text|left
@@ -7933,7 +7921,6 @@ start_sec|end_sec|event_type|event_data
 0:53:58.64|0:53:58.80|text|all
 0:53:58.80|0:53:59.12|text|that.
 0:53:59.12|0:53:59.12|text|Um
-0:54:00.16||meta|{"begin_speaker":"unlabeled"}
 0:54:00.16|0:54:00.64|text|already
 0:54:00.64|0:54:00.80|text|pretty
 0:54:00.80|0:54:00.96|text|much
@@ -8356,7 +8343,6 @@ start_sec|end_sec|event_type|event_data
 0:55:58.96|0:55:59.20|text|and
 0:55:59.20|0:55:59.44|text|over
 0:55:59.44|0:55:59.44|text|to
-0:56:00.08||meta|{"begin_speaker":"unlabeled"}
 0:56:00.08|0:56:00.24|text|uh
 0:56:00.24|0:56:00.40|text|the
 0:56:00.40|0:56:00.56|text|other
@@ -8806,7 +8792,6 @@ start_sec|end_sec|event_type|event_data
 0:57:59.20|0:57:59.36|text|them
 0:57:59.36|0:57:59.52|text|in
 0:57:59.52|0:57:59.76|text|there.
-0:58:00.16||meta|{"begin_speaker":"unlabeled"}
 0:58:00.16|0:58:00.32|text|And
 0:58:00.32|0:58:00.64|text|then
 0:58:00.64|0:58:01.12|text|uh
@@ -9240,7 +9225,6 @@ start_sec|end_sec|event_type|event_data
 0:59:59.28|0:59:59.44|text|spent
 0:59:59.44|0:59:59.60|text|more
 0:59:59.60|0:59:59.76|text|than.
-1:00:00.24||meta|{"begin_speaker":"unlabeled"}
 1:00:00.24|1:00:00.40|text|Should
 1:00:00.40|1:00:00.64|text|have,
 1:00:00.64|1:00:00.80|text|but
@@ -9625,7 +9609,6 @@ start_sec|end_sec|event_type|event_data
 1:01:59.20|1:01:59.28|text|to
 1:01:59.28|1:01:59.44|text|be
 1:01:59.44|1:01:59.68|text|replaced.
-1:02:00.08||meta|{"begin_speaker":"unlabeled"}
 1:02:00.08|1:02:00.24|text|Like
 1:02:00.24|1:02:00.48|text|on
 1:02:00.48|1:02:00.64|text|the
@@ -9934,7 +9917,6 @@ start_sec|end_sec|event_type|event_data
 1:03:59.28|1:03:59.44|text|on
 1:03:59.44|1:03:59.52|text|a
 1:03:59.52|1:03:59.84|text|holiday.
-1:04:00.32||meta|{"begin_speaker":"unlabeled"}
 1:04:00.32|1:04:00.96|text|Day
 1:04:00.96|1:04:01.20|text|to
 1:04:01.20|1:04:01.36|text|put
@@ -10311,7 +10293,6 @@ start_sec|end_sec|event_type|event_data
 1:05:58.48|1:05:58.80|text|more
 1:05:58.80|1:05:59.28|text|than
 1:05:59.28|1:05:59.76|text|half.
-1:06:00.08||meta|{"begin_speaker":"unlabeled"}
 1:06:00.08|1:06:00.40|text|room
 1:06:00.40|1:06:00.56|text|ended
 1:06:00.56|1:06:00.64|text|up
@@ -10660,7 +10641,6 @@ start_sec|end_sec|event_type|event_data
 1:07:59.20|1:07:59.36|text|of
 1:07:59.36|1:07:59.68|text|the
 1:07:59.68|1:07:59.76|text|new
-1:08:00.24||meta|{"begin_speaker":"unlabeled"}
 1:08:00.24|1:08:00.40|text|the
 1:08:00.40|1:08:01.60|text|board
 1:08:01.60|1:08:02.32|text|yourself
@@ -10924,12 +10904,12 @@ start_sec|end_sec|event_type|event_data
 1:09:48.32|1:09:48.80|text|Roth
 1:09:48.80|1:09:49.84|text|oh
 1:09:49.84|1:09:58.48|text|please
+1:09:58.48||meta|{"begin_speaker":"segmented:spk-2"}
 1:09:58.48|1:09:58.80|text|can
 1:09:58.80|1:09:58.96|text|you
 1:09:58.96|1:09:59.20|text|hear
 1:09:59.20|1:09:59.36|text|me
 1:09:59.36|1:09:59.36|text|now
-1:10:00.64||meta|{"begin_speaker":"unlabeled"}
 1:10:00.64|1:10:01.68|text|Yeah.
 1:10:01.68|1:10:03.04|text|Gotcha.
 1:10:03.04|1:10:03.84|text|Okay.
@@ -11190,7 +11170,6 @@ start_sec|end_sec|event_type|event_data
 1:11:58.88|1:11:59.28|text|email
 1:11:59.28|1:11:59.44|text|a
 1:11:59.44|1:11:59.84|text|flyer.
-1:12:00.24||meta|{"begin_speaker":"unlabeled"}
 1:12:00.24|1:12:01.44|text|And
 1:12:01.44|1:12:01.68|text|people
 1:12:01.68|1:12:02.00|text|that
@@ -11343,6 +11322,7 @@ start_sec|end_sec|event_type|event_data
 1:12:57.84|1:12:58.16|text|all
 1:12:58.16|1:12:58.56|text|thank
 1:12:58.56|1:13:00.56|text|you.
+1:13:00.56||meta|{"begin_speaker":"segmented:spk-0"}
 1:13:00.56|1:13:00.88|text|Thank
 1:13:00.88|1:13:01.04|text|you
 1:13:01.04|1:13:01.20|text|very
@@ -11484,7 +11464,6 @@ start_sec|end_sec|event_type|event_data
 1:13:59.28|1:13:59.52|text|interested
 1:13:59.52|1:13:59.68|text|in
 1:13:59.68|1:13:59.76|text|that.
-1:14:00.16||meta|{"begin_speaker":"unlabeled"}
 1:14:00.16|1:14:00.32|text|we
 1:14:00.32|1:14:00.56|text|can
 1:14:00.56|1:14:01.04|text|certainly
@@ -11760,13 +11739,14 @@ start_sec|end_sec|event_type|event_data
 1:15:58.56|1:15:58.80|text|you're
 1:15:58.80|1:15:59.20|text|interested
 1:15:59.20|1:15:59.20|text|in
-1:16:00.16||meta|{"begin_speaker":"unlabeled"}
 1:16:00.16|1:16:00.32|text|be
 1:16:00.32|1:16:04.00|text|assigned
 1:16:04.00|1:16:04.72|text|to
 1:16:04.72|1:16:05.20|text|feel
 1:16:05.20|1:16:07.20|text|fired
+1:16:07.20||meta|{"begin_speaker":"segmented:spk-8"}
 1:16:07.20|1:16:10.24|text|part
+1:16:10.24||meta|{"begin_speaker":"segmented:spk-0"}
 1:16:10.24|1:16:10.48|text|all
 1:16:10.48|1:16:11.04|text|right
 1:16:11.04|1:16:11.28|text|i
@@ -11980,7 +11960,6 @@ start_sec|end_sec|event_type|event_data
 1:17:57.84|1:17:58.16|text|or
 1:17:58.16|1:17:58.88|text|sorry
 1:17:58.88|1:17:58.88|text|um
-1:18:00.16||meta|{"begin_speaker":"unlabeled"}
 1:18:00.16|1:18:00.56|text|Yeah,
 1:18:00.56|1:18:00.64|text|I
 1:18:00.64|1:18:00.80|text|don't
@@ -12292,7 +12271,6 @@ start_sec|end_sec|event_type|event_data
 1:19:59.04|1:19:59.20|text|or
 1:19:59.20|1:19:59.52|text|days,
 1:19:59.52|1:19:59.68|text|that's
-1:20:00.24||meta|{"begin_speaker":"unlabeled"}
 1:20:00.24|1:20:00.40|text|Good
 1:20:00.40|1:20:00.64|text|to
 1:20:00.64|1:20:00.88|text|know
@@ -12589,7 +12567,6 @@ start_sec|end_sec|event_type|event_data
 1:21:58.56|1:21:58.64|text|of
 1:21:58.64|1:21:59.12|text|July
 1:21:59.12|1:21:59.68|text|Saturday.
-1:22:01.20||meta|{"begin_speaker":"unlabeled"}
 1:22:01.20|1:22:01.52|text|We
 1:22:01.52|1:22:01.76|text|are
 1:22:01.76|1:22:02.08|text|working
@@ -12953,7 +12930,6 @@ start_sec|end_sec|event_type|event_data
 1:23:59.04|1:23:59.28|text|just
 1:23:59.28|1:23:59.60|text|shout
 1:23:59.60|1:23:59.76|text|out.
-1:24:00.16||meta|{"begin_speaker":"unlabeled"}
 1:24:00.16|1:24:00.40|text|For
 1:24:00.40|1:24:00.56|text|our
 1:24:00.56|1:24:00.96|text|fair
@@ -13275,7 +13251,6 @@ start_sec|end_sec|event_type|event_data
 1:25:48.64|1:25:48.80|text|of
 1:25:48.80|1:25:50.00|text|all
 1:25:50.00|1:25:59.12|text|this.
-1:26:00.00||meta|{"begin_speaker":"unlabeled"}
 1:26:00.00|1:26:00.24|text|So
 1:26:00.24|1:26:00.48|text|were
 1:26:00.48|1:26:00.64|text|you
@@ -13468,7 +13443,6 @@ start_sec|end_sec|event_type|event_data
 1:27:33.84|1:27:34.48|text|zero.
 1:27:34.48|1:27:34.72|text|Thank
 1:27:34.72|1:27:34.88|text|you.
-1:28:00.56||meta|{"begin_speaker":"unlabeled"}
 1:28:00.56|1:28:00.80|text|Master
 1:28:00.80|1:28:01.20|text|parks
 1:28:01.20|1:28:01.60|text|plan,
@@ -13814,7 +13788,6 @@ start_sec|end_sec|event_type|event_data
 1:29:58.72|1:29:58.88|text|the
 1:29:58.88|1:29:59.36|text|link
 1:29:59.36|1:29:59.84|text|split?
-1:30:00.08||meta|{"begin_speaker":"unlabeled"}
 1:30:00.08|1:30:00.24|text|I
 1:30:00.24|1:30:00.48|text|mind
 1:30:00.48|1:30:00.64|text|what
@@ -13825,6 +13798,7 @@ start_sec|end_sec|event_type|event_data
 1:30:01.36|1:30:01.60|text|what
 1:30:01.60|1:30:01.76|text|was
 1:30:01.76|1:30:04.00|text|revised.
+1:30:04.00||meta|{"begin_speaker":"segmented:spk-4"}
 1:30:04.00|1:30:04.72|text|Bob
 1:30:04.72|1:30:05.20|text|Director
 1:30:05.20|1:30:05.36|text|for
@@ -13924,6 +13898,7 @@ start_sec|end_sec|event_type|event_data
 1:30:33.60|1:30:33.76|text|would
 1:30:33.76|1:30:34.00|text|be
 1:30:34.00|1:30:34.40|text|looking
+1:30:34.40||meta|{"begin_speaker":"segmented:spk-0"}
 1:30:34.40|1:30:35.60|text|at.
 1:30:35.60|1:30:36.00|text|Thank
 1:30:36.00|1:30:39.28|text|you.
@@ -14066,7 +14041,6 @@ start_sec|end_sec|event_type|event_data
 1:31:58.96|1:31:59.28|text|doing
 1:31:59.28|1:31:59.44|text|some
 1:31:59.44|1:31:59.76|text|interesting.
-1:32:00.16||meta|{"begin_speaker":"unlabeled"}
 1:32:00.16|1:32:00.40|text|Some
 1:32:00.40|1:32:00.64|text|work
 1:32:00.64|1:32:00.96|text|in
@@ -14424,7 +14398,6 @@ start_sec|end_sec|event_type|event_data
 1:33:59.04|1:33:59.36|text|detail
 1:33:59.36|1:33:59.52|text|of
 1:33:59.52|1:33:59.52|text|the
-1:34:00.16||meta|{"begin_speaker":"unlabeled"}
 1:34:00.16|1:34:00.40|text|focus
 1:34:00.40|1:34:00.64|text|of
 1:34:00.64|1:34:00.80|text|either
@@ -14751,7 +14724,6 @@ start_sec|end_sec|event_type|event_data
 1:35:57.76|1:35:57.92|text|of
 1:35:57.92|1:35:58.64|text|question
 1:35:58.64|1:35:58.96|text|Yeah.
-1:36:00.32||meta|{"begin_speaker":"unlabeled"}
 1:36:00.32|1:36:00.56|text|thing
 1:36:00.56|1:36:00.88|text|that
 1:36:00.88|1:36:01.12|text|I
@@ -15087,7 +15059,6 @@ start_sec|end_sec|event_type|event_data
 1:37:58.88|1:37:59.28|text|facility
 1:37:59.28|1:37:59.44|text|is
 1:37:59.44|1:37:59.84|text|facing.
-1:38:00.64||meta|{"begin_speaker":"unlabeled"}
 1:38:00.64|1:38:01.12|text|So
 1:38:01.12|1:38:01.36|text|I
 1:38:01.36|1:38:01.68|text|think
@@ -15434,7 +15405,6 @@ start_sec|end_sec|event_type|event_data
 1:39:58.32|1:39:58.64|text|look
 1:39:58.64|1:39:58.88|text|at
 1:39:58.88|1:39:59.76|text|this.
-1:40:00.64||meta|{"begin_speaker":"unlabeled"}
 1:40:00.64|1:40:00.80|text|I
 1:40:00.80|1:40:00.96|text|don't
 1:40:00.96|1:40:01.20|text|know
@@ -15729,7 +15699,6 @@ start_sec|end_sec|event_type|event_data
 1:41:56.64|1:41:57.52|text|anchorage
 1:41:57.52|1:41:58.64|text|municipality
 1:41:58.64|1:41:59.36|text|specific.
-1:42:00.24||meta|{"begin_speaker":"unlabeled"}
 1:42:00.24|1:42:00.48|text|not
 1:42:00.48|1:42:01.04|text|shared
 1:42:01.04|1:42:01.84|text|with
@@ -16073,7 +16042,6 @@ start_sec|end_sec|event_type|event_data
 1:43:57.20|1:43:57.36|text|have
 1:43:57.36|1:43:57.92|text|learned
 1:43:57.92|1:43:57.92|text|about
-1:44:00.32||meta|{"begin_speaker":"unlabeled"}
 1:44:00.32|1:44:00.56|text|learned
 1:44:00.56|1:44:00.72|text|that
 1:44:00.72|1:44:00.88|text|there
@@ -16372,7 +16340,6 @@ start_sec|end_sec|event_type|event_data
 1:45:58.40|1:45:58.64|text|this
 1:45:58.64|1:45:59.12|text|particular
 1:45:59.12|1:45:59.52|text|case.
-1:46:00.08||meta|{"begin_speaker":"unlabeled"}
 1:46:00.08|1:46:00.32|text|Just
 1:46:00.32|1:46:00.40|text|in
 1:46:00.40|1:46:00.56|text|this
@@ -16641,7 +16608,6 @@ start_sec|end_sec|event_type|event_data
 1:47:59.20|1:47:59.44|text|we,
 1:47:59.44|1:47:59.68|text|yes,
 1:47:59.68|1:47:59.76|text|we.
-1:48:00.32||meta|{"begin_speaker":"unlabeled"}
 1:48:00.32|1:48:00.72|text|are
 1:48:00.72|1:48:00.96|text|you
 1:48:00.96|1:48:01.60|text|know
@@ -16961,7 +16927,6 @@ start_sec|end_sec|event_type|event_data
 1:49:57.20|1:49:57.36|text|or
 1:49:57.36|1:49:59.28|text|no
 1:49:59.28|1:49:59.52|text|okay
-1:50:00.08||meta|{"begin_speaker":"unlabeled"}
 1:50:00.08|1:50:00.32|text|Well,
 1:50:00.32|1:50:00.48|text|for
 1:50:00.48|1:50:00.56|text|the
@@ -17255,7 +17220,6 @@ start_sec|end_sec|event_type|event_data
 1:51:58.72|1:51:59.04|text|now
 1:51:59.04|1:51:59.44|text|we're
 1:51:59.44|1:51:59.44|text|now
-1:52:00.16||meta|{"begin_speaker":"unlabeled"}
 1:52:00.16|1:52:00.48|text|opportunity
 1:52:00.48|1:52:00.64|text|when
 1:52:00.64|1:52:00.72|text|we
@@ -17529,7 +17493,6 @@ start_sec|end_sec|event_type|event_data
 1:53:59.52|1:53:59.60|text|know
 1:53:59.60|1:53:59.68|text|if
 1:53:59.68|1:53:59.68|text|we
-1:54:00.08||meta|{"begin_speaker":"unlabeled"}
 1:54:00.08|1:54:00.32|text|Roll
 1:54:00.32|1:54:00.48|text|call
 1:54:00.48|1:54:00.64|text|vote
@@ -17582,6 +17545,7 @@ start_sec|end_sec|event_type|event_data
 1:54:14.08|1:54:14.16|text|to
 1:54:14.16|1:54:14.48|text|do
 1:54:14.48|1:54:16.32|text|anymore?
+1:54:16.32||meta|{"begin_speaker":"segmented:spk-5"}
 1:54:16.32|1:54:16.72|text|Thanks.
 1:54:16.72|1:54:17.04|text|Yeah,
 1:54:17.04|1:54:17.20|text|just
@@ -17819,6 +17783,7 @@ start_sec|end_sec|event_type|event_data
 1:55:30.88|1:55:31.76|text|appreciated.
 1:55:31.76|1:55:32.16|text|Thank
 1:55:32.16|1:55:36.24|text|you
+1:55:36.24||meta|{"begin_speaker":"segmented:spk-0"}
 1:55:36.24|1:55:36.48|text|I
 1:55:36.48|1:55:36.96|text|think
 1:55:36.96|1:55:38.00|text|since
@@ -17871,12 +17836,12 @@ start_sec|end_sec|event_type|event_data
 1:55:57.44|1:55:58.64|text|representative
 1:55:58.64|1:55:58.96|text|to
 1:55:58.96|1:55:58.96|text|the
-1:56:00.16||meta|{"begin_speaker":"unlabeled"}
 1:56:00.16|1:56:01.76|text|Supervisors.
 1:56:01.76|1:56:02.00|text|Sorry
 1:56:02.00|1:56:02.24|text|to
 1:56:02.24|1:56:02.40|text|the
 1:56:02.40|1:56:04.32|text|end.
+1:56:04.32||meta|{"begin_speaker":"segmented:spk-5"}
 1:56:04.32|1:56:04.56|text|That
 1:56:04.56|1:56:04.72|text|would
 1:56:04.72|1:56:04.88|text|be
@@ -17902,6 +17867,7 @@ start_sec|end_sec|event_type|event_data
 1:56:09.12|1:56:09.52|text|record.
 1:56:09.52|1:56:09.76|text|So
 1:56:09.76|1:56:10.08|text|thank
+1:56:10.08||meta|{"begin_speaker":"segmented:spk-0"}
 1:56:10.08|1:56:11.84|text|you.
 1:56:11.84|1:56:12.08|text|So
 1:56:12.08|1:56:12.32|text|do
@@ -18135,7 +18101,6 @@ start_sec|end_sec|event_type|event_data
 1:57:58.08|1:57:58.72|text|extent
 1:57:58.72|1:57:59.36|text|that
 1:57:59.36|1:57:59.36|text|we
-1:58:02.08||meta|{"begin_speaker":"unlabeled"}
 1:58:02.08|1:58:02.48|text|Looked
 1:58:02.48|1:58:02.72|text|at
 1:58:02.72|1:58:02.88|text|the
@@ -18383,7 +18348,6 @@ start_sec|end_sec|event_type|event_data
 1:59:58.96|1:59:59.20|text|for
 1:59:59.20|1:59:59.52|text|January
 1:59:59.52|1:59:59.76|text|20.
-2:00:00.24||meta|{"begin_speaker":"unlabeled"}
 2:00:00.24|2:00:00.56|text|21
 2:00:00.56|2:00:00.72|text|to
 2:00:00.72|2:00:01.12|text|October
@@ -18651,7 +18615,6 @@ start_sec|end_sec|event_type|event_data
 2:01:59.44|2:01:59.52|text|be
 2:01:59.52|2:01:59.68|text|able
 2:01:59.68|2:01:59.68|text|to
-2:02:00.32||meta|{"begin_speaker":"unlabeled"}
 2:02:00.32|2:02:00.56|text|forward
 2:02:00.56|2:02:00.80|text|on
 2:02:00.80|2:02:00.96|text|we
@@ -18956,7 +18919,6 @@ start_sec|end_sec|event_type|event_data
 2:03:58.72|2:03:58.96|text|is
 2:03:58.96|2:03:59.28|text|the
 2:03:59.28|2:03:59.28|text|uh
-2:04:00.48||meta|{"begin_speaker":"unlabeled"}
 2:04:00.48|2:04:00.80|text|Change
 2:04:00.80|2:04:00.96|text|they
 2:04:00.96|2:04:01.20|text|show
@@ -19292,7 +19254,6 @@ start_sec|end_sec|event_type|event_data
 2:05:57.36|2:05:58.48|text|way.
 2:05:58.48|2:05:58.64|text|The
 2:05:58.64|2:05:59.76|text|orchid.
-2:06:00.24||meta|{"begin_speaker":"unlabeled"}
 2:06:00.24|2:06:00.64|text|Well
 2:06:00.64|2:06:01.28|text|there.
 2:06:01.28|2:06:01.60|text|Okay.
@@ -19541,7 +19502,6 @@ start_sec|end_sec|event_type|event_data
 2:07:58.96|2:07:59.28|text|and
 2:07:59.28|2:07:59.52|text|and
 2:07:59.52|2:07:59.76|text|some.
-2:08:00.24||meta|{"begin_speaker":"unlabeled"}
 2:08:00.24|2:08:00.48|text|things
 2:08:00.48|2:08:00.56|text|you
 2:08:00.56|2:08:00.72|text|just
@@ -19853,7 +19813,6 @@ start_sec|end_sec|event_type|event_data
 2:09:59.36|2:09:59.44|text|we
 2:09:59.44|2:09:59.60|text|start
 2:09:59.60|2:09:59.60|text|going
-2:10:00.16||meta|{"begin_speaker":"unlabeled"}
 2:10:00.16|2:10:00.32|text|to
 2:10:00.32|2:10:00.56|text|more
 2:10:00.56|2:10:00.88|text|higher
@@ -20176,10 +20135,10 @@ start_sec|end_sec|event_type|event_data
 2:11:57.04|2:11:57.36|text|actually
 2:11:57.36|2:11:57.60|text|can
 2:11:57.60|2:11:59.76|text|be.
-2:12:00.64||meta|{"begin_speaker":"unlabeled"}
 2:12:00.64|2:12:00.96|text|Through
 2:12:00.96|2:12:01.12|text|the
 2:12:01.12|2:12:01.92|text|chair's
+2:12:01.92||meta|{"begin_speaker":"segmented:spk-4"}
 2:12:01.92|2:12:02.96|text|bubble
 2:12:02.96|2:12:03.36|text|uh
 2:12:03.36|2:12:03.52|text|at
@@ -20254,6 +20213,7 @@ start_sec|end_sec|event_type|event_data
 2:12:26.24|2:12:26.40|text|in
 2:12:26.40|2:12:26.56|text|an
 2:12:26.56|2:12:29.12|text|earthquake.
+2:12:29.12||meta|{"begin_speaker":"segmented:spk-0"}
 2:12:29.12|2:12:31.92|text|Thanks.
 2:12:31.92|2:12:32.16|text|So
 2:12:32.16|2:12:32.32|text|one
@@ -20517,7 +20477,6 @@ start_sec|end_sec|event_type|event_data
 2:13:56.88|2:13:58.56|text|the
 2:13:58.56|2:13:59.20|text|entrance
 2:13:59.20|2:13:59.20|text|and
-2:14:02.48||meta|{"begin_speaker":"unlabeled"}
 2:14:02.48|2:14:02.64|text|I
 2:14:02.64|2:14:02.80|text|just
 2:14:02.80|2:14:02.96|text|want
@@ -20877,7 +20836,6 @@ start_sec|end_sec|event_type|event_data
 2:15:57.44|2:15:57.68|text|for
 2:15:57.68|2:15:58.48|text|next
 2:15:58.48|2:15:59.44|text|month.
-2:16:01.20||meta|{"begin_speaker":"unlabeled"}
 2:16:01.20|2:16:01.60|text|I'm
 2:16:01.60|2:16:01.76|text|not
 2:16:01.76|2:16:02.24|text|comfortable
@@ -21175,7 +21133,6 @@ start_sec|end_sec|event_type|event_data
 2:17:58.56|2:17:58.80|text|uh
 2:17:58.80|2:17:59.12|text|risk
 2:17:59.12|2:17:59.76|text|reduction.
-2:18:00.08||meta|{"begin_speaker":"unlabeled"}
 2:18:00.08|2:18:00.56|text|coordinator
 2:18:00.56|2:18:00.88|text|Jeff
 2:18:00.88|2:18:01.92|text|Dobson.
@@ -21483,7 +21440,6 @@ start_sec|end_sec|event_type|event_data
 2:19:59.28|2:19:59.44|text|would
 2:19:59.44|2:19:59.60|text|be
 2:19:59.60|2:19:59.60|text|the
-2:20:01.04||meta|{"begin_speaker":"unlabeled"}
 2:20:01.04|2:20:02.56|text|Perspective
 2:20:02.56|2:20:03.04|text|purchase
 2:20:03.04|2:20:03.36|text|price
