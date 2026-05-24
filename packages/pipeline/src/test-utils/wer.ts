@@ -35,7 +35,8 @@ export function computeWER(reference: string, hypothesis: string): WERResult {
   return { wer, substitutions, deletions, insertions, ref_word_count };
 }
 
-export type AlignmentOp = "match" | "sub" | "del" | "ins";
+const ALIGNMENT_OPS = ["match", "sub", "del", "ins"] as const;
+export type AlignmentOp = (typeof ALIGNMENT_OPS)[number];
 
 export interface AlignedWordPair {
   op: AlignmentOp;
@@ -56,53 +57,91 @@ export function alignWords(
   return alignTokens(refTokens, hypTokens);
 }
 
+// Needleman–Wunsch alignment with a memory-conscious layout.
+//
+// The naive version of this DP allocates two full (m+1)×(n+1) matrices: a
+// `number[][]` cost grid and a `string[][]` back-pointer grid. On full-meeting
+// transcripts (~21k–27k words) those are ~470M–720M cells of *boxed* values —
+// each a heap pointer to a double or an interned string — which totals well over
+// 7 GB and OOMs V8's old-space (~4 GB). `compareTranscripts(golden, golden)`
+// alone OOMs in ~3s with no ASR involved.
+//
+// Two changes keep the exact same algorithm and output but slash peak memory:
+//   1. Cost only ever reads the previous and current row, so it lives in two
+//      Int32Array rows (O(n)) instead of a full matrix.
+//   2. Back-pointers are packed one byte per cell in a single flat Uint8Array
+//      (off-heap backing store), not a (m+1)×(n+1) array-of-arrays of strings.
+// That brings a 27k×27k alignment from ~7+ GB down to ~700 MB — comfortably
+// under the heap limit — so full meetings align without OOM.
+//
+// Tie-break priority is preserved exactly: sub/match > del > ins. The byte codes
+// below are compared with strict `<` against the running minimum (del checked
+// before ins), which is equivalent to the original `min === subCost ? ... :
+// min === delCost ? ...` cascade. wer.perf.test.ts cross-validates this against
+// the original full-matrix implementation on hundreds of random inputs.
+//
+// Memory is still O(m·n) for the back-pointer buffer. If transcripts ever grow
+// well beyond meeting scale, Hirschberg's algorithm would drop this to
+// O(min(m,n)) at the cost of ~2× the time and a much trickier tie-break.
+const OP_MATCH = 0;
+const OP_SUB = 1;
+const OP_DEL = 2;
+const OP_INS = 3;
+
 function alignTokens(ref: readonly string[], hyp: readonly string[]): AlignedWordPair[] {
   const m = ref.length;
   const n = hyp.length;
-  const cost: number[][] = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
-  const back: AlignmentOp[][] = Array.from({ length: m + 1 }, () =>
-    new Array<AlignmentOp>(n + 1).fill("match"),
-  );
-  for (let i = 1; i <= m; i++) {
-    cost[i]![0] = i;
-    back[i]![0] = "del";
-  }
+  const width = n + 1;
+  const back = new Uint8Array(width * (m + 1));
+
+  let prev = new Int32Array(n + 1);
+  let cur = new Int32Array(n + 1);
   for (let j = 1; j <= n; j++) {
-    cost[0]![j] = j;
-    back[0]![j] = "ins";
+    prev[j] = j;
+    back[j] = OP_INS; // row 0: only insertions reach these cells
   }
   for (let i = 1; i <= m; i++) {
+    cur[0] = i;
+    const rowBase = i * width;
+    back[rowBase] = OP_DEL; // column 0: only deletions reach these cells
+    const refTok = ref[i - 1];
     for (let j = 1; j <= n; j++) {
-      const isMatch = ref[i - 1] === hyp[j - 1];
-      const subCost = cost[i - 1]![j - 1]! + (isMatch ? 0 : 1);
-      const delCost = cost[i - 1]![j]! + 1;
-      const insCost = cost[i]![j - 1]! + 1;
-      const min = Math.min(subCost, delCost, insCost);
-      cost[i]![j] = min;
-      if (min === subCost) {
-        back[i]![j] = isMatch ? "match" : "sub";
-      } else if (min === delCost) {
-        back[i]![j] = "del";
-      } else {
-        back[i]![j] = "ins";
+      const isMatch = refTok === hyp[j - 1];
+      const subCost = prev[j - 1]! + (isMatch ? 0 : 1);
+      const delCost = prev[j]! + 1;
+      const insCost = cur[j - 1]! + 1;
+      let min = subCost;
+      let op = isMatch ? OP_MATCH : OP_SUB;
+      if (delCost < min) {
+        min = delCost;
+        op = OP_DEL;
       }
+      if (insCost < min) {
+        min = insCost;
+        op = OP_INS;
+      }
+      cur[j] = min;
+      back[rowBase + j] = op;
     }
+    const tmp = prev;
+    prev = cur;
+    cur = tmp;
   }
 
   const ops: AlignedWordPair[] = [];
   let i = m;
   let j = n;
   while (i > 0 || j > 0) {
-    const op = back[i]![j]!;
-    if (op === "match" || op === "sub") {
-      ops.push({ op, refIdx: i - 1, hypIdx: j - 1 });
+    const op = back[i * width + j]!;
+    if (op === OP_MATCH || op === OP_SUB) {
+      ops.push({ op: ALIGNMENT_OPS[op]!, refIdx: i - 1, hypIdx: j - 1 });
       i--;
       j--;
-    } else if (op === "del") {
-      ops.push({ op, refIdx: i - 1, hypIdx: -1 });
+    } else if (op === OP_DEL) {
+      ops.push({ op: "del", refIdx: i - 1, hypIdx: -1 });
       i--;
     } else {
-      ops.push({ op, refIdx: -1, hypIdx: j - 1 });
+      ops.push({ op: "ins", refIdx: -1, hypIdx: j - 1 });
       j--;
     }
   }
