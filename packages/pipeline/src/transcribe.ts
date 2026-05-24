@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import { ensureDownloaded, ModelSpec } from "./model.js";
 
 import sherpa_onnx, { type OfflineRecognizer, type OfflineRecognizerResult } from "sherpa-onnx-node";
-import type { TranscriptSegment, TranscriptWord } from "./types.ts";
+import type { TranscriptWord } from "./types.ts";
 
 const MODEL_SPEC = {
   // I chose this model based on how it is the highest accuracy with still a >3000x real-time facto
@@ -59,7 +59,7 @@ export function resetTrace(): void {
 export async function transcribeAudio(
   audio: string | sherpa_onnx.WaveForm,
   chunkSec: number = CHUNK_SEC,
-): Promise<TranscriptSegment[]> {
+): Promise<TranscriptWord[]> {
   const wallStart = Date.now();
   const wave = ensureWaveAudio(audio);
   const duration = wave.samples.length / wave.sampleRate;
@@ -70,7 +70,7 @@ export async function transcribeAudio(
     `Transcribing ${typeof audio === "string" ? audio : "<waveform>"} (${duration.toFixed(1)}s) in ${nChunks} chunk(s) of up to ${chunkSec}s...`,
   );
 
-  const tasks = Array.from({ length: nChunks }, async (_, i): Promise<TranscriptSegment | null> => {
+  const tasks = Array.from({ length: nChunks }, async (_, i): Promise<TranscriptWord[]> => {
     const chunkStart = i * chunkSec;
     const chunkEnd = Math.min(chunkStart + chunkSec, duration);
     const startIdx = Math.round(chunkStart * wave.sampleRate);
@@ -92,29 +92,21 @@ export async function transcribeAudio(
         wallEndMs: Date.now(),
       });
     }
-
-    const text = result.text.trim();
-    if (!text) return null;
-
     const words = tokensToWords(result.tokens ?? [], result.timestamps ?? []).map((w) => ({
       ...w,
       start: w.start + chunkStart,
       end: w.end + chunkStart,
     }));
-
-    return {
-      speaker: { type: "unlabeled" },
-      words,
-    };
+    return words;
   });
 
   const results = await Promise.all(tasks);
-  const segments = results.filter((s): s is TranscriptSegment => s !== null);
+  const words = results.filter((s): s is TranscriptWord[] => s !== null).flat();
 
   const elapsed = (Date.now() - wallStart) / 1000;
   console.log(`Done: ${duration.toFixed(1)}s audio in ${elapsed.toFixed(1)}s (RTF=${(elapsed / duration).toFixed(2)})`);
 
-  return segments;
+  return words;
 }
 
 function ensureWaveAudio(audio: string | sherpa_onnx.WaveForm): sherpa_onnx.WaveForm {

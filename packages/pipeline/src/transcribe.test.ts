@@ -24,22 +24,17 @@ describe("transcribe", () => {
   it("transcribes a 4 second audio sample", async () => {
     const modelFiles = ensureModelFiles();
     const result = await transcribeAudio(modelFiles.test_wavs['en.wav']);
-    expect(result.length).toBe(1);
-    const firstSegment = result[0]!;
-
-    expect(firstSegment.words.map((w) => w.text)).toEqual([
+    expect(result.map((w) => w.text)).toEqual([
       "Ask", "not", "what", "your", "country", "can", "do", "for", "you,",
       "ask", "what", "you", "can", "do", "for", "your", "country.",
     ]);
 
-    expect(firstSegment.speaker.type).toBe("unlabeled");
-
     // Word timings are monotonic and non-overlapping
-    for (let i = 0; i < firstSegment.words.length; i++) {
-      const w = firstSegment.words[i]!;
+    for (let i = 0; i < result.length; i++) {
+      const w = result[i]!;
       expect(w.end).toBeGreaterThanOrEqual(w.start);
       if (i > 0) {
-        expect(w.start).toBeGreaterThanOrEqual(firstSegment.words[i - 1]!.start);
+        expect(w.start).toBeGreaterThanOrEqual(result[i - 1]!.start);
       }
     }
   });
@@ -77,32 +72,31 @@ describe("transcribe", () => {
       const meeting = getMeetingData(slug);
       const runDir = join(RUNS_DIR, slug);
       cpDirSymlinked(meeting.meetingDir, runDir);
-      const result = await transcribeAudio(await meeting.getAudio().then(a => a.path));
-      serializePsv(result, { path: join(runDir, "transcribed.gen.psv") });
+      const transcribedWords = await transcribeAudio(await meeting.getAudio().then(a => a.path));
+      const transcribedSegments = [{ words: transcribedWords, speaker: { type: "unlabeled" as const } }];
+      serializePsv(transcribedSegments, { path: join(runDir, "transcribed.gen.psv") });
       if (process.env.SNAPSHOT_UPDATE === "1") {
         // golden.psv is shared with diarize.test.ts. This test owns only the
         // transcription, so preserve the existing speaker boundaries (the
         // diarization layer) instead of overwriting them with `unlabeled`:
         // re-apply the golden's turns to the freshly transcribed words.
         const turns = segmentsToTurns(meeting.segments);
-        const words = result.flatMap((s) => s.words);
-        const merged = turns.length > 0 ? alignSpeakers(words, turns) : result;
+        const merged = turns.length > 0 ? alignSpeakers(transcribedWords, turns) : transcribedSegments;
         serializePsv(merged, { path: join(meeting.meetingDir, "golden.psv") });
         return;
       }
 
       const refWords = meeting.segments.flatMap((s) => s.words);
-      const hypWords = result.flatMap((s) => s.words);
       // First: confirm the check actually has teeth. With strict thresholds the
       // current transcribe output should never pass, so the assertion below MUST
       // throw. If it doesn't, our metric is broken (or the model is suspiciously
       // perfect — also worth knowing).
-      expect(() => assertWithinThresholds(refWords, hypWords, { maxWER: 0, maxTimestampError: 0 })).toThrow();
+      expect(() => assertWithinThresholds(refWords, transcribedWords, { maxWER: 0, maxTimestampError: 0 })).toThrow();
 
       // Then the real check: lax-but-meaningful thresholds we expect to pass.
       // WER < 15% and matched-word p95 timestamp error < 0.5s are realistic for
       // this model on noisy multi-speaker audio.
-      assertWithinThresholds(refWords, hypWords, { maxWER: 0.15, maxTimestampError: 0.5 });
+      assertWithinThresholds(refWords, transcribedWords, { maxWER: 0.15, maxTimestampError: 0.5 });
     });
   }
 });
