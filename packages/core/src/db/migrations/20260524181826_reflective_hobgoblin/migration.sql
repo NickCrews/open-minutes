@@ -1,0 +1,1 @@
+ALTER TABLE "segments" DROP COLUMN "text_embedding";

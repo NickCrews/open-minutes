@@ -13,11 +13,6 @@ import {
 } from "drizzle-orm/pg-core";
 import { N_DIMENSIONS as VOICE_N_DIMENSIONS } from "../voice_embeddings";
 
-// Lexical/text embeddings (segment search) come from a sentence-transformer and
-// live in a different vector space than voice embeddings — they must not share a
-// dimension constant. 384 = all-MiniLM-L6-v2-class models.
-const TEXT_N_DIMENSIONS = 384;
-
 const secondsInterval = () => interval({ fields: "second", precision: 3 });
 
 export const municipalitiesTable = pgTable("municipalities", {
@@ -101,7 +96,6 @@ export const segmentsTable = pgTable("segments", {
     (): SQL => sql`${segmentsTable.end_secs} - ${segmentsTable.start_secs}`,
   ),
   words: jsonb().$type<SegmentWord[]>(),
-  text_embedding: vector({ dimensions: TEXT_N_DIMENSIONS }),
   created_at: timestamp().notNull().defaultNow(),
 });
 
