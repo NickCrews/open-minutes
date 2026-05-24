@@ -2,11 +2,9 @@
 
 ## Context
 
-The Girdwood Board of Supervisors (GBOS) publishes meeting recordings on [YouTube](https://www.youtube.com/channel/UCOUlNInprZEjhbpVPiJOlEA) (~188 videos). There's no searchable archive of what was said, by whom, or when. This project creates an audio+transcript database with lexical and semantic search and a daily update pipeline — enabling citizens and AI agents to find when GBOS discussed any topic.
+The Girdwood Board of Supervisors (GBOS) publishes meeting recordings on [YouTube](https://www.youtube.com/channel/UCOUlNInprZEjhbpVPiJOlEA) (~188 videos). There's no searchable archive of what was said, by whom, or when. This project creates an audio+transcript database with lexical search and a daily update pipeline — enabling citizens and AI agents to find when GBOS discussed any topic.
 
-The data model is designed to be **municipality-agnostic** so additional government bodies can be added later, following the MeetingBank schema conventions where applicable.
-
-It is also designed to be **source-agnostic**. YouTube is the only ingestion source today, but Vimeo, direct uploads, and municipality-hosted streams are all plausible tomorrow. A meeting therefore has its own internal id (`meetings.id`, the integer primary key), and the YouTube video id is just one *attribute* of that meeting (its source identifier). All downstream code — pipeline stages, cache paths, function signatures, test fixtures — should key off the internal meeting id, not the YouTube id. See "Open: source abstraction" below for the planned schema follow-up.
+The data model is designed to be **municipality-agnostic** so additional government bodies can be added later.
 
 ## Prior Art Considered
 
@@ -24,36 +22,27 @@ It is also designed to be **source-agnostic**. YouTube is the only ingestion sou
 | Transcription      | `sherpa-onnx` (NeMo Parakeet TDT 0.6b v3, INT8)             | Fast ONNX transducer ASR via native Node.js bindings, no Python           |
 | Diarization        | `sherpa-onnx`                                               | Native ONNX bindings, no Python/GPU, ~30s for 45-min meeting on M1        |
 | Speaker embeddings | CAM++ via sherpa-onnx (512-dim)                             | Half the params of ECAPA-TDNN, lower EER, fast CPU inference, ONNX export |
-| Text embeddings    | `@xenova/transformers` (`Xenova/all-MiniLM-L6-v2`, 384-dim) | Same model as sentence-transformers, runs in Node.js via ONNX             |
 | Database           | Postgres + pgvector + Drizzle ORM                           |                                                                           |
 | Pipeline           | TypeScript + Node.js via `tsx`/`pnpm`                       | Unified stack — no Python sidecar, no runtime boundary                    |
 | Web App            | SolidJS + TanStack Start + TanStack Router                  | SSR-capable frontend with file-based routing, server functions            |
 
-**No Python required.** All ML runs through ONNX models loaded either by `sherpa-onnx` (transcription, diarization) or `@xenova/transformers` (text embedding). The only native dependency is `ffmpeg` for audio decoding.
-
-**Drizzle as source of truth**: The schema is defined in `web/src/db/schema.ts`. The pipeline connects to the same Postgres database using `postgres` (postgres-js) with raw SQL.
-
-### What we add beyond MeetingBank
-
-- **People**: Persistent speaker identity across meetings with voice embeddings
-- **Voice fingerprinting**: Automatic cross-meeting speaker linking via these embeddings
+**No Python required.** All ML runs through ONNX models loaded either by `sherpa-onnx` (transcription, diarization). The only native dependency is `ffmpeg` for audio decoding.
 
 ## Diarization Architecture
 
-Follows the [OpenWhispr local diarization approach](https://openwhispr.com/blog/local-speaker-diarization), implemented entirely through sherpa-onnx native Node.js bindings:
+Follows the [OpenWhispr local diarization approach](https://openwhispr.com/blog/local-speaker-diarization), implemented entirely through sherpa-onnx native Node.js bindings. That walkthrough describes the online algorithm that happens live.
+We actually just use their process that they use offline, which is slightly different from what they describe
+in that blog (inferred from reading their source code):
 
-1. **Silero VAD** (~2MB) — filter silence before expensive stages
-2. **pyannote-3.0 segmentation** (~6.6MB ONNX) — identify speaker boundaries and overlapping speech
-3. **CAM++ embeddings** (~28MB ONNX) — 512-dim voice fingerprints per segment
-4. **Agglomerative clustering** — group embeddings at 0.5 cosine-similarity threshold
-
-Total model size: ~45MB, downloaded once via `pnpm download-models`. The only network activity after first launch is the one-time model download.
+1. **pyannote-3.0 segmentation** (~6.6MB ONNX) — identify speaker boundaries and overlapping speech
+2. **CAM++ embeddings** (~28MB ONNX) — 512-dim voice fingerprints per segment
+3. **Agglomerative clustering** — group embeddings at 0.5 cosine-similarity threshold
 
 **Minimum segment duration**: 0.8 seconds for reliable CAM++ embedding extraction.
 
 ### How it works
 
-1. **Diarization** (`pipeline/src/diarize.ts`): sherpa-onnx produces speaker embeddings per speaker (mean-pooled over their segments).
+1. **Diarization** (`pipeline/src/diarize.ts`): sherpa-onnx produces speaker embeddings per speaker (mean-pooled over their 3 longest segments).
 
 2. **Identify** (`pipeline/src/identify.ts`): For each speaker embedding, query `people` by cosine distance:
 
@@ -71,4 +60,4 @@ Total model size: ~45MB, downloaded once via `pnpm download-models`. The only ne
 
 3. **Link segments**: Each aligned transcript segment gets `person_id` set to the matched or newly-created person.
 
-4. **Manual override** (future CLI): `tsx pipeline/src/manage-people.ts name 3 "Mike Edgington"`, merge duplicates, assign roles.
+It is also designed to be **source-agnostic**. YouTube is the only ingestion source today, but Vimeo, direct uploads, and municipality-hosted streams are all plausible tomorrow. A meeting therefore has its own internal id (`meetings.id`, the integer primary key), and the YouTube video id is just one *attribute* of that meeting (its source identifier). All downstream code — pipeline stages, cache paths, function signatures, test fixtures — should key off the internal meeting id, not the YouTube id. See "Open: source abstraction" below for the planned schema follow-up.
