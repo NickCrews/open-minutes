@@ -19,7 +19,9 @@ const MODEL_SPEC = {
     "tokens.txt": true,
     "test_wavs": {
       "en.wav": true,
-      "zh.wav": true,
+      "fr.wav": true,
+      "es.wav": true,
+      "de.wav": true,
     },
   },
 } as const satisfies ModelSpec

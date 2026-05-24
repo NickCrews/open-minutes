@@ -26,11 +26,12 @@ export type ResolvedFiles<T extends DirListing> = {
 export function ensureDownloaded<S extends ModelSpec>(spec: S, rootDir: string = MODELS_DIR) {
   const path = join(rootDir, spec.name);
   let downloaded = false;
-  if (!existsSync(path)) {
+  // Re-download if the dir is missing OR present-but-incomplete (e.g. an empty
+  // dir left by an interrupted download or removed code). Checking the actual
+  // files, not just the dir, makes this self-healing.
+  if (!allFilesPresent(path, spec.files)) {
     downloadModel(spec, path);
     downloaded = true;
-  } else {
-    // console.log(`Model ${spec.name} already exists at ${path}`);
   }
   return {
     name: spec.name,
@@ -54,11 +55,27 @@ function downloadModel(model: ModelSpec, dir: string): void {
       { stdio: "inherit" },
     );
   } else {
-    execSync(`curl -L "${model.url}" | tar -xj -C "${dir}"`, {
+    // k2-fsa release tarballs wrap everything in a single top-level folder
+    // (e.g. sherpa-onnx-pyannote-segmentation-3-0/model.onnx). We extract into a
+    // dir already named after the model, so strip that wrapper to land the files
+    // flat at <dir>/<file> rather than <dir>/<wrapper>/<file>.
+    execSync(`curl -L "${model.url}" | tar -xj --strip-components=1 -C "${dir}"`, {
       stdio: "inherit",
     });
   }
   console.log(`  ✓ ${model.name}`);
+}
+
+function allFilesPresent(dir: string, files: DirListing, prefix = ""): boolean {
+  for (const [filename, value] of Object.entries(files)) {
+    const path = join(dir, prefix, filename);
+    if (value === true) {
+      if (!existsSync(path)) return false;
+    } else if (!allFilesPresent(dir, value, join(prefix, filename))) {
+      return false;
+    }
+  }
+  return true;
 }
 
 function resolveFiles(dir: string, files: DirListing, prefix = ""): Record<string, unknown> {
