@@ -1,10 +1,15 @@
-import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, readdirSync, symlinkSync } from "node:fs";
 import { execSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import sherpa_onnx from "sherpa-onnx-node";
-import { ensureModelFiles, getTraceEvents, MERGE_WINDOW_SEC, resetTrace, transcribeAudio } from "./transcribe";
+import {
+  ensureModelFiles,
+  MERGE_WINDOW_SEC,
+  transcribeAudio,
+  type TranscribeWindowEndEvent,
+} from "./transcribe";
 import { compareTranscripts } from "./test-utils/wer";
 import { serializePsv, serializeVadRunsPsv } from "./test-utils/psv";
 import { getMeetingData } from "./test-utils/test-data";
@@ -24,14 +29,6 @@ function sample16kHz(): string {
   }
   return dest;
 }
-
-beforeAll(() => {
-  process.env.TRANSCRIBE_TRACE = "1";
-});
-
-beforeEach(() => {
-  resetTrace();
-});
 
 describe("transcribe", () => {
   it("transcribes a 4 second audio sample", async () => {
@@ -77,9 +74,12 @@ describe("transcribe", () => {
       off += p.length;
     }
 
-    await transcribeAudio({ sampleRate: sr, samples });
+    const events: TranscribeWindowEndEvent[] = [];
+    await transcribeAudio(
+      { sampleRate: sr, samples },
+      { tracing: { onWindowEnd: (e) => events.push(e) } },
+    );
 
-    const events = getTraceEvents();
     expect(events.length).toBeGreaterThanOrEqual(3);
 
     // At least one pair of chunks must overlap in wall time — proof of parallelism.

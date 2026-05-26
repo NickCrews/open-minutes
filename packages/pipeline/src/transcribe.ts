@@ -79,26 +79,25 @@ export const MERGE_WINDOW_SEC = 120;
 // small cap costs little.)
 const TRANSCRIBE_CONCURRENCY = Math.max(1, Math.min(4, availableParallelism()));
 
-export type TraceEvent = {
-  segmentIndex: number;
-  segmentStart: number;
-  segmentEnd: number;
+export interface TranscribeWindowEvent {
+  windowIndex: number;
+  windowStart: number;
+  windowEnd: number;
   wallStartMs: number;
+}
+
+export interface TranscribeWindowEndEvent extends TranscribeWindowEvent {
   wallEndMs: number;
-};
-
-const traceEvents: TraceEvent[] = [];
-
-function isTracingEnabled(): boolean {
-  return process.env.TRANSCRIBE_TRACE === "1";
 }
 
-export function getTraceEvents(): readonly TraceEvent[] {
-  return traceEvents;
+/** Optional callbacks fired as decode windows are processed. */
+export interface TranscribeTracing {
+  onWindowStart?(event: TranscribeWindowEvent): void;
+  onWindowEnd?(event: TranscribeWindowEndEvent): void;
 }
 
-export function resetTrace(): void {
-  traceEvents.length = 0;
+export interface TranscribeOptions {
+  tracing?: TranscribeTracing;
 }
 
 /**
@@ -111,12 +110,13 @@ export function resetTrace(): void {
  */
 export async function transcribeAudio(
   audio: string | WaveForm,
+  options: TranscribeOptions = {},
 ): Promise<SpeechSegment[]> {
   const wallStart = Date.now();
   const wave = ensureWaveAudio(audio);
   assertSampleRate(wave.sampleRate);
   const duration = wave.samples.length / wave.sampleRate;
-  const tracing = isTracingEnabled();
+  const { tracing } = options;
 
   const speechRuns = detectSpeechRuns(wave);
   const windows = mergeRuns(speechRuns, wave.sampleRate);
@@ -134,17 +134,21 @@ export async function transcribeAudio(
       // (copying every window would duplicate the audio).
       const samples = wave.samples.subarray(win.startSample, win.endSample);
 
-      const traceStart = tracing ? Date.now() : 0;
+      const wallStartMs = Date.now();
+      tracing?.onWindowStart?.({
+        windowIndex: i,
+        windowStart: start,
+        windowEnd: end,
+        wallStartMs,
+      });
       const result = await transcribeSamples(samples, wave.sampleRate);
-      if (tracing) {
-        traceEvents.push({
-          segmentIndex: i,
-          segmentStart: start,
-          segmentEnd: end,
-          wallStartMs: traceStart,
-          wallEndMs: Date.now(),
-        });
-      }
+      tracing?.onWindowEnd?.({
+        windowIndex: i,
+        windowStart: start,
+        windowEnd: end,
+        wallStartMs,
+        wallEndMs: Date.now(),
+      });
 
       const words = tokensToWords(result.tokens ?? [], result.timestamps ?? []).map((w) => ({
         ...w,
