@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { formatTimestamp, parseTimestamp, parsePsv, serializePsv } from "./psv";
-import type { TranscriptSegment } from "../types";
+import { formatTimestamp, parseTimestamp, parsePsv, serializePsv, serializeVadRunsPsv } from "./psv";
+import type { SpeechSegment, TranscriptSegment } from "../types";
 
 describe("psv timestamps", () => {
   it("formats seconds as H:MM:SS.ss", () => {
@@ -60,6 +60,39 @@ describe("psv parse/serialize", () => {
 
   it("rejects text before any begin_speaker", () => {
     expect(() => parsePsv("0:00:01.00|0:00:02.00|text|orphan")).toThrow(/begin_speaker/);
+  });
+
+  it("emits vad span markers interleaved with each run's words", () => {
+    const runs: SpeechSegment[] = [
+      { start: 0.08, end: 1.0, words: [{ text: "Hello", start: 0.08, end: 1.0 }] },
+      { start: 1.1, end: 301.1, words: [{ text: "there", start: 1.1, end: 1.5 }] },
+    ];
+    const content = serializeVadRunsPsv(runs);
+    const lines = content.trim().split("\n");
+    expect(lines).toEqual([
+      "start_sec|end_sec|event_type|event_data",
+      '0:00:00.08||meta|{"begin_speaker":"unlabeled"}',
+      '0:00:00.08|0:00:01.00|vad|{"index":0,"dur":0.92}',
+      "0:00:00.08|0:00:01.00|text|Hello",
+      '0:00:01.10|0:05:01.10|vad|{"index":1,"dur":300}',
+      "0:00:01.10|0:00:01.50|text|there",
+    ]);
+  });
+
+  it("skips vad markers when parsing, recovering the flat word list", () => {
+    const runs: SpeechSegment[] = [
+      { start: 0.08, end: 1.0, words: [{ text: "Hello", start: 0.08, end: 1.0 }] },
+      { start: 1.1, end: 1.5, words: [{ text: "there", start: 1.1, end: 1.5 }] },
+    ];
+    expect(parsePsv(serializeVadRunsPsv(runs))).toEqual<TranscriptSegment[]>([
+      {
+        speaker: { type: "unlabeled" },
+        words: [
+          { text: "Hello", start: 0.08, end: 1.0 },
+          { text: "there", start: 1.1, end: 1.5 },
+        ],
+      },
+    ]);
   });
 
   it("round-trips segments through serialize/parse", () => {

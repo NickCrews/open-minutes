@@ -13,18 +13,23 @@
 //         event_data is the raw word text.
 //       * event_type "meta": a marker with an empty end. event_data is JSON.
 //         {"begin_speaker": "<label>"} opens a new segment for that speaker.
+//       * event_type "vad": a debug marker (written only to *.gen.psv) spanning a
+//         VAD speech run — the chunk of audio fed to the recognizer. start/end are
+//         the run's bounds and event_data is JSON ({"index","dur"}). Purely
+//         informational: parsePsv skips these, so they never affect parsed output.
 //   - Speaker labels: "unlabeled", "segmented:spk-<n>", "identified:<personId>".
 //   - Timestamps are `H:MM:SS.ss` (hours:minutes:seconds.hundredths).
 //   - event_data is the final field, so it may itself contain `|`.
 
 import { readFileSync, writeFileSync } from "node:fs";
 
-import type { Speaker, TranscriptSegment } from "../types.ts";
+import type { Speaker, SpeechSegment, TranscriptSegment } from "../types.ts";
 
 // Internal line-level representation. Not part of the public API.
 type PsvEvent =
   | { type: "text"; start: number; end: number; text: string }
-  | { type: "meta"; start: number; data: Record<string, unknown> };
+  | { type: "meta"; start: number; data: Record<string, unknown> }
+  | { type: "vad"; start: number; end: number; data: Record<string, unknown> };
 
 const COLUMN_HEADER = "start_sec|end_sec|event_type|event_data";
 
@@ -126,6 +131,14 @@ function parseEvents(content: string): PsvEvent[] {
         throw new Error(`Invalid meta JSON on PSV line ${i + 1}: ${JSON.stringify(eventData)}`, { cause: err });
       }
       events.push({ type: "meta", start: parseTimestamp(startField), data });
+    } else if (eventType === "vad") {
+      let data: Record<string, unknown>;
+      try {
+        data = JSON.parse(eventData) as Record<string, unknown>;
+      } catch (err) {
+        throw new Error(`Invalid vad JSON on PSV line ${i + 1}: ${JSON.stringify(eventData)}`, { cause: err });
+      }
+      events.push({ type: "vad", start: parseTimestamp(startField), end: parseTimestamp(endField), data });
     } else {
       throw new Error(`Unknown event_type on PSV line ${i + 1}: ${JSON.stringify(eventType)}`);
     }
@@ -145,7 +158,9 @@ export function parsePsv(source: string | { path: string }): TranscriptSegment[]
   let current: TranscriptSegment | null = null;
 
   for (const event of parseEvents(content)) {
-    if (event.type === "meta") {
+    if (event.type === "vad") {
+      continue; // debug-only span marker; carries no transcript content
+    } else if (event.type === "meta") {
       const label = event.data["begin_speaker"];
       if (typeof label !== "string") {
         throw new Error(`Unsupported meta event (expected begin_speaker): ${JSON.stringify(event.data)}`);
@@ -180,6 +195,34 @@ export function serializePsv(
       rows.push(`${formatTimestamp(w.start)}|${formatTimestamp(w.end)}|text|${w.text}`);
     }
   }
+  const content = [COLUMN_HEADER, ...rows].join("\n") + "\n";
+  if (options?.path !== undefined) {
+    writeFileSync(options.path, content);
+  }
+  return content;
+}
+
+/**
+ * Serialize VAD speech runs for the debug `transcribed.gen.psv` artifact: one
+ * unlabeled speaker segment whose words are interleaved with `vad` marker lines
+ * showing where each run was cut and fed to the recognizer. Each marker spans the
+ * run (start/end) and carries its `index` and `dur` in seconds — so a diff makes a
+ * changed chunk boundary visible. Round-trips through parsePsv, which skips the
+ * markers and recovers the flat word list.
+ */
+export function serializeVadRunsPsv(
+  runs: readonly SpeechSegment[],
+  options?: { path?: string },
+): string {
+  const rows: string[] = [];
+  rows.push(`${formatTimestamp(runs[0]?.start ?? 0)}||meta|${JSON.stringify({ begin_speaker: "unlabeled" })}`);
+  runs.forEach((run, i) => {
+    const data = { index: i, dur: Math.round((run.end - run.start) * 100) / 100 };
+    rows.push(`${formatTimestamp(run.start)}|${formatTimestamp(run.end)}|vad|${JSON.stringify(data)}`);
+    for (const w of run.words) {
+      rows.push(`${formatTimestamp(w.start)}|${formatTimestamp(w.end)}|text|${w.text}`);
+    }
+  });
   const content = [COLUMN_HEADER, ...rows].join("\n") + "\n";
   if (options?.path !== undefined) {
     writeFileSync(options.path, content);

@@ -95,4 +95,61 @@ declare module 'sherpa-onnx-node' {
         compute(stream: OnlineStream, enableExternalBuffer?: boolean): Float32Array;
     }
 
+    // --- Voice activity detection (Silero VAD) ---
+    // Inferred from sherpa-onnx-node's vad.js and types.js (v1.12.39).
+
+    export interface SileroVadModelConfig {
+        /** Path to the silero_vad.onnx model file. */
+        model: string;
+        /** Speech-probability threshold above which a frame counts as speech (default ~0.5). */
+        threshold?: number;
+        /** Seconds of sub-threshold audio that ends a speech run (the cut points). */
+        minSilenceDuration?: number;
+        /** Speech runs shorter than this (seconds) are discarded. */
+        minSpeechDuration?: number;
+        /** Samples per VAD window (512 for 16 kHz Silero). */
+        windowSize?: number;
+        /** A speech run longer than this (seconds) is force-split, preferring the last silence. */
+        maxSpeechDuration?: number;
+    }
+
+    export interface VadConfig {
+        sileroVad?: SileroVadModelConfig;
+        sampleRate?: number;
+        numThreads?: number;
+        provider?: string;
+        debug?: boolean | number;
+    }
+
+    /**
+     * A detected speech run. `start` is the sample index (at the VAD's sampleRate)
+     * where the run begins; `samples` are that run's audio. The run's end sample
+     * index is `start + samples.length`.
+     */
+    export interface VadSpeechSegment {
+        start: number;
+        samples: Float32Array;
+    }
+
+    export class Vad {
+        /** @param bufferSizeInSeconds size of the internal circular buffer. */
+        constructor(config: VadConfig, bufferSizeInSeconds: number);
+        /** Feed raw float32 samples (in [-1, 1]) at the configured sampleRate. */
+        acceptWaveform(samples: Float32Array): void;
+        /** True when there are no completed speech segments queued. */
+        isEmpty(): boolean;
+        /** True while speech is currently being detected. */
+        isDetected(): boolean;
+        /** Pop (discard) the earliest queued speech segment. */
+        pop(): void;
+        /** Clear all queued segments. */
+        clear(): void;
+        /** The earliest queued speech segment without removing it. */
+        front(enableExternalBuffer?: boolean): VadSpeechSegment;
+        /** Reset detector state. */
+        reset(): void;
+        /** Flush the internal buffer, emitting any trailing speech as a final segment. */
+        flush(): void;
+    }
+
 }
