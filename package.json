@@ -9,7 +9,9 @@
     "lint": "eslint .",
     "test": "vitest run",
     "check": "pnpm run format:check && pnpm run lint && pnpm run test",
-    "db:setup": "pnpm --filter gbos-core run db:setup",
+    "db:nuke": "pnpm --filter gbos-core run db:nuke",
+    "db:seed": "pnpm --filter gbos-pipeline run db:seed",
+    "db:reset": "pnpm db:nuke && pnpm db:seed",
     "pipeline:fixtures": "pnpm --filter gbos-pipeline run fixtures"
   },
   "devDependencies": {

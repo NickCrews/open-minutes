@@ -14,7 +14,9 @@
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:setup": "docker compose -f ../../docker-compose.yml up -d --wait && pnpm db:migrate"
+    "db:up": "docker compose -f ../../docker-compose.yml up -d --wait",
+    "db:setup": "pnpm db:up && pnpm db:migrate",
+    "db:nuke": "pnpm db:up && node src/db/nuke.mjs && pnpm db:migrate"
   },
   "dependencies": {
     "@t3-oss/env-core": "^0.13.11",

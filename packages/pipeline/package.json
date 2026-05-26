@@ -6,6 +6,7 @@
   "scripts": {
     "process": "tsx src/update.ts",
     "fixtures": "tsx scripts/fixtures.ts",
+    "db:seed": "tsx src/seed/cli.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
