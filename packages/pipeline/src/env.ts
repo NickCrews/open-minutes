@@ -10,7 +10,7 @@ export function loadEnv() {
 
   // Default to docker-compose's postgres so tests work out of the box after `pnpm db:setup`.
   process.env.DATABASE_URL ??=
-    "postgres://postgres:postgres@localhost:5432/gbos";
+    "postgres://postgres:postgres@localhost:5432/open_minutes";
   const env = {
     DATABASE_URL: process.env.DATABASE_URL,
   };

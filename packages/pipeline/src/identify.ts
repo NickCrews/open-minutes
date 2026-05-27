@@ -1,5 +1,5 @@
 import { cosineDistance, sql } from "drizzle-orm";
-import { type DB, peopleTable, segmentsTable } from "@gbos/core/db";
+import { type DB, peopleTable, segmentsTable } from "@open-minutes/core/db";
 
 // Confidence tiers from OpenWhispr's matching system:
 //   ≥ 0.70 cosine similarity → auto-confirm

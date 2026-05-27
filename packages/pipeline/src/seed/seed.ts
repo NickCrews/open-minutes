@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { type DB, municipalitiesTable } from "@gbos/core/db";
+import { type DB, municipalitiesTable } from "@open-minutes/core/db";
 import { loadAllTestData } from "../test-utils/test-data";
 import { mapSnapshot } from "./map";
 

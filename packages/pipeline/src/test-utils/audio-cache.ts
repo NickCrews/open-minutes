@@ -3,9 +3,9 @@ import { createHash } from "node:crypto";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import sherpa from "sherpa-onnx-node";
-import { downloadVideoAudio } from "@gbos/core/youtube";
+import { downloadVideoAudio } from "@open-minutes/core/youtube";
 
-const CACHE_ROOT = join(homedir(), ".cache", "gbos-transcripts", "meetings");
+const CACHE_ROOT = join(homedir(), ".cache", "open-minutes", "meetings");
 
 interface AudioManifest {
   youtube_id: string;

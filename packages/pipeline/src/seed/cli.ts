@@ -1,7 +1,7 @@
 import { config } from "dotenv";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { getDb } from "@gbos/core/db";
+import { getDb } from "@open-minutes/core/db";
 import { seedDatabase } from "./seed";
 
 // Mirror drizzle.config.ts: load .env.local from the workspace root so the seed

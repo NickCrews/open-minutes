@@ -6,4 +6,4 @@ import { dirname, join } from "node:path";
 config({ path: join(dirname(fileURLToPath(import.meta.url)), ".env") });
 
 // Default to docker-compose's postgres so tests work out of the box after `pnpm db:setup`.
-process.env.DATABASE_URL ??= "postgres://postgres:postgres@localhost:5432/gbos";
+process.env.DATABASE_URL ??= "postgres://postgres:postgres@localhost:5432/open_minutes";

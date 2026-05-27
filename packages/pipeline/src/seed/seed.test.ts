@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, it } from "vitest";
-import { getDb, municipalitiesTable } from "@gbos/core/db";
+import { getDb, municipalitiesTable } from "@open-minutes/core/db";
 import { loadAllTestData } from "../test-utils/test-data";
 import { seedDatabase } from "./seed";
 

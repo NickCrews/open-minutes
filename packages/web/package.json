@@ -1,7 +1,7 @@
 {
-  "name": "gbos-web",
+  "name": "@open-minutes/web",
   "version": "0.1.0",
-  "description": "GBOS meeting transcript browser",
+  "description": "Open Minutes meeting transcript browser",
   "type": "module",
   "scripts": {
     "dev": "vite dev",
@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@gbos/core": "workspace:*",
+    "@open-minutes/core": "workspace:*",
     "@tanstack/solid-router": "^1",
     "@tanstack/solid-start": "^1",
     "@t3-oss/env-core": "^0.13.11",

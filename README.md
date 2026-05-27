@@ -1,1 +1,1 @@
-# GBOS Meeting Transcript Database
+# Open Minutes — Meeting Transcript Database

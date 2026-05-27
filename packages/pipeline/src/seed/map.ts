@@ -1,4 +1,4 @@
-import { municipalitiesTable } from "@gbos/core/db";
+import { municipalitiesTable } from "@open-minutes/core/db";
 import type { TestData } from "../test-utils/test-data";
 
 type MunicipalityInsert = typeof municipalitiesTable.$inferInsert;

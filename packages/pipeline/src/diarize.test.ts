@@ -9,7 +9,7 @@ import { computeSpeakerEmbeddings, diarizeAudio } from "./diarize";
 import { alignSpeakers } from "./align";
 import { parsePsv, serializePsv } from "./test-utils/psv";
 import { getMeetingData } from "./test-utils/test-data";
-import { N_DIMENSIONS } from "@gbos/core/voice_embeddings";
+import { N_DIMENSIONS } from "@open-minutes/core/voice_embeddings";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const RUNS_DIR = join(HERE, "..", "test-runs");

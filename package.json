@@ -9,10 +9,10 @@
     "lint": "eslint .",
     "test": "vitest run",
     "check": "pnpm run format:check && pnpm run lint && pnpm run test",
-    "db:nuke": "pnpm --filter gbos-core run db:nuke",
-    "db:seed": "pnpm --filter gbos-pipeline run db:seed",
+    "db:nuke": "pnpm --filter @open-minutes/core run db:nuke",
+    "db:seed": "pnpm --filter @open-minutes/pipeline run db:seed",
     "db:reset": "pnpm db:nuke && pnpm db:seed",
-    "pipeline:fixtures": "pnpm --filter gbos-pipeline run fixtures"
+    "pipeline:fixtures": "pnpm --filter @open-minutes/pipeline run fixtures"
   },
   "devDependencies": {
     "@types/node": "^22",
