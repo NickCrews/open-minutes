@@ -1,6 +1,10 @@
 import { cosineDistance, sql } from "drizzle-orm";
 import { type DB, peopleTable, segmentsTable } from "@open-minutes/core/db";
-import { TranscriptWord } from "../../core/src/transcription/types";
+import { TranscriptWord } from "@open-minutes/core/transcription";
+
+// Accepts either a database or a transaction handle, so callers can make
+// segment insertion part of a larger all-or-nothing transaction.
+type Queryable = Pick<DB, "select" | "insert">;
 
 // Confidence tiers from OpenWhispr's matching system:
 //   ≥ 0.70 cosine similarity → auto-confirm
@@ -10,13 +14,14 @@ const MATCH_THRESHOLD = 0.55;
 const MAX_DISTANCE = 1 - MATCH_THRESHOLD;
 
 export async function identifyAndInsertSegments(
-  db: DB,
+  db: Queryable,
   meetingId: number,
   alignedSegments: Array<{
     text: string;
     start: number;
     end: number;
-    speaker: number;
+    /** Local diarization label, or null for an unlabeled (undiarized) segment. */
+    speaker: number | null;
     words: Array<TranscriptWord>;
   }>,
   speakerEmbeddings: Map<number, Float32Array>,
@@ -30,7 +35,10 @@ export async function identifyAndInsertSegments(
   for (const seg of alignedSegments) {
     await db.insert(segmentsTable).values({
       meeting_id: meetingId,
-      person_id: speakerToPersonId.get(seg.speaker) ?? null,
+      person_id:
+        seg.speaker === null
+          ? null
+          : (speakerToPersonId.get(seg.speaker) ?? null),
       speaker_number: seg.speaker,
       start_secs: sql`make_interval(secs => ${seg.start})`,
       end_secs: sql`make_interval(secs => ${seg.end})`,
@@ -40,7 +48,7 @@ export async function identifyAndInsertSegments(
 }
 
 async function findOrCreatePerson(
-  db: DB,
+  db: Queryable,
   embedding: Float32Array,
 ): Promise<number> {
   const vec = Array.from(embedding);

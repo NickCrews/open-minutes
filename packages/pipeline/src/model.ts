@@ -45,7 +45,8 @@ export function ensureDownloaded<S extends ModelSpec>(
 }
 
 function downloadModel(model: ModelSpec, dir: string): void {
-  console.log(`Downloading ${model.name} to ${dir}...`);
+  // Progress goes to stderr so callers' stdout stays machine-readable.
+  console.error(`Downloading ${model.name} to ${dir}...`);
   mkdirSync(dir, { recursive: true });
   if (model.single_file) {
     const files = Object.keys(model.files);
@@ -70,7 +71,7 @@ function downloadModel(model: ModelSpec, dir: string): void {
       },
     );
   }
-  console.log(`  ✓ ${model.name}`);
+  console.error(`  ✓ ${model.name}`);
 }
 
 function allFilesPresent(dir: string, files: DirListing, prefix = ""): boolean {

@@ -123,7 +123,8 @@ export async function transcribeAudio(
 
   const speechRuns = detectSpeechRuns(wave);
   const windows = mergeRuns(speechRuns, wave.sampleRate);
-  console.log(
+  // Progress goes to stderr so callers' stdout stays machine-readable.
+  console.error(
     `Transcribing ${typeof audio === "string" ? audio : "<waveform>"} (${duration.toFixed(1)}s) in ${windows.length} window(s) merged from ${speechRuns.length} VAD run(s)...`,
   );
 
@@ -166,7 +167,7 @@ export async function transcribeAudio(
   );
 
   const elapsed = (Date.now() - wallStart) / 1000;
-  console.log(
+  console.error(
     `Done: ${duration.toFixed(1)}s audio in ${elapsed.toFixed(1)}s (RTF=${(elapsed / duration).toFixed(2)})`,
   );
 

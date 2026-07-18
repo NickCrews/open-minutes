@@ -38,6 +38,76 @@ export async function videosInChannel(channelIdOrUrl: string) {
   return playlist.entries;
 }
 
+export interface VideoMetadata {
+  id: string;
+  /** The YouTube channel the video was published on (eg "UCOUlNInprZEjhbpVPiJOlEA"). */
+  channelId: string;
+  title: string;
+  description: string;
+  /** When the video started (release time for live streams, else upload time). */
+  startTime: Date | null;
+  durationSecs: number | null;
+}
+
+export async function fetchVideoMetadata(
+  videoIdOrUrl: string,
+): Promise<VideoMetadata> {
+  const { stdout } = await execFileAsync(
+    "yt-dlp",
+    ["--skip-download", "-J", videoUrl(videoIdOrUrl)],
+    {
+      maxBuffer: 100 * 1024 * 1024,
+    },
+  );
+  const raw = JSON.parse(stdout) as {
+    id: string;
+    channel_id?: string;
+    title?: string;
+    description?: string;
+    // Municipal meetings are usually live streams: release_timestamp is when the
+    // stream actually started; timestamp/upload_date are when it was published.
+    release_timestamp?: number | null;
+    timestamp?: number | null;
+    upload_date?: string | null; // YYYYMMDD
+    duration?: number | null;
+  };
+  const epoch = raw.release_timestamp ?? raw.timestamp;
+  const startTime =
+    epoch != null ? new Date(epoch * 1000) : parseUploadDate(raw.upload_date);
+  return {
+    id: raw.id,
+    channelId: raw.channel_id ?? "",
+    title: raw.title ?? "",
+    description: raw.description ?? "",
+    startTime,
+    durationSecs: raw.duration ?? null,
+  };
+}
+
+function parseUploadDate(uploadDate: string | null | undefined): Date | null {
+  if (!uploadDate || !/^\d{8}$/.test(uploadDate)) return null;
+  return new Date(
+    `${uploadDate.slice(0, 4)}-${uploadDate.slice(4, 6)}-${uploadDate.slice(6, 8)}T00:00:00Z`,
+  );
+}
+
+/**
+ * Everything that touches YouTube (via yt-dlp), as an injectable boundary so
+ * callers like the ingestion pipeline can be tested without network access.
+ */
+export interface YouTube {
+  videosInChannel: typeof videosInChannel;
+  fetchVideoMetadata: typeof fetchVideoMetadata;
+  downloadVideoAudio: typeof downloadVideoAudio;
+}
+
+/** The real yt-dlp-backed implementation of the {@link YouTube} boundary. */
+export const realYouTube: YouTube = {
+  videosInChannel,
+  fetchVideoMetadata,
+  downloadVideoAudio,
+};
+
 export async function downloadVideoAudio(
   youtubeIdOrUrl: string,
   path: string,
@@ -52,7 +122,8 @@ export async function downloadVideoAudio(
   const shouldDownload = onExists === "overwrite" || !exists;
   if (shouldDownload) {
     const url = videoUrl(youtubeIdOrUrl);
-    console.log(`Downloading audio for ${url} to ${path}...`);
+    // Progress goes to stderr so callers' stdout stays machine-readable.
+    console.error(`Downloading audio for ${url} to ${path}...`);
     await execFileAsync("yt-dlp", [
       "-x",
       "--audio-format",

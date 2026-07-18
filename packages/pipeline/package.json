@@ -3,9 +3,14 @@
   "version": "0.1.0",
   "description": "Open Minutes meeting transcript pipeline: download, transcribe, diarize, embed",
   "type": "module",
+  "bin": {
+    "om": "./src/om/cli.ts"
+  },
+  "exports": {
+    "./om": "./src/om/index.ts"
+  },
   "scripts": {
-    "process": "tsx src/update.ts",
-    "fixtures": "tsx scripts/fixtures.ts",
+    "om": "tsx src/om/cli.ts",
     "db:seed": "tsx src/seed/cli.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
@@ -14,6 +19,7 @@
     "@open-minutes/core": "workspace:*",
     "@t3-oss/env-core": "^0.13.11",
     "@xenova/transformers": "^2.17.2",
+    "citty": "^0.1.6",
     "dotenv": "^17.4.2",
     "drizzle-orm": "1.0.0-beta.21",
     "sherpa-onnx-node": "^1.12.39"

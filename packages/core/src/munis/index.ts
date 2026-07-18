@@ -3,6 +3,14 @@ import { eq, InferInsertModel } from "drizzle-orm";
 
 type Municipality = InferInsertModel<typeof municipalitiesTable>;
 
+/**
+ * Short identifier for a municipality (eg "gbos"), used for `--muni` CLI
+ * filters and per-meeting work-directory names like `gbos_9HoIM5INxpI`.
+ */
+export function muniSlug(muni: { name_short: string }): string {
+  return muni.name_short.toLowerCase();
+}
+
 export const GBOS_MUNICIPALITY = {
   name: "Girdwood Board of Supervisors",
   name_short: "GBOS",

@@ -17,11 +17,13 @@
     "db:nuke": "pnpm --filter @open-minutes/core run db:nuke",
     "db:seed": "pnpm --filter @open-minutes/pipeline run db:seed",
     "db:reset": "pnpm db:nuke && pnpm db:seed",
-    "pipeline:fixtures": "pnpm --filter @open-minutes/pipeline run fixtures",
-    "web:dev": "pnpm --filter @open-minutes/web run dev"
+    "web:dev": "pnpm --filter @open-minutes/web run dev",
+    "om": "om"
   },
   "devDependencies": {
+    "@open-minutes/pipeline": "workspace:*",
     "@types/node": "^22",
+    "tsx": "^4.21.0",
     "@eslint/js": "^9.36.0",
     "eslint": "^9.36.0",
     "prettier": "^3.7.4",
