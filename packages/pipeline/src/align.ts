@@ -32,7 +32,10 @@ export function alignSpeakers(
   for (const word of words) {
     const speaker = assignSpeaker(word, turns);
     if (current === null || speaker !== currentSpeaker) {
-      current = { speaker: { type: "segmented", speakerNumber: speaker }, words: [] };
+      current = {
+        speaker: { type: "segmented", speakerNumber: speaker },
+        words: [],
+      };
       currentSpeaker = speaker;
       segments.push(current);
     }
@@ -42,11 +45,15 @@ export function alignSpeakers(
 }
 
 /** The diarization turn a word overlaps most; ties/zero-overlap fall back to nearest midpoint. */
-function assignSpeaker(word: TranscriptWord, turns: readonly DiarizationTurn[]): number {
+function assignSpeaker(
+  word: TranscriptWord,
+  turns: readonly DiarizationTurn[],
+): number {
   let bestSpeaker = turns[0]!.speaker;
   let bestOverlap = 0;
   for (const turn of turns) {
-    const overlap = Math.min(word.end, turn.end) - Math.max(word.start, turn.start);
+    const overlap =
+      Math.min(word.end, turn.end) - Math.max(word.start, turn.start);
     if (overlap > bestOverlap) {
       bestOverlap = overlap;
       bestSpeaker = turn.speaker;

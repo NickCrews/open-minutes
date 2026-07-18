@@ -23,14 +23,14 @@ const MODEL_SPEC = {
     "decoder.int8.onnx": true,
     "joiner.int8.onnx": true,
     "tokens.txt": true,
-    "test_wavs": {
+    test_wavs: {
       "en.wav": true,
       "fr.wav": true,
       "es.wav": true,
       "de.wav": true,
     },
   },
-} as const satisfies ModelSpec
+} as const satisfies ModelSpec;
 
 // Silero VAD — finds speech/silence boundaries so we can chunk at silences.
 const VAD_MODEL_SPEC = {
@@ -150,7 +150,10 @@ export async function transcribeAudio(
         wallEndMs: Date.now(),
       });
 
-      const words = tokensToWords(result.tokens ?? [], result.timestamps ?? []).map((w) => ({
+      const words = tokensToWords(
+        result.tokens ?? [],
+        result.timestamps ?? [],
+      ).map((w) => ({
         ...w,
         start: w.start + start,
         end: w.end + start,
@@ -160,7 +163,9 @@ export async function transcribeAudio(
   );
 
   const elapsed = (Date.now() - wallStart) / 1000;
-  console.log(`Done: ${duration.toFixed(1)}s audio in ${elapsed.toFixed(1)}s (RTF=${(elapsed / duration).toFixed(2)})`);
+  console.log(
+    `Done: ${duration.toFixed(1)}s audio in ${elapsed.toFixed(1)}s (RTF=${(elapsed / duration).toFixed(2)})`,
+  );
 
   return windowSegments.flat();
 }
@@ -184,7 +189,10 @@ interface SpeechWindow {
  * cap; otherwise it opens a new window. A single run longer than the cap (up to
  * VAD_MAX_SPEECH_SEC) becomes its own window — still under Parakeet's ~400s limit.
  */
-function mergeRuns(runs: readonly SpeechRun[], sampleRate: number): SpeechWindow[] {
+function mergeRuns(
+  runs: readonly SpeechRun[],
+  sampleRate: number,
+): SpeechWindow[] {
   const maxSamples = MERGE_WINDOW_SEC * sampleRate;
   const windows: SpeechWindow[] = [];
   for (const run of runs) {
@@ -193,7 +201,11 @@ function mergeRuns(runs: readonly SpeechRun[], sampleRate: number): SpeechWindow
       last.endSample = run.endSample;
       last.runs.push(run);
     } else {
-      windows.push({ startSample: run.startSample, endSample: run.endSample, runs: [run] });
+      windows.push({
+        startSample: run.startSample,
+        endSample: run.endSample,
+        runs: [run],
+      });
     }
   }
   return windows;
@@ -218,7 +230,8 @@ function splitWordsIntoRuns(
   }));
   let ri = 0;
   for (const word of words) {
-    while (ri < segments.length - 1 && word.start >= segments[ri + 1]!.start) ri++;
+    while (ri < segments.length - 1 && word.start >= segments[ri + 1]!.start)
+      ri++;
     segments[ri]!.words.push(word);
   }
   return segments;
@@ -238,7 +251,10 @@ function detectSpeechRuns(wave: WaveForm): SpeechRun[] {
   const drain = () => {
     while (!vad.isEmpty()) {
       const seg = vad.front();
-      runs.push({ startSample: seg.start, endSample: seg.start + seg.samples.length });
+      runs.push({
+        startSample: seg.start,
+        endSample: seg.start + seg.samples.length,
+      });
       vad.pop();
     }
   };
@@ -267,7 +283,9 @@ async function mapWithConcurrency<T, R>(
       results[i] = await fn(items[i]!, i);
     }
   };
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  await Promise.all(
+    Array.from({ length: Math.min(limit, items.length) }, worker),
+  );
   return results;
 }
 
@@ -353,7 +371,10 @@ export function ensureModelFiles() {
 // NeMo Parakeet uses space-prefixed tokens (e.g. " Ask", "sk") where a leading
 // space marks a word boundary. Punctuation tokens (e.g. ",") have no leading
 // space and attach to the preceding word.
-function tokensToWords(tokens: string[], timestamps: number[]): TranscriptWord[] {
+function tokensToWords(
+  tokens: string[],
+  timestamps: number[],
+): TranscriptWord[] {
   const words: TranscriptWord[] = [];
   let currentText = "";
   let currentStart = 0;
@@ -362,7 +383,8 @@ function tokensToWords(tokens: string[], timestamps: number[]): TranscriptWord[]
     const token = tokens[i]!;
     const ts = timestamps[i]!;
     // Also accept ▁ (U+2581) for models that use SentencePiece word-start marker.
-    const isWordStart = token.startsWith(" ") || token.startsWith("▁") || i === 0;
+    const isWordStart =
+      token.startsWith(" ") || token.startsWith("▁") || i === 0;
 
     if (isWordStart && currentText) {
       words.push({ text: currentText, start: currentStart, end: ts });
@@ -377,7 +399,11 @@ function tokensToWords(tokens: string[], timestamps: number[]): TranscriptWord[]
   }
 
   if (currentText) {
-    words.push({ text: currentText, start: currentStart, end: timestamps.at(-1) ?? currentStart });
+    words.push({
+      text: currentText,
+      start: currentStart,
+      end: timestamps.at(-1) ?? currentStart,
+    });
   }
 
   return words.filter((w) => w.text.length > 0);

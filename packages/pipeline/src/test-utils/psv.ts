@@ -49,7 +49,9 @@ export function formatTimestamp(sec: number): string {
 export function parseTimestamp(str: string): number {
   const parts = str.split(":");
   if (parts.length !== 3) {
-    throw new Error(`Invalid timestamp (expected H:MM:SS.ss): ${JSON.stringify(str)}`);
+    throw new Error(
+      `Invalid timestamp (expected H:MM:SS.ss): ${JSON.stringify(str)}`,
+    );
   }
   const [h, m, s] = parts;
   const seconds = Number(h) * 3600 + Number(m) * 60 + Number(s);
@@ -69,12 +71,18 @@ function parseSpeaker(label: string): Speaker {
   if (label === "unlabeled") return { type: "unlabeled" };
   if (label.startsWith("segmented:")) {
     const m = label.slice("segmented:".length).match(/^spk-(\d+)$/);
-    if (!m) throw new Error(`Invalid segmented speaker label: ${JSON.stringify(label)}`);
+    if (!m)
+      throw new Error(
+        `Invalid segmented speaker label: ${JSON.stringify(label)}`,
+      );
     return { type: "segmented", speakerNumber: Number(m[1]) };
   }
   if (label.startsWith("identified:")) {
     const personId = label.slice("identified:".length);
-    if (!personId) throw new Error(`Invalid identified speaker label (no id): ${JSON.stringify(label)}`);
+    if (!personId)
+      throw new Error(
+        `Invalid identified speaker label (no id): ${JSON.stringify(label)}`,
+      );
     return { type: "identified", personId };
   }
   throw new Error(`Unknown speaker label: ${JSON.stringify(label)}`);
@@ -107,7 +115,9 @@ function parseEvents(content: string): PsvEvent[] {
     const sep2 = line.indexOf("|", sep1 + 1);
     const sep3 = line.indexOf("|", sep2 + 1);
     if (sep1 < 0 || sep2 < 0 || sep3 < 0) {
-      throw new Error(`Malformed PSV line ${i + 1} (expected 4 fields): ${JSON.stringify(raw)}`);
+      throw new Error(
+        `Malformed PSV line ${i + 1} (expected 4 fields): ${JSON.stringify(raw)}`,
+      );
     }
     const startField = line.slice(0, sep1);
     const endField = line.slice(sep1 + 1, sep2);
@@ -128,7 +138,10 @@ function parseEvents(content: string): PsvEvent[] {
       try {
         data = JSON.parse(eventData) as Record<string, unknown>;
       } catch (err) {
-        throw new Error(`Invalid meta JSON on PSV line ${i + 1}: ${JSON.stringify(eventData)}`, { cause: err });
+        throw new Error(
+          `Invalid meta JSON on PSV line ${i + 1}: ${JSON.stringify(eventData)}`,
+          { cause: err },
+        );
       }
       events.push({ type: "meta", start: parseTimestamp(startField), data });
     } else if (eventType === "vad") {
@@ -136,11 +149,21 @@ function parseEvents(content: string): PsvEvent[] {
       try {
         data = JSON.parse(eventData) as Record<string, unknown>;
       } catch (err) {
-        throw new Error(`Invalid vad JSON on PSV line ${i + 1}: ${JSON.stringify(eventData)}`, { cause: err });
+        throw new Error(
+          `Invalid vad JSON on PSV line ${i + 1}: ${JSON.stringify(eventData)}`,
+          { cause: err },
+        );
       }
-      events.push({ type: "vad", start: parseTimestamp(startField), end: parseTimestamp(endField), data });
+      events.push({
+        type: "vad",
+        start: parseTimestamp(startField),
+        end: parseTimestamp(endField),
+        data,
+      });
     } else {
-      throw new Error(`Unknown event_type on PSV line ${i + 1}: ${JSON.stringify(eventType)}`);
+      throw new Error(
+        `Unknown event_type on PSV line ${i + 1}: ${JSON.stringify(eventType)}`,
+      );
     }
   }
   return events;
@@ -152,8 +175,11 @@ function parseEvents(content: string): PsvEvent[] {
  * Pass a content string to parse it directly, or `{ path }` to read and parse
  * the file at that path.
  */
-export function parsePsv(source: string | { path: string }): TranscriptSegment[] {
-  const content = typeof source === "string" ? source : readFileSync(source.path, "utf8");
+export function parsePsv(
+  source: string | { path: string },
+): TranscriptSegment[] {
+  const content =
+    typeof source === "string" ? source : readFileSync(source.path, "utf8");
   const segments: TranscriptSegment[] = [];
   let current: TranscriptSegment | null = null;
 
@@ -163,15 +189,23 @@ export function parsePsv(source: string | { path: string }): TranscriptSegment[]
     } else if (event.type === "meta") {
       const label = event.data["begin_speaker"];
       if (typeof label !== "string") {
-        throw new Error(`Unsupported meta event (expected begin_speaker): ${JSON.stringify(event.data)}`);
+        throw new Error(
+          `Unsupported meta event (expected begin_speaker): ${JSON.stringify(event.data)}`,
+        );
       }
       current = { speaker: parseSpeaker(label), words: [] };
       segments.push(current);
     } else {
       if (!current) {
-        throw new Error(`text event before any begin_speaker meta (word: ${JSON.stringify(event.text)})`);
+        throw new Error(
+          `text event before any begin_speaker meta (word: ${JSON.stringify(event.text)})`,
+        );
       }
-      current.words.push({ text: event.text, start: event.start, end: event.end });
+      current.words.push({
+        text: event.text,
+        start: event.start,
+        end: event.end,
+      });
     }
   }
   return segments;
@@ -190,9 +224,13 @@ export function serializePsv(
   const rows: string[] = [];
   for (const segment of segments) {
     const start = segment.words[0]?.start ?? 0;
-    rows.push(`${formatTimestamp(start)}||meta|${JSON.stringify({ begin_speaker: formatSpeaker(segment.speaker) })}`);
+    rows.push(
+      `${formatTimestamp(start)}||meta|${JSON.stringify({ begin_speaker: formatSpeaker(segment.speaker) })}`,
+    );
     for (const w of segment.words) {
-      rows.push(`${formatTimestamp(w.start)}|${formatTimestamp(w.end)}|text|${w.text}`);
+      rows.push(
+        `${formatTimestamp(w.start)}|${formatTimestamp(w.end)}|text|${w.text}`,
+      );
     }
   }
   const content = [COLUMN_HEADER, ...rows].join("\n") + "\n";
@@ -215,12 +253,21 @@ export function serializeVadRunsPsv(
   options?: { path?: string },
 ): string {
   const rows: string[] = [];
-  rows.push(`${formatTimestamp(runs[0]?.start ?? 0)}||meta|${JSON.stringify({ begin_speaker: "unlabeled" })}`);
+  rows.push(
+    `${formatTimestamp(runs[0]?.start ?? 0)}||meta|${JSON.stringify({ begin_speaker: "unlabeled" })}`,
+  );
   runs.forEach((run, i) => {
-    const data = { index: i, dur: Math.round((run.end - run.start) * 100) / 100 };
-    rows.push(`${formatTimestamp(run.start)}|${formatTimestamp(run.end)}|vad|${JSON.stringify(data)}`);
+    const data = {
+      index: i,
+      dur: Math.round((run.end - run.start) * 100) / 100,
+    };
+    rows.push(
+      `${formatTimestamp(run.start)}|${formatTimestamp(run.end)}|vad|${JSON.stringify(data)}`,
+    );
     for (const w of run.words) {
-      rows.push(`${formatTimestamp(w.start)}|${formatTimestamp(w.end)}|text|${w.text}`);
+      rows.push(
+        `${formatTimestamp(w.start)}|${formatTimestamp(w.end)}|text|${w.text}`,
+      );
     }
   });
   const content = [COLUMN_HEADER, ...rows].join("\n") + "\n";

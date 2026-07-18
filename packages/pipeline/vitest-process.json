@@ -1,1 +1,59 @@
-{"numTotalTestSuites":2,"numPassedTestSuites":0,"numFailedTestSuites":2,"numPendingTestSuites":0,"numTotalTests":1,"numPassedTests":0,"numFailedTests":1,"numPendingTests":0,"numTodoTests":0,"snapshot":{"added":0,"failure":false,"filesAdded":0,"filesRemoved":0,"filesRemovedList":[],"filesUnmatched":0,"filesUpdated":0,"matched":0,"total":0,"unchecked":1,"uncheckedKeysByFile":[{"filePath":"/Users/nc/code/gbos-transcripts/packages/pipeline/src/process.test.ts","keys":["Pipeline Process E2E > should process meetings through the full pipeline 1"]}],"unmatched":0,"updated":0,"didUpdate":false},"startTime":1776737154405,"success":false,"testResults":[{"assertionResults":[{"ancestorTitles":["Pipeline Process E2E"],"fullName":"Pipeline Process E2E should process meetings through the full pipeline","status":"failed","title":"should process meetings through the full pipeline","duration":62967.643125,"failureMessages":["TypeError: sherpa.OfflineSpeakerDiarization is not a constructor\n    at diarizeAudio (/Users/nc/code/gbos-transcripts/packages/pipeline/src/diarize.ts:30:14)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at processOneMeeting (/Users/nc/code/gbos-transcripts/packages/pipeline/src/process.ts:85:20)\n    at /Users/nc/code/gbos-transcripts/packages/pipeline/src/process.test.ts:56:13\n    at file:///Users/nc/code/gbos-transcripts/node_modules/.pnpm/@vitest+runner@4.1.4/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"],"meta":{},"tags":[]}],"startTime":1776737155089,"endTime":1776737218056.643,"status":"failed","message":"","name":"/Users/nc/code/gbos-transcripts/packages/pipeline/src/process.test.ts"}]}
+{
+  "numTotalTestSuites": 2,
+  "numPassedTestSuites": 0,
+  "numFailedTestSuites": 2,
+  "numPendingTestSuites": 0,
+  "numTotalTests": 1,
+  "numPassedTests": 0,
+  "numFailedTests": 1,
+  "numPendingTests": 0,
+  "numTodoTests": 0,
+  "snapshot": {
+    "added": 0,
+    "failure": false,
+    "filesAdded": 0,
+    "filesRemoved": 0,
+    "filesRemovedList": [],
+    "filesUnmatched": 0,
+    "filesUpdated": 0,
+    "matched": 0,
+    "total": 0,
+    "unchecked": 1,
+    "uncheckedKeysByFile": [
+      {
+        "filePath": "/Users/nc/code/gbos-transcripts/packages/pipeline/src/process.test.ts",
+        "keys": [
+          "Pipeline Process E2E > should process meetings through the full pipeline 1"
+        ]
+      }
+    ],
+    "unmatched": 0,
+    "updated": 0,
+    "didUpdate": false
+  },
+  "startTime": 1776737154405,
+  "success": false,
+  "testResults": [
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": ["Pipeline Process E2E"],
+          "fullName": "Pipeline Process E2E should process meetings through the full pipeline",
+          "status": "failed",
+          "title": "should process meetings through the full pipeline",
+          "duration": 62967.643125,
+          "failureMessages": [
+            "TypeError: sherpa.OfflineSpeakerDiarization is not a constructor\n    at diarizeAudio (/Users/nc/code/gbos-transcripts/packages/pipeline/src/diarize.ts:30:14)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at processOneMeeting (/Users/nc/code/gbos-transcripts/packages/pipeline/src/process.ts:85:20)\n    at /Users/nc/code/gbos-transcripts/packages/pipeline/src/process.test.ts:56:13\n    at file:///Users/nc/code/gbos-transcripts/node_modules/.pnpm/@vitest+runner@4.1.4/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+          ],
+          "meta": {},
+          "tags": []
+        }
+      ],
+      "startTime": 1776737155089,
+      "endTime": 1776737218056.643,
+      "status": "failed",
+      "message": "",
+      "name": "/Users/nc/code/gbos-transcripts/packages/pipeline/src/process.test.ts"
+    }
+  ]
+}

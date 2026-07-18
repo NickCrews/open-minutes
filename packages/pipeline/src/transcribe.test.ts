@@ -25,7 +25,10 @@ function sample16kHz(): string {
   const dest = join(RUNS_DIR, "en-16k.wav");
   if (!existsSync(dest)) {
     mkdirSync(RUNS_DIR, { recursive: true });
-    execSync(`ffmpeg -y -loglevel error -i "${src}" -ar 16000 -ac 1 "${dest}"`, { stdio: "inherit" });
+    execSync(
+      `ffmpeg -y -loglevel error -i "${src}" -ar 16000 -ac 1 "${dest}"`,
+      { stdio: "inherit" },
+    );
   }
   return dest;
 }
@@ -35,8 +38,23 @@ describe("transcribe", () => {
     const segments = await transcribeAudio(sample16kHz());
     const words = segments.flatMap((s) => s.words);
     expect(words.map((w) => w.text)).toEqual([
-      "Ask", "not", "what", "your", "country", "can", "do", "for", "you,",
-      "ask", "what", "you", "can", "do", "for", "your", "country.",
+      "Ask",
+      "not",
+      "what",
+      "your",
+      "country",
+      "can",
+      "do",
+      "for",
+      "you,",
+      "ask",
+      "what",
+      "you",
+      "can",
+      "do",
+      "for",
+      "your",
+      "country.",
     ]);
 
     // Each segment's bounds are ordered and contain its words.
@@ -85,7 +103,8 @@ describe("transcribe", () => {
     // At least one pair of chunks must overlap in wall time — proof of parallelism.
     const overlapped = events.some((a, i) =>
       events.some(
-        (b, j) => i !== j && a.wallStartMs < b.wallEndMs && b.wallStartMs < a.wallEndMs,
+        (b, j) =>
+          i !== j && a.wallStartMs < b.wallEndMs && b.wallStartMs < a.wallEndMs,
       ),
     );
     expect(overlapped).toBe(true);
@@ -95,54 +114,72 @@ describe("transcribe", () => {
     // events, not total wall time, so the VAD pass (which now scans long silence)
     // doesn't mask the overlap.
     const decodeSpan =
-      Math.max(...events.map((e) => e.wallEndMs)) - Math.min(...events.map((e) => e.wallStartMs));
-    const sumPerChunk = events.reduce((s, e) => s + (e.wallEndMs - e.wallStartMs), 0);
+      Math.max(...events.map((e) => e.wallEndMs)) -
+      Math.min(...events.map((e) => e.wallStartMs));
+    const sumPerChunk = events.reduce(
+      (s, e) => s + (e.wallEndMs - e.wallStartMs),
+      0,
+    );
     expect(decodeSpan).toBeLessThan(sumPerChunk);
   });
 
-  const meetingSlugs = [
-    "gbos_9HoIM5INxpI",
-    "gbos_xTDznaSElgY",
-  ];
+  const meetingSlugs = ["gbos_9HoIM5INxpI", "gbos_xTDznaSElgY"];
   for (const slug of meetingSlugs) {
-    it(`can transcribe meeting ${slug}, passing our accuracy limits`, { tags: ["slow5min"] }, async () => {
-      const meeting = getMeetingData(slug);
-      const runDir = join(RUNS_DIR, slug);
-      cpDirSymlinked(meeting.meetingDir, runDir);
-      const speechSegments = await transcribeAudio(await meeting.getAudio().then(a => a.path));
-      const transcribedWords = speechSegments.flatMap((s) => s.words);
-      const transcribedSegments = [{ words: transcribedWords, speaker: { type: "unlabeled" as const } }];
-      // Debug artifact: interleave VAD run markers so a diff shows where the audio
-      // was chunked (each run's span + duration) and fed to the recognizer.
-      serializeVadRunsPsv(speechSegments, { path: join(runDir, "transcribed.gen.psv") });
-      if (process.env.SNAPSHOT_UPDATE === "1") {
-        // golden.psv is shared with diarize.test.ts. This test owns only the
-        // transcription, so preserve the existing speaker boundaries (the
-        // diarization layer) instead of overwriting them with `unlabeled`:
-        // re-apply the golden's turns to the freshly transcribed words.
-        const turns = segmentsToTurns(meeting.segments);
-        const merged = turns.length > 0 ? alignSpeakers(transcribedWords, turns) : transcribedSegments;
-        serializePsv(merged, { path: join(meeting.meetingDir, "golden.psv") });
-        return;
-      }
+    it(
+      `can transcribe meeting ${slug}, passing our accuracy limits`,
+      { tags: ["slow5min"] },
+      async () => {
+        const meeting = getMeetingData(slug);
+        const runDir = join(RUNS_DIR, slug);
+        cpDirSymlinked(meeting.meetingDir, runDir);
+        const speechSegments = await transcribeAudio(
+          await meeting.getAudio().then((a) => a.path),
+        );
+        const transcribedWords = speechSegments.flatMap((s) => s.words);
+        const transcribedSegments = [
+          { words: transcribedWords, speaker: { type: "unlabeled" as const } },
+        ];
+        // Debug artifact: interleave VAD run markers so a diff shows where the audio
+        // was chunked (each run's span + duration) and fed to the recognizer.
+        serializeVadRunsPsv(speechSegments, {
+          path: join(runDir, "transcribed.gen.psv"),
+        });
+        if (process.env.SNAPSHOT_UPDATE === "1") {
+          // golden.psv is shared with diarize.test.ts. This test owns only the
+          // transcription, so preserve the existing speaker boundaries (the
+          // diarization layer) instead of overwriting them with `unlabeled`:
+          // re-apply the golden's turns to the freshly transcribed words.
+          const turns = segmentsToTurns(meeting.segments);
+          const merged =
+            turns.length > 0
+              ? alignSpeakers(transcribedWords, turns)
+              : transcribedSegments;
+          serializePsv(merged, {
+            path: join(meeting.meetingDir, "golden.psv"),
+          });
+          return;
+        }
 
-      const refWords = meeting.segments.flatMap((s) => s.words);
-      const cmp = compareTranscripts(refWords, transcribedWords);
-      console.log(
-        `[${slug}] WER=${cmp.wer.toFixed(4)} (sub=${cmp.substitutions} del=${cmp.deletions} ins=${cmp.insertions} of ${cmp.refWordCount}); ` +
-          `p95 start=${cmp.p95StartError.toFixed(3)}s end=${cmp.p95EndError.toFixed(3)}s; ${speechSegments.length} segments`,
-      );
-      // First: confirm the check actually has teeth. With strict thresholds the
-      // current transcribe output should never pass, so the assertion below MUST
-      // throw. If it doesn't, our metric is broken (or the model is suspiciously
-      // perfect — also worth knowing).
-      expect(() => assertWithinThresholds(cmp, { maxWER: 0, maxTimestampError: 0 })).toThrow();
+        const refWords = meeting.segments.flatMap((s) => s.words);
+        const cmp = compareTranscripts(refWords, transcribedWords);
+        console.log(
+          `[${slug}] WER=${cmp.wer.toFixed(4)} (sub=${cmp.substitutions} del=${cmp.deletions} ins=${cmp.insertions} of ${cmp.refWordCount}); ` +
+            `p95 start=${cmp.p95StartError.toFixed(3)}s end=${cmp.p95EndError.toFixed(3)}s; ${speechSegments.length} segments`,
+        );
+        // First: confirm the check actually has teeth. With strict thresholds the
+        // current transcribe output should never pass, so the assertion below MUST
+        // throw. If it doesn't, our metric is broken (or the model is suspiciously
+        // perfect — also worth knowing).
+        expect(() =>
+          assertWithinThresholds(cmp, { maxWER: 0, maxTimestampError: 0 }),
+        ).toThrow();
 
-      // Then the real check: lax-but-meaningful thresholds we expect to pass.
-      // WER < 15% and matched-word p95 timestamp error < 0.5s are realistic for
-      // this model on noisy multi-speaker audio.
-      assertWithinThresholds(cmp, { maxWER: 0.15, maxTimestampError: 0.5 });
-    });
+        // Then the real check: lax-but-meaningful thresholds we expect to pass.
+        // WER < 15% and matched-word p95 timestamp error < 0.5s are realistic for
+        // this model on noisy multi-speaker audio.
+        assertWithinThresholds(cmp, { maxWER: 0.15, maxTimestampError: 0.5 });
+      },
+    );
   }
 });
 
@@ -163,15 +200,23 @@ function assertWithinThresholds(
 ): void {
   const failures: string[] = [];
   if (cmp.wer > thresholds.maxWER) {
-    failures.push(`WER ${cmp.wer.toFixed(4)} > ${thresholds.maxWER} (sub=${cmp.substitutions} del=${cmp.deletions} ins=${cmp.insertions} of ${cmp.refWordCount} ref words)`);
+    failures.push(
+      `WER ${cmp.wer.toFixed(4)} > ${thresholds.maxWER} (sub=${cmp.substitutions} del=${cmp.deletions} ins=${cmp.insertions} of ${cmp.refWordCount} ref words)`,
+    );
   }
   if (cmp.p95StartError > thresholds.maxTimestampError) {
-    failures.push(`p95 word-start error ${cmp.p95StartError.toFixed(3)}s > ${thresholds.maxTimestampError}s (mean=${cmp.meanStartError.toFixed(3)}s, max=${cmp.maxStartError.toFixed(3)}s, n=${cmp.matchedPairs})`);
+    failures.push(
+      `p95 word-start error ${cmp.p95StartError.toFixed(3)}s > ${thresholds.maxTimestampError}s (mean=${cmp.meanStartError.toFixed(3)}s, max=${cmp.maxStartError.toFixed(3)}s, n=${cmp.matchedPairs})`,
+    );
   }
   if (cmp.p95EndError > thresholds.maxTimestampError) {
-    failures.push(`p95 word-end error ${cmp.p95EndError.toFixed(3)}s > ${thresholds.maxTimestampError}s (mean=${cmp.meanEndError.toFixed(3)}s, max=${cmp.maxEndError.toFixed(3)}s, n=${cmp.matchedPairs})`);
+    failures.push(
+      `p95 word-end error ${cmp.p95EndError.toFixed(3)}s > ${thresholds.maxTimestampError}s (mean=${cmp.meanEndError.toFixed(3)}s, max=${cmp.maxEndError.toFixed(3)}s, n=${cmp.matchedPairs})`,
+    );
   }
   if (failures.length > 0) {
-    throw new Error(`Transcript outside thresholds:\n  - ${failures.join("\n  - ")}`);
+    throw new Error(
+      `Transcript outside thresholds:\n  - ${failures.join("\n  - ")}`,
+    );
   }
 }

@@ -20,9 +20,7 @@ export function normalizeForWER(text: string): string[] {
 }
 
 function normalizeToken(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^\p{L}\p{N}']/gu, "");
+  return text.toLowerCase().replace(/[^\p{L}\p{N}']/gu, "");
 }
 
 export function computeWER(reference: string, hypothesis: string): WERResult {
@@ -31,7 +29,12 @@ export function computeWER(reference: string, hypothesis: string): WERResult {
   const ops = alignTokens(ref, hyp);
   const { substitutions, deletions, insertions } = tallyOps(ops);
   const ref_word_count = ref.length;
-  const wer = ref_word_count === 0 ? (hyp.length === 0 ? 0 : 1) : (substitutions + deletions + insertions) / ref_word_count;
+  const wer =
+    ref_word_count === 0
+      ? hyp.length === 0
+        ? 0
+        : 1
+      : (substitutions + deletions + insertions) / ref_word_count;
   return { wer, substitutions, deletions, insertions, ref_word_count };
 }
 
@@ -88,7 +91,10 @@ const OP_SUB = 1;
 const OP_DEL = 2;
 const OP_INS = 3;
 
-function alignTokens(ref: readonly string[], hyp: readonly string[]): AlignedWordPair[] {
+function alignTokens(
+  ref: readonly string[],
+  hyp: readonly string[],
+): AlignedWordPair[] {
   const m = ref.length;
   const n = hyp.length;
   const width = n + 1;
@@ -249,6 +255,9 @@ function max(xs: readonly number[]): number {
 function percentile(xs: readonly number[], p: number): number {
   if (xs.length === 0) return 0;
   const sorted = [...xs].sort((a, b) => a - b);
-  const idx = Math.min(sorted.length - 1, Math.max(0, Math.ceil(p * sorted.length) - 1));
+  const idx = Math.min(
+    sorted.length - 1,
+    Math.max(0, Math.ceil(p * sorted.length) - 1),
+  );
   return sorted[idx]!;
 }

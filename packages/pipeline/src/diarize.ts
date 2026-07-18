@@ -172,7 +172,11 @@ function mergeSpeakers(
     .forEach(([group], i) => renumber.set(group, i));
 
   return turns
-    .map((t) => ({ start: t.start, end: t.end, speaker: renumber.get(groupForTurn(t))! }))
+    .map((t) => ({
+      start: t.start,
+      end: t.end,
+      speaker: renumber.get(groupForTurn(t))!,
+    }))
     .sort((a, b) => a.start - b.start);
 }
 
@@ -187,7 +191,10 @@ function agglomerate(
     let bestSim = threshold;
     for (let i = 0; i < clusters.length; i++) {
       for (let j = i + 1; j < clusters.length; j++) {
-        const sim = cosineSimilarity(clusters[i]!.centroid, clusters[j]!.centroid);
+        const sim = cosineSimilarity(
+          clusters[i]!.centroid,
+          clusters[j]!.centroid,
+        );
         if (sim >= bestSim) {
           bestSim = sim;
           bestI = i;
@@ -202,7 +209,8 @@ function agglomerate(
     const weight = a.weight + b.weight;
     const merged = new Float32Array(a.centroid.length);
     for (let k = 0; k < merged.length; k++) {
-      merged[k] = (a.centroid[k]! * a.weight + b.centroid[k]! * b.weight) / weight;
+      merged[k] =
+        (a.centroid[k]! * a.weight + b.centroid[k]! * b.weight) / weight;
     }
     a.centroid = merged;
     a.weight = weight;
@@ -212,7 +220,10 @@ function agglomerate(
 }
 
 /** The group of the anchor turn nearest `mid` in time. */
-function nearestGroup(mid: number, anchors: { mid: number; group: number }[]): number {
+function nearestGroup(
+  mid: number,
+  anchors: { mid: number; group: number }[],
+): number {
   let best = anchors[0]!.group;
   let bestDist = Infinity;
   for (const a of anchors) {
@@ -237,7 +248,9 @@ function speakerCentroid(
     .slice(0, LONGEST_SEGMENTS);
   if (longest.length === 0) return null;
 
-  const embeddings = longest.map((t) => extractEmbedding(extractor, wave, t.start, t.end));
+  const embeddings = longest.map((t) =>
+    extractEmbedding(extractor, wave, t.start, t.end),
+  );
   return computeCentroid(embeddings, extractor.dim);
 }
 
@@ -261,7 +274,10 @@ function extractEmbedding(
 }
 
 /** Element-wise mean of N equal-length embeddings. */
-function computeCentroid(embeddings: Float32Array[], dim: number): Float32Array {
+function computeCentroid(
+  embeddings: Float32Array[],
+  dim: number,
+): Float32Array {
   const centroid = new Float32Array(dim);
   for (const emb of embeddings) {
     for (let i = 0; i < dim; i++) centroid[i]! += emb[i]!;
@@ -287,7 +303,9 @@ function midpoint(t: DiarizationTurn): number {
   return (t.start + t.end) / 2;
 }
 
-function groupBySpeaker(turns: DiarizationTurn[]): Map<number, DiarizationTurn[]> {
+function groupBySpeaker(
+  turns: DiarizationTurn[],
+): Map<number, DiarizationTurn[]> {
   const bySpeaker = new Map<number, DiarizationTurn[]>();
   for (const turn of turns) {
     const list = bySpeaker.get(turn.speaker) ?? [];
@@ -355,7 +373,9 @@ async function cli() {
   }
   const turns = diarizeAudio(audioPath);
   const speakers = new Set(turns.map((t) => t.speaker));
-  console.log(`Found ${speakers.size} speaker(s) across ${turns.length} turn(s).`);
+  console.log(
+    `Found ${speakers.size} speaker(s) across ${turns.length} turn(s).`,
+  );
   const embeddings = computeSpeakerEmbeddings(audioPath, turns);
   for (const turn of turns) {
     console.log(

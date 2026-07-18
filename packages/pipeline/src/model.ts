@@ -17,13 +17,16 @@ export interface ModelSpec {
 
 export type ResolvedFiles<T extends DirListing> = {
   [K in keyof T]: T[K] extends true
-  ? string
-  : T[K] extends DirListing
-  ? ResolvedFiles<T[K]>
-  : never;
+    ? string
+    : T[K] extends DirListing
+      ? ResolvedFiles<T[K]>
+      : never;
 };
 
-export function ensureDownloaded<S extends ModelSpec>(spec: S, rootDir: string = MODELS_DIR) {
+export function ensureDownloaded<S extends ModelSpec>(
+  spec: S,
+  rootDir: string = MODELS_DIR,
+) {
   const path = join(rootDir, spec.name);
   let downloaded = false;
   // Re-download if the dir is missing OR present-but-incomplete (e.g. an empty
@@ -47,21 +50,25 @@ function downloadModel(model: ModelSpec, dir: string): void {
   if (model.single_file) {
     const files = Object.keys(model.files);
     if (files.length !== 1) {
-      throw new Error(`Model ${model.name} is marked as single_file but has ${files.length} files`);
+      throw new Error(
+        `Model ${model.name} is marked as single_file but has ${files.length} files`,
+      );
     }
     const filename = files[0]!;
-    execSync(
-      `curl -L -o "${join(dir, filename)}" "${model.url}"`,
-      { stdio: "inherit" },
-    );
+    execSync(`curl -L -o "${join(dir, filename)}" "${model.url}"`, {
+      stdio: "inherit",
+    });
   } else {
     // k2-fsa release tarballs wrap everything in a single top-level folder
     // (e.g. sherpa-onnx-pyannote-segmentation-3-0/model.onnx). We extract into a
     // dir already named after the model, so strip that wrapper to land the files
     // flat at <dir>/<file> rather than <dir>/<wrapper>/<file>.
-    execSync(`curl -L "${model.url}" | tar -xj --strip-components=1 -C "${dir}"`, {
-      stdio: "inherit",
-    });
+    execSync(
+      `curl -L "${model.url}" | tar -xj --strip-components=1 -C "${dir}"`,
+      {
+        stdio: "inherit",
+      },
+    );
   }
   console.log(`  ✓ ${model.name}`);
 }
@@ -78,7 +85,11 @@ function allFilesPresent(dir: string, files: DirListing, prefix = ""): boolean {
   return true;
 }
 
-function resolveFiles(dir: string, files: DirListing, prefix = ""): Record<string, unknown> {
+function resolveFiles(
+  dir: string,
+  files: DirListing,
+  prefix = "",
+): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [filename, value] of Object.entries(files)) {
     const path = join(dir, prefix, filename);

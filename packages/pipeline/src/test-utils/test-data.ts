@@ -52,18 +52,22 @@ function parseJson<T>(path: string): T {
 }
 
 export function loadAllTestData(): TestData {
-  if (!existsSync(TEST_DATA_ROOT)) throw new Error(`Fixtures root not found: ${TEST_DATA_ROOT}`);
+  if (!existsSync(TEST_DATA_ROOT))
+    throw new Error(`Fixtures root not found: ${TEST_DATA_ROOT}`);
 
   const muniPath = join(TEST_DATA_ROOT, "municipalities.jsonl");
-  if (!existsSync(muniPath)) throw new Error(`Municipalities file not found: ${muniPath}`);
+  if (!existsSync(muniPath))
+    throw new Error(`Municipalities file not found: ${muniPath}`);
   const municipalities = parseJsonl<GoldenMunicipality>(muniPath);
 
   const peoplePath = join(TEST_DATA_ROOT, "people.jsonl");
-  if (!existsSync(peoplePath)) throw new Error(`People file not found: ${peoplePath}`);
+  if (!existsSync(peoplePath))
+    throw new Error(`People file not found: ${peoplePath}`);
   const people = parseJsonl<GoldenPerson>(peoplePath);
 
   const meetingsDir = join(TEST_DATA_ROOT, "meetings");
-  if (!existsSync(meetingsDir)) throw new Error(`Meetings directory not found: ${meetingsDir}`);
+  if (!existsSync(meetingsDir))
+    throw new Error(`Meetings directory not found: ${meetingsDir}`);
   const meetingSlugs = listDirs(meetingsDir);
   const meetings = meetingSlugs.map((slug) => getMeetingData(slug));
 
@@ -76,15 +80,20 @@ export function loadAllTestData(): TestData {
 
 export function getMeetingData(meetingSlug: string): GoldenMeeting {
   const meetingDir = join(TEST_DATA_ROOT, "meetings", meetingSlug);
-  if (!existsSync(meetingDir)) throw new Error(`Meeting directory not found: ${meetingDir}`);
+  if (!existsSync(meetingDir))
+    throw new Error(`Meeting directory not found: ${meetingDir}`);
   const meetingPath = join(meetingDir, "meeting.json");
-  if (!existsSync(meetingPath)) throw new Error(`Meeting file not found: ${meetingPath}`);
+  if (!existsSync(meetingPath))
+    throw new Error(`Meeting file not found: ${meetingPath}`);
   const meeting = parseJson<GoldenMeeting>(meetingPath);
 
   const segments = parsePsv({ path: join(meetingDir, "golden.psv") });
 
   const getAudio = async (): Promise<CachedAudio> => {
-    const audio = await getCachedAudio({ youtubeId: meeting.youtube_id, sha256: meeting._audio_sha256 });
+    const audio = await getCachedAudio({
+      youtubeId: meeting.youtube_id,
+      sha256: meeting._audio_sha256,
+    });
 
     // Symlink the cached audio into the meeting directory for inspection
     const symlinkPath = join(meetingDir, "audio.gen.wav");
@@ -93,7 +102,7 @@ export function getMeetingData(meetingSlug: string): GoldenMeeting {
     }
 
     return audio;
-  }
+  };
 
   return {
     ...meeting,
@@ -104,5 +113,7 @@ export function getMeetingData(meetingSlug: string): GoldenMeeting {
 }
 
 function listDirs(parent: string): string[] {
-  return readdirSync(parent).filter((entry) => statSync(join(parent, entry)).isDirectory());
+  return readdirSync(parent).filter((entry) =>
+    statSync(join(parent, entry)).isDirectory(),
+  );
 }

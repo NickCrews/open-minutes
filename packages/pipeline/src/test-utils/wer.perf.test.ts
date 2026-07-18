@@ -22,9 +22,30 @@ function w(text: string, start = 0, end = 0): TranscriptWord {
 // normalizeToken() is a no-op and we can reason about alignment directly.
 function makeWords(n: number, rng: () => number): TranscriptWord[] {
   const vocab = [
-    "the", "quick", "brown", "fox", "jumps", "over", "lazy", "dog",
-    "and", "then", "runs", "away", "into", "forest", "where", "trees",
-    "grow", "tall", "near", "river", "that", "flows", "down", "hill",
+    "the",
+    "quick",
+    "brown",
+    "fox",
+    "jumps",
+    "over",
+    "lazy",
+    "dog",
+    "and",
+    "then",
+    "runs",
+    "away",
+    "into",
+    "forest",
+    "where",
+    "trees",
+    "grow",
+    "tall",
+    "near",
+    "river",
+    "that",
+    "flows",
+    "down",
+    "hill",
   ];
   const words: TranscriptWord[] = new Array(n);
   for (let i = 0; i < n; i++) {
@@ -38,10 +59,15 @@ function makeWords(n: number, rng: () => number): TranscriptWord[] {
 // Kept here (and only here) so we can assert Hirschberg produces a *byte-identical*
 // alignment — same ops, same indices, same tie-breaks — on inputs small enough
 // that the O(m·n) matrices fit in memory.
-function referenceAlign(ref: readonly string[], hyp: readonly string[]): AlignedWordPair[] {
+function referenceAlign(
+  ref: readonly string[],
+  hyp: readonly string[],
+): AlignedWordPair[] {
   const m = ref.length;
   const n = hyp.length;
-  const cost: number[][] = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+  const cost: number[][] = Array.from({ length: m + 1 }, () =>
+    new Array(n + 1).fill(0),
+  );
   const back: AlignmentOp[][] = Array.from({ length: m + 1 }, () =>
     new Array<AlignmentOp>(n + 1).fill("match"),
   );
@@ -109,8 +135,12 @@ describe("alignWords cross-validation against full-matrix oracle", () => {
     const rng = mulberry32(99);
     const ref = makeWords(300, rng);
     const hyp = makeWords(5, rng);
-    expect(alignWords(ref, hyp)).toEqual(referenceAlign(toTokens(ref), toTokens(hyp)));
-    expect(alignWords(hyp, ref)).toEqual(referenceAlign(toTokens(hyp), toTokens(ref)));
+    expect(alignWords(ref, hyp)).toEqual(
+      referenceAlign(toTokens(ref), toTokens(hyp)),
+    );
+    expect(alignWords(hyp, ref)).toEqual(
+      referenceAlign(toTokens(hyp), toTokens(ref)),
+    );
   });
 });
 

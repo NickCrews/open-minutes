@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { formatTimestamp, parseTimestamp, parsePsv, serializePsv, serializeVadRunsPsv } from "./psv";
+import {
+  formatTimestamp,
+  parseTimestamp,
+  parsePsv,
+  serializePsv,
+  serializeVadRunsPsv,
+} from "./psv";
 import type { SpeechSegment, TranscriptSegment } from "../types";
 
 describe("psv timestamps", () => {
@@ -55,17 +61,29 @@ describe("psv parse/serialize", () => {
       '0:00:00.00||meta|{"begin_speaker": "unlabeled"}',
       "0:00:01.00|0:00:02.00|text|a|b",
     ].join("\n");
-    expect(parsePsv(content)[0]!.words).toEqual([{ text: "a|b", start: 1, end: 2 }]);
+    expect(parsePsv(content)[0]!.words).toEqual([
+      { text: "a|b", start: 1, end: 2 },
+    ]);
   });
 
   it("rejects text before any begin_speaker", () => {
-    expect(() => parsePsv("0:00:01.00|0:00:02.00|text|orphan")).toThrow(/begin_speaker/);
+    expect(() => parsePsv("0:00:01.00|0:00:02.00|text|orphan")).toThrow(
+      /begin_speaker/,
+    );
   });
 
   it("emits vad span markers interleaved with each run's words", () => {
     const runs: SpeechSegment[] = [
-      { start: 0.08, end: 1.0, words: [{ text: "Hello", start: 0.08, end: 1.0 }] },
-      { start: 1.1, end: 301.1, words: [{ text: "there", start: 1.1, end: 1.5 }] },
+      {
+        start: 0.08,
+        end: 1.0,
+        words: [{ text: "Hello", start: 0.08, end: 1.0 }],
+      },
+      {
+        start: 1.1,
+        end: 301.1,
+        words: [{ text: "there", start: 1.1, end: 1.5 }],
+      },
     ];
     const content = serializeVadRunsPsv(runs);
     const lines = content.trim().split("\n");
@@ -81,8 +99,16 @@ describe("psv parse/serialize", () => {
 
   it("skips vad markers when parsing, recovering the flat word list", () => {
     const runs: SpeechSegment[] = [
-      { start: 0.08, end: 1.0, words: [{ text: "Hello", start: 0.08, end: 1.0 }] },
-      { start: 1.1, end: 1.5, words: [{ text: "there", start: 1.1, end: 1.5 }] },
+      {
+        start: 0.08,
+        end: 1.0,
+        words: [{ text: "Hello", start: 0.08, end: 1.0 }],
+      },
+      {
+        start: 1.1,
+        end: 1.5,
+        words: [{ text: "there", start: 1.1, end: 1.5 }],
+      },
     ];
     expect(parsePsv(serializeVadRunsPsv(runs))).toEqual<TranscriptSegment[]>([
       {

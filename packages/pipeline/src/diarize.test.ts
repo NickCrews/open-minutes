@@ -24,7 +24,7 @@ describe("diarize", () => {
   for (const slug of meetingSlugs) {
     // It took 18 minutes on my M1 pro, probably slower on others.
     // But the timeout might not actually have an effect:
-    // The vitest timeout cannot 
+    // The vitest timeout cannot
     it(`diarizes meeting ${slug}`, { timeout: 25 * 60 * 1000 }, async () => {
       const meeting = getMeetingData(slug);
       const runDir = join(RUNS_DIR, slug);

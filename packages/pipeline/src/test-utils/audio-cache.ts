@@ -1,4 +1,10 @@
-import { createReadStream, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  createReadStream,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { createHash } from "node:crypto";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -23,14 +29,19 @@ export function meetingCacheDir(youtube_id: string): string {
   return join(CACHE_ROOT, youtube_id);
 }
 
-export async function getCachedAudio(fixture: { youtubeId: string, sha256?: string }): Promise<CachedAudio> {
+export async function getCachedAudio(fixture: {
+  youtubeId: string;
+  sha256?: string;
+}): Promise<CachedAudio> {
   const dir = meetingCacheDir(fixture.youtubeId);
   const audioPath = join(dir, "audio.wav");
   const manifestPath = join(dir, "manifest.json");
   mkdirSync(dir, { recursive: true });
 
   if (existsSync(manifestPath) && existsSync(audioPath)) {
-    const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as AudioManifest;
+    const manifest = JSON.parse(
+      readFileSync(manifestPath, "utf8"),
+    ) as AudioManifest;
     const actual = await sha256File(audioPath);
     if (actual !== manifest.sha256) {
       throw new Error(
@@ -67,7 +78,9 @@ export async function getCachedAudio(fixture: { youtubeId: string, sha256?: stri
 
 export function isCached(youtube_id: string): boolean {
   const dir = meetingCacheDir(youtube_id);
-  return existsSync(join(dir, "audio.wav")) && existsSync(join(dir, "manifest.json"));
+  return (
+    existsSync(join(dir, "audio.wav")) && existsSync(join(dir, "manifest.json"))
+  );
 }
 
 async function sha256File(path: string): Promise<string> {

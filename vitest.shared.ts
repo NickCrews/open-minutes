@@ -12,8 +12,9 @@ export default defineConfig({
     setupFiles: [join(ROOT, "test-setup.ts")],
     tags: [
       {
-        name: 'slow5min',
-        description: 'Slow diarization/transcription tests over full meetings (~10 min each on CPU)',
+        name: "slow5min",
+        description:
+          "Slow diarization/transcription tests over full meetings (~10 min each on CPU)",
         // WARNING: the timeout might not actually have an effect for the ML-heavy tests:
         // Vitest cannot interrupt synchronous native code (like in sherpa-onnx), it only can abort within the JS event loop.
         timeout: 25 * 60 * 1000, // a full 166-min meeting diarizes in ~8-10 min; headroom for CI/background

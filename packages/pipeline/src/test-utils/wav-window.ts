@@ -2,9 +2,15 @@ import sherpa, { type WaveForm } from "sherpa-onnx-node";
 
 // Returns the slice of `wave.samples` between [startSec, endSec]. Caller-supplied
 // bounds are clamped to [0, totalDuration].
-export function sliceWave(wave: WaveForm, startSec: number, endSec: number): WaveForm {
+export function sliceWave(
+  wave: WaveForm,
+  startSec: number,
+  endSec: number,
+): WaveForm {
   if (startSec >= endSec) {
-    throw new Error(`Invalid slice with startSec >= endSec: ${startSec} >= ${endSec}`);
+    throw new Error(
+      `Invalid slice with startSec >= endSec: ${startSec} >= ${endSec}`,
+    );
   }
   const total = wave.samples.length / wave.sampleRate;
   const s = Math.max(0, Math.min(startSec, total));
