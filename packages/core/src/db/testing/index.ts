@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import postgres from "postgres";
 import { getDb, type DB } from "../index";
+import { resolveDatabaseUrl } from "../resolve.mjs";
 
 // Utilities for tests that need a real Postgres as a disposable playground.
 // createTestDb() is fully self-sufficient: it starts docker-compose's postgres
@@ -38,14 +39,11 @@ export interface TestDb {
   drop(): Promise<void>;
 }
 
+// Tests always target "local" unless a URL is passed explicitly: these
+// utilities create and drop databases, which must never happen against
+// whatever real target $DB happens to select.
 function baseUrl(url?: string): string {
-  const resolved = url ?? process.env.DATABASE_URL;
-  if (!resolved) {
-    throw new Error(
-      "Must provide DATABASE_URL in environment variables or as an argument",
-    );
-  }
-  return resolved;
+  return url ?? resolveDatabaseUrl("local");
 }
 
 function urlForDatabase(base: string, name: string): string {

@@ -8,22 +8,22 @@
 //
 // Plain JavaScript (not TypeScript) so it runs under bare `node` using only
 // gbos-core's existing `postgres` and `dotenv` dependencies — no extra runner.
-import { config } from "dotenv";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import process from "node:process";
+import { URL } from "node:url";
 import postgres from "postgres";
+import { resolveDatabaseUrl } from "./resolve.mjs";
 
-// Mirror drizzle.config.ts: load .env.local from the workspace root so this
-// targets the same DATABASE_URL as the migrations.
-config({
-  path: join(dirname(fileURLToPath(import.meta.url)), "../../../../.env.local"),
-});
+const url = resolveDatabaseUrl();
 
-const url = process.env.DATABASE_URL;
-if (!url) {
+// Nuking the wrong database is unrecoverable, so remote targets (e.g.
+// DB=prod) must opt in explicitly.
+const host = new URL(url).hostname;
+if (
+  !["localhost", "127.0.0.1", "::1"].includes(host) &&
+  process.env.ALLOW_REMOTE_NUKE !== "1"
+) {
   throw new Error(
-    "DATABASE_URL must be set (in .env.local or the environment)",
+    `Refusing to nuke non-local database at ${host}. Set ALLOW_REMOTE_NUKE=1 to override.`,
   );
 }
 

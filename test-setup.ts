@@ -1,10 +1,8 @@
-import { config } from "dotenv";
-import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
+import { loadRootDotEnv } from "./packages/core/src/dotenv.mjs";
 
-// Load .env from the workspace root, regardless of which package vitest runs from.
-config({ path: join(dirname(fileURLToPath(import.meta.url)), ".env") });
+loadRootDotEnv();
 
-// Default to docker-compose's postgres so tests work out of the box.
-process.env.DATABASE_URL ??=
-  "postgres://postgres:postgres@localhost:5432/open_minutes";
+// Tests must never touch a named remote database (they create and drop
+// databases), so pin resolution to "local" regardless of what $DB says.
+// Explicit URLs passed in code still win.
+process.env.DB = "local";

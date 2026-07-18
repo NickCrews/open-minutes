@@ -4,6 +4,8 @@
   "type": "module",
   "exports": {
     "./db": "./src/db/index.ts",
+    "./db/resolve": "./src/db/resolve.mjs",
+    "./dotenv": "./src/dotenv.mjs",
     "./db/testing": "./src/db/testing/index.ts",
     "./db/testing/vitest": "./src/db/testing/vitest.ts",
     "./youtube": "./src/youtube/index.ts",
