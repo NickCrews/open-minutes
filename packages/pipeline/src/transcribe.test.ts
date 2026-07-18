@@ -127,7 +127,7 @@ describe("transcribe", () => {
   for (const slug of meetingSlugs) {
     it(
       `can transcribe meeting ${slug}, passing our accuracy limits`,
-      { tags: ["slow5min"] },
+      { tags: ["slow"] },
       async () => {
         const meeting = getMeetingData(slug);
         const runDir = join(RUNS_DIR, slug);
