@@ -9,6 +9,8 @@
     "lint": "eslint .",
     "test": "vitest run",
     "check": "pnpm run format:check && pnpm run lint && pnpm run test",
+    "db:generate": "pnpm --filter @open-minutes/core run db:generate",
+    "db:migrate": "pnpm --filter @open-minutes/core run db:migrate",
     "db:nuke": "pnpm --filter @open-minutes/core run db:nuke",
     "db:seed": "pnpm --filter @open-minutes/pipeline run db:seed",
     "db:reset": "pnpm db:nuke && pnpm db:seed",
