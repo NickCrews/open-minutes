@@ -72,13 +72,18 @@ export const segmentsTable = pgTable("segments", {
   // unlabeled/segmented distinction when person_id is null: both null = no
   // speaker info at all; speaker_number set = diarized but not yet identified.
   speaker_number: integer(),
-  text: varchar().notNull(),
+  // Derived from `words` by the words_to_text() SQL function (created by hand in
+  // the migration that introduced this column — drizzle-kit doesn't manage
+  // functions), so it can never drift from the word-level data.
+  text: varchar().generatedAlwaysAs(
+    (): SQL => sql`words_to_text(${segmentsTable.words})`,
+  ),
   start_secs: secondsInterval(),
   end_secs: secondsInterval(),
   duration_secs: secondsInterval().generatedAlwaysAs(
     (): SQL => sql`${segmentsTable.end_secs} - ${segmentsTable.start_secs}`,
   ),
-  words: jsonb().$type<TranscriptWord[]>(),
+  words: jsonb().$type<TranscriptWord[]>().notNull(),
   created_at: timestamp().notNull().defaultNow(),
 });
 

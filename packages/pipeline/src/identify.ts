@@ -32,7 +32,6 @@ export async function identifyAndInsertSegments(
       meeting_id: meetingId,
       person_id: speakerToPersonId.get(seg.speaker) ?? null,
       speaker_number: seg.speaker,
-      text: seg.text,
       start_secs: sql`make_interval(secs => ${seg.start})`,
       end_secs: sql`make_interval(secs => ${seg.end})`,
       words: seg.words,
