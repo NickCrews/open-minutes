@@ -13,6 +13,7 @@ models/
 node_modules/
 dist/
 .output/
+*.tsbuildinfo
 
 # Environment
 .env

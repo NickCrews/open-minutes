@@ -1,7 +1,6 @@
 import { defineRelations, SQL, sql } from "drizzle-orm";
 import {
   pgTable,
-  pgEnum,
   integer,
   interval,
   jsonb,
@@ -29,18 +28,6 @@ export const municipalitiesTable = pgTable("municipalities", {
   created_at: timestamp().notNull().defaultNow(),
 });
 
-export const MEETING_STATUSES = [
-  "discovered",
-  "downloaded",
-  "transcribed",
-  "diarized",
-  "aligned",
-  "identified",
-  "embedded",
-] as const;
-export type MeetingStatus = (typeof MEETING_STATUSES)[number];
-export const meetingStatusEnum = pgEnum("meeting_status", MEETING_STATUSES);
-
 export const meetingsTable = pgTable("meetings", {
   id: serial().primaryKey(),
   municipality_id: integer()
@@ -55,7 +42,6 @@ export const meetingsTable = pgTable("meetings", {
   description: varchar().notNull().default(""),
   start_time: timestamp(),
   duration_secs: secondsInterval(),
-  status: meetingStatusEnum().notNull().default("discovered"),
   transcription: jsonb(),
   diarization: jsonb(),
   created_at: timestamp().notNull().defaultNow(),
