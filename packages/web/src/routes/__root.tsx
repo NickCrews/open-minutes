@@ -6,6 +6,7 @@ import {
   Scripts,
 } from "@tanstack/solid-router";
 import type { JSX } from "solid-js";
+import appCss from "~/styles/app.css?url";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -14,6 +15,7 @@ export const Route = createRootRoute({
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Open Minutes" },
     ],
+    links: [{ rel: "stylesheet", href: appCss }],
   }),
   component: RootComponent,
 });
@@ -21,16 +23,31 @@ export const Route = createRootRoute({
 function RootComponent() {
   return (
     <RootDocument>
-      <nav style={{ display: "flex", gap: "1rem", padding: "1rem" }}>
-        <Link to="/">Home</Link>
-        <Link to="/meetings">Meetings</Link>
-        <Link to="/people">People</Link>
-        <Link to="/municipalities">Municipalities</Link>
-        <Link to="/search" search={{ q: "" }}>
+      <nav class="flex gap-4 border-b px-4 py-3">
+        <Link to="/" class="font-semibold hover:underline">
+          Home
+        </Link>
+        <Link to="/meetings" class="text-muted-foreground hover:underline">
+          Meetings
+        </Link>
+        <Link to="/people" class="text-muted-foreground hover:underline">
+          People
+        </Link>
+        <Link
+          to="/municipalities"
+          class="text-muted-foreground hover:underline"
+        >
+          Municipalities
+        </Link>
+        <Link
+          to="/search"
+          search={{ q: "" }}
+          class="text-muted-foreground hover:underline"
+        >
           Search
         </Link>
       </nav>
-      <main style={{ padding: "0 1rem 1rem" }}>
+      <main class="p-4">
         <Outlet />
       </main>
     </RootDocument>

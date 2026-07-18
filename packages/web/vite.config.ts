@@ -1,6 +1,7 @@
 import { defineConfig } from "vite";
 import { tanstackStart } from "@tanstack/solid-start/plugin/vite";
 import solidPlugin from "vite-plugin-solid";
+import tailwindcss from "@tailwindcss/vite";
 import path from "node:path";
 
 export default defineConfig({
@@ -12,5 +13,5 @@ export default defineConfig({
       "~": path.resolve(import.meta.dirname, "src"),
     },
   },
-  plugins: [tanstackStart(), solidPlugin({ ssr: true })],
+  plugins: [tailwindcss(), tanstackStart(), solidPlugin({ ssr: true })],
 });

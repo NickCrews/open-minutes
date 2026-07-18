@@ -16,13 +16,20 @@ export const Route = createFileRoute("/people")({
 function PeoplePage() {
   const people = Route.useLoaderData();
   return (
-    <div>
-      <h1>People</h1>
-      <ul>
-        <For each={people()} fallback={<li>No people yet.</li>}>
+    <div class="mx-auto max-w-3xl">
+      <h1 class="mb-6 text-2xl font-bold">People</h1>
+      <ul class="divide-y">
+        <For
+          each={people()}
+          fallback={<li class="text-muted-foreground py-2">No people yet.</li>}
+        >
           {(person) => (
-            <li>
-              <Link to="/people/$id" params={{ id: String(person.id) }}>
+            <li class="py-2">
+              <Link
+                to="/people/$id"
+                params={{ id: String(person.id) }}
+                class="font-medium hover:underline"
+              >
                 {person.name || "(unnamed)"}
               </Link>
             </li>
