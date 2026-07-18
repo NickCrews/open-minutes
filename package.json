@@ -17,8 +17,7 @@
     "db:nuke": "pnpm --filter @open-minutes/core run db:nuke",
     "db:seed": "pnpm --filter @open-minutes/pipeline run db:seed",
     "db:reset": "pnpm db:nuke && pnpm db:seed",
-    "web:dev": "pnpm --filter @open-minutes/web run dev",
-    "om": "om"
+    "web:dev": "pnpm --filter @open-minutes/web run dev"
   },
   "devDependencies": {
     "@open-minutes/pipeline": "workspace:*",

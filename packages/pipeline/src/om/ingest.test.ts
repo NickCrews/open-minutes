@@ -63,7 +63,7 @@ async function seedWorkDir(workRoot: string, youtubeId: string): Promise<void> {
   await writeFile(join(dir, "audio.wav"), "not really audio");
   await writeFile(
     join(dir, "transcription.json"),
-    JSON.stringify(TRANSCRIPTION),
+    JSON.stringify(TRANSCRIPTION, null, 2),
   );
   await writeFile(join(dir, "diarization.json"), JSON.stringify(DIARIZATION));
 }

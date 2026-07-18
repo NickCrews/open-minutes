@@ -7,6 +7,13 @@
 // Database selection follows the named-database convention: defaults to
 // `local`, overridable per-invocation with `DB=prod om <cmd>`.
 import { defineCommand, runMain } from "citty";
+
+// A downstream pipe closing early (eg `om available | head -3`) raises EPIPE
+// on stdout; that's normal pipeline behavior, not an error.
+process.stdout.on("error", (error: NodeJS.ErrnoException) => {
+  if (error.code === "EPIPE") process.exit(0);
+  throw error;
+});
 import { getDb, type DB } from "@open-minutes/core/db";
 import { listIngested, type IngestedMeeting } from "./ingested";
 import { listAvailable } from "./available";

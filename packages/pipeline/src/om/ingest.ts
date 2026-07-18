@@ -38,11 +38,11 @@ export interface IngestOptions {
 
 export type IngestResult =
   | {
-      youtubeId: string;
-      status: "ingested";
-      meetingId: number;
-      segmentCount: number;
-    }
+    youtubeId: string;
+    status: "ingested";
+    meetingId: number;
+    segmentCount: number;
+  }
   | { youtubeId: string; status: "skipped" };
 
 /** On-disk shape of a work directory's diarization.json. */
@@ -224,7 +224,7 @@ async function resolveMunicipality(
   }
   throw new Error(
     `Video ${youtubeId} is on channel "${channelId}", which matches no ` +
-      `municipality's youtube_channel_id. Refusing to ingest an unrelated video.`,
+    `municipality's youtube_channel_id. Refusing to ingest an unrelated video.`,
   );
 }
 
@@ -243,6 +243,6 @@ async function cachedStage<T>(
     return JSON.parse(await readFile(artifactPath, "utf8")) as T;
   }
   const result = await compute();
-  await writeFile(artifactPath, JSON.stringify(result));
+  await writeFile(artifactPath, JSON.stringify(result, null, 2));
   return result;
 }
