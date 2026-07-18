@@ -2,11 +2,11 @@
 import { createEnv } from "@t3-oss/env-core";
 import { z } from "zod";
 import { resolveDatabaseUrl } from "@open-minutes/core/db/resolve";
-import { loadRootEnv } from "@open-minutes/core/env";
+import { loadRootDotEnv } from "@open-minutes/core/dotenv";
 
 // Load .env.local before validating: NODE_ENV below comes from it, and must
 // not depend on resolveDatabaseUrl() having run first as a side effect.
-if (typeof window === "undefined") loadRootEnv();
+if (typeof window === "undefined") loadRootDotEnv();
 
 export const env = createEnv({
   server: {
