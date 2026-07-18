@@ -9,7 +9,10 @@ import sherpa_onnx, {
   type Vad,
   type WaveForm,
 } from "sherpa-onnx-node";
-import type { SpeechSegment, TranscriptWord } from "@open-minutes/core/transcription";
+import type {
+  SpeechSegment,
+  TranscriptWord,
+} from "@open-minutes/core/transcription";
 
 const MODEL_SPEC = {
   // I chose this model based on how it is the highest accuracy with still a >3000x real-time facto
