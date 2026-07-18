@@ -45,7 +45,7 @@ export async function getCachedAudio(fixture: { youtubeId: string, sha256?: stri
     return { path: audioPath, manifest };
   }
 
-  downloadVideoAudio(fixture.youtubeId, audioPath, "skip");
+  await downloadVideoAudio(fixture.youtubeId, audioPath, "skip");
 
   const sha256 = await sha256File(audioPath);
   if (fixture.sha256 && sha256 !== fixture.sha256) {

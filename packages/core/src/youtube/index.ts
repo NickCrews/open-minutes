@@ -1,6 +1,9 @@
-import { execFileSync, execSync } from "node:child_process";
-import { mkdirSync, existsSync } from "node:fs";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+import { mkdir, access } from "node:fs/promises";
 import { dirname } from "node:path";
+
+const execFileAsync = promisify(execFile);
 
 export function channelUrl(channelIdOrUrl: string) {
     // if youtube.com already, return as-is
@@ -18,14 +21,15 @@ export function videoUrl(videoIdOrUrl: string) {
     return `https://www.youtube.com/watch?v=${videoIdOrUrl}`;
 }
 
-export function videosInChannel(channelIdOrUrl: string) {
-    const raw = execSync(
-        `yt-dlp --flat-playlist -J "${channelUrl(channelIdOrUrl)}"`,
+export async function videosInChannel(channelIdOrUrl: string) {
+    const { stdout } = await execFileAsync(
+        "yt-dlp",
+        ["--flat-playlist", "-J", channelUrl(channelIdOrUrl)],
         {
             maxBuffer: 10 * 1024 * 1024,
         },
-    ).toString();
-    const playlist = JSON.parse(raw) as {
+    );
+    const playlist = JSON.parse(stdout) as {
         entries: Array<{
             id: string;
             title?: string;
@@ -34,18 +38,19 @@ export function videosInChannel(channelIdOrUrl: string) {
     return playlist.entries;
 }
 
-export function downloadVideoAudio(
+export async function downloadVideoAudio(
     youtubeIdOrUrl: string,
     path: string,
     onExists: "skip" | "overwrite" = "skip",
 ) {
     const folder = dirname(path);
-    mkdirSync(folder, { recursive: true });
-    const shouldDownload = onExists === "overwrite" || !existsSync(path);
+    await mkdir(folder, { recursive: true });
+    const exists = await access(path).then(() => true, () => false);
+    const shouldDownload = onExists === "overwrite" || !exists;
     if (shouldDownload) {
         const url = videoUrl(youtubeIdOrUrl);
         console.log(`Downloading audio for ${url} to ${path}...`);
-        execFileSync("yt-dlp", [
+        await execFileAsync("yt-dlp", [
             "-x",
             "--audio-format", "wav",
             // the trancription model wants 16kHz audio with one channel
