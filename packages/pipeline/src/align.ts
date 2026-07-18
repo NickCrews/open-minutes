@@ -2,7 +2,7 @@ import type {
   DiarizationTurn,
   TranscriptSegment,
   TranscriptWord,
-} from "./types.ts";
+} from "@open-minutes/core/transcription";
 
 // Attach speakers to a transcript by time overlap — the offline-only port of
 // OpenWhispr's mergeWithTranscript. There's no mic/system split here (single

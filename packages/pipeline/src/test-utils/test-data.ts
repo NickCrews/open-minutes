@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { type CachedAudio, getCachedAudio } from "./audio-cache";
-import { TranscriptSegment } from "../types";
+import { TranscriptSegment } from "@open-minutes/core/transcription";
 import { parsePsv } from "./psv";
 import { symlink } from "node:fs/promises";
 

@@ -1,7 +1,7 @@
 // Word Error Rate via Levenshtein distance over normalized word tokens.
 // WER = (substitutions + deletions + insertions) / reference_word_count.
 
-import type { TranscriptWord } from "../types.ts";
+import type { TranscriptWord } from "@open-minutes/core/transcription";
 
 export interface WERResult {
   wer: number;

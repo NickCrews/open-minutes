@@ -8,7 +8,7 @@ import sherpa_onnx, {
 } from "sherpa-onnx-node";
 
 import { ensureDownloaded, type ModelSpec } from "./model.js";
-import type { DiarizationTurn } from "./types.ts";
+import type { DiarizationTurn } from "@open-minutes/core/transcription";
 
 // Ported from OpenWhispr's offline speaker-diarization path. Two layers:
 //   - diarizeAudio():            anonymous, time-stamped speaker turns (Tier A).

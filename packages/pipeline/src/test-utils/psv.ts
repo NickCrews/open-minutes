@@ -23,7 +23,11 @@
 
 import { readFileSync, writeFileSync } from "node:fs";
 
-import type { Speaker, SpeechSegment, TranscriptSegment } from "../types.ts";
+import type {
+  Speaker,
+  SpeechSegment,
+  TranscriptSegment,
+} from "@open-minutes/core/transcription";
 
 // Internal line-level representation. Not part of the public API.
 type PsvEvent =

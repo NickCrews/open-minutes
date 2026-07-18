@@ -6,7 +6,10 @@ import {
   serializePsv,
   serializeVadRunsPsv,
 } from "./psv";
-import type { SpeechSegment, TranscriptSegment } from "../types";
+import type {
+  SpeechSegment,
+  TranscriptSegment,
+} from "@open-minutes/core/transcription";
 
 describe("psv timestamps", () => {
   it("formats seconds as H:MM:SS.ss", () => {
