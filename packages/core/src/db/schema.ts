@@ -100,6 +100,7 @@ export const relations = defineRelations(
       municipality: r.one.municipalitiesTable({
         from: r.meetingsTable.municipality_id,
         to: r.municipalitiesTable.id,
+        optional: false,
       }),
       segments: r.many.segmentsTable({
         from: r.meetingsTable.id,
@@ -116,6 +117,7 @@ export const relations = defineRelations(
       meeting: r.one.meetingsTable({
         from: r.segmentsTable.meeting_id,
         to: r.meetingsTable.id,
+        optional: false,
       }),
       person: r.one.peopleTable({
         from: r.segmentsTable.person_id,

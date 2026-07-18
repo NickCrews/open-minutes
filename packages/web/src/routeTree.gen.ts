@@ -8,139 +8,212 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { Route as rootRouteImport } from "./routes/__root";
-import { Route as SearchRouteImport } from "./routes/search";
-import { Route as PeopleRouteImport } from "./routes/people";
-import { Route as IndexRouteImport } from "./routes/index";
-import { Route as PeopleIdRouteImport } from "./routes/people_.$id";
-import { Route as MeetingsIdRouteImport } from "./routes/meetings.$id";
+import { Route as rootRouteImport } from './routes/__root'
+import { Route as SearchRouteImport } from './routes/search'
+import { Route as PeopleRouteImport } from './routes/people'
+import { Route as MunicipalitiesRouteImport } from './routes/municipalities'
+import { Route as MeetingsRouteImport } from './routes/meetings'
+import { Route as IndexRouteImport } from './routes/index'
+import { Route as PeopleIdRouteImport } from './routes/people_.$id'
+import { Route as MunicipalitiesIdRouteImport } from './routes/municipalities_.$id'
+import { Route as MeetingsIdRouteImport } from './routes/meetings_.$id'
 
 const SearchRoute = SearchRouteImport.update({
-  id: "/search",
-  path: "/search",
+  id: '/search',
+  path: '/search',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const PeopleRoute = PeopleRouteImport.update({
-  id: "/people",
-  path: "/people",
+  id: '/people',
+  path: '/people',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
+const MunicipalitiesRoute = MunicipalitiesRouteImport.update({
+  id: '/municipalities',
+  path: '/municipalities',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MeetingsRoute = MeetingsRouteImport.update({
+  id: '/meetings',
+  path: '/meetings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
-  id: "/",
-  path: "/",
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const PeopleIdRoute = PeopleIdRouteImport.update({
-  id: "/people_/$id",
-  path: "/people/$id",
+  id: '/people_/$id',
+  path: '/people/$id',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
+const MunicipalitiesIdRoute = MunicipalitiesIdRouteImport.update({
+  id: '/municipalities_/$id',
+  path: '/municipalities/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MeetingsIdRoute = MeetingsIdRouteImport.update({
-  id: "/meetings/$id",
-  path: "/meetings/$id",
+  id: '/meetings_/$id',
+  path: '/meetings/$id',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 
 export interface FileRoutesByFullPath {
-  "/": typeof IndexRoute;
-  "/people": typeof PeopleRoute;
-  "/search": typeof SearchRoute;
-  "/meetings/$id": typeof MeetingsIdRoute;
-  "/people/$id": typeof PeopleIdRoute;
+  '/': typeof IndexRoute
+  '/meetings': typeof MeetingsRoute
+  '/municipalities': typeof MunicipalitiesRoute
+  '/people': typeof PeopleRoute
+  '/search': typeof SearchRoute
+  '/meetings/$id': typeof MeetingsIdRoute
+  '/municipalities/$id': typeof MunicipalitiesIdRoute
+  '/people/$id': typeof PeopleIdRoute
 }
 export interface FileRoutesByTo {
-  "/": typeof IndexRoute;
-  "/people": typeof PeopleRoute;
-  "/search": typeof SearchRoute;
-  "/meetings/$id": typeof MeetingsIdRoute;
-  "/people/$id": typeof PeopleIdRoute;
+  '/': typeof IndexRoute
+  '/meetings': typeof MeetingsRoute
+  '/municipalities': typeof MunicipalitiesRoute
+  '/people': typeof PeopleRoute
+  '/search': typeof SearchRoute
+  '/meetings/$id': typeof MeetingsIdRoute
+  '/municipalities/$id': typeof MunicipalitiesIdRoute
+  '/people/$id': typeof PeopleIdRoute
 }
 export interface FileRoutesById {
-  __root__: typeof rootRouteImport;
-  "/": typeof IndexRoute;
-  "/people": typeof PeopleRoute;
-  "/search": typeof SearchRoute;
-  "/meetings/$id": typeof MeetingsIdRoute;
-  "/people_/$id": typeof PeopleIdRoute;
+  __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
+  '/meetings': typeof MeetingsRoute
+  '/municipalities': typeof MunicipalitiesRoute
+  '/people': typeof PeopleRoute
+  '/search': typeof SearchRoute
+  '/meetings_/$id': typeof MeetingsIdRoute
+  '/municipalities_/$id': typeof MunicipalitiesIdRoute
+  '/people_/$id': typeof PeopleIdRoute
 }
 export interface FileRouteTypes {
-  fileRoutesByFullPath: FileRoutesByFullPath;
-  fullPaths: "/" | "/people" | "/search" | "/meetings/$id" | "/people/$id";
-  fileRoutesByTo: FileRoutesByTo;
-  to: "/" | "/people" | "/search" | "/meetings/$id" | "/people/$id";
+  fileRoutesByFullPath: FileRoutesByFullPath
+  fullPaths:
+    | '/'
+    | '/meetings'
+    | '/municipalities'
+    | '/people'
+    | '/search'
+    | '/meetings/$id'
+    | '/municipalities/$id'
+    | '/people/$id'
+  fileRoutesByTo: FileRoutesByTo
+  to:
+    | '/'
+    | '/meetings'
+    | '/municipalities'
+    | '/people'
+    | '/search'
+    | '/meetings/$id'
+    | '/municipalities/$id'
+    | '/people/$id'
   id:
-    | "__root__"
-    | "/"
-    | "/people"
-    | "/search"
-    | "/meetings/$id"
-    | "/people_/$id";
-  fileRoutesById: FileRoutesById;
+    | '__root__'
+    | '/'
+    | '/meetings'
+    | '/municipalities'
+    | '/people'
+    | '/search'
+    | '/meetings_/$id'
+    | '/municipalities_/$id'
+    | '/people_/$id'
+  fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute;
-  PeopleRoute: typeof PeopleRoute;
-  SearchRoute: typeof SearchRoute;
-  MeetingsIdRoute: typeof MeetingsIdRoute;
-  PeopleIdRoute: typeof PeopleIdRoute;
+  IndexRoute: typeof IndexRoute
+  MeetingsRoute: typeof MeetingsRoute
+  MunicipalitiesRoute: typeof MunicipalitiesRoute
+  PeopleRoute: typeof PeopleRoute
+  SearchRoute: typeof SearchRoute
+  MeetingsIdRoute: typeof MeetingsIdRoute
+  MunicipalitiesIdRoute: typeof MunicipalitiesIdRoute
+  PeopleIdRoute: typeof PeopleIdRoute
 }
 
-declare module "@tanstack/solid-router" {
+declare module '@tanstack/solid-router' {
   interface FileRoutesByPath {
-    "/search": {
-      id: "/search";
-      path: "/search";
-      fullPath: "/search";
-      preLoaderRoute: typeof SearchRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/people": {
-      id: "/people";
-      path: "/people";
-      fullPath: "/people";
-      preLoaderRoute: typeof PeopleRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/": {
-      id: "/";
-      path: "/";
-      fullPath: "/";
-      preLoaderRoute: typeof IndexRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/people_/$id": {
-      id: "/people_/$id";
-      path: "/people/$id";
-      fullPath: "/people/$id";
-      preLoaderRoute: typeof PeopleIdRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/meetings/$id": {
-      id: "/meetings/$id";
-      path: "/meetings/$id";
-      fullPath: "/meetings/$id";
-      preLoaderRoute: typeof MeetingsIdRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+    '/search': {
+      id: '/search'
+      path: '/search'
+      fullPath: '/search'
+      preLoaderRoute: typeof SearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/people': {
+      id: '/people'
+      path: '/people'
+      fullPath: '/people'
+      preLoaderRoute: typeof PeopleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/municipalities': {
+      id: '/municipalities'
+      path: '/municipalities'
+      fullPath: '/municipalities'
+      preLoaderRoute: typeof MunicipalitiesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/meetings': {
+      id: '/meetings'
+      path: '/meetings'
+      fullPath: '/meetings'
+      preLoaderRoute: typeof MeetingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/people_/$id': {
+      id: '/people_/$id'
+      path: '/people/$id'
+      fullPath: '/people/$id'
+      preLoaderRoute: typeof PeopleIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/municipalities_/$id': {
+      id: '/municipalities_/$id'
+      path: '/municipalities/$id'
+      fullPath: '/municipalities/$id'
+      preLoaderRoute: typeof MunicipalitiesIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/meetings_/$id': {
+      id: '/meetings_/$id'
+      path: '/meetings/$id'
+      fullPath: '/meetings/$id'
+      preLoaderRoute: typeof MeetingsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  MeetingsRoute: MeetingsRoute,
+  MunicipalitiesRoute: MunicipalitiesRoute,
   PeopleRoute: PeopleRoute,
   SearchRoute: SearchRoute,
   MeetingsIdRoute: MeetingsIdRoute,
+  MunicipalitiesIdRoute: MunicipalitiesIdRoute,
   PeopleIdRoute: PeopleIdRoute,
-};
+}
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
-  ._addFileTypes<FileRouteTypes>();
+  ._addFileTypes<FileRouteTypes>()
 
-import type { getRouter } from "./router";
-import type { createStart } from "@tanstack/solid-start";
-declare module "@tanstack/solid-start" {
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/solid-start'
+declare module '@tanstack/solid-start' {
   interface Register {
-    ssr: true;
-    router: Awaited<ReturnType<typeof getRouter>>;
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
   }
 }
