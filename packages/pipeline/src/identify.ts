@@ -1,5 +1,6 @@
 import { cosineDistance, sql } from "drizzle-orm";
 import { type DB, peopleTable, segmentsTable } from "@open-minutes/core/db";
+import { TranscriptWord } from "../../core/src/transcription/types";
 
 // Confidence tiers from OpenWhispr's matching system:
 //   ≥ 0.70 cosine similarity → auto-confirm
@@ -16,7 +17,7 @@ export async function identifyAndInsertSegments(
     start: number;
     end: number;
     speaker: number;
-    words: Array<{ text: string; start: number; end: number }>;
+    words: Array<TranscriptWord>;
   }>,
   speakerEmbeddings: Map<number, Float32Array>,
 ): Promise<void> {
@@ -30,6 +31,7 @@ export async function identifyAndInsertSegments(
     await db.insert(segmentsTable).values({
       meeting_id: meetingId,
       person_id: speakerToPersonId.get(seg.speaker) ?? null,
+      speaker_number: seg.speaker,
       text: seg.text,
       start_secs: sql`make_interval(secs => ${seg.start})`,
       end_secs: sql`make_interval(secs => ${seg.end})`,

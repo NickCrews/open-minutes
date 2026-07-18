@@ -40,6 +40,11 @@ export interface SegmentedSpeaker {
 /** A speaker with a known global identity (e.g. "Cathy Giessel, AK Senator"). */
 export interface IdentifiedSpeaker {
   type: "identified";
+  /**
+   * Human-readable string identity (eg "cathy-giessel" in golden transcripts).
+   * Deliberately NOT the serial `people.id` from the DB — mapping to DB rows
+   * happens at the identify boundary, not in this type.
+   */
   personId: string;
 }
 export type Speaker = UnlabeledSpeaker | SegmentedSpeaker | IdentifiedSpeaker;

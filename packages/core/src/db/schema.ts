@@ -11,6 +11,7 @@ import {
   index,
 } from "drizzle-orm/pg-core";
 import { N_DIMENSIONS as VOICE_N_DIMENSIONS } from "../voice_embeddings";
+import { TranscriptWord } from "../transcription";
 
 const secondsInterval = () => interval({ fields: "second", precision: 3 });
 
@@ -42,8 +43,6 @@ export const meetingsTable = pgTable("meetings", {
   description: varchar().notNull().default(""),
   start_time: timestamp(),
   duration_secs: secondsInterval(),
-  transcription: jsonb(),
-  diarization: jsonb(),
   created_at: timestamp().notNull().defaultNow(),
 });
 
@@ -63,41 +62,59 @@ export const peopleTable = pgTable(
   ],
 );
 
-export interface SegmentWord {
-  text: string;
-  start: number;
-  end: number;
-}
-
 export const segmentsTable = pgTable("segments", {
   id: serial().primaryKey(),
   meeting_id: integer()
     .notNull()
     .references(() => meetingsTable.id),
   person_id: integer().references(() => peopleTable.id),
+  // Local diarization label within this meeting (eg "speaker 3"). Preserves the
+  // unlabeled/segmented distinction when person_id is null: both null = no
+  // speaker info at all; speaker_number set = diarized but not yet identified.
+  speaker_number: integer(),
   text: varchar().notNull(),
   start_secs: secondsInterval(),
   end_secs: secondsInterval(),
   duration_secs: secondsInterval().generatedAlwaysAs(
     (): SQL => sql`${segmentsTable.end_secs} - ${segmentsTable.start_secs}`,
   ),
-  words: jsonb().$type<SegmentWord[]>(),
+  words: jsonb().$type<TranscriptWord[]>(),
   created_at: timestamp().notNull().defaultNow(),
 });
 
 export const relations = defineRelations(
   { municipalitiesTable, meetingsTable, peopleTable, segmentsTable },
   (r) => ({
+    municipalitiesTable: {
+      meetings: r.many.meetingsTable({
+        from: r.municipalitiesTable.id,
+        to: r.meetingsTable.municipality_id,
+      }),
+    },
     meetingsTable: {
       municipality: r.one.municipalitiesTable({
         from: r.meetingsTable.municipality_id,
         to: r.municipalitiesTable.id,
+      }),
+      segments: r.many.segmentsTable({
+        from: r.meetingsTable.id,
+        to: r.segmentsTable.meeting_id,
       }),
     },
     peopleTable: {
       segments: r.many.segmentsTable({
         from: r.peopleTable.id,
         to: r.segmentsTable.person_id,
+      }),
+    },
+    segmentsTable: {
+      meeting: r.one.meetingsTable({
+        from: r.segmentsTable.meeting_id,
+        to: r.meetingsTable.id,
+      }),
+      person: r.one.peopleTable({
+        from: r.segmentsTable.person_id,
+        to: r.peopleTable.id,
       }),
     },
   }),
