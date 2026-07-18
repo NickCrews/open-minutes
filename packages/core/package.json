@@ -4,6 +4,8 @@
   "type": "module",
   "exports": {
     "./db": "./src/db/index.ts",
+    "./db/testing": "./src/db/testing/index.ts",
+    "./db/testing/vitest": "./src/db/testing/vitest.ts",
     "./youtube": "./src/youtube/index.ts",
     "./munis": "./src/munis/index.ts",
     "./timeline": "./src/timeline.ts",
@@ -27,6 +29,7 @@
   },
   "devDependencies": {
     "@types/node": "^25.6.0",
-    "drizzle-kit": "1.0.0-beta.22"
+    "drizzle-kit": "1.0.0-beta.22",
+    "vitest": "^4.0.18"
   }
 }

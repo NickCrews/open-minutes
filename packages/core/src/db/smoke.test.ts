@@ -1,15 +1,9 @@
-import { afterAll, describe, expect, it } from "vitest";
+import { describe, expect } from "vitest";
 import { sql } from "drizzle-orm";
-import { getDb } from "./index";
+import { test } from "./testing/vitest";
 
 describe("db smoke test", () => {
-  const { client, db } = getDb();
-
-  afterAll(async () => {
-    await client.end();
-  });
-
-  it("connects and returns a result", async () => {
+  test("connects and returns a result", async ({ db }) => {
     const [result] = await db.execute(sql`SELECT 1 AS value`);
     expect(result!.value).toBe(1);
   });
