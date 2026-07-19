@@ -4,12 +4,18 @@
  */
 export interface YTPlayer {
   getCurrentTime(): number;
+  /** Total length in seconds, or 0 until the video's metadata has loaded. */
+  getDuration(): number;
   seekTo(seconds: number, allowSeekAhead: boolean): void;
   loadVideoById(args: { videoId: string; startSeconds?: number }): void;
   playVideo(): void;
   pauseVideo(): void;
+  setPlaybackRate(rate: number): void;
   destroy(): void;
 }
+
+/** Playback rates the IFrame API accepts, slowest first. */
+export const PLAYBACK_RATES = [0.75, 1, 1.25, 1.5, 1.75, 2] as const;
 
 /** The subset of YT.PlayerState values we care about. */
 export const PlayerState = { ended: 0, playing: 1, paused: 2 } as const;

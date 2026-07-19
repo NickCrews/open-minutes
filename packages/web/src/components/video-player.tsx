@@ -1,10 +1,16 @@
 import { onCleanup, onMount } from "solid-js";
-import { loadYouTubeIframeApi, type YTPlayer } from "~/lib/youtube";
+import {
+  loadYouTubeIframeApi,
+  PlayerState,
+  type YTPlayer,
+} from "~/lib/youtube";
 
 export function VideoPlayer(props: {
   videoId: string;
   onPlayer: (player: YTPlayer) => void;
   onTime: (secs: number) => void;
+  onDuration?: (secs: number) => void;
+  onPlayingChange?: (playing: boolean) => void;
 }) {
   let host!: HTMLDivElement;
   onMount(() => {
@@ -21,7 +27,11 @@ export function VideoPlayer(props: {
         width: "100%",
         height: "100%",
         playerVars: { playsinline: 1 },
-        events: { onReady: () => props.onPlayer(created) },
+        events: {
+          onReady: () => props.onPlayer(created),
+          onStateChange: ({ data }) =>
+            props.onPlayingChange?.(data === PlayerState.playing),
+        },
       });
       player = created;
     });
@@ -30,6 +40,10 @@ export function VideoPlayer(props: {
     const poll = setInterval(() => {
       const secs = player?.getCurrentTime?.();
       if (typeof secs === "number" && !Number.isNaN(secs)) props.onTime(secs);
+      // Duration reads as 0 until metadata loads, so poll it rather than
+      // reading it once on ready.
+      const total = player?.getDuration?.();
+      if (typeof total === "number" && total > 0) props.onDuration?.(total);
     }, 250);
     onCleanup(() => {
       disposed = true;

@@ -21,6 +21,9 @@ export const Route = createFileRoute("/meetings_/$id")({
 function MeetingPage() {
   const meeting = Route.useLoaderData();
   const [currentTime, setCurrentTime] = createSignal(0);
+  const [duration, setDuration] = createSignal(0);
+  const [playing, setPlaying] = createSignal(false);
+  const [playbackRate, setPlaybackRate] = createSignal(1);
   const [player, setPlayer] = createSignal<YTPlayer>();
   // After a transcript-initiated seek, ignore polled times briefly so the
   // playhead doesn't flash back to the pre-seek position.
@@ -34,6 +37,16 @@ function MeetingPage() {
   const onPolledTime = (secs: number) => {
     if (performance.now() < ignorePollsUntil) return;
     setCurrentTime(secs);
+  };
+  const togglePlay = () => {
+    const p = player();
+    if (!p) return;
+    if (playing()) p.pauseVideo();
+    else p.playVideo();
+  };
+  const changeRate = (rate: number) => {
+    player()?.setPlaybackRate(rate);
+    setPlaybackRate(rate);
   };
 
   return (
@@ -68,6 +81,8 @@ function MeetingPage() {
                 videoId={videoId()}
                 onPlayer={setPlayer}
                 onTime={onPolledTime}
+                onDuration={setDuration}
+                onPlayingChange={setPlaying}
               />
             )}
           </Show>
@@ -81,7 +96,12 @@ function MeetingPage() {
         <Transcript
           segments={meeting().segments}
           currentTime={currentTime}
+          duration={duration}
+          playing={playing}
+          playbackRate={playbackRate}
           onSeek={seekTo}
+          onPlayPause={togglePlay}
+          onPlaybackRate={changeRate}
         />
       </div>
     </div>

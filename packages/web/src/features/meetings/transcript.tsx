@@ -5,6 +5,7 @@ import {
   createSignal,
   For,
   Index,
+  type JSX,
   on,
   onCleanup,
   onMount,
@@ -12,7 +13,8 @@ import {
 } from "solid-js";
 import { Button } from "~/components/button";
 import { TextField, TextFieldInput } from "~/components/text-field";
-import { formatSecsDuration, formatTimestamp } from "~/lib/format";
+import { formatTimestamp } from "~/lib/format";
+import { PLAYBACK_RATES } from "~/lib/youtube";
 import {
   assignSpeakers,
   type Segment,
@@ -28,6 +30,8 @@ type SegmentStatus = "past" | "active" | "future";
 type Match = { segment: number; from: number; to: number };
 
 const MIN_QUERY_LENGTH = 2;
+/** How far the skip buttons jump, in seconds. */
+const JUMP_SECS = 15;
 
 function segmentStart(segment: Segment): number {
   return segment.words[0]?.start ?? 0;
@@ -36,7 +40,13 @@ function segmentStart(segment: Segment): number {
 export function Transcript(props: {
   segments: Segment[];
   currentTime: () => number;
+  /** Total video length, or 0 before the player reports one. */
+  duration: () => number;
+  playing: () => boolean;
+  playbackRate: () => number;
   onSeek: (secs: number) => void;
+  onPlayPause: () => void;
+  onPlaybackRate: (rate: number) => void;
 }) {
   let container!: HTMLDivElement;
   // Whether the transcript auto-scrolls to track playback. Manual scrolling
@@ -55,6 +65,15 @@ export function Transcript(props: {
   const seek = (secs: number) => {
     setFollowing(true);
     props.onSeek(secs);
+  };
+  // Duration is 0 until the player reports one, so only clamp once we know it.
+  const jump = (delta: number) => {
+    const end = props.duration() || Infinity;
+    seek(Math.min(end, Math.max(0, props.currentTime() + delta)));
+  };
+  const cycleRate = () => {
+    const i = PLAYBACK_RATES.findIndex((r) => r === props.playbackRate());
+    props.onPlaybackRate(PLAYBACK_RATES[(i + 1) % PLAYBACK_RATES.length]!);
   };
 
   const [query, setQuery] = createSignal("");
@@ -161,7 +180,7 @@ export function Transcript(props: {
           </Button>
         </Show>
       </div>
-      <div class="relative min-h-0 flex-1">
+      <div class="min-h-0 flex-1">
         <div ref={container} class="h-full overflow-y-auto rounded-lg border">
           <div class="flex flex-col gap-4 p-4">
             <For
@@ -190,19 +209,137 @@ export function Transcript(props: {
             </For>
           </div>
         </div>
-        {/* Only worth offering once the playhead has somewhere to return to. */}
-        <Show when={!following() && props.currentTime() > 0}>
+      </div>
+      <div class="flex shrink-0 items-center gap-1">
+        <span class="text-muted-foreground w-14 text-xs tabular-nums">
+          {formatTimestamp(props.currentTime())}
+        </span>
+        <div class="flex flex-1 items-center justify-center gap-1">
           <Button
-            variant="secondary"
+            variant="ghost"
             size="sm"
-            class="absolute bottom-3 left-1/2 -translate-x-1/2 shadow-md"
+            class="tabular-nums"
+            aria-label={`Playback speed: ${props.playbackRate()}×`}
+            onClick={cycleRate}
+          >
+            {props.playbackRate()}×
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={`Back ${JUMP_SECS} seconds`}
+            onClick={() => jump(-JUMP_SECS)}
+          >
+            <SkipIcon back />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={props.playing() ? "Pause" : "Play"}
+            onClick={() => props.onPlayPause()}
+          >
+            <Show when={props.playing()} fallback={<PlayIcon />}>
+              <PauseIcon />
+            </Show>
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={`Forward ${JUMP_SECS} seconds`}
+            onClick={() => jump(JUMP_SECS)}
+          >
+            <SkipIcon />
+          </Button>
+          {/* Only worth offering once the transcript has scrolled away. */}
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Return to playhead"
+            disabled={following()}
             onClick={() => setFollowing(true)}
           >
-            Return to {formatSecsDuration(props.currentTime())}
+            <PlayheadIcon />
           </Button>
-        </Show>
+        </div>
+        <span class="text-muted-foreground w-14 text-right text-xs tabular-nums">
+          <Show when={props.duration() > 0}>
+            −{formatTimestamp(props.duration() - props.currentTime())}
+          </Show>
+        </span>
       </div>
     </div>
+  );
+}
+
+function Icon(props: { children: JSX.Element }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      {props.children}
+    </svg>
+  );
+}
+
+function PlayIcon() {
+  return (
+    <Icon>
+      <polygon points="6 3 20 12 6 21" fill="currentColor" />
+    </Icon>
+  );
+}
+
+function PauseIcon() {
+  return (
+    <Icon>
+      <rect x="6" y="4" width="4" height="16" fill="currentColor" />
+      <rect x="14" y="4" width="4" height="16" fill="currentColor" />
+    </Icon>
+  );
+}
+
+/** A circular arrow labelled with the jump size; forward unless `back`. */
+function SkipIcon(props: { back?: boolean }) {
+  return (
+    <Icon>
+      <Show
+        when={props.back}
+        fallback={
+          <>
+            <path d="M21 3v6h-6" />
+            <path d="M20.5 14.5a9 9 0 1 1-2.1-9.4L21 9" />
+          </>
+        }
+      >
+        <path d="M3 3v6h6" />
+        <path d="M3.5 14.5a9 9 0 1 0 2.1-9.4L3 9" />
+      </Show>
+      <text
+        x="12"
+        y="17"
+        text-anchor="middle"
+        font-size="9"
+        stroke="none"
+        fill="currentColor"
+      >
+        {JUMP_SECS}
+      </text>
+    </Icon>
+  );
+}
+
+function PlayheadIcon() {
+  return (
+    <Icon>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 1v4M12 19v4M1 12h4M19 12h4" />
+    </Icon>
   );
 }
 
