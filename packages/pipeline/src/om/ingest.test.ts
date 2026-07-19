@@ -52,8 +52,12 @@ const DIARIZATION = {
     { start: 0.4, end: 1.5, speaker: 0 },
     { start: 4.9, end: 5.5, speaker: 1 },
   ],
-  embeddings: { "0": embedding(0), "1": embedding(1) },
 };
+
+const EMBEDDINGS = [
+  { speaker: 0, centroid: embedding(0) },
+  { speaker: 1, centroid: embedding(1) },
+];
 
 /**
  * Pre-seed a meeting's work directory with every stage artifact, as if a prior
@@ -68,6 +72,7 @@ async function seedWorkDir(workRoot: string, youtubeId: string): Promise<void> {
     JSON.stringify(TRANSCRIPTION, null, 2),
   );
   await writeFile(join(dir, "diarization.json"), JSON.stringify(DIARIZATION));
+  await writeFile(join(dir, "embeddings.json"), JSON.stringify(EMBEDDINGS));
 }
 
 describe("ingestVideo", () => {

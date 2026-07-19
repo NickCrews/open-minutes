@@ -60,12 +60,12 @@ const PUNCTUATION_WINDOW_WORDS = 2;
 
 /**
  * Fold away spurious one-or-two-word speaker changes inside a single utterance.
- * 
+ *
  * The raw transcription + diarization output can wobble between two speakers:
  *    Mélisa Babb:      ...a rezone to a residential district would not necessarily be supported
  *    Radhika Krishna:  in that area
  *    Mélisa Babb:      by the plan because that area is envisioned as...
- * 
+ *
  * The middle line is a few word sliver that the clustering algorithm misattributed to Radhika.
  * This should be one continuous turn by Mélisa.
  * The tricky thing is distinguishing a real interjection from a clustering wobble.
@@ -74,7 +74,7 @@ const PUNCTUATION_WINDOW_WORDS = 2;
  *   - no full stop near either boundary
  *   - no pause between any two words across it
  *   - the sliver itself is over quickly.
- * 
+ *
  * Anything else — a completed sentence, a beat of silence, a sliver
  * that holds the floor for seconds — is someone taking a turn, and is left
  * alone. Where all of it holds, the three segments become one.

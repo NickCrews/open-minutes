@@ -17,7 +17,7 @@ import type {
 } from "@open-minutes/core/transcription";
 import { transcribeAudio } from "../transcribe";
 import { computeSpeakerEmbeddings, diarizeAudio } from "../diarize";
-import { alignSpeakers } from "../align";
+import { alignSpeakers, segmentsToTurns } from "../align";
 import { identifyAndInsertSegments } from "../identify";
 
 /**
@@ -49,9 +49,14 @@ export type IngestResult =
 /** On-disk shape of a work directory's diarization.json. */
 interface DiarizationArtifact {
   turns: DiarizationTurn[];
-  /** Per-speaker voiceprint centroids, keyed by local speaker number. */
-  embeddings: Record<string, number[]>;
 }
+
+/**
+ * On-disk shape of embeddings.json: one voiceprint centroid per local speaker.
+ * An array rather than a keyed object so the speaker number stays a number —
+ * JSON object keys are always strings.
+ */
+type EmbeddingsArtifact = Array<{ speaker: number; centroid: number[] }>;
 
 /**
  * Run the full pipeline for one video — download → transcribe → diarize →
@@ -108,40 +113,44 @@ export async function ingestVideo(
   const diarization = await cachedStage<DiarizationArtifact>(
     youtubeId,
     join(workDir, "diarization.json"),
-    async () => {
-      const turns = diarizeAudio(audioPath);
-      const embeddings = computeSpeakerEmbeddings(audioPath, turns);
-      return {
-        turns,
-        embeddings: Object.fromEntries(
-          [...embeddings].map(([speaker, centroid]) => [
-            String(speaker),
-            Array.from(centroid),
-          ]),
-        ),
-      };
-    },
+    () => ({ turns: diarizeAudio(audioPath) }),
+  );
+
+  // Transcription and diarization are both raw, and both wrong in places: the
+  // recognizer drops audio, and clustering wobbles mid-utterance. Combining
+  // them is what produces our best account of who said what and when, so everything
+  // downstream works from the aligned segments rather than either raw input.
+  const words = speechSegments.flatMap((s) => s.words);
+  const segments = alignSpeakers(words, diarization.turns).filter(
+    (segment) => segment.words.length > 0,
+  );
+
+  // Voiceprints come from the cleaned segments, not the raw diarization turns.
+  const embeddings = await cachedStage<EmbeddingsArtifact>(
+    youtubeId,
+    join(workDir, "embeddings.json"),
+    () =>
+      [...computeSpeakerEmbeddings(audioPath, segmentsToTurns(segments))].map(
+        ([speaker, centroid]) => ({ speaker, centroid: Array.from(centroid) }),
+      ),
   );
   const speakerEmbeddings = new Map(
-    Object.entries(diarization.embeddings).map(([speaker, centroid]) => [
-      Number(speaker),
+    embeddings.map(({ speaker, centroid }) => [
+      speaker,
       Float32Array.from(centroid),
     ]),
   );
 
-  const words = speechSegments.flatMap((s) => s.words);
-  const aligned = alignSpeakers(words, diarization.turns)
-    .filter((segment) => segment.words.length > 0)
-    .map((segment) => ({
-      text: segment.words.map((w) => w.text).join(" "),
-      start: segment.words[0]!.start,
-      end: segment.words.at(-1)!.end,
-      speaker:
-        segment.speaker.type === "segmented"
-          ? segment.speaker.speakerNumber
-          : null,
-      words: segment.words,
-    }));
+  const aligned = segments.map((segment) => ({
+    text: segment.words.map((w) => w.text).join(" "),
+    start: segment.words[0]!.start,
+    end: segment.words.at(-1)!.end,
+    speaker:
+      segment.speaker.type === "segmented"
+        ? segment.speaker.speakerNumber
+        : null,
+    words: segment.words,
+  }));
 
   console.error(
     `[${youtubeId}] committing meeting with ${aligned.length} segment(s)...`,
