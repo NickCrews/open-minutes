@@ -2,9 +2,20 @@ import { createFileRoute, Link, useRouter } from "@tanstack/solid-router";
 import { createServerFn } from "@tanstack/solid-start";
 import { createSignal, For, onCleanup, Show } from "solid-js";
 import { Button } from "~/components/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "~/components/card";
 import { TextField, TextFieldInput } from "~/components/text-field";
 import { getPersonById, updatePersonName } from "~/features/people";
-import { intervalToSecs } from "~/lib/format";
+import {
+  formatMeetingTime,
+  formatTimestamp,
+  intervalToSecs,
+} from "~/lib/format";
 import {
   loadYouTubeIframeApi,
   PlayerState,
@@ -93,72 +104,13 @@ function PersonPage() {
           </Button>
         </form>
       </Show>
-      <h2 class="mb-4 border-b pb-2 text-lg font-semibold">Segments</h2>
-      <div class="flex flex-col gap-3">
+      <h2 class="mb-4 border-b pb-2 text-lg font-semibold">Meetings</h2>
+      <div class="flex flex-col gap-4">
         <For
-          each={person().segments}
+          each={groupByMeeting(person().segments)}
           fallback={<p class="text-muted-foreground">No segments yet.</p>}
         >
-          {(segment) => {
-            const start = () =>
-              segment.start_secs != null
-                ? intervalToSecs(segment.start_secs)
-                : null;
-            const end = () =>
-              segment.end_secs != null
-                ? intervalToSecs(segment.end_secs)
-                : null;
-            return (
-              <div class="flex items-start gap-2">
-                <Show
-                  when={segment.meeting.youtube_id && start() != null}
-                  fallback={<div class="size-8 shrink-0" />}
-                >
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    class="shrink-0 rounded-full"
-                    aria-label={
-                      audio.playingId() === segment.id
-                        ? "Pause audio"
-                        : "Play audio"
-                    }
-                    onClick={() =>
-                      audio.toggle(
-                        segment.id,
-                        segment.meeting.youtube_id,
-                        start()!,
-                        end(),
-                      )
-                    }
-                  >
-                    <Show
-                      when={audio.playingId() === segment.id}
-                      fallback={
-                        <svg viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M8 5v14l11-7z" />
-                        </svg>
-                      }
-                    >
-                      <svg viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M6 5h4v14H6zM14 5h4v14h-4z" />
-                      </svg>
-                    </Show>
-                  </Button>
-                </Show>
-                <p class="leading-relaxed">
-                  <Link
-                    to="/meetings/$id"
-                    params={{ id: String(segment.meeting.id) }}
-                    class="font-semibold hover:underline"
-                  >
-                    {segment.meeting.title || "(untitled)"}
-                  </Link>
-                  : {segment.text}
-                </p>
-              </div>
-            );
-          }}
+          {(group) => <MeetingCard group={group} audio={audio} />}
         </For>
       </div>
       <div
@@ -166,6 +118,159 @@ function PersonPage() {
         aria-hidden="true"
         class="pointer-events-none fixed right-0 bottom-0 h-px w-px overflow-hidden opacity-0"
       />
+    </div>
+  );
+}
+
+type Person = Awaited<ReturnType<typeof getPersonById>>;
+type PersonSegment = Person["segments"][number];
+type MeetingGroup = {
+  meeting: PersonSegment["meeting"];
+  segments: PersonSegment[];
+};
+
+/**
+ * Collects a person's segments into one group per meeting: most recent meeting
+ * first, and within a meeting the segments in the order they were spoken.
+ * Meetings with no start time sort last, since we can't place them in time.
+ */
+function groupByMeeting(segments: PersonSegment[]): MeetingGroup[] {
+  const groups = new Map<number, MeetingGroup>();
+  for (const segment of segments) {
+    let group = groups.get(segment.meeting.id);
+    if (!group) {
+      group = { meeting: segment.meeting, segments: [] };
+      groups.set(segment.meeting.id, group);
+    }
+    group.segments.push(segment);
+  }
+  for (const group of groups.values()) {
+    group.segments.sort(
+      (a, b) => (segmentStart(a) ?? 0) - (segmentStart(b) ?? 0),
+    );
+  }
+  return [...groups.values()].sort((a, b) => {
+    const aTime = a.meeting.start_time?.getTime();
+    const bTime = b.meeting.start_time?.getTime();
+    if (aTime == null || bTime == null) {
+      if (aTime == null && bTime == null) return b.meeting.id - a.meeting.id;
+      return aTime == null ? 1 : -1;
+    }
+    return bTime - aTime;
+  });
+}
+
+const segmentStart = (segment: PersonSegment) =>
+  segment.start_secs != null ? intervalToSecs(segment.start_secs) : null;
+
+const segmentEnd = (segment: PersonSegment) =>
+  segment.end_secs != null ? intervalToSecs(segment.end_secs) : null;
+
+/** One meeting the person spoke in, expandable to reveal all their segments. */
+function MeetingCard(props: {
+  group: MeetingGroup;
+  audio: ReturnType<typeof createHiddenAudio>;
+}) {
+  const [expanded, setExpanded] = createSignal(false);
+  const count = () => props.group.segments.length;
+
+  return (
+    <Card class="gap-0 py-0">
+      <button
+        type="button"
+        aria-expanded={expanded()}
+        onClick={() => setExpanded(!expanded())}
+        class="hover:bg-muted/50 cursor-pointer rounded-xl text-left"
+      >
+        <CardHeader class="py-4">
+          <CardTitle class="flex items-center gap-2">
+            <svg
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              aria-hidden="true"
+              class="text-muted-foreground size-4 shrink-0 transition-transform"
+              classList={{ "rotate-90": expanded() }}
+            >
+              <path d="M8 5v14l11-7z" />
+            </svg>
+            {props.group.meeting.title || "(untitled)"}
+          </CardTitle>
+          <CardDescription class="pl-6">
+            {props.group.meeting.start_time
+              ? formatMeetingTime(props.group.meeting.start_time)
+              : "Date unknown"}
+            {" · "}
+            {count()} {count() === 1 ? "segment" : "segments"}
+          </CardDescription>
+        </CardHeader>
+      </button>
+      <Show when={expanded()}>
+        <CardContent class="flex flex-col gap-3 border-t py-4">
+          <For each={props.group.segments}>
+            {(segment) => <SegmentRow segment={segment} audio={props.audio} />}
+          </For>
+          <Link
+            to="/meetings/$id"
+            params={{ id: String(props.group.meeting.id) }}
+            class="text-sm font-medium hover:underline"
+          >
+            View meeting →
+          </Link>
+        </CardContent>
+      </Show>
+    </Card>
+  );
+}
+
+function SegmentRow(props: {
+  segment: PersonSegment;
+  audio: ReturnType<typeof createHiddenAudio>;
+}) {
+  const start = () => segmentStart(props.segment);
+  const playing = () => props.audio.playingId() === props.segment.id;
+
+  return (
+    <div class="flex items-start gap-2">
+      <Show
+        when={props.segment.meeting.youtube_id && start() != null}
+        fallback={<div class="size-8 shrink-0" />}
+      >
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          class="shrink-0 rounded-full"
+          aria-label={playing() ? "Pause audio" : "Play audio"}
+          onClick={() =>
+            props.audio.toggle(
+              props.segment.id,
+              props.segment.meeting.youtube_id,
+              start()!,
+              segmentEnd(props.segment),
+            )
+          }
+        >
+          <Show
+            when={playing()}
+            fallback={
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            }
+          >
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M6 5h4v14H6zM14 5h4v14h-4z" />
+            </svg>
+          </Show>
+        </Button>
+      </Show>
+      <p class="leading-relaxed">
+        <Show when={start() != null}>
+          <span class="text-muted-foreground mr-2 font-mono text-sm">
+            {formatTimestamp(start()!)}
+          </span>
+        </Show>
+        {props.segment.text}
+      </p>
     </div>
   );
 }
