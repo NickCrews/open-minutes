@@ -372,16 +372,55 @@ export function ensureModelFiles() {
   return files;
 }
 
+// How long a single token may sound. Parakeet reports one timestamp per token —
+// the token's *onset*, quantized to the encoder's ~12.5 fps frame grid — and no
+// durations, so a word's end has to be estimated from its last token's onset.
+// Measured on this model, consecutive tokens inside continuous speech land
+// 0.08-0.24s apart; 0.32s (4 frames) is a generous ceiling on that.
+//
+// The upper bound matters more than the exact value: it is deliberately below
+// VAD_MIN_SILENCE_SEC, so an estimated word can never span a pause long enough
+// for VAD to have cut at it. That is what stops a word from reaching across a
+// silence into the next speaker's diarization turn (see alignSpeakers, and the
+// regression test in align.test.ts).
+const MAX_TOKEN_SEC = 0.32;
+
 // NeMo Parakeet uses space-prefixed tokens (e.g. " Ask", "sk") where a leading
 // space marks a word boundary. Punctuation tokens (e.g. ",") have no leading
 // space and attach to the preceding word.
-function tokensToWords(
+//
+// A word spans [first token's onset, last *spoken* token's onset + MAX_TOKEN_SEC],
+// truncated at the next word's onset so words never overlap. Two details, both of
+// which otherwise stretch a word forward into the silence that follows it:
+//
+//   - It is the word's *own* last token that ends it. Ending a word at the next
+//     word's onset instead would stretch the last word before a pause across the
+//     entire silence.
+//   - Punctuation tokens are excluded. They attach to the preceding word's text,
+//     but the model emits them where it decides a sentence ended — which is after
+//     the pause, sometimes seconds late ("June." measured 3.8s that way). Nothing
+//     is voiced there, so punctuation contributes text but no duration.
+//
+// Both cases bite hardest on sentence-final words, which are exactly the words
+// sitting at speaker boundaries.
+export function tokensToWords(
   tokens: string[],
   timestamps: number[],
 ): TranscriptWord[] {
   const words: TranscriptWord[] = [];
   let currentText = "";
   let currentStart = 0;
+  let currentVoiced = 0; // onset of the last *spoken* token folded into currentText
+
+  const flush = (nextStart?: number) => {
+    if (!currentText) return;
+    const end = currentVoiced + MAX_TOKEN_SEC;
+    words.push({
+      text: currentText,
+      start: currentStart,
+      end: nextStart === undefined ? end : Math.min(end, nextStart),
+    });
+  };
 
   for (let i = 0; i < tokens.length; i++) {
     const token = tokens[i]!;
@@ -390,27 +429,24 @@ function tokensToWords(
     const isWordStart =
       token.startsWith(" ") || token.startsWith("▁") || i === 0;
 
-    if (isWordStart && currentText) {
-      words.push({ text: currentText, start: currentStart, end: ts });
+    if (isWordStart) {
+      flush(ts);
       currentText = token.replace(/^[ ▁]+/, "");
       currentStart = ts;
-    } else if (isWordStart) {
-      currentText = token.replace(/^[ ▁]+/, "");
-      currentStart = ts;
+      currentVoiced = ts;
     } else {
       currentText += token;
+      if (isVoiced(token)) currentVoiced = ts;
     }
   }
-
-  if (currentText) {
-    words.push({
-      text: currentText,
-      start: currentStart,
-      end: timestamps.at(-1) ?? currentStart,
-    });
-  }
+  flush();
 
   return words.filter((w) => w.text.length > 0);
+}
+
+/** Does this token represent audible speech, as opposed to punctuation? */
+function isVoiced(token: string): boolean {
+  return /[\p{L}\p{N}]/u.test(token);
 }
 
 async function cli() {

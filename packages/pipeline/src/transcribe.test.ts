@@ -7,6 +7,7 @@ import sherpa_onnx from "sherpa-onnx-node";
 import {
   ensureModelFiles,
   MERGE_WINDOW_SEC,
+  tokensToWords,
   transcribeAudio,
   type TranscribeWindowEndEvent,
 } from "./transcribe";
@@ -32,6 +33,53 @@ function sample16kHz(): string {
   }
   return dest;
 }
+
+// Parakeet reports one timestamp per token — the token's onset — and no
+// durations, so these tests pin down how a word's *end* is estimated from them.
+// Getting this wrong misattributes words at speaker boundaries; see the
+// regression test in align.test.ts for the failure it caused.
+describe("tokensToWords", () => {
+  it("joins space-prefixed tokens into words and attaches punctuation", () => {
+    const words = tokensToWords(
+      [" A", "sk", " not", " what", ","],
+      [0.0, 0.24, 0.4, 0.64, 0.8],
+    );
+    expect(words.map((w) => w.text)).toEqual(["Ask", "not", "what,"]);
+  });
+
+  it("ends a word from its own last token, not the next word's onset", () => {
+    // "report." is followed by 1.7s of silence. Its span must not cover it.
+    const words = tokensToWords([" report", " Thanks"], [10.0, 11.7]);
+    expect(words[0]!.start).toBe(10.0);
+    expect(words[0]!.end).toBeCloseTo(10.32);
+  });
+
+  it("truncates a word at the next word's onset so words never overlap", () => {
+    // Tokens 0.16s apart — closer than the max token duration.
+    const words = tokensToWords([" a", " b"], [1.0, 1.16]);
+    expect(words[0]!.end).toBeCloseTo(1.16);
+    expect(words[0]!.end).toBeLessThanOrEqual(words[1]!.start);
+  });
+
+  it("does not let a late punctuation token extend a word", () => {
+    // The model emits "." where it decides the sentence ended — well after the
+    // speech stopped. Nothing is voiced there, so it must not add duration.
+    const words = tokensToWords([" June", ".", " Next"], [5.0, 8.4, 9.0]);
+    expect(words[0]!.text).toBe("June.");
+    expect(words[0]!.end).toBeCloseTo(5.32);
+  });
+
+  it("extends a word for a voiced continuation token", () => {
+    // "sk" in "Ask" is not word-initial but *is* spoken, unlike punctuation.
+    const words = tokensToWords([" A", "sk"], [0.0, 0.24]);
+    expect(words[0]!.text).toBe("Ask");
+    expect(words[0]!.end).toBeCloseTo(0.56);
+  });
+
+  it("returns no words for no tokens", () => {
+    expect(tokensToWords([], [])).toEqual([]);
+  });
+});
 
 describe("transcribe", () => {
   it("transcribes a 4 second audio sample", async () => {
