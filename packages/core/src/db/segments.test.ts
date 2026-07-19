@@ -16,7 +16,11 @@ async function insertMeeting(db: DB): Promise<number> {
     .returning({ id: jurisdictionsTable.id });
   const [body] = await db
     .insert(bodiesTable)
-    .values({ name: "Testville Council", jurisdiction_id: jurisdiction!.id })
+    .values({
+      name: "Testville Council",
+      jurisdiction_id: jurisdiction!.id,
+      timezone: "America/Anchorage",
+    })
     .returning({ id: bodiesTable.id });
   const [meeting] = await db
     .insert(meetingsTable)

@@ -21,6 +21,7 @@ export const MOA_JURISDICTION = {
 export const GBOS_BODY = {
   name: "Girdwood Board of Supervisors",
   name_short: "GBOS",
+  timezone: "America/Anchorage",
 } as const satisfies Omit<Body, "jurisdiction_id">;
 
 // https://www.youtube.com/channel/UCOUlNInprZEjhbpVPiJOlEA

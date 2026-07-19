@@ -36,6 +36,7 @@ export function getPersonById(db: DB, personId: number) {
                 start_time: true,
                 youtube_id: true,
               },
+              with: { body: { columns: { timezone: true } } },
             },
           },
           orderBy: { id: "desc" },

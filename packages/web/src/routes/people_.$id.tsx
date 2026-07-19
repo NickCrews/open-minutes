@@ -197,7 +197,10 @@ function MeetingCard(props: {
           </CardTitle>
           <CardDescription class="pl-6">
             {props.group.meeting.start_time
-              ? formatMeetingTime(props.group.meeting.start_time)
+              ? formatMeetingTime(
+                  props.group.meeting.start_time,
+                  props.group.meeting.body.timezone,
+                )
               : "Date unknown"}
             {" · "}
             {count()} {count() === 1 ? "segment" : "segments"}

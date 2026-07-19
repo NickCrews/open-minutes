@@ -28,6 +28,8 @@ export interface GoldenBody {
   jurisdiction_id: string;
   name: string;
   name_short: string;
+  /** IANA zone the body meets in, eg "America/Anchorage". */
+  timezone: string;
   video_sources: GoldenVideoSource[];
 }
 

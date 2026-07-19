@@ -68,6 +68,7 @@ export function mapSnapshot(data: TestData): MappedRows {
       jurisdiction_id: jurisdictionId,
       name: b.name,
       name_short: b.name_short,
+      timezone: b.timezone,
     };
   });
 

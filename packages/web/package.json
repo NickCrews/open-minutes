@@ -13,7 +13,6 @@
   "dependencies": {
     "@kobalte/core": "^0.13.12",
     "@open-minutes/core": "workspace:*",
-    "@t3-oss/env-core": "^0.13.11",
     "@tailwindcss/vite": "^4.3.3",
     "@tanstack/solid-router": "^1",
     "@tanstack/solid-start": "^1",

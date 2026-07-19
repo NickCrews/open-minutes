@@ -60,7 +60,7 @@ function BodyPage() {
                 {(start) => (
                   <span class="text-muted-foreground text-sm">
                     {" "}
-                    — {formatMeetingTime(start())}
+                    — {formatMeetingTime(start(), body().timezone)}
                   </span>
                 )}
               </Show>

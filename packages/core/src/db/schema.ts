@@ -43,6 +43,11 @@ export const bodiesTable = pgTable("bodies", {
   name: varchar().notNull().default(""),
   name_short: varchar().notNull().default(""),
   homepage_url: varchar(),
+  // IANA zone the body meets in, eg "America/Anchorage". Meeting times are
+  // stored as UTC instants, so this is what turns one back into the wall-clock
+  // time that was on the agenda — the only time a reader (or an editor typing
+  // one in) ever thinks in.
+  timezone: varchar().notNull(),
   created_at: timestamp().notNull().defaultNow(),
 });
 
@@ -83,7 +88,11 @@ export const meetingsTable = pgTable("meetings", {
   ),
   title: varchar().notNull().default(""),
   description: varchar().notNull().default(""),
-  start_time: timestamp(),
+  // An instant, not a wall-clock reading: the meeting is over and the moment it
+  // gavelled in is a fact, one that has to line up with video timestamps and
+  // sort against meetings in other zones. Render it through the body's
+  // `timezone` to get back the time that was on the agenda.
+  start_time: timestamp({ withTimezone: true }),
   duration_secs: secondsInterval(),
   created_at: timestamp().notNull().defaultNow(),
 });

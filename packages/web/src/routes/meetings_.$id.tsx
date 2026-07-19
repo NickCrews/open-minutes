@@ -1,11 +1,12 @@
-import { createFileRoute, Link } from "@tanstack/solid-router";
+import { createFileRoute, Link, useRouter } from "@tanstack/solid-router";
 import { createServerFn } from "@tanstack/solid-start";
 import { createSignal, Show } from "solid-js";
 import { VideoPlayer } from "~/components/video-player";
 import { getMeetingById } from "~/features/meetings";
+import { Duration } from "~/features/meetings/duration";
 import { Speakers } from "~/features/meetings/speakers";
+import { StartTime } from "~/features/meetings/start-time";
 import { Transcript } from "~/features/meetings/transcript";
-import { formatMeetingTime } from "~/lib/format";
 import { type YTPlayer } from "~/lib/youtube";
 import { db } from "~/server/db";
 
@@ -20,6 +21,7 @@ export const Route = createFileRoute("/meetings_/$id")({
 
 function MeetingPage() {
   const meeting = Route.useLoaderData();
+  const router = useRouter();
   const [currentTime, setCurrentTime] = createSignal(0);
   const [duration, setDuration] = createSignal(0);
   const [playing, setPlaying] = createSignal(false);
@@ -53,7 +55,10 @@ function MeetingPage() {
     <div class="flex h-[calc(100dvh-5.5rem)] flex-col gap-3">
       <header class="shrink-0">
         <h1 class="text-xl font-bold">{meeting().title || "(untitled)"}</h1>
-        <p class="text-muted-foreground text-sm">
+        {/* A div, not a p: the dev-only start-time editor puts a form in here,
+            and a browser closes an open <p> the moment it meets flow content,
+            which would split this line in two during hydration. */}
+        <div class="text-muted-foreground text-sm">
           <Link
             to="/bodies/$id"
             params={{ id: String(meeting().body.id) }}
@@ -61,10 +66,15 @@ function MeetingPage() {
           >
             {meeting().body.name}
           </Link>
-          <Show when={meeting().start_time}>
-            {(start) => <> — {formatMeetingTime(start())}</>}
-          </Show>
-        </p>
+          <StartTime
+            meetingId={meeting().id}
+            startTime={meeting().start_time}
+            timezone={meeting().body.timezone}
+            prefix=" — "
+            onSaved={() => void router.invalidate()}
+          />
+          <Duration durationSecs={meeting().duration_secs} prefix=" — " />
+        </div>
       </header>
       <div class="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row">
         <div class="flex min-h-0 shrink-0 flex-col gap-3 lg:w-3/5">

@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/solid-router";
+import { createFileRoute, Link, useRouter } from "@tanstack/solid-router";
 import { createServerFn } from "@tanstack/solid-start";
 import { For, Show } from "solid-js";
 import {
@@ -15,7 +15,8 @@ import {
   HoverCardTrigger,
 } from "~/components/hover-card";
 import { getAllMeetings } from "~/features/meetings";
-import { formatMeetingTime } from "~/lib/format";
+import { Duration } from "~/features/meetings/duration";
+import { StartTime } from "~/features/meetings/start-time";
 import { db } from "~/server/db";
 
 const fetchMeetings = createServerFn({ method: "GET" }).handler(() =>
@@ -29,6 +30,7 @@ export const Route = createFileRoute("/meetings")({
 
 function MeetingsPage() {
   const meetings = Route.useLoaderData();
+  const router = useRouter();
   return (
     <div class="mx-auto max-w-3xl">
       <h1 class="mb-6 text-2xl font-bold">Meetings</h1>
@@ -49,10 +51,14 @@ function MeetingsPage() {
                     {meeting.title || "(untitled)"}
                   </Link>
                 </CardTitle>
-                <CardDescription>
-                  {meeting.start_time
-                    ? formatMeetingTime(meeting.start_time)
-                    : "Date unknown"}
+                <CardDescription class="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <StartTime
+                    meetingId={meeting.id}
+                    startTime={meeting.start_time}
+                    timezone={meeting.body.timezone}
+                    onSaved={() => void router.invalidate()}
+                  />
+                  <Duration durationSecs={meeting.duration_secs} />
                 </CardDescription>
               </CardHeader>
               <CardContent>

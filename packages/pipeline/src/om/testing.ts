@@ -45,6 +45,7 @@ export async function insertBody(
   body: {
     name: string;
     name_short: string;
+    timezone?: string;
     sources?: Array<{ kind: "channel" | "playlist"; youtube_id: string }>;
   },
 ): Promise<number> {
@@ -58,6 +59,7 @@ export async function insertBody(
       name: body.name,
       name_short: body.name_short,
       jurisdiction_id: jurisdiction!.id,
+      timezone: body.timezone ?? "America/Anchorage",
     })
     .returning({ id: bodiesTable.id });
   if (body.sources?.length) {

@@ -6,7 +6,10 @@ export function searchSegments(db: DB, query: string) {
     where: { text: { ilike: `%${query}%` } },
     columns: { words: false },
     with: {
-      meeting: { columns: { id: true, title: true, start_time: true } },
+      meeting: {
+        columns: { id: true, title: true, start_time: true },
+        with: { body: { columns: { timezone: true } } },
+      },
       person: { columns: { id: true, name: true } },
     },
     orderBy: { id: "desc" },
