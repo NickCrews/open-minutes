@@ -1,35 +1,35 @@
-import type { ComponentProps, ValidComponent } from "solid-js"
-import { splitProps } from "solid-js"
-import { HoverCard as HoverCardPrimitive } from "@kobalte/core/hover-card"
+import type { ComponentProps, ValidComponent } from "solid-js";
+import { splitProps } from "solid-js";
+import { HoverCard as HoverCardPrimitive } from "@kobalte/core/hover-card";
 
-import { cx } from "~/lib/cva"
+import { cx } from "~/lib/cva";
 
-export const HoverCardPortal = HoverCardPrimitive.Portal
+export const HoverCardPortal = HoverCardPrimitive.Portal;
 
-export type HoverCardProps = ComponentProps<typeof HoverCardPrimitive>
+export type HoverCardProps = ComponentProps<typeof HoverCardPrimitive>;
 
 export const HoverCard = (props: HoverCardProps) => {
-  return <HoverCardPrimitive data-slot="hover-card" {...props} />
-}
+  return <HoverCardPrimitive data-slot="hover-card" {...props} />;
+};
 
 export type HoverCardTriggerProps<T extends ValidComponent = "button"> =
-  ComponentProps<typeof HoverCardPrimitive.Trigger<T>>
+  ComponentProps<typeof HoverCardPrimitive.Trigger<T>>;
 
 export const HoverCardTrigger = <T extends ValidComponent = "button">(
   props: HoverCardTriggerProps<T>,
 ) => {
   return (
     <HoverCardPrimitive.Trigger data-slot="hover-card-trigger" {...props} />
-  )
-}
+  );
+};
 
 export type HoverCardContentProps<T extends ValidComponent = "div"> =
-  ComponentProps<typeof HoverCardPrimitive.Content<T>>
+  ComponentProps<typeof HoverCardPrimitive.Content<T>>;
 
 export const HoverCardContent = <T extends ValidComponent = "div">(
   props: HoverCardContentProps<T>,
 ) => {
-  const [, rest] = splitProps(props as HoverCardContentProps, ["class"])
+  const [, rest] = splitProps(props as HoverCardContentProps, ["class"]);
 
   return (
     <HoverCardPrimitive.Content
@@ -41,5 +41,5 @@ export const HoverCardContent = <T extends ValidComponent = "div">(
       )}
       {...rest}
     />
-  )
-}
+  );
+};

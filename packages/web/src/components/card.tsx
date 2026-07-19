@@ -1,12 +1,12 @@
-import type { ComponentProps } from "solid-js"
-import { splitProps } from "solid-js"
+import type { ComponentProps } from "solid-js";
+import { splitProps } from "solid-js";
 
-import { cx } from "~/lib/cva"
+import { cx } from "~/lib/cva";
 
-export type CardProps = ComponentProps<"div">
+export type CardProps = ComponentProps<"div">;
 
 export const Card = (props: CardProps) => {
-  const [, rest] = splitProps(props, ["class"])
+  const [, rest] = splitProps(props, ["class"]);
 
   return (
     <div
@@ -17,13 +17,13 @@ export const Card = (props: CardProps) => {
       )}
       {...rest}
     />
-  )
-}
+  );
+};
 
-export type CardHeaderProps = ComponentProps<"div">
+export type CardHeaderProps = ComponentProps<"div">;
 
 export const CardHeader = (props: CardHeaderProps) => {
-  const [, rest] = splitProps(props, ["class"])
+  const [, rest] = splitProps(props, ["class"]);
 
   return (
     <div
@@ -34,13 +34,13 @@ export const CardHeader = (props: CardHeaderProps) => {
       )}
       {...rest}
     />
-  )
-}
+  );
+};
 
-export type CardTitleProps = ComponentProps<"div">
+export type CardTitleProps = ComponentProps<"div">;
 
 export const CardTitle = (props: CardTitleProps) => {
-  const [, rest] = splitProps(props, ["class"])
+  const [, rest] = splitProps(props, ["class"]);
 
   return (
     <div
@@ -48,13 +48,13 @@ export const CardTitle = (props: CardTitleProps) => {
       class={cx("leading-none font-semibold", props.class)}
       {...rest}
     />
-  )
-}
+  );
+};
 
-export type CardDescriptionProps = ComponentProps<"div">
+export type CardDescriptionProps = ComponentProps<"div">;
 
 export const CardDescription = (props: CardDescriptionProps) => {
-  const [, rest] = splitProps(props, ["class"])
+  const [, rest] = splitProps(props, ["class"]);
 
   return (
     <div
@@ -62,13 +62,13 @@ export const CardDescription = (props: CardDescriptionProps) => {
       class={cx("text-muted-foreground text-sm", props.class)}
       {...rest}
     />
-  )
-}
+  );
+};
 
-export type CardActionProps = ComponentProps<"div">
+export type CardActionProps = ComponentProps<"div">;
 
 export const CardAction = (props: CardActionProps) => {
-  const [, rest] = splitProps(props, ["class"])
+  const [, rest] = splitProps(props, ["class"]);
 
   return (
     <div
@@ -79,23 +79,23 @@ export const CardAction = (props: CardActionProps) => {
       )}
       {...rest}
     />
-  )
-}
+  );
+};
 
-export type CardContentProps = ComponentProps<"div">
+export type CardContentProps = ComponentProps<"div">;
 
 export const CardContent = (props: CardContentProps) => {
-  const [, rest] = splitProps(props, ["class"])
+  const [, rest] = splitProps(props, ["class"]);
 
   return (
     <div data-slot="card-content" class={cx("px-6", props.class)} {...rest} />
-  )
-}
+  );
+};
 
-export type CardFooterProps = ComponentProps<"div">
+export type CardFooterProps = ComponentProps<"div">;
 
 export const CardFooter = (props: CardFooterProps) => {
-  const [, rest] = splitProps(props, ["class"])
+  const [, rest] = splitProps(props, ["class"]);
 
   return (
     <div
@@ -103,5 +103,5 @@ export const CardFooter = (props: CardFooterProps) => {
       class={cx("flex items-center px-6 [.border-t]:pt-6", props.class)}
       {...rest}
     />
-  )
-}
+  );
+};

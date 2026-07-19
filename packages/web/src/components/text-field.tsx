@@ -1,17 +1,17 @@
-import type { ComponentProps, ValidComponent } from "solid-js"
-import { For, Match, Switch, splitProps } from "solid-js"
-import { TextField as TextFieldPrimitive } from "@kobalte/core/text-field"
+import type { ComponentProps, ValidComponent } from "solid-js";
+import { For, Match, Switch, splitProps } from "solid-js";
+import { TextField as TextFieldPrimitive } from "@kobalte/core/text-field";
 
-import { cx } from "~/lib/cva"
+import { cx } from "~/lib/cva";
 
 export type TextFieldProps<T extends ValidComponent = "div"> = ComponentProps<
   typeof TextFieldPrimitive<T>
->
+>;
 
 export const TextField = <T extends ValidComponent = "div">(
   props: TextFieldProps<T>,
 ) => {
-  const [, rest] = splitProps(props as TextFieldProps, ["class"])
+  const [, rest] = splitProps(props as TextFieldProps, ["class"]);
 
   return (
     <TextFieldPrimitive
@@ -19,16 +19,16 @@ export const TextField = <T extends ValidComponent = "div">(
       class={cx("grid w-full gap-2", props.class)}
       {...rest}
     />
-  )
-}
+  );
+};
 
 export type TextFieldInputProps<T extends ValidComponent = "input"> =
-  ComponentProps<typeof TextFieldPrimitive.Input<T>>
+  ComponentProps<typeof TextFieldPrimitive.Input<T>>;
 
 export const TextFieldInput = <T extends ValidComponent = "input">(
   props: TextFieldInputProps<T>,
 ) => {
-  const [, rest] = splitProps(props as TextFieldInputProps, ["class"])
+  const [, rest] = splitProps(props as TextFieldInputProps, ["class"]);
 
   return (
     <TextFieldPrimitive.Input
@@ -42,16 +42,16 @@ export const TextFieldInput = <T extends ValidComponent = "input">(
       )}
       {...rest}
     />
-  )
-}
+  );
+};
 
 export type TextFieldTextAreaProps<T extends ValidComponent = "textarea"> =
-  ComponentProps<typeof TextFieldPrimitive.TextArea<T>>
+  ComponentProps<typeof TextFieldPrimitive.TextArea<T>>;
 
 export const TextFieldTextArea = <T extends ValidComponent = "textarea">(
   props: TextFieldTextAreaProps<T>,
 ) => {
-  const [, rest] = splitProps(props as TextFieldTextAreaProps, ["class"])
+  const [, rest] = splitProps(props as TextFieldTextAreaProps, ["class"]);
 
   return (
     <TextFieldPrimitive.TextArea
@@ -64,16 +64,16 @@ export const TextFieldTextArea = <T extends ValidComponent = "textarea">(
       )}
       {...rest}
     />
-  )
-}
+  );
+};
 
 export type TextFieldLabelProps<T extends ValidComponent = "label"> =
-  ComponentProps<typeof TextFieldPrimitive.Label<T>>
+  ComponentProps<typeof TextFieldPrimitive.Label<T>>;
 
 export const TextFieldLabel = <T extends ValidComponent = "label">(
   props: TextFieldLabelProps<T>,
 ) => {
-  const [, rest] = splitProps(props as TextFieldLabelProps, ["class"])
+  const [, rest] = splitProps(props as TextFieldLabelProps, ["class"]);
 
   return (
     <TextFieldPrimitive.Label
@@ -86,13 +86,13 @@ export const TextFieldLabel = <T extends ValidComponent = "label">(
       )}
       {...rest}
     />
-  )
-}
+  );
+};
 
 export type TextFieldErrorMessageProps<T extends ValidComponent = "div"> =
   ComponentProps<typeof TextFieldPrimitive.ErrorMessage<T>> & {
-    errors?: ({ message?: string } | undefined)[]
-  }
+    errors?: ({ message?: string } | undefined)[];
+  };
 
 export const TextFieldErrorMessage = <T extends ValidComponent = "div">(
   props: TextFieldErrorMessageProps<T>,
@@ -101,11 +101,11 @@ export const TextFieldErrorMessage = <T extends ValidComponent = "div">(
     "class",
     "errors",
     "children",
-  ])
+  ]);
 
   const uniqueErrors = () => [
     ...new Map(props.errors?.map((error) => [error?.message, error])).values(),
-  ]
+  ];
 
   return (
     <TextFieldPrimitive.ErrorMessage
@@ -129,16 +129,16 @@ export const TextFieldErrorMessage = <T extends ValidComponent = "div">(
         </Match>
       </Switch>
     </TextFieldPrimitive.ErrorMessage>
-  )
-}
+  );
+};
 
 export type TextFieldDescriptionProps<T extends ValidComponent = "div"> =
-  ComponentProps<typeof TextFieldPrimitive.Description<T>>
+  ComponentProps<typeof TextFieldPrimitive.Description<T>>;
 
 export const TextFieldDescription = <T extends ValidComponent = "div">(
   props: TextFieldDescriptionProps<T>,
 ) => {
-  const [, rest] = splitProps(props as TextFieldDescriptionProps, ["class"])
+  const [, rest] = splitProps(props as TextFieldDescriptionProps, ["class"]);
 
   return (
     <TextFieldPrimitive.Description
@@ -146,5 +146,5 @@ export const TextFieldDescription = <T extends ValidComponent = "div">(
       class={cx("text-muted-foreground text-sm", props.class)}
       {...rest}
     />
-  )
-}
+  );
+};

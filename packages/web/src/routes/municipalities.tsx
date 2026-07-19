@@ -36,9 +36,7 @@ function MunicipalitiesPage() {
               </Link>
               <Show when={municipality.state}>
                 {(state) => (
-                  <span class="text-muted-foreground text-sm">
-                    , {state()}
-                  </span>
+                  <span class="text-muted-foreground text-sm">, {state()}</span>
                 )}
               </Show>
             </li>

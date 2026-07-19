@@ -3,6 +3,7 @@ import { createServerFn } from "@tanstack/solid-start";
 import { createSignal, Show } from "solid-js";
 import { VideoPlayer } from "~/components/video-player";
 import { getMeetingById } from "~/features/meetings";
+import { Speakers } from "~/features/meetings/speakers";
 import { Transcript } from "~/features/meetings/transcript";
 import { formatMeetingTime } from "~/lib/format";
 import { type YTPlayer } from "~/lib/youtube";
@@ -70,6 +71,7 @@ function MeetingPage() {
               />
             )}
           </Show>
+          <Speakers segments={meeting().segments} />
           <Show when={meeting().description}>
             <p class="text-muted-foreground hidden min-h-0 overflow-y-auto whitespace-pre-line text-sm lg:block">
               {meeting().description}

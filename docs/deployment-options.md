@@ -50,7 +50,7 @@ Primary sources:
 - [TanStack Start Solid hosting guide](https://tanstack.com/start/latest/docs/framework/solid/guide/hosting)
   — lists Cloudflare Workers as a partner target and gives Solid-specific
   config (imports from `@tanstack/solid-start/plugin/vite`, `main:
-  "@tanstack/solid-start/server-entry"`).
+"@tanstack/solid-start/server-entry"`).
 - [Cloudflare's TanStack Start framework guide](https://developers.cloudflare.com/workers/framework-guides/web-apps/tanstack-start/)
   — Cloudflare's own guide; note it is written for the **React** variant
   (`@tanstack/react-start/server-entry`), but the mechanism is identical and
@@ -61,7 +61,7 @@ Primary sources:
 
 ### Required config (per the Solid hosting guide)
 
-`vite.config.ts` — add the Cloudflare plugin *before* `tanstackStart()`, bound
+`vite.config.ts` — add the Cloudflare plugin _before_ `tanstackStart()`, bound
 to the `ssr` environment:
 
 ```ts
@@ -88,7 +88,7 @@ export default defineConfig({
   "compatibility_date": "2026-07-18",
   "compatibility_flags": ["nodejs_compat"],
   "main": "@tanstack/solid-start/server-entry",
-  "observability": { "enabled": true }
+  "observability": { "enabled": true },
 }
 ```
 
@@ -195,16 +195,16 @@ which restores `.output/server/index.mjs`, or serve the fetch handler yourself
 equivalent Rsbuild output, and notes any Node server that serves the client
 assets and calls the entry's `fetch` works).
 
-| Option | Changes needed | Hobby-scale cost | Postgres fit |
-|---|---|---|---|
-| **Node server on VPS / Docker** | Fix start script (add `nitro()` or an srvx/custom entry); Dockerfile | Whatever the box costs (~$4–6/mo VPS) | Perfect — long-lived process, postgres.js pools natively; zero DB-code changes |
-| **Railway** (TanStack partner) | Same Node fix; connect repo — [Railway section of hosting guide](https://tanstack.com/start/latest/docs/framework/solid/guide/hosting) says follow the Nitro instructions | [Hobby $5/mo incl. usage](https://railway.com/pricing); managed Postgres billed as usage | Excellent — app + Postgres in one place, private networking |
-| **Fly.io** | Same Node fix + Dockerfile | [shared-cpu-1x/256MB ≈ $2/mo](https://fly.io/docs/about/pricing/); unmanaged single-node Postgres ≈ $2/mo, Managed Postgres extra | Very good — long-lived VM, can colocate Postgres |
-| **Render** | Same Node fix; connect repo | Free web-service tier (spins down) or cheapest paid instance; see [pricing](https://render.com/pricing) | Good — managed Postgres offering on-platform |
-| **Netlify** (partner) | Add [`@netlify/vite-plugin-tanstack-start`](https://tanstack.com/start/latest/docs/framework/solid/guide/hosting) | Free tier generous for hobby | OK — serverless functions, so pool via provider pooler/pgbouncer; postgres.js per-invocation connections need care |
-| **Vercel** | Hosting guide routes Vercel through the Nitro instructions | Hobby free tier | Same serverless caveat as Netlify |
-| **Cloudflare Workers** | §1 + §2 changes (vite plugin, wrangler.jsonc, Hyperdrive, db-code edits) | Workers [Free: 100k req/day / Paid $5/mo](https://developers.cloudflare.com/workers/platform/pricing/); Hyperdrive included | Good via Hyperdrive; DB itself must live elsewhere |
-| **Cloudflare Containers** | Dockerfile + Worker shim; run the Node build unchanged | Requires [Workers Paid $5/mo; per-10ms billing, ~25 GiB-h memory included](https://developers.cloudflare.com/containers/pricing/) | Good — real Node process; but more moving parts than a plain VPS for the same result |
+| Option                          | Changes needed                                                                                                                                                            | Hobby-scale cost                                                                                                                  | Postgres fit                                                                                                       |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| **Node server on VPS / Docker** | Fix start script (add `nitro()` or an srvx/custom entry); Dockerfile                                                                                                      | Whatever the box costs (~$4–6/mo VPS)                                                                                             | Perfect — long-lived process, postgres.js pools natively; zero DB-code changes                                     |
+| **Railway** (TanStack partner)  | Same Node fix; connect repo — [Railway section of hosting guide](https://tanstack.com/start/latest/docs/framework/solid/guide/hosting) says follow the Nitro instructions | [Hobby $5/mo incl. usage](https://railway.com/pricing); managed Postgres billed as usage                                          | Excellent — app + Postgres in one place, private networking                                                        |
+| **Fly.io**                      | Same Node fix + Dockerfile                                                                                                                                                | [shared-cpu-1x/256MB ≈ $2/mo](https://fly.io/docs/about/pricing/); unmanaged single-node Postgres ≈ $2/mo, Managed Postgres extra | Very good — long-lived VM, can colocate Postgres                                                                   |
+| **Render**                      | Same Node fix; connect repo                                                                                                                                               | Free web-service tier (spins down) or cheapest paid instance; see [pricing](https://render.com/pricing)                           | Good — managed Postgres offering on-platform                                                                       |
+| **Netlify** (partner)           | Add [`@netlify/vite-plugin-tanstack-start`](https://tanstack.com/start/latest/docs/framework/solid/guide/hosting)                                                         | Free tier generous for hobby                                                                                                      | OK — serverless functions, so pool via provider pooler/pgbouncer; postgres.js per-invocation connections need care |
+| **Vercel**                      | Hosting guide routes Vercel through the Nitro instructions                                                                                                                | Hobby free tier                                                                                                                   | Same serverless caveat as Netlify                                                                                  |
+| **Cloudflare Workers**          | §1 + §2 changes (vite plugin, wrangler.jsonc, Hyperdrive, db-code edits)                                                                                                  | Workers [Free: 100k req/day / Paid $5/mo](https://developers.cloudflare.com/workers/platform/pricing/); Hyperdrive included       | Good via Hyperdrive; DB itself must live elsewhere                                                                 |
+| **Cloudflare Containers**       | Dockerfile + Worker shim; run the Node build unchanged                                                                                                                    | Requires [Workers Paid $5/mo; per-10ms billing, ~25 GiB-h memory included](https://developers.cloudflare.com/containers/pricing/) | Good — real Node process; but more moving parts than a plain VPS for the same result                               |
 
 ## 4. Recommendation
 
