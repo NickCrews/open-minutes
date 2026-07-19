@@ -3,7 +3,10 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect } from "vitest";
 import { meetingsTable, segmentsTable } from "@open-minutes/core/db";
-import { GBOS_MUNICIPALITY, getOrCreateGbos } from "@open-minutes/core/munis";
+import {
+  GBOS_YOUTUBE_CHANNEL_ID,
+  getOrCreateGbos,
+} from "@open-minutes/core/bodies";
 import type { VideoMetadata } from "@open-minutes/core/youtube";
 import type { SpeechSegment } from "@open-minutes/core/transcription";
 import { N_DIMENSIONS } from "@open-minutes/core/voice_embeddings";
@@ -16,7 +19,7 @@ const VIDEO_ID = "test-video-1";
 
 const METADATA: VideoMetadata = {
   id: VIDEO_ID,
-  channelId: GBOS_MUNICIPALITY.youtube_channel_id,
+  channelId: GBOS_YOUTUBE_CHANNEL_ID,
   title: "Regular Meeting",
   description: "Agenda: everything",
   durationSecs: 3600,
@@ -85,7 +88,7 @@ describe("ingestVideo", () => {
     expect(await db.select().from(meetingsTable)).toHaveLength(1);
   });
 
-  test("rejects a video whose channel matches no municipality", async ({
+  test("rejects a video whose channel matches no body", async ({
     db,
     workRoot,
   }) => {
@@ -98,7 +101,7 @@ describe("ingestVideo", () => {
     });
 
     await expect(ingestVideo(db, VIDEO_ID, { yt, workRoot })).rejects.toThrow(
-      /no municipality/,
+      /matches no body's video sources/,
     );
     expect(await db.select().from(meetingsTable)).toHaveLength(0);
   });
@@ -262,7 +265,7 @@ describe("listIngested", () => {
     const all = await listIngested(db);
     expect(all.map((m) => m.youtubeId)).toEqual([VIDEO_ID, "older-video"]);
     expect(all[0]).toMatchObject({
-      muni: "gbos",
+      body: "gbos",
       title: METADATA.title,
       segmentCount: 2,
       durationSecs: "01:00:00",

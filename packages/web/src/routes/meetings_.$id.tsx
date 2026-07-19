@@ -55,11 +55,11 @@ function MeetingPage() {
         <h1 class="text-xl font-bold">{meeting().title || "(untitled)"}</h1>
         <p class="text-muted-foreground text-sm">
           <Link
-            to="/municipalities/$id"
-            params={{ id: String(meeting().municipality.id) }}
+            to="/bodies/$id"
+            params={{ id: String(meeting().body.id) }}
             class="hover:underline"
           >
-            {meeting().municipality.name}
+            {meeting().body.name}
           </Link>
           <Show when={meeting().start_time}>
             {(start) => <> — {formatMeetingTime(start())}</>}

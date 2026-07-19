@@ -1,5 +1,5 @@
 import { describe, expect } from "vitest";
-import { municipalitiesTable } from "@open-minutes/core/db";
+import { bodiesTable, jurisdictionsTable } from "@open-minutes/core/db";
 import { test } from "@open-minutes/core/db/testing/vitest";
 import { loadAllTestData } from "../test-utils/test-data";
 import { seedDatabase } from "./seed";
@@ -10,16 +10,26 @@ import { seedDatabase } from "./seed";
 // which an in-memory fake would not exercise.
 describe("seedDatabase", () => {
   // Expected counts derive from the loaded snapshot, never hard-coded, so adding
-  // a municipality to test-data/ does not break this test.
+  // a body to test-data/ does not break this test.
   const snapshot = loadAllTestData();
 
-  test("seeds the municipalities from the snapshot", async ({ db }) => {
+  test("seeds the jurisdictions and bodies from the snapshot", async ({
+    db,
+  }) => {
     await seedDatabase(db);
 
-    const rows = await db.select().from(municipalitiesTable);
-    expect(rows).toHaveLength(snapshot.municipalities.length);
-    for (const m of snapshot.municipalities) {
-      expect(rows.some((r) => r.name_short === m.name_short)).toBe(true);
+    const jurisdictions = await db.select().from(jurisdictionsTable);
+    expect(jurisdictions).toHaveLength(snapshot.jurisdictions.length);
+    for (const j of snapshot.jurisdictions) {
+      expect(jurisdictions.some((r) => r.name_short === j.name_short)).toBe(
+        true,
+      );
+    }
+
+    const bodies = await db.select().from(bodiesTable);
+    expect(bodies).toHaveLength(snapshot.bodies.length);
+    for (const b of snapshot.bodies) {
+      expect(bodies.some((r) => r.name_short === b.name_short)).toBe(true);
     }
   });
 
@@ -27,12 +37,12 @@ describe("seedDatabase", () => {
     db,
   }) => {
     await seedDatabase(db);
-    const first = await db.select().from(municipalitiesTable);
+    const first = await db.select().from(bodiesTable);
 
     await seedDatabase(db);
-    const second = await db.select().from(municipalitiesTable);
+    const second = await db.select().from(bodiesTable);
 
     expect(second).toHaveLength(first.length);
-    expect(second).toHaveLength(snapshot.municipalities.length);
+    expect(second).toHaveLength(snapshot.bodies.length);
   });
 });

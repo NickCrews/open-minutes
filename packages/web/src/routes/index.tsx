@@ -42,10 +42,10 @@ function HomePage(): JSX.Element {
             description="Speakers identified across meetings."
           />
         </Link>
-        <Link to="/municipalities">
+        <Link to="/bodies">
           <SectionCard
-            title="Municipalities"
-            description="The local governments being tracked."
+            title="Boards & Councils"
+            description="The governing bodies being tracked."
           />
         </Link>
         <Link to="/search" search={{ q: "" }}>

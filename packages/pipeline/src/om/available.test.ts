@@ -1,8 +1,10 @@
 import { describe, expect } from "vitest";
-import { municipalitiesTable } from "@open-minutes/core/db";
-import { getOrCreateGbos } from "@open-minutes/core/munis";
+import {
+  GBOS_YOUTUBE_CHANNEL_ID,
+  getOrCreateGbos,
+} from "@open-minutes/core/bodies";
 import { listAvailable } from "./available";
-import { fakeYouTube, insertMeeting, test } from "./testing";
+import { fakeYouTube, insertBody, insertMeeting, test } from "./testing";
 
 describe("listAvailable", () => {
   test("returns scraped IDs minus ingested ones, newest first", async ({
@@ -24,11 +26,9 @@ describe("listAvailable", () => {
     expect(ids).toEqual(["newest", "oldest"]);
   });
 
-  test("scrapes only municipalities with a YouTube channel", async ({ db }) => {
+  test("scrapes only bodies that have a video source", async ({ db }) => {
     await getOrCreateGbos(db);
-    await db
-      .insert(municipalitiesTable)
-      .values({ name: "No Channel Town", name_short: "NCT" });
+    await insertBody(db, { name: "No Channel Town", name_short: "NCT" });
 
     const scraped: string[] = [];
     const yt = fakeYouTube({
@@ -40,15 +40,31 @@ describe("listAvailable", () => {
 
     const ids = await listAvailable(db, { yt });
     expect(ids).toEqual(["v1"]);
-    expect(scraped).toHaveLength(1);
+    expect(scraped).toEqual([GBOS_YOUTUBE_CHANNEL_ID]);
   });
 
-  test("--muni restricts the scrape to that municipality", async ({ db }) => {
-    const gbos = await getOrCreateGbos(db);
-    await db.insert(municipalitiesTable).values({
-      name: "Other Town",
+  test("scrapes a playlist source via the playlist API", async ({ db }) => {
+    // Bodies that share a channel with their siblings are separated by
+    // playlist, so a playlist source must not be scraped as a channel.
+    await insertBody(db, {
+      name: "Anchorage Assembly",
+      name_short: "Assembly",
+      sources: [{ kind: "playlist", youtube_id: "PL_ASSEMBLY" }],
+    });
+
+    const yt = fakeYouTube({
+      videosInPlaylist: async (playlistId) => [{ id: `video-${playlistId}` }],
+    });
+
+    expect(await listAvailable(db, { yt })).toEqual(["video-PL_ASSEMBLY"]);
+  });
+
+  test("--body restricts the scrape to that body", async ({ db }) => {
+    await getOrCreateGbos(db);
+    await insertBody(db, {
+      name: "Other Town Council",
       name_short: "OT",
-      youtube_channel_id: "UC_OTHER_CHANNEL",
+      sources: [{ kind: "channel", youtube_id: "UC_OTHER_CHANNEL" }],
     });
 
     const scraped: string[] = [];
@@ -59,15 +75,15 @@ describe("listAvailable", () => {
       },
     });
 
-    const ids = await listAvailable(db, { muni: "gbos", yt });
-    expect(scraped).toEqual([gbos.youtube_channel_id]);
-    expect(ids).toEqual([`video-from-${gbos.youtube_channel_id}`]);
+    const ids = await listAvailable(db, { body: "gbos", yt });
+    expect(scraped).toEqual([GBOS_YOUTUBE_CHANNEL_ID]);
+    expect(ids).toEqual([`video-from-${GBOS_YOUTUBE_CHANNEL_ID}`]);
   });
 
-  test("rejects an unknown municipality slug", async ({ db }) => {
+  test("rejects an unknown body slug", async ({ db }) => {
     await getOrCreateGbos(db);
     await expect(
-      listAvailable(db, { muni: "atlantis", yt: fakeYouTube() }),
+      listAvailable(db, { body: "atlantis", yt: fakeYouTube() }),
     ).rejects.toThrow(/atlantis/);
   });
 });

@@ -2,16 +2,25 @@ import { describe, expect } from "vitest";
 import { eq } from "drizzle-orm";
 import { test } from "./testing/vitest";
 import type { DB } from "./index";
-import { meetingsTable, municipalitiesTable, segmentsTable } from "./schema";
+import {
+  bodiesTable,
+  jurisdictionsTable,
+  meetingsTable,
+  segmentsTable,
+} from "./schema";
 
 async function insertMeeting(db: DB): Promise<number> {
-  const [muni] = await db
-    .insert(municipalitiesTable)
+  const [jurisdiction] = await db
+    .insert(jurisdictionsTable)
     .values({ name: "Testville" })
-    .returning({ id: municipalitiesTable.id });
+    .returning({ id: jurisdictionsTable.id });
+  const [body] = await db
+    .insert(bodiesTable)
+    .values({ name: "Testville Council", jurisdiction_id: jurisdiction!.id })
+    .returning({ id: bodiesTable.id });
   const [meeting] = await db
     .insert(meetingsTable)
-    .values({ municipality_id: muni!.id })
+    .values({ body_id: body!.id })
     .returning({ id: meetingsTable.id });
   return meeting!.id;
 }

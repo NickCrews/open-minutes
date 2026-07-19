@@ -15,25 +15,67 @@ import { TranscriptWord } from "../transcription";
 
 const secondsInterval = () => interval({ fields: "second", precision: 3 });
 
-export const municipalitiesTable = pgTable("municipalities", {
+/**
+ * A government: the Municipality of Anchorage, the City & Borough of Juneau.
+ * A place with boundaries — it never meets and never has minutes. That's what
+ * the bodies inside it do.
+ */
+export const jurisdictionsTable = pgTable("jurisdictions", {
   id: serial().primaryKey(),
   name: varchar().notNull().default(""),
   name_short: varchar().notNull().default(""),
   state: varchar().notNull().default(""),
   postcode: varchar().default(""),
-  youtube_channel_id: varchar().default(""),
-  youtube_channel_url: varchar().generatedAlwaysAs(
+  created_at: timestamp().notNull().defaultNow(),
+});
+
+/**
+ * A deliberative body that actually meets: the Anchorage Assembly, the Girdwood
+ * Board of Supervisors, the Anchorage School Board. Meetings hang off these,
+ * not off the jurisdiction — one jurisdiction has many, and they are what a
+ * reader browses by.
+ */
+export const bodiesTable = pgTable("bodies", {
+  id: serial().primaryKey(),
+  jurisdiction_id: integer()
+    .notNull()
+    .references(() => jurisdictionsTable.id),
+  name: varchar().notNull().default(""),
+  name_short: varchar().notNull().default(""),
+  homepage_url: varchar(),
+  created_at: timestamp().notNull().defaultNow(),
+});
+
+/**
+ * Where a body's video comes from. Deliberately not a column on `bodies`,
+ * because neither direction of that relationship is one-to-one: the MOA channel
+ * carries the Assembly, P&Z and the school board mixed together, and a single
+ * body may be spread across a channel plus several playlists. Ingestion uses
+ * the source a video was found under to decide which body it belongs to.
+ */
+export const videoSourcesTable = pgTable("video_sources", {
+  id: serial().primaryKey(),
+  body_id: integer()
+    .notNull()
+    .references(() => bodiesTable.id),
+  kind: varchar().$type<"channel" | "playlist">().notNull(),
+  // A YouTube channel id (UC...) or playlist id (PL...), per `kind`.
+  youtube_id: varchar().notNull(),
+  url: varchar().generatedAlwaysAs(
     (): SQL =>
-      sql`CASE WHEN ${municipalitiesTable.youtube_channel_id} != '' THEN 'https://www.youtube.com/channel/' || ${municipalitiesTable.youtube_channel_id} ELSE '' END`,
+      sql`CASE ${videoSourcesTable.kind}
+            WHEN 'channel' THEN 'https://www.youtube.com/channel/' || ${videoSourcesTable.youtube_id}
+            WHEN 'playlist' THEN 'https://www.youtube.com/playlist?list=' || ${videoSourcesTable.youtube_id}
+          END`,
   ),
   created_at: timestamp().notNull().defaultNow(),
 });
 
 export const meetingsTable = pgTable("meetings", {
   id: serial().primaryKey(),
-  municipality_id: integer()
+  body_id: integer()
     .notNull()
-    .references(() => municipalitiesTable.id),
+    .references(() => bodiesTable.id),
   youtube_id: varchar().notNull().default("").unique(),
   youtube_url: varchar().generatedAlwaysAs(
     (): SQL =>
@@ -91,18 +133,47 @@ export const segmentsTable = pgTable("segments", {
 });
 
 export const relations = defineRelations(
-  { municipalitiesTable, meetingsTable, peopleTable, segmentsTable },
+  {
+    jurisdictionsTable,
+    bodiesTable,
+    videoSourcesTable,
+    meetingsTable,
+    peopleTable,
+    segmentsTable,
+  },
   (r) => ({
-    municipalitiesTable: {
+    jurisdictionsTable: {
+      bodies: r.many.bodiesTable({
+        from: r.jurisdictionsTable.id,
+        to: r.bodiesTable.jurisdiction_id,
+      }),
+    },
+    bodiesTable: {
+      jurisdiction: r.one.jurisdictionsTable({
+        from: r.bodiesTable.jurisdiction_id,
+        to: r.jurisdictionsTable.id,
+        optional: false,
+      }),
+      videoSources: r.many.videoSourcesTable({
+        from: r.bodiesTable.id,
+        to: r.videoSourcesTable.body_id,
+      }),
       meetings: r.many.meetingsTable({
-        from: r.municipalitiesTable.id,
-        to: r.meetingsTable.municipality_id,
+        from: r.bodiesTable.id,
+        to: r.meetingsTable.body_id,
+      }),
+    },
+    videoSourcesTable: {
+      body: r.one.bodiesTable({
+        from: r.videoSourcesTable.body_id,
+        to: r.bodiesTable.id,
+        optional: false,
       }),
     },
     meetingsTable: {
-      municipality: r.one.municipalitiesTable({
-        from: r.meetingsTable.municipality_id,
-        to: r.municipalitiesTable.id,
+      body: r.one.bodiesTable({
+        from: r.meetingsTable.body_id,
+        to: r.bodiesTable.id,
         optional: false,
       }),
       segments: r.many.segmentsTable({

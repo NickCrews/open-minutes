@@ -10,12 +10,25 @@ const TEST_DATA_ROOT = new URL("../../test-data/", import.meta.url).pathname;
 // DB-shaped row types (mirrors schema.ts columns that are relevant to fixtures).
 // Fields prefixed with _ are test-only and do not exist in the DB.
 
-export interface GoldenMunicipality {
+export interface GoldenJurisdiction {
   id: string;
   name: string;
   name_short: string;
   state: string;
-  youtube_channel_id: string;
+}
+
+export interface GoldenVideoSource {
+  kind: "channel" | "playlist";
+  youtube_id: string;
+}
+
+export interface GoldenBody {
+  id: string;
+  /** Snapshot id of the jurisdiction this body sits inside (eg "moa"). */
+  jurisdiction_id: string;
+  name: string;
+  name_short: string;
+  video_sources: GoldenVideoSource[];
 }
 
 export interface GoldenPerson {
@@ -24,7 +37,7 @@ export interface GoldenPerson {
 }
 
 export interface GoldenMeeting {
-  municipality_id: string;
+  body_id: string;
   youtube_id: string;
   title: string;
   duration_secs: number;
@@ -35,7 +48,8 @@ export interface GoldenMeeting {
   _audio_sha256: string;
 }
 export interface TestData {
-  municipalities: GoldenMunicipality[];
+  jurisdictions: GoldenJurisdiction[];
+  bodies: GoldenBody[];
   people: GoldenPerson[];
   meetings: GoldenMeeting[];
 }
@@ -55,10 +69,15 @@ export function loadAllTestData(): TestData {
   if (!existsSync(TEST_DATA_ROOT))
     throw new Error(`Fixtures root not found: ${TEST_DATA_ROOT}`);
 
-  const muniPath = join(TEST_DATA_ROOT, "municipalities.jsonl");
-  if (!existsSync(muniPath))
-    throw new Error(`Municipalities file not found: ${muniPath}`);
-  const municipalities = parseJsonl<GoldenMunicipality>(muniPath);
+  const jurisdictionsPath = join(TEST_DATA_ROOT, "jurisdictions.jsonl");
+  if (!existsSync(jurisdictionsPath))
+    throw new Error(`Jurisdictions file not found: ${jurisdictionsPath}`);
+  const jurisdictions = parseJsonl<GoldenJurisdiction>(jurisdictionsPath);
+
+  const bodiesPath = join(TEST_DATA_ROOT, "bodies.jsonl");
+  if (!existsSync(bodiesPath))
+    throw new Error(`Bodies file not found: ${bodiesPath}`);
+  const bodies = parseJsonl<GoldenBody>(bodiesPath);
 
   const peoplePath = join(TEST_DATA_ROOT, "people.jsonl");
   if (!existsSync(peoplePath))
@@ -72,7 +91,8 @@ export function loadAllTestData(): TestData {
   const meetings = meetingSlugs.map((slug) => getMeetingData(slug));
 
   return {
-    municipalities,
+    jurisdictions,
+    bodies,
     people,
     meetings,
   };

@@ -1,13 +1,13 @@
 import { describe, expect } from "vitest";
 import { sql } from "drizzle-orm";
 import { getDb } from "../index";
-import { municipalitiesTable } from "../schema";
+import { jurisdictionsTable } from "../schema";
 import { createTestDb } from "./index";
 import { test } from "./vitest";
 
 describe("createTestDb", () => {
   test("provides a migrated, empty database", async ({ db }) => {
-    const rows = await db.select().from(municipalitiesTable);
+    const rows = await db.select().from(jurisdictionsTable);
     expect(rows).toHaveLength(0);
   });
 
@@ -15,17 +15,17 @@ describe("createTestDb", () => {
   // the old one-db-per-run setup), whichever runs second would see 2 rows.
   test("isolates writes from other tests (a)", async ({ db }) => {
     await db
-      .insert(municipalitiesTable)
+      .insert(jurisdictionsTable)
       .values({ name: "Isolation Check", name_short: "isolation-check" });
-    const rows = await db.select().from(municipalitiesTable);
+    const rows = await db.select().from(jurisdictionsTable);
     expect(rows).toHaveLength(1);
   });
 
   test("isolates writes from other tests (b)", async ({ db }) => {
     await db
-      .insert(municipalitiesTable)
+      .insert(jurisdictionsTable)
       .values({ name: "Isolation Check", name_short: "isolation-check" });
-    const rows = await db.select().from(municipalitiesTable);
+    const rows = await db.select().from(jurisdictionsTable);
     expect(rows).toHaveLength(1);
   });
 

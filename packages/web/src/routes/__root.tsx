@@ -34,11 +34,8 @@ function RootComponent() {
         <Link to="/people" class="text-muted-foreground hover:underline">
           People
         </Link>
-        <Link
-          to="/municipalities"
-          class="text-muted-foreground hover:underline"
-        >
-          Municipalities
+        <Link to="/bodies" class="text-muted-foreground hover:underline">
+          Boards &amp; Councils
         </Link>
         <Link
           to="/search"

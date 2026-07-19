@@ -1,7 +1,13 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { type DB, meetingsTable } from "@open-minutes/core/db";
+import {
+  type DB,
+  bodiesTable,
+  jurisdictionsTable,
+  meetingsTable,
+  videoSourcesTable,
+} from "@open-minutes/core/db";
 import type { YouTube } from "@open-minutes/core/youtube";
 import { test as dbTest } from "@open-minutes/core/db/testing/vitest";
 
@@ -16,6 +22,9 @@ export function fakeYouTube(overrides: Partial<YouTube> = {}): YouTube {
     videosInChannel: async () => {
       throw new Error("unexpected videosInChannel call");
     },
+    videosInPlaylist: async () => {
+      throw new Error("unexpected videosInPlaylist call");
+    },
     fetchVideoMetadata: async () => {
       throw new Error("unexpected fetchVideoMetadata call");
     },
@@ -26,17 +35,50 @@ export function fakeYouTube(overrides: Partial<YouTube> = {}): YouTube {
   };
 }
 
+/**
+ * Insert a body, with its video sources, under a throwaway jurisdiction of the
+ * same name. Returns its id. For tests that need a second body alongside the
+ * GBOS one from `getOrCreateGbos`.
+ */
+export async function insertBody(
+  db: DB,
+  body: {
+    name: string;
+    name_short: string;
+    sources?: Array<{ kind: "channel" | "playlist"; youtube_id: string }>;
+  },
+): Promise<number> {
+  const [jurisdiction] = await db
+    .insert(jurisdictionsTable)
+    .values({ name: body.name, name_short: body.name_short })
+    .returning({ id: jurisdictionsTable.id });
+  const [row] = await db
+    .insert(bodiesTable)
+    .values({
+      name: body.name,
+      name_short: body.name_short,
+      jurisdiction_id: jurisdiction!.id,
+    })
+    .returning({ id: bodiesTable.id });
+  if (body.sources?.length) {
+    await db
+      .insert(videoSourcesTable)
+      .values(body.sources.map((s) => ({ ...s, body_id: row!.id })));
+  }
+  return row!.id;
+}
+
 /** Insert a bare meeting row (as if previously ingested). Returns its id. */
 export async function insertMeeting(
   db: DB,
-  municipalityId: number,
+  bodyId: number,
   youtubeId: string,
   startTime?: Date,
 ): Promise<number> {
   const [row] = await db
     .insert(meetingsTable)
     .values({
-      municipality_id: municipalityId,
+      body_id: bodyId,
       youtube_id: youtubeId,
       start_time: startTime,
     })

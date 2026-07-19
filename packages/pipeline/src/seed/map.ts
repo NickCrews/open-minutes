@@ -1,16 +1,24 @@
-import { municipalitiesTable } from "@open-minutes/core/db";
+import {
+  bodiesTable,
+  jurisdictionsTable,
+  videoSourcesTable,
+} from "@open-minutes/core/db";
 import type { TestData } from "../test-utils/test-data";
 
-type MunicipalityInsert = typeof municipalitiesTable.$inferInsert;
+type JurisdictionInsert = typeof jurisdictionsTable.$inferInsert;
+type BodyInsert = typeof bodiesTable.$inferInsert;
+type VideoSourceInsert = typeof videoSourcesTable.$inferInsert;
 
 export interface MappedRows {
-  municipalities: MunicipalityInsert[];
+  jurisdictions: JurisdictionInsert[];
+  bodies: BodyInsert[];
+  videoSources: VideoSourceInsert[];
   /**
-   * Resolves a snapshot municipality id (e.g. "gbos") to its assigned serial
-   * primary key. This is the seam later slices use to wire up foreign keys
-   * (meetings → municipalities) without a database round-trip.
+   * Resolves a snapshot body id (e.g. "gbos") to its assigned serial primary
+   * key. This is the seam later slices use to wire up foreign keys (meetings →
+   * bodies) without a database round-trip.
    */
-  municipalityIdByKey: ReadonlyMap<string, number>;
+  bodyIdByKey: ReadonlyMap<string, number>;
 }
 
 /**
@@ -25,18 +33,43 @@ export interface MappedRows {
  * sequence rather than colliding with leftover serial state.
  */
 export function mapSnapshot(data: TestData): MappedRows {
-  const municipalityIdByKey = new Map<string, number>();
-  const municipalities = data.municipalities.map((m, i): MunicipalityInsert => {
+  const jurisdictionIdByKey = new Map<string, number>();
+  const jurisdictions = data.jurisdictions.map((j, i): JurisdictionInsert => {
     const id = i + 1;
-    municipalityIdByKey.set(m.id, id);
+    jurisdictionIdByKey.set(j.id, id);
     return {
       id,
-      name: m.name,
-      name_short: m.name_short,
-      state: m.state,
-      youtube_channel_id: m.youtube_channel_id,
+      name: j.name,
+      name_short: j.name_short,
+      state: j.state,
     };
   });
 
-  return { municipalities, municipalityIdByKey };
+  const bodyIdByKey = new Map<string, number>();
+  const videoSources: VideoSourceInsert[] = [];
+  const bodies = data.bodies.map((b, i): BodyInsert => {
+    const id = i + 1;
+    bodyIdByKey.set(b.id, id);
+    const jurisdictionId = jurisdictionIdByKey.get(b.jurisdiction_id);
+    if (jurisdictionId === undefined)
+      throw new Error(
+        `Body "${b.id}" references unknown jurisdiction "${b.jurisdiction_id}"`,
+      );
+    for (const source of b.video_sources) {
+      videoSources.push({
+        id: videoSources.length + 1,
+        body_id: id,
+        kind: source.kind,
+        youtube_id: source.youtube_id,
+      });
+    }
+    return {
+      id,
+      jurisdiction_id: jurisdictionId,
+      name: b.name,
+      name_short: b.name_short,
+    };
+  });
+
+  return { jurisdictions, bodies, videoSources, bodyIdByKey };
 }

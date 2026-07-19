@@ -5,10 +5,11 @@ import { fileURLToPath } from "node:url";
 import { eq, sql } from "drizzle-orm";
 import {
   type DB,
+  bodiesTable,
   meetingsTable,
-  municipalitiesTable,
+  videoSourcesTable,
 } from "@open-minutes/core/db";
-import { muniSlug } from "@open-minutes/core/munis";
+import { bodySlug } from "@open-minutes/core/bodies";
 import { realYouTube, type YouTube } from "@open-minutes/core/youtube";
 import type {
   DiarizationTurn,
@@ -20,7 +21,7 @@ import { alignSpeakers } from "../align";
 import { identifyAndInsertSegments } from "../identify";
 
 /**
- * Root of the per-meeting work directories (one `<muni-slug>_<youtubeId>` dir
+ * Root of the per-meeting work directories (one `<body-slug>_<youtubeId>` dir
  * per meeting, holding each stage's artifact for inspection and resume).
  * Lives at packages/pipeline/data/meetings/, gitignored via the root `data/`
  * rule.
@@ -64,7 +65,7 @@ interface DiarizationArtifact {
  * appear in queries.
  *
  * An already-ingested video is skipped (returns `status: "skipped"`); a video
- * whose channel matches no known municipality is an error.
+ * whose channel matches no known body is an error.
  */
 export async function ingestVideo(
   db: DB,
@@ -86,9 +87,9 @@ export async function ingestVideo(
 
   console.error(`[${youtubeId}] fetching video metadata...`);
   const metadata = await yt.fetchVideoMetadata(youtubeId);
-  const muni = await resolveMunicipality(db, youtubeId, metadata.channelId);
+  const body = await resolveBody(db, youtubeId, metadata.channelId);
 
-  const workDir = join(workRoot, `${muniSlug(muni)}_${youtubeId}`);
+  const workDir = join(workRoot, `${bodySlug(body)}_${youtubeId}`);
   await mkdir(workDir, { recursive: true });
 
   const audioPath = join(workDir, "audio.wav");
@@ -149,7 +150,7 @@ export async function ingestVideo(
     const [meeting] = await tx
       .insert(meetingsTable)
       .values({
-        municipality_id: muni.id,
+        body_id: body.id,
         youtube_id: youtubeId,
         title: metadata.title,
         description: metadata.description,
@@ -210,22 +211,26 @@ function describeError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-async function resolveMunicipality(
-  db: DB,
-  youtubeId: string,
-  channelId: string,
-) {
+async function resolveBody(db: DB, youtubeId: string, channelId: string) {
   if (channelId) {
-    const [muni] = await db
-      .select()
-      .from(municipalitiesTable)
-      .where(eq(municipalitiesTable.youtube_channel_id, channelId))
+    const [body] = await db
+      .select({
+        id: bodiesTable.id,
+        name: bodiesTable.name,
+        name_short: bodiesTable.name_short,
+      })
+      .from(bodiesTable)
+      .innerJoin(
+        videoSourcesTable,
+        eq(videoSourcesTable.body_id, bodiesTable.id),
+      )
+      .where(eq(videoSourcesTable.youtube_id, channelId))
       .limit(1);
-    if (muni) return muni;
+    if (body) return body;
   }
   throw new Error(
     `Video ${youtubeId} is on channel "${channelId}", which matches no ` +
-      `municipality's youtube_channel_id. Refusing to ingest an unrelated video.`,
+      `body's video sources. Refusing to ingest an unrelated video.`,
   );
 }
 

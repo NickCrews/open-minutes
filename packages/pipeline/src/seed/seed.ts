@@ -1,5 +1,10 @@
 import { sql } from "drizzle-orm";
-import { type DB, municipalitiesTable } from "@open-minutes/core/db";
+import {
+  type DB,
+  bodiesTable,
+  jurisdictionsTable,
+  videoSourcesTable,
+} from "@open-minutes/core/db";
 import { loadAllTestData } from "../test-utils/test-data";
 import { mapSnapshot } from "./map";
 
@@ -7,7 +12,7 @@ import { mapSnapshot } from "./map";
 // already clears dependent rows, but listing the seeded tables explicitly keeps
 // the seeder's footprint visible as later slices add meetings, people, and
 // segments.
-const SEEDED_TABLES = [municipalitiesTable];
+const SEEDED_TABLES = [jurisdictionsTable, bodiesTable, videoSourcesTable];
 
 /** Per-table count of rows inserted by a seed run. */
 export type SeedSummary = Record<string, number>;
@@ -39,7 +44,13 @@ export async function seedDatabase(db: DB): Promise<SeedSummary> {
   const mapped = mapSnapshot(loadAllTestData());
   return await db.transaction(async (tx) => {
     await tx.execute(truncateStatement());
-    await tx.insert(municipalitiesTable).values(mapped.municipalities);
-    return { municipalities: mapped.municipalities.length };
+    await tx.insert(jurisdictionsTable).values(mapped.jurisdictions);
+    await tx.insert(bodiesTable).values(mapped.bodies);
+    await tx.insert(videoSourcesTable).values(mapped.videoSources);
+    return {
+      jurisdictions: mapped.jurisdictions.length,
+      bodies: mapped.bodies.length,
+      video_sources: mapped.videoSources.length,
+    };
   });
 }

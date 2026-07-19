@@ -60,12 +60,12 @@ const status = defineCommand({
 function printStatusTable(meetings: IngestedMeeting[]): void {
   const rows = meetings.map((m) => [
     m.youtubeId,
-    m.muni,
+    m.body,
     m.startTime?.toISOString().slice(0, 10) ?? "",
     String(m.segmentCount),
     m.title,
   ]);
-  const header = ["VIDEO", "MUNI", "DATE", "SEGMENTS", "TITLE"];
+  const header = ["VIDEO", "BODY", "DATE", "SEGMENTS", "TITLE"];
   const widths = header.map((h, col) =>
     Math.max(h.length, ...rows.map((r) => r[col]!.length)),
   );
@@ -74,9 +74,9 @@ function printStatusTable(meetings: IngestedMeeting[]): void {
   }
 
   const totalSegments = meetings.reduce((n, m) => n + m.segmentCount, 0);
-  const munis = new Set(meetings.map((m) => m.muni));
+  const bodies = new Set(meetings.map((m) => m.body));
   console.log(
-    `\n${meetings.length} meeting(s), ${totalSegments} segment(s), ${munis.size} municipality(ies)`,
+    `\n${meetings.length} meeting(s), ${totalSegments} segment(s), ${bodies.size} body(ies)`,
   );
 }
 
@@ -84,18 +84,18 @@ const available = defineCommand({
   meta: {
     name: "available",
     description:
-      "Print the YouTube video IDs on municipality channels that are not yet " +
+      "Print the YouTube video IDs on bodies' video sources that are not yet " +
       "in the database, one per line, newest first",
   },
   args: {
-    muni: {
+    body: {
       type: "string",
-      description: 'Restrict the scrape to one municipality slug (eg "gbos")',
+      description: 'Restrict the scrape to one body slug (eg "gbos")',
     },
   },
   async run({ args }) {
     await withDb(async (db) => {
-      const ids = await listAvailable(db, { muni: args.muni });
+      const ids = await listAvailable(db, { body: args.body });
       for (const id of ids) {
         console.log(id);
       }

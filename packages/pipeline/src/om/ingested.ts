@@ -1,17 +1,17 @@
 import { count, desc, eq, inArray } from "drizzle-orm";
 import {
   type DB,
+  bodiesTable,
   meetingsTable,
-  municipalitiesTable,
   segmentsTable,
 } from "@open-minutes/core/db";
-import { muniSlug } from "@open-minutes/core/munis";
+import { bodySlug } from "@open-minutes/core/bodies";
 
 /** One fully ingested meeting, as listed by `om status`. */
 export interface IngestedMeeting {
   youtubeId: string;
-  /** Municipality slug (eg "gbos"). */
-  muni: string;
+  /** Body slug (eg "gbos"). */
+  body: string;
   title: string;
   startTime: Date | null;
   /** Postgres interval rendering (eg "01:23:45"), or null if unknown. */
@@ -31,28 +31,25 @@ export async function listIngested(
   const rows = await db
     .select({
       youtubeId: meetingsTable.youtube_id,
-      nameShort: municipalitiesTable.name_short,
+      nameShort: bodiesTable.name_short,
       title: meetingsTable.title,
       startTime: meetingsTable.start_time,
       durationSecs: meetingsTable.duration_secs,
       segmentCount: count(segmentsTable.id),
     })
     .from(meetingsTable)
-    .innerJoin(
-      municipalitiesTable,
-      eq(meetingsTable.municipality_id, municipalitiesTable.id),
-    )
+    .innerJoin(bodiesTable, eq(meetingsTable.body_id, bodiesTable.id))
     .leftJoin(segmentsTable, eq(segmentsTable.meeting_id, meetingsTable.id))
     .where(
       ids && ids.length > 0
         ? inArray(meetingsTable.youtube_id, ids)
         : undefined,
     )
-    .groupBy(meetingsTable.id, municipalitiesTable.id)
+    .groupBy(meetingsTable.id, bodiesTable.id)
     .orderBy(desc(meetingsTable.start_time), desc(meetingsTable.id));
 
   return rows.map(({ nameShort, ...row }) => ({
     ...row,
-    muni: muniSlug({ name_short: nameShort }),
+    body: bodySlug({ name_short: nameShort }),
   }));
 }

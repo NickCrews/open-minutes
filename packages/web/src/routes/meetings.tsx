@@ -61,36 +61,24 @@ function MeetingsPage() {
                     as="span"
                     class="text-muted-foreground cursor-default text-sm underline decoration-dotted underline-offset-4"
                   >
-                    {meeting.municipality.name}
+                    {meeting.body.name}
                   </HoverCardTrigger>
                   <HoverCardPortal>
                     <HoverCardContent>
                       <div class="flex flex-col gap-1">
-                        <p class="font-semibold">{meeting.municipality.name}</p>
+                        <p class="font-semibold">{meeting.body.name}</p>
                         <p class="text-muted-foreground text-sm">
-                          {meeting.municipality.state}
-                          <Show when={meeting.municipality.postcode}>
-                            {(postcode) => <>, {postcode()}</>}
+                          {meeting.body.jurisdiction.name}
+                          <Show when={meeting.body.jurisdiction.state}>
+                            {(state) => <>, {state()}</>}
                           </Show>
                         </p>
-                        <Show when={meeting.municipality.youtube_channel_url}>
-                          {(url) => (
-                            <a
-                              href={url()}
-                              target="_blank"
-                              rel="noreferrer"
-                              class="text-sm hover:underline"
-                            >
-                              YouTube channel
-                            </a>
-                          )}
-                        </Show>
                         <Link
-                          to="/municipalities/$id"
-                          params={{ id: String(meeting.municipality.id) }}
+                          to="/bodies/$id"
+                          params={{ id: String(meeting.body.id) }}
                           class="text-sm font-medium hover:underline"
                         >
-                          View municipality →
+                          View body →
                         </Link>
                       </div>
                     </HoverCardContent>

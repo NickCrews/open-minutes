@@ -13,6 +13,14 @@ export function channelUrl(channelIdOrUrl: string) {
   return `https://www.youtube.com/channel/${channelIdOrUrl}`;
 }
 
+export function playlistUrl(playlistIdOrUrl: string) {
+  // if youtube.com already, return as-is
+  if (playlistIdOrUrl.includes("youtube.com")) {
+    return playlistIdOrUrl;
+  }
+  return `https://www.youtube.com/playlist?list=${playlistIdOrUrl}`;
+}
+
 export function videoUrl(videoIdOrUrl: string) {
   // if youtube.com already, return as-is
   if (videoIdOrUrl.includes("youtube.com")) {
@@ -44,16 +52,30 @@ function flattenVideos(node: FlatEntry, seen = new Set<string>()): FlatEntry[] {
   return [node];
 }
 
-export async function videosInChannel(channelIdOrUrl: string) {
+async function flatPlaylist(url: string) {
   const { stdout } = await execFileAsync(
     "yt-dlp",
-    ["--flat-playlist", "-J", channelUrl(channelIdOrUrl)],
+    ["--flat-playlist", "-J", url],
     {
       // A busy channel's flat playlist runs to several MB.
       maxBuffer: 100 * 1024 * 1024,
     },
   );
   return flattenVideos(JSON.parse(stdout) as FlatEntry);
+}
+
+export async function videosInChannel(channelIdOrUrl: string) {
+  return await flatPlaylist(channelUrl(channelIdOrUrl));
+}
+
+/**
+ * The videos in one playlist. Bodies that share a channel with their siblings
+ * (the Assembly, P&Z and the school board all publish to the MOA channel) are
+ * usually separated by playlist, so this is how a video gets attributed to the
+ * right body.
+ */
+export async function videosInPlaylist(playlistIdOrUrl: string) {
+  return await flatPlaylist(playlistUrl(playlistIdOrUrl));
 }
 
 export interface VideoMetadata {
@@ -97,6 +119,7 @@ export async function fetchVideoMetadata(
  */
 export interface YouTube {
   videosInChannel: typeof videosInChannel;
+  videosInPlaylist: typeof videosInPlaylist;
   fetchVideoMetadata: typeof fetchVideoMetadata;
   downloadVideoAudio: typeof downloadVideoAudio;
 }
@@ -104,6 +127,7 @@ export interface YouTube {
 /** The real yt-dlp-backed implementation of the {@link YouTube} boundary. */
 export const realYouTube: YouTube = {
   videosInChannel,
+  videosInPlaylist,
   fetchVideoMetadata,
   downloadVideoAudio,
 };

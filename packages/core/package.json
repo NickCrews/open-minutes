@@ -9,7 +9,7 @@
     "./db/testing": "./src/db/testing/index.ts",
     "./db/testing/vitest": "./src/db/testing/vitest.ts",
     "./youtube": "./src/youtube/index.ts",
-    "./munis": "./src/munis/index.ts",
+    "./bodies": "./src/bodies/index.ts",
     "./timeline": "./src/timeline.ts",
     "./transcription": "./src/transcription/index.ts",
     "./voice_embeddings": "./src/voice_embeddings/index.ts"
