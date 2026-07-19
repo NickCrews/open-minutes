@@ -13,6 +13,7 @@ import {
 } from "solid-js";
 import { Button } from "~/components/button";
 import { TextField, TextFieldInput } from "~/components/text-field";
+import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/tooltip";
 import { formatTimestamp } from "~/lib/format";
 import { PLAYBACK_RATES } from "~/lib/youtube";
 import {
@@ -66,14 +67,18 @@ export function Transcript(props: {
     setFollowing(true);
     props.onSeek(secs);
   };
-  // Duration is 0 until the player reports one, so only clamp once we know it.
-  const jump = (delta: number) => {
-    const end = props.duration() || Infinity;
-    seek(Math.min(end, Math.max(0, props.currentTime() + delta)));
-  };
-  const cycleRate = () => {
+  // Where a skip lands. Duration is 0 until the player reports one, so only
+  // clamp against the end once we know it.
+  const jumpTarget = (delta: number) =>
+    Math.min(
+      props.duration() || Infinity,
+      Math.max(0, props.currentTime() + delta),
+    );
+  const jump = (delta: number) => seek(jumpTarget(delta));
+  // The rate one click away, so the button can say where it's headed.
+  const nextRate = () => {
     const i = PLAYBACK_RATES.findIndex((r) => r === props.playbackRate());
-    props.onPlaybackRate(PLAYBACK_RATES[(i + 1) % PLAYBACK_RATES.length]!);
+    return PLAYBACK_RATES[(i + 1) % PLAYBACK_RATES.length]!;
   };
 
   const [query, setQuery] = createSignal("");
@@ -215,51 +220,47 @@ export function Transcript(props: {
           {formatTimestamp(props.currentTime())}
         </span>
         <div class="flex flex-1 items-center justify-center gap-1">
-          <Button
-            variant="ghost"
+          <ToolbarButton
+            label="Change playback speed"
+            tooltip={`Playback speed: ${props.playbackRate()}× → ${nextRate()}×`}
             size="sm"
             class="tabular-nums"
-            aria-label={`Playback speed: ${props.playbackRate()}×`}
-            onClick={cycleRate}
+            onClick={() => props.onPlaybackRate(nextRate())}
           >
             {props.playbackRate()}×
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={`Back ${JUMP_SECS} seconds`}
+          </ToolbarButton>
+          <ToolbarButton
+            label={`Back ${JUMP_SECS} seconds`}
+            tooltip={`Jump back to ${formatTimestamp(jumpTarget(-JUMP_SECS))}`}
             onClick={() => jump(-JUMP_SECS)}
           >
             <SkipIcon back />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={props.playing() ? "Pause" : "Play"}
+          </ToolbarButton>
+          <ToolbarButton
+            label={props.playing() ? "Pause" : "Play"}
+            tooltip={props.playing() ? "Pause the video" : "Play the video"}
             onClick={() => props.onPlayPause()}
           >
             <Show when={props.playing()} fallback={<PlayIcon />}>
               <PauseIcon />
             </Show>
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={`Forward ${JUMP_SECS} seconds`}
+          </ToolbarButton>
+          <ToolbarButton
+            label={`Forward ${JUMP_SECS} seconds`}
+            tooltip={`Jump ahead to ${formatTimestamp(jumpTarget(JUMP_SECS))}`}
             onClick={() => jump(JUMP_SECS)}
           >
             <SkipIcon />
-          </Button>
-          {/* Only worth offering once the transcript has scrolled away. */}
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label="Return to playhead"
+          </ToolbarButton>
+          {/* Disabled while following, since there's nowhere to return to. */}
+          <ToolbarButton
+            label="Return to playhead"
+            tooltip="Scroll back to the playhead and resume following it"
             disabled={following()}
             onClick={() => setFollowing(true)}
           >
             <PlayheadIcon />
-          </Button>
+          </ToolbarButton>
         </div>
         <span class="text-muted-foreground w-14 text-right text-xs tabular-nums">
           <Show when={props.duration() > 0}>
@@ -268,6 +269,37 @@ export function Transcript(props: {
         </span>
       </div>
     </div>
+  );
+}
+
+/**
+ * A playback control. `label` names the button for screen readers; `tooltip`
+ * spells out what clicking it will do, and shows on hover or keyboard focus.
+ */
+function ToolbarButton(props: {
+  label: string;
+  tooltip: string;
+  onClick: () => void;
+  children: JSX.Element;
+  size?: "sm" | "icon-sm";
+  disabled?: boolean;
+  class?: string;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        as={Button}
+        variant="ghost"
+        size={props.size ?? "icon-sm"}
+        class={props.class}
+        aria-label={props.label}
+        disabled={props.disabled}
+        onClick={() => props.onClick()}
+      >
+        {props.children}
+      </TooltipTrigger>
+      <TooltipContent>{props.tooltip}</TooltipContent>
+    </Tooltip>
   );
 }
 
