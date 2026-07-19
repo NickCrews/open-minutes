@@ -5,17 +5,24 @@ import {
   createSignal,
   For,
   Index,
+  on,
   onCleanup,
   onMount,
   Show,
 } from "solid-js";
 import { Button } from "~/components/button";
+import { TextField, TextFieldInput } from "~/components/text-field";
 import { formatTimestamp } from "~/lib/format";
 import type { getMeetingById } from "./index";
 
 type Meeting = Awaited<ReturnType<typeof getMeetingById>>;
 export type Segment = Meeting["segments"][number];
 type SegmentStatus = "past" | "active" | "future";
+
+/** A search hit, as the inclusive range of words it covers in one segment. */
+type Match = { segment: number; from: number; to: number };
+
+const MIN_QUERY_LENGTH = 2;
 
 function segmentStart(segment: Segment): number {
   return segment.words[0]?.start ?? 0;
@@ -43,6 +50,39 @@ export function Transcript(props: {
     setFollowing(true);
     props.onSeek(secs);
   };
+
+  const [query, setQuery] = createSignal("");
+  const matches = createMemo(() => findMatches(props.segments, query()));
+  // Which hit is focused. Jumping past either end wraps around.
+  const [matchIndex, setMatchIndex] = createSignal(0);
+  const currentMatch = createMemo(() => matches()[matchIndex()]);
+  const matchesBySegment = createMemo(() => {
+    const bySegment = new Map<number, Match[]>();
+    for (const match of matches()) {
+      const existing = bySegment.get(match.segment);
+      if (existing) existing.push(match);
+      else bySegment.set(match.segment, [match]);
+    }
+    return bySegment;
+  });
+
+  createEffect(on(matches, () => setMatchIndex(0), { defer: true }));
+
+  const step = (delta: number) => {
+    const count = matches().length;
+    if (count === 0) return;
+    setMatchIndex((i) => (i + delta + count) % count);
+  };
+
+  // Bring the focused hit into view. Searching takes over the scroll position,
+  // so it also stops playback-following until the user resumes.
+  createEffect(() => {
+    if (!currentMatch()) return;
+    const word = container.querySelector<HTMLElement>("[data-search-current]");
+    if (!word) return;
+    setFollowing(false);
+    word.scrollIntoView({ block: "center", behavior: "smooth" });
+  });
 
   onMount(() => {
     const stopFollowing = () => setFollowing(false);
@@ -72,42 +112,88 @@ export function Transcript(props: {
   });
 
   return (
-    <div class="relative min-h-0 flex-1">
-      <div ref={container} class="h-full overflow-y-auto rounded-lg border">
-        <div class="flex flex-col gap-4 p-4">
-          <For
-            each={props.segments}
-            fallback={
-              <p class="text-muted-foreground">No transcript segments yet.</p>
-            }
+    <div class="flex min-h-0 flex-1 flex-col gap-2">
+      <div class="flex items-center gap-2">
+        <TextField class="flex-1" value={query()} onChange={setQuery}>
+          <TextFieldInput
+            type="search"
+            placeholder="Search transcript"
+            class="w-full"
+            onKeyDown={(e: KeyboardEvent) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                step(e.shiftKey ? -1 : 1);
+              } else if (e.key === "Escape") {
+                setQuery("");
+              }
+            }}
+          />
+        </TextField>
+        <Show when={query().trim().length >= MIN_QUERY_LENGTH}>
+          <span class="text-muted-foreground w-16 text-right text-sm tabular-nums">
+            {matches().length === 0
+              ? "No results"
+              : `${matchIndex() + 1} / ${matches().length}`}
+          </span>
+          <Button
+            variant="outline"
+            size="icon-sm"
+            aria-label="Previous match"
+            disabled={matches().length === 0}
+            onClick={() => step(-1)}
           >
-            {(segment, i) => (
-              <SegmentBlock
-                segment={segment}
-                status={() =>
-                  i() < activeIndex()
-                    ? "past"
-                    : i() === activeIndex()
-                      ? "active"
-                      : "future"
-                }
-                currentTime={props.currentTime}
-                onSeek={seek}
-              />
-            )}
-          </For>
-        </div>
+            ↑
+          </Button>
+          <Button
+            variant="outline"
+            size="icon-sm"
+            aria-label="Next match"
+            disabled={matches().length === 0}
+            onClick={() => step(1)}
+          >
+            ↓
+          </Button>
+        </Show>
       </div>
-      <Show when={!following()}>
-        <Button
-          variant="secondary"
-          size="sm"
-          class="absolute bottom-3 left-1/2 -translate-x-1/2 shadow-md"
-          onClick={() => setFollowing(true)}
-        >
-          Resume auto-scroll
-        </Button>
-      </Show>
+      <div class="relative min-h-0 flex-1">
+        <div ref={container} class="h-full overflow-y-auto rounded-lg border">
+          <div class="flex flex-col gap-4 p-4">
+            <For
+              each={props.segments}
+              fallback={
+                <p class="text-muted-foreground">No transcript segments yet.</p>
+              }
+            >
+              {(segment, i) => (
+                <SegmentBlock
+                  segment={segment}
+                  status={() =>
+                    i() < activeIndex()
+                      ? "past"
+                      : i() === activeIndex()
+                        ? "active"
+                        : "future"
+                  }
+                  currentTime={props.currentTime}
+                  onSeek={seek}
+                  matches={() => matchesBySegment().get(i()) ?? []}
+                  currentMatch={currentMatch}
+                />
+              )}
+            </For>
+          </div>
+        </div>
+        <Show when={!following()}>
+          <Button
+            variant="secondary"
+            size="sm"
+            class="absolute bottom-3 left-1/2 -translate-x-1/2 shadow-md"
+            onClick={() => setFollowing(true)}
+          >
+            Resume auto-scroll
+          </Button>
+        </Show>
+      </div>
     </div>
   );
 }
@@ -117,7 +203,22 @@ function SegmentBlock(props: {
   status: () => SegmentStatus;
   currentTime: () => number;
   onSeek: (secs: number) => void;
+  matches: () => Match[];
+  currentMatch: () => Match | undefined;
 }) {
+  // Word index -> whether it belongs to a hit, and to the focused one.
+  const highlights = createMemo(() => {
+    const focused = props.currentMatch();
+    const byWord = new Map<number, { current: boolean; first: boolean }>();
+    for (const match of props.matches()) {
+      const current = match === focused;
+      for (let i = match.from; i <= match.to; i++) {
+        byWord.set(i, { current, first: i === match.from });
+      }
+    }
+    return byWord;
+  });
+
   const wordStarts = createMemo(() => props.segment.words.map((w) => w.start));
   // Index of the word at the playhead: -1 before this segment starts,
   // words.length once it's fully spoken. Past/future segments never read
@@ -166,20 +267,59 @@ function SegmentBlock(props: {
       </div>
       <p class="leading-relaxed">
         <Index each={props.segment.words}>
-          {(word, i) => (
-            <span
-              class="cursor-pointer rounded-sm transition-opacity duration-300 data-playhead:bg-primary/10"
-              classList={{ "opacity-30": i > playheadIndex() }}
-              data-playhead={i === playheadIndex() ? "" : undefined}
-              onClick={() => props.onSeek(word().start)}
-            >
-              {word().text}{" "}
-            </span>
-          )}
+          {(word, i) => {
+            const highlight = () => highlights().get(i);
+            return (
+              <span
+                class="cursor-pointer rounded-sm transition-opacity duration-300 data-playhead:bg-primary/10"
+                classList={{
+                  "opacity-30": i > playheadIndex() && !highlight(),
+                  "bg-yellow-200 dark:bg-yellow-500/30":
+                    !!highlight() && !highlight()?.current,
+                  "bg-yellow-400 dark:bg-yellow-500/70": !!highlight()?.current,
+                }}
+                data-playhead={i === playheadIndex() ? "" : undefined}
+                data-search-current={
+                  highlight()?.current && highlight()?.first ? "" : undefined
+                }
+                onClick={() => props.onSeek(word().start)}
+              >
+                {word().text}{" "}
+              </span>
+            );
+          }}
         </Index>
       </p>
     </div>
   );
+}
+
+/**
+ * Every case-insensitive occurrence of `query` in the transcript, in reading
+ * order. Matching runs over each segment's words joined by spaces, so a query
+ * can span word boundaries; a hit covers every word it touches.
+ */
+function findMatches(segments: Segment[], query: string): Match[] {
+  const q = query.trim().toLowerCase();
+  const matches: Match[] = [];
+  if (q.length < MIN_QUERY_LENGTH) return matches;
+
+  segments.forEach((segment, segmentIndex) => {
+    let text = "";
+    const wordStarts: number[] = [];
+    for (const word of segment.words) {
+      wordStarts.push(text.length);
+      text += `${word.text.toLowerCase()} `;
+    }
+    for (let at = text.indexOf(q); at !== -1; at = text.indexOf(q, at + 1)) {
+      matches.push({
+        segment: segmentIndex,
+        from: lastIndexAtOrBefore(wordStarts, at),
+        to: lastIndexAtOrBefore(wordStarts, at + q.length - 1),
+      });
+    }
+  });
+  return matches;
 }
 
 /** Index of the last value in a sorted array that is <= target, or -1. */
