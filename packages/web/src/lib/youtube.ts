@@ -5,8 +5,14 @@
 export interface YTPlayer {
   getCurrentTime(): number;
   seekTo(seconds: number, allowSeekAhead: boolean): void;
+  loadVideoById(args: { videoId: string; startSeconds?: number }): void;
+  playVideo(): void;
+  pauseVideo(): void;
   destroy(): void;
 }
+
+/** The subset of YT.PlayerState values we care about. */
+export const PlayerState = { ended: 0, playing: 1, paused: 2 } as const;
 
 interface YTNamespace {
   Player: new (
@@ -16,7 +22,10 @@ interface YTNamespace {
       width?: string | number;
       height?: string | number;
       playerVars?: Record<string, string | number>;
-      events?: { onReady?: () => void };
+      events?: {
+        onReady?: () => void;
+        onStateChange?: (event: { data: number }) => void;
+      };
     },
   ) => YTPlayer;
 }

@@ -1,10 +1,18 @@
-import { type DB } from "@open-minutes/core/db";
+import { type DB, peopleTable } from "@open-minutes/core/db";
+import { eq } from "drizzle-orm";
 
 export function getAllPeople(db: DB) {
   return db.query.peopleTable.findMany({
     columns: { voice_embedding: false },
     orderBy: { name: "asc" },
   });
+}
+
+export function updatePersonName(db: DB, personId: number, name: string) {
+  return db
+    .update(peopleTable)
+    .set({ name })
+    .where(eq(peopleTable.id, personId));
 }
 
 export function getPersonById(db: DB, personId: number) {
@@ -17,7 +25,12 @@ export function getPersonById(db: DB, personId: number) {
           columns: { words: false },
           with: {
             meeting: {
-              columns: { id: true, title: true, start_time: true },
+              columns: {
+                id: true,
+                title: true,
+                start_time: true,
+                youtube_id: true,
+              },
             },
           },
           orderBy: { id: "desc" },

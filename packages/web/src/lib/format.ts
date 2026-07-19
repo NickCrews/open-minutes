@@ -28,12 +28,17 @@ export function formatTimestamp(totalSecs: number): string {
   return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${s}` : `${m}:${s}`;
 }
 
-export function formatDuration(interval: string): string {
+/** Parse a Postgres interval string like "01:23:05.023" into total seconds, or null. */
+export function intervalToSecs(interval: string): number | null {
   const match = /^(\d+):(\d{2}):(\d{2}(?:\.\d+)?)$/.exec(interval);
-  if (!match) return interval;
-  const totalSecs = Math.round(
-    Number(match[1]) * 3600 + Number(match[2]) * 60 + Number(match[3]),
-  );
+  if (!match) return null;
+  return Number(match[1]) * 3600 + Number(match[2]) * 60 + Number(match[3]);
+}
+
+export function formatDuration(interval: string): string {
+  const secs = intervalToSecs(interval);
+  if (secs == null) return interval;
+  const totalSecs = Math.round(secs);
   const h = Math.floor(totalSecs / 3600);
   const m = Math.floor((totalSecs % 3600) / 60);
   const s = totalSecs % 60;
