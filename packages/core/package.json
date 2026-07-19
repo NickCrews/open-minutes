@@ -21,6 +21,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:up": "docker compose -f ../../docker-compose.yml up -d --wait",
     "db:setup": "pnpm db:up && pnpm db:migrate",
+    "db:studio": "drizzle-kit studio",
     "db:nuke": "pnpm db:up && node src/db/nuke.mjs && pnpm db:migrate"
   },
   "dependencies": {
