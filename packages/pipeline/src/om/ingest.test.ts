@@ -19,7 +19,6 @@ const METADATA: VideoMetadata = {
   channelId: GBOS_MUNICIPALITY.youtube_channel_id,
   title: "Regular Meeting",
   description: "Agenda: everything",
-  startTime: new Date("2026-01-05T18:00:00Z"),
   durationSecs: 3600,
 };
 
@@ -146,7 +145,7 @@ describe("ingestVideo", () => {
       youtube_id: VIDEO_ID,
       title: METADATA.title,
       description: METADATA.description,
-      start_time: METADATA.startTime,
+      start_time: null,
     });
     expect(meeting!.duration_secs).toBe("01:00:00");
 

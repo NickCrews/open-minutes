@@ -153,7 +153,8 @@ export async function ingestVideo(
         youtube_id: youtubeId,
         title: metadata.title,
         description: metadata.description,
-        start_time: metadata.startTime,
+        // start_time is left null: YouTube publish/stream times don't reliably
+        // reflect when the meeting actually happened.
         duration_secs:
           metadata.durationSecs === null
             ? null

@@ -44,8 +44,6 @@ export interface VideoMetadata {
   channelId: string;
   title: string;
   description: string;
-  /** When the video started (release time for live streams, else upload time). */
-  startTime: Date | null;
   durationSecs: number | null;
 }
 
@@ -64,31 +62,15 @@ export async function fetchVideoMetadata(
     channel_id?: string;
     title?: string;
     description?: string;
-    // Municipal meetings are usually live streams: release_timestamp is when the
-    // stream actually started; timestamp/upload_date are when it was published.
-    release_timestamp?: number | null;
-    timestamp?: number | null;
-    upload_date?: string | null; // YYYYMMDD
     duration?: number | null;
   };
-  const epoch = raw.release_timestamp ?? raw.timestamp;
-  const startTime =
-    epoch != null ? new Date(epoch * 1000) : parseUploadDate(raw.upload_date);
   return {
     id: raw.id,
     channelId: raw.channel_id ?? "",
     title: raw.title ?? "",
     description: raw.description ?? "",
-    startTime,
     durationSecs: raw.duration ?? null,
   };
-}
-
-function parseUploadDate(uploadDate: string | null | undefined): Date | null {
-  if (!uploadDate || !/^\d{8}$/.test(uploadDate)) return null;
-  return new Date(
-    `${uploadDate.slice(0, 4)}-${uploadDate.slice(4, 6)}-${uploadDate.slice(6, 8)}T00:00:00Z`,
-  );
 }
 
 /**
