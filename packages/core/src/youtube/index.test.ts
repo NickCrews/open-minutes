@@ -3,14 +3,33 @@ import { videosInChannel, downloadVideoAudio } from ".";
 import { rmSync, existsSync } from "node:fs";
 
 describe("YouTube Module", () => {
-  it("should fetch videos in a channel", async () => {
-    const sampleChannel = "UCOUlNInprZEjhbpVPiJOlEA"; // GBOS YouTube channel ID
-    const videos = await videosInChannel(sampleChannel);
-    expect(videos).toBeInstanceOf(Array);
-    expect(videos.length).toBeGreaterThan(0);
-    expect(videos[0]).toHaveProperty("id");
-    expect(videos[0]).toHaveProperty("title");
-  });
+  // A channel expands into one nested playlist per tab ("Videos", "Live", ...),
+  // so these assert we walk down to the videos rather than handing back the
+  // tabs. MOA is the regression case: it has both tabs, and returning them
+  // unflattened made `om available` report exactly 2 channel-ID "videos".
+  const channels = [
+    { name: "GBOS", id: "UCOUlNInprZEjhbpVPiJOlEA", minVideos: 10 },
+    { name: "MOA", id: "UCZDEuWj4IxdlwBhqrk62_XA", minVideos: 1000 },
+  ];
+
+  it.each(channels)(
+    "should fetch videos in the $name channel",
+    // MOA's flat playlist is thousands of entries and several MB of JSON, so
+    // scraping it takes about a minute.
+    { tags: ["slow"] },
+    async ({ id, minVideos }) => {
+      const videos = await videosInChannel(id);
+      expect(videos).toBeInstanceOf(Array);
+      expect(videos.length).toBeGreaterThan(minVideos);
+      expect(videos[0]).toHaveProperty("id");
+      expect(videos[0]).toHaveProperty("title");
+      for (const video of videos) {
+        expect(video.id).not.toBe(id);
+        expect(video.entries).toBeUndefined();
+      }
+      expect(new Set(videos.map((v) => v.id)).size).toBe(videos.length);
+    },
+  );
 
   it("should download video audio", async () => {
     // A 5 sec video for testing

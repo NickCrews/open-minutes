@@ -21,21 +21,39 @@ export function videoUrl(videoIdOrUrl: string) {
   return `https://www.youtube.com/watch?v=${videoIdOrUrl}`;
 }
 
+interface FlatEntry {
+  /** "url" for a video, "playlist" for a nested tab/playlist. */
+  _type?: "url" | "playlist";
+  id: string;
+  title?: string;
+  entries?: FlatEntry[];
+}
+
+/**
+ * Pull the videos out of a yt-dlp `--flat-playlist` tree. A channel URL expands
+ * into one nested playlist per tab ("Videos", "Live", ...), so the top-level
+ * entries are playlists, not videos — walk down to the `_type: "url"` leaves.
+ * Deduped by ID, since a video can appear under more than one tab.
+ */
+function flattenVideos(node: FlatEntry, seen = new Set<string>()): FlatEntry[] {
+  if (node.entries) return node.entries.flatMap((e) => flattenVideos(e, seen));
+  // A leaf without _type is still a video: older yt-dlp output omits it.
+  if (node._type !== undefined && node._type !== "url") return [];
+  if (seen.has(node.id)) return [];
+  seen.add(node.id);
+  return [node];
+}
+
 export async function videosInChannel(channelIdOrUrl: string) {
   const { stdout } = await execFileAsync(
     "yt-dlp",
     ["--flat-playlist", "-J", channelUrl(channelIdOrUrl)],
     {
-      maxBuffer: 10 * 1024 * 1024,
+      // A busy channel's flat playlist runs to several MB.
+      maxBuffer: 100 * 1024 * 1024,
     },
   );
-  const playlist = JSON.parse(stdout) as {
-    entries: Array<{
-      id: string;
-      title?: string;
-    }>;
-  };
-  return playlist.entries;
+  return flattenVideos(JSON.parse(stdout) as FlatEntry);
 }
 
 export interface VideoMetadata {
