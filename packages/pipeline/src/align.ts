@@ -41,7 +41,103 @@ export function alignSpeakers(
     }
     current.words.push(word);
   }
-  return segments;
+  return absorbSlivers(segments);
+}
+
+/** Longest sliver, in words, that a mid-sentence clustering wobble can produce. */
+const MAX_SLIVER_WORDS = 5;
+/** Longest a wobble can last. Past this the sliver held the floor — a real turn. */
+const MAX_SLIVER_SEC = 2.0;
+/**
+ * Longest silence allowed anywhere across the sliver and its two boundaries.
+ * Matches transcribe.ts's VAD_MIN_SILENCE_SEC: a gap that long is a pause the
+ * VAD would have called a break in speech, and speech resuming after a pause is
+ * someone taking a turn.
+ */
+const MAX_WORD_GAP_SEC = 0.5;
+/** How far either side of a boundary a full stop still disqualifies the merge. */
+const PUNCTUATION_WINDOW_WORDS = 2;
+
+/**
+ * Fold away spurious one-or-two-word speaker changes inside a single utterance.
+ * 
+ * The raw transcription + diarization output can wobble between two speakers:
+ *    Mélisa Babb:      ...a rezone to a residential district would not necessarily be supported
+ *    Radhika Krishna:  in that area
+ *    Mélisa Babb:      by the plan because that area is envisioned as...
+ * 
+ * The middle line is a few word sliver that the clustering algorithm misattributed to Radhika.
+ * This should be one continuous turn by Mélisa.
+ * The tricky thing is distinguishing a real interjection from a clustering wobble.
+ *
+ * We use the conditions:
+ *   - no full stop near either boundary
+ *   - no pause between any two words across it
+ *   - the sliver itself is over quickly.
+ * 
+ * Anything else — a completed sentence, a beat of silence, a sliver
+ * that holds the floor for seconds — is someone taking a turn, and is left
+ * alone. Where all of it holds, the three segments become one.
+ */
+function absorbSlivers(segments: TranscriptSegment[]): TranscriptSegment[] {
+  const merged: TranscriptSegment[] = [];
+  for (let i = 0; i < segments.length; i++) {
+    const previous = merged.at(-1);
+    const sliver = segments[i]!;
+    const next = segments[i + 1];
+    if (
+      previous !== undefined &&
+      next !== undefined &&
+      sameSpeaker(previous, next) &&
+      !sameSpeaker(previous, sliver) &&
+      isWobble(previous, sliver, next)
+    ) {
+      previous.words.push(...sliver.words, ...next.words);
+      i++; // `next` has been folded in; don't emit it again.
+      continue;
+    }
+    merged.push(sliver);
+  }
+  return merged;
+}
+
+/** Whether a sliver looks like a clustering wobble inside one continuous utterance. */
+function isWobble(
+  previous: TranscriptSegment,
+  sliver: TranscriptSegment,
+  next: TranscriptSegment,
+): boolean {
+  if (sliver.words.length > MAX_SLIVER_WORDS) return false;
+
+  const first = sliver.words[0];
+  const last = sliver.words.at(-1);
+  if (first === undefined || last === undefined) return false;
+  if (last.end - first.start > MAX_SLIVER_SEC) return false;
+
+  // The neighbourhood the sentence has to run through unbroken: the tail of the
+  // previous segment, the sliver, and the head of the next.
+  const around = [
+    ...previous.words.slice(-PUNCTUATION_WINDOW_WORDS),
+    ...sliver.words,
+    ...next.words.slice(0, PUNCTUATION_WINDOW_WORDS),
+  ];
+  if (around.some(endsSentence)) return false;
+  for (let i = 1; i < around.length; i++) {
+    if (around[i]!.start - around[i - 1]!.end > MAX_WORD_GAP_SEC) return false;
+  }
+  return true;
+}
+
+function sameSpeaker(a: TranscriptSegment, b: TranscriptSegment): boolean {
+  if (a.speaker.type !== "segmented" || b.speaker.type !== "segmented") {
+    return false;
+  }
+  return a.speaker.speakerNumber === b.speaker.speakerNumber;
+}
+
+/** Whether a word closes a sentence. */
+function endsSentence(word: TranscriptWord): boolean {
+  return /[.?!]["')\]]?$/.test(word.text);
 }
 
 /** The diarization turn a word overlaps most; ties/zero-overlap fall back to nearest midpoint. */
