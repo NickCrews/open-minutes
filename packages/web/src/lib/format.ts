@@ -19,6 +19,15 @@ export function formatMeetingTime(date: Date): string {
   return `${day} ${time}`;
 }
 
+/** Format seconds as a clock-style timestamp: "0:07", "4:05", "1:02:33". */
+export function formatTimestamp(totalSecs: number): string {
+  const secs = Math.max(0, Math.floor(totalSecs));
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  const s = String(secs % 60).padStart(2, "0");
+  return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${s}` : `${m}:${s}`;
+}
+
 export function formatDuration(interval: string): string {
   const match = /^(\d+):(\d{2}):(\d{2}(?:\.\d+)?)$/.exec(interval);
   if (!match) return interval;

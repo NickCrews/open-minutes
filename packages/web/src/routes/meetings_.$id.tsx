@@ -1,8 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/solid-router";
 import { createServerFn } from "@tanstack/solid-start";
-import { For, Show } from "solid-js";
+import { createSignal, Show } from "solid-js";
+import { VideoPlayer } from "~/components/video-player";
 import { getMeetingById } from "~/features/meetings";
-import { formatDuration, formatMeetingTime } from "~/lib/format";
+import { Transcript } from "~/features/meetings/transcript";
+import { formatMeetingTime } from "~/lib/format";
+import { type YTPlayer } from "~/lib/youtube";
 import { db } from "~/server/db";
 
 const fetchMeeting = createServerFn({ method: "GET" })
@@ -16,82 +19,68 @@ export const Route = createFileRoute("/meetings_/$id")({
 
 function MeetingPage() {
   const meeting = Route.useLoaderData();
+  const [currentTime, setCurrentTime] = createSignal(0);
+  const [player, setPlayer] = createSignal<YTPlayer>();
+  // After a transcript-initiated seek, ignore polled times briefly so the
+  // playhead doesn't flash back to the pre-seek position.
+  let ignorePollsUntil = 0;
+
+  const seekTo = (secs: number) => {
+    setCurrentTime(secs);
+    ignorePollsUntil = performance.now() + 800;
+    player()?.seekTo(secs, true);
+  };
+  const onPolledTime = (secs: number) => {
+    if (performance.now() < ignorePollsUntil) return;
+    setCurrentTime(secs);
+  };
+
   return (
-    <div class="mx-auto max-w-3xl">
-      <h1 class="mb-2 text-2xl font-bold">
-        {meeting().title || "(untitled)"}
-      </h1>
-      <p class="text-muted-foreground mb-4 text-sm">
-        <Link
-          to="/municipalities/$id"
-          params={{ id: String(meeting().municipality.id) }}
-          class="hover:underline"
-        >
-          {meeting().municipality.name}
-        </Link>
-        <Show when={meeting().start_time}>
-          {(start) => <> — {formatMeetingTime(start())}</>}
-        </Show>
-      </p>
-      <Show when={meeting().youtube_url}>
-        <p class="mb-4">
-          <a
-            href={meeting().youtube_url!}
-            target="_blank"
-            rel="noreferrer"
-            class="text-sm font-medium hover:underline"
+    <div class="flex h-[calc(100dvh-5.5rem)] flex-col gap-3">
+      <header class="shrink-0">
+        <h1 class="text-xl font-bold">{meeting().title || "(untitled)"}</h1>
+        <p class="text-muted-foreground text-sm">
+          <Link
+            to="/municipalities/$id"
+            params={{ id: String(meeting().municipality.id) }}
+            class="hover:underline"
           >
-            Watch on YouTube
-          </a>
+            {meeting().municipality.name}
+          </Link>
+          <Show when={meeting().start_time}>
+            {(start) => <> — {formatMeetingTime(start())}</>}
+          </Show>
         </p>
-      </Show>
-      <Show when={meeting().description}>
-        <p class="text-muted-foreground mb-6 whitespace-pre-line text-sm">
-          {meeting().description}
-        </p>
-      </Show>
-      <h2 class="mb-4 border-b pb-2 text-lg font-semibold">Transcript</h2>
-      <div class="flex flex-col gap-3">
-        <For
-          each={meeting().segments}
-          fallback={
-            <p class="text-muted-foreground">No transcript segments yet.</p>
-          }
-        >
-          {(segment) => (
-            <p class="leading-relaxed">
-              <span class="font-semibold">
-                <Show
-                  when={segment.person}
-                  fallback={
-                    segment.speaker_number != null
-                      ? `Speaker ${segment.speaker_number}`
-                      : "Unknown"
-                  }
-                >
-                  {(person) => (
-                    <Link
-                      to="/people/$id"
-                      params={{ id: String(person().id) }}
-                      class="hover:underline"
-                    >
-                      {person().name || "(unnamed)"}
-                    </Link>
-                  )}
-                </Show>
-              </span>
-              <Show when={segment.start_secs}>
-                {(start) => (
-                  <span class="text-muted-foreground text-xs">
-                    {" "}
-                    [{formatDuration(start())}]
-                  </span>
-                )}
-              </Show>
-              : {segment.text}
+      </header>
+      <div class="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row">
+        <div class="flex min-h-0 shrink-0 flex-col gap-3 lg:w-3/5">
+          <Show
+            when={meeting().youtube_id}
+            fallback={
+              <div class="bg-muted text-muted-foreground flex aspect-video w-full shrink-0 items-center justify-center rounded-lg text-sm">
+                No video available
+              </div>
+            }
+          >
+            {(videoId) => (
+              <VideoPlayer
+                videoId={videoId()}
+                onPlayer={setPlayer}
+                onTime={onPolledTime}
+              />
+            )}
+          </Show>
+          <Show when={meeting().description}>
+            <p class="text-muted-foreground hidden min-h-0 overflow-y-auto whitespace-pre-line text-sm lg:block">
+              {meeting().description}
             </p>
-          )}
-        </For>
+          </Show>
+        </div>
+        <Transcript
+          segments={meeting().segments}
+          currentTime={currentTime}
+          onSeek={seekTo}
+        />
       </div>
     </div>
   );

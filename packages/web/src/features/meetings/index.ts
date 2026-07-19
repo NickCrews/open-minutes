@@ -14,9 +14,9 @@ export function getMeetingById(db: DB, meetingId: number) {
       with: {
         municipality: true,
         segments: {
-          // words is the bulky word-level jsonb; the derived text column is
-          // all the UI needs.
-          columns: { words: false },
+          // The transcript renders word-by-word synced to video playback, so
+          // ship the word-level timestamps and skip the derived text column.
+          columns: { text: false },
           with: { person: { columns: { id: true, name: true } } },
           orderBy: { start_secs: "asc" },
         },
