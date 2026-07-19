@@ -12,11 +12,16 @@ import {
 } from "solid-js";
 import { Button } from "~/components/button";
 import { TextField, TextFieldInput } from "~/components/text-field";
-import { formatTimestamp } from "~/lib/format";
-import type { getMeetingById } from "./index";
+import { formatSecsDuration, formatTimestamp } from "~/lib/format";
+import {
+  assignSpeakers,
+  type Segment,
+  speakerColor,
+  type SpeakerIdentity,
+  speakerKey,
+  SpeakerSwatch,
+} from "./speaker-identity";
 
-type Meeting = Awaited<ReturnType<typeof getMeetingById>>;
-export type Segment = Meeting["segments"][number];
 type SegmentStatus = "past" | "active" | "future";
 
 /** A search hit, as the inclusive range of words it covers in one segment. */
@@ -38,6 +43,7 @@ export function Transcript(props: {
   // turns it off; seeking or the resume button turns it back on.
   const [following, setFollowing] = createSignal(true);
 
+  const speakers = createMemo(() => assignSpeakers(props.segments));
   const starts = createMemo(() => props.segments.map(segmentStart));
   // Index of the segment being spoken: the last one starting at or before the
   // playhead, -1 before the first segment starts.
@@ -167,6 +173,7 @@ export function Transcript(props: {
               {(segment, i) => (
                 <SegmentBlock
                   segment={segment}
+                  speaker={() => speakers().get(speakerKey(segment))}
                   status={() =>
                     i() < activeIndex()
                       ? "past"
@@ -183,14 +190,15 @@ export function Transcript(props: {
             </For>
           </div>
         </div>
-        <Show when={!following()}>
+        {/* Only worth offering once the playhead has somewhere to return to. */}
+        <Show when={!following() && props.currentTime() > 0}>
           <Button
             variant="secondary"
             size="sm"
             class="absolute bottom-3 left-1/2 -translate-x-1/2 shadow-md"
             onClick={() => setFollowing(true)}
           >
-            Resume auto-scroll
+            Return to {formatSecsDuration(props.currentTime())}
           </Button>
         </Show>
       </div>
@@ -200,6 +208,7 @@ export function Transcript(props: {
 
 function SegmentBlock(props: {
   segment: Segment;
+  speaker: () => SpeakerIdentity | undefined;
   status: () => SegmentStatus;
   currentTime: () => number;
   onSeek: (secs: number) => void;
@@ -235,16 +244,19 @@ function SegmentBlock(props: {
   });
 
   return (
-    <div>
+    <div
+      class="border-l-2 pl-3"
+      style={{
+        "border-color":
+          speakerColor(props.speaker()?.colorSlot ?? null) ?? "var(--border)",
+      }}
+    >
       <div class="flex items-baseline gap-2 text-sm">
-        <span class="font-semibold">
+        <span class="flex items-baseline gap-1.5 font-semibold">
+          <SpeakerSwatch speaker={props.speaker} />
           <Show
-            when={props.segment.person}
-            fallback={
-              props.segment.speaker_number != null
-                ? `Speaker ${props.segment.speaker_number}`
-                : "Unknown"
-            }
+            when={props.speaker()?.person}
+            fallback={props.speaker()?.label ?? "Unknown"}
           >
             {(person) => (
               <Link
@@ -252,7 +264,7 @@ function SegmentBlock(props: {
                 params={{ id: String(person().id) }}
                 class="hover:underline"
               >
-                {person().name || "(unnamed)"}
+                {props.speaker()?.label}
               </Link>
             )}
           </Show>

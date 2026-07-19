@@ -83,6 +83,18 @@
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
+  /* Per-speaker identity colors. Categorical, so the order matters: it was
+     chosen to maximize the separation of adjacent slots under color-vision
+     deficiency, and speakers are assigned slots in order of first appearance.
+     Re-run the dataviz palette validator before changing any of these. */
+  --speaker-1: #2a78d6;
+  --speaker-2: #008300;
+  --speaker-3: #e87ba4;
+  --speaker-4: #eda100;
+  --speaker-5: #1baf7a;
+  --speaker-6: #eb6834;
+  --speaker-7: #4a3aa7;
+  --speaker-8: #e34948;
   --vis-tooltip-padding: calc(var(--spacing) * 1.5) calc(var(--spacing) * 2.5);
   --vis-tooltip-box-shadow: var(--shadow-xl);
   --vis-tooltip-background-color: var(--color-background);
@@ -125,6 +137,16 @@
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
+  /* The same eight hues re-stepped for the dark surface, not an automatic
+     flip — each was validated against this background, not the light one. */
+  --speaker-1: #3987e5;
+  --speaker-2: #008300;
+  --speaker-3: #d55181;
+  --speaker-4: #c98500;
+  --speaker-5: #199e70;
+  --speaker-6: #d95926;
+  --speaker-7: #9085e9;
+  --speaker-8: #e66767;
 }
 
 @layer base {

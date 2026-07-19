@@ -35,7 +35,7 @@ function PersonPage() {
   const save = async (name: string) => {
     setSaving(true);
     try {
-      await savePersonName({ data: { id: person().id, name: name.trim() } });
+      await savePersonName({ data: { id: person().id, name } });
       await router.invalidate();
       setEditing(false);
     } finally {
@@ -68,7 +68,11 @@ function PersonPage() {
             void save(String(name ?? ""));
           }}
         >
-          <TextField name="name" defaultValue={person().name} class="flex-1">
+          <TextField
+            name="name"
+            defaultValue={person().name ?? ""}
+            class="flex-1"
+          >
             <TextFieldInput
               type="text"
               placeholder="Person's name"

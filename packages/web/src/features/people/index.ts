@@ -8,10 +8,15 @@ export function getAllPeople(db: DB) {
   });
 }
 
+/**
+ * Sets a person's name, or clears it back to unidentified when `name` is blank.
+ * Clearing is a real affordance: it undoes a misidentification and returns the
+ * speaker to an anonymous placeholder in every transcript.
+ */
 export function updatePersonName(db: DB, personId: number, name: string) {
   return db
     .update(peopleTable)
-    .set({ name })
+    .set({ name: name.trim() || null })
     .where(eq(peopleTable.id, personId));
 }
 

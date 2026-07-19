@@ -1,15 +1,15 @@
 import { Link } from "@tanstack/solid-router";
 import { createMemo, For, Show } from "solid-js";
 import { formatSecsDuration, intervalToSecs } from "~/lib/format";
-import type { Segment } from "./transcript";
+import {
+  assignSpeakers,
+  type Segment,
+  type SpeakerIdentity,
+  speakerKey,
+  SpeakerSwatch,
+} from "./speaker-identity";
 
-type Speaker = {
-  /** Stable grouping key: an identified person, a diarized number, or neither. */
-  key: string;
-  person: NonNullable<Segment["person"]> | null;
-  speakerNumber: number | null;
-  secs: number;
-};
+type Speaker = SpeakerIdentity & { secs: number };
 
 /** How long a segment lasts, falling back to its word timestamps. */
 function segmentSecs(segment: Segment): number {
@@ -23,30 +23,25 @@ function segmentSecs(segment: Segment): number {
 }
 
 /**
- * Total speaking time per speaker, longest first. Segments with a person are
- * grouped by person even if they carry different diarization numbers.
+ * Total speaking time per speaker, longest first.
+ *
+ * Names and colors come from assignSpeakers, which orders them by first
+ * appearance — so this list is deliberately not alphabetical. It is a duration
+ * ranking that doubles as the transcript's color legend.
  */
 function tallySpeakers(segments: Segment[]): Speaker[] {
-  const bySpeaker = new Map<string, Speaker>();
+  const identities = assignSpeakers(segments);
+  const secsByKey = new Map<string, number>();
   for (const segment of segments) {
-    const key = segment.person
-      ? `person:${segment.person.id}`
-      : segment.speaker_number != null
-        ? `number:${segment.speaker_number}`
-        : "unknown";
-    let speaker = bySpeaker.get(key);
-    if (!speaker) {
-      speaker = {
-        key,
-        person: segment.person,
-        speakerNumber: segment.speaker_number,
-        secs: 0,
-      };
-      bySpeaker.set(key, speaker);
-    }
-    speaker.secs += segmentSecs(segment);
+    const key = speakerKey(segment);
+    secsByKey.set(key, (secsByKey.get(key) ?? 0) + segmentSecs(segment));
   }
-  return [...bySpeaker.values()].sort((a, b) => b.secs - a.secs);
+  return [...identities.values()]
+    .map((identity) => ({
+      ...identity,
+      secs: secsByKey.get(identity.key) ?? 0,
+    }))
+    .sort((a, b) => b.secs - a.secs);
 }
 
 export function Speakers(props: { segments: Segment[] }) {
@@ -64,22 +59,16 @@ export function Speakers(props: { segments: Segment[] }) {
           <For each={speakers()}>
             {(speaker) => (
               <li class="flex items-baseline gap-2 py-1">
+                <SpeakerSwatch speaker={() => speaker} />
                 <span class="min-w-0 flex-1 truncate">
-                  <Show
-                    when={speaker.person}
-                    fallback={
-                      speaker.speakerNumber != null
-                        ? `Speaker ${speaker.speakerNumber}`
-                        : "Unknown"
-                    }
-                  >
+                  <Show when={speaker.person} fallback={speaker.label}>
                     {(person) => (
                       <Link
                         to="/people/$id"
                         params={{ id: String(person().id) }}
                         class="hover:underline"
                       >
-                        {person().name || "(unnamed)"}
+                        {speaker.label}
                       </Link>
                     )}
                   </Show>
