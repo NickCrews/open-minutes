@@ -50,7 +50,10 @@ export const peopleTable = pgTable(
   "people",
   {
     id: serial().primaryKey(),
-    name: varchar().notNull().default(""),
+    // Null until a human identifies this voice. Nullable rather than "" so the
+    // "not yet identified" branch is a type-level obligation everywhere a name
+    // renders — the UI substitutes a per-meeting placeholder there.
+    name: varchar(),
     created_at: timestamp().notNull().defaultNow(),
     voice_embedding: vector({ dimensions: VOICE_N_DIMENSIONS }).notNull(),
   },

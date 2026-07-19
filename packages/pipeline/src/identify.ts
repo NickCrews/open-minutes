@@ -65,7 +65,9 @@ async function findOrCreatePerson(
 
   const [created] = await db
     .insert(peopleTable)
-    .values({ name: "Unknown Speaker", voice_embedding: vec })
+    // Name is left null: diarization tells us this is a distinct voice, not who
+    // it belongs to. The UI renders null-named people as anonymous placeholders.
+    .values({ voice_embedding: vec })
     .returning({ id: peopleTable.id });
   return created!.id;
 }
