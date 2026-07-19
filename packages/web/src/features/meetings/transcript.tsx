@@ -440,7 +440,7 @@ function SegmentBlock(props: {
         </span>
         <button
           type="button"
-          class="text-muted-foreground text-xs tabular-nums hover:underline"
+          class="text-muted-foreground text-xs tabular-nums hover:underline hover:cursor-pointer"
           onClick={() => props.onSeek(segmentStart(props.segment))}
         >
           {formatTimestamp(segmentStart(props.segment))}
@@ -451,22 +451,25 @@ function SegmentBlock(props: {
           {(word, i) => {
             const highlight = () => highlights().get(i);
             return (
-              <span
-                class="cursor-pointer rounded-sm transition-opacity duration-300 data-playhead:bg-primary/10"
-                classList={{
-                  "opacity-30": i > playheadIndex() && !highlight(),
-                  "bg-yellow-200 dark:bg-yellow-500/30":
-                    !!highlight() && !highlight()?.current,
-                  "bg-yellow-400 dark:bg-yellow-500/70": !!highlight()?.current,
-                }}
-                data-playhead={i === playheadIndex() ? "" : undefined}
-                data-search-current={
-                  highlight()?.current && highlight()?.first ? "" : undefined
-                }
-                onClick={() => props.onSeek(word().start)}
-              >
-                {word().text}{" "}
-              </span>
+              <>
+                <span
+                  class="cursor-pointer rounded-sm transition-opacity duration-300 data-playhead:bg-primary/10 hover:bg-primary/10 hover:opacity-100"
+                  classList={{
+                    "opacity-30": i > playheadIndex() && !highlight(),
+                    "bg-yellow-200 dark:bg-yellow-500/30":
+                      !!highlight() && !highlight()?.current,
+                    "bg-yellow-400 dark:bg-yellow-500/70": !!highlight()?.current,
+                  }}
+                  data-playhead={i === playheadIndex() ? "" : undefined}
+                  data-search-current={
+                    highlight()?.current && highlight()?.first ? "" : undefined
+                  }
+                  onClick={() => props.onSeek(word().start)}
+                >
+                  {word().text}
+                </span>
+                {" "}
+              </>
             );
           }}
         </Index>
