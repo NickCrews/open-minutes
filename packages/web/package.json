@@ -6,12 +6,15 @@
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
-    "start": "node .output/server/index.mjs",
+    "preview": "vite preview",
+    "deploy": "vite build && wrangler deploy",
+    "cf-typegen": "wrangler types",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@kobalte/core": "^0.13.12",
+    "@neondatabase/serverless": "^1.1.0",
     "@open-minutes/core": "workspace:*",
     "@tailwindcss/vite": "^4.3.3",
     "@tanstack/solid-router": "^1",
@@ -25,5 +28,9 @@
     "vite": "^7",
     "vite-plugin-solid": "^2",
     "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.45.1",
+    "wrangler": "^4.112.0"
   }
 }

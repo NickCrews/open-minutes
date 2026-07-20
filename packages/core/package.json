@@ -25,6 +25,7 @@
     "db:nuke": "pnpm db:up && node src/db/nuke.mjs && pnpm db:migrate"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.1.0",
     "@t3-oss/env-core": "^0.13.11",
     "dotenv": "^17.4.2",
     "drizzle-orm": "1.0.0-beta.21",

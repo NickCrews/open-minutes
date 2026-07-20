@@ -1,0 +1,11 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "open-minutes",
+  "compatibility_date": "2026-07-19",
+  // nodejs_compat also populates process.env from vars/secrets (the
+  // nodejs_compat_populate_process_env flag, default-on at this date), which
+  // is how DATABASE_URL reaches the db resolution code.
+  "compatibility_flags": ["nodejs_compat"],
+  "main": "@tanstack/solid-start/server-entry",
+  "observability": { "enabled": true },
+}

@@ -18,8 +18,17 @@ let loaded = false;
 export function loadRootDotEnv() {
   if (loaded) return;
   loaded = true;
-  config({
-    path: join(dirname(fileURLToPath(import.meta.url)), "../../../.env.local"),
-    quiet: true,
-  });
+  try {
+    config({
+      path: join(
+        dirname(fileURLToPath(import.meta.url)),
+        "../../../.env.local",
+      ),
+      quiet: true,
+    });
+  } catch {
+    // Bundled non-Node runtimes (e.g. Cloudflare Workers) have no workspace
+    // filesystem — env vars arrive directly, so a failed load is a no-op,
+    // matching the missing-file behavior on Node.
+  }
 }
