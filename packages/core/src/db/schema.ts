@@ -106,6 +106,11 @@ export const peopleTable = pgTable(
     // "not yet identified" branch is a type-level obligation everywhere a name
     // renders — the UI substitutes a per-meeting placeholder there.
     name: varchar(),
+    // Free-form background a human writes down: role, affiliation, tenure. Eg
+    // "Mayor of Anchorage since 2024" or "member of GBOS from May 2020 to 2026".
+    // Prose rather than structured fields — roles and dates are too irregular
+    // across jurisdictions to model, and nothing queries this.
+    bio: varchar(),
     created_at: timestamp().notNull().defaultNow(),
     voice_embedding: vector({ dimensions: VOICE_N_DIMENSIONS }).notNull(),
   },
