@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/solid-router";
 import { createServerFn } from "@tanstack/solid-start";
-import { For } from "solid-js";
-import { getAllPeople } from "~/features/people";
+import { For, Show } from "solid-js";
+import { type Attendance, getAllPeople } from "~/features/people";
+import { formatMonthYear } from "~/lib/format";
 import { db } from "~/server/db";
 
 const fetchPeople = createServerFn({ method: "GET" }).handler(() =>
@@ -12,6 +13,19 @@ export const Route = createFileRoute("/people")({
   loader: () => fetchPeople(),
   component: PeoplePage,
 });
+
+/**
+ * One body's worth of a person's record, eg "5 GBOS meetings, Apr 2023–Feb
+ * 2026". A span within a single month collapses to that month, so a person seen
+ * once doesn't read as "Apr 2023–Apr 2023".
+ */
+function formatAttendance(a: Attendance): string {
+  const count = `${a.meetings} ${a.body} ${a.meetings === 1 ? "meeting" : "meetings"}`;
+  if (!a.first || !a.last) return count;
+  const first = formatMonthYear(a.first, a.timezone);
+  const last = formatMonthYear(a.last, a.timezone);
+  return `${count}, ${first === last ? first : `${first}–${last}`}`;
+}
 
 function PeoplePage() {
   const people = Route.useLoaderData();
@@ -25,13 +39,27 @@ function PeoplePage() {
         >
           {(person) => (
             <li class="py-2">
-              <Link
-                to="/people/$id"
-                params={{ id: String(person.id) }}
-                class="font-medium hover:underline"
-              >
-                {person.name || "(unnamed)"}
-              </Link>
+              <div class="flex items-baseline gap-2">
+                <Link
+                  to="/people/$id"
+                  params={{ id: String(person.id) }}
+                  class="shrink-0 font-medium hover:underline"
+                >
+                  {person.name || "(unnamed)"}
+                </Link>
+                <Show when={person.attendance.length}>
+                  <span class="text-muted-foreground min-w-0 truncate text-sm">
+                    {person.attendance.map(formatAttendance).join(" · ")}
+                  </span>
+                </Show>
+              </div>
+              {/* Bios run to whatever length someone typed, so this one gets
+                  clipped to a single line to keep the list scannable. */}
+              <Show when={person.bio}>
+                <p class="text-muted-foreground truncate text-sm">
+                  {person.bio}
+                </p>
+              </Show>
             </li>
           )}
         </For>

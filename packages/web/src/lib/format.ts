@@ -20,6 +20,19 @@ export function formatMeetingTime(date: Date, timeZone: string): string {
 }
 
 /**
+ * Format a month like "Apr 2023", in the timezone the body meets in — the same
+ * reasoning as `formatMeetingTime`, and it matters at the edges: a 6pm meeting
+ * on the 31st in Anchorage falls in the next month read as UTC.
+ */
+export function formatMonthYear(date: Date, timeZone: string): string {
+  return date.toLocaleDateString("en-US", {
+    timeZone,
+    month: "short",
+    year: "numeric",
+  });
+}
+
+/**
  * The wall-clock time `date` shows in `timeZone`, as the "YYYY-MM-DDTHH:mm"
  * that `<input type="datetime-local">` wants.
  */
