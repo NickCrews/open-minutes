@@ -16,11 +16,8 @@ const MAX_DISTANCE = 1 - MATCH_THRESHOLD;
 export async function identifyAndInsertSegments(
   db: Queryable,
   meetingId: number,
-  alignedSegments: Array<{
-    text: string;
-    start: number;
-    end: number;
-    /** Local diarization label, or null for an unlabeled (undiarized) segment. */
+  segments: Array<{
+    /** References the embedding in `speakerEmbeddings`, or null for an unlabeled segment. */
     speaker: number | null;
     words: Array<TranscriptWord>;
   }>,
@@ -32,7 +29,9 @@ export async function identifyAndInsertSegments(
     speakerToPersonId.set(speakerId, await findOrCreatePerson(db, embedding));
   }
 
-  for (const seg of alignedSegments) {
+  for (const seg of segments) {
+    const start = seg.words[0]!.start;
+    const end = seg.words.at(-1)!.end;
     await db.insert(segmentsTable).values({
       meeting_id: meetingId,
       person_id:
@@ -40,8 +39,8 @@ export async function identifyAndInsertSegments(
           ? null
           : (speakerToPersonId.get(seg.speaker) ?? null),
       speaker_number: seg.speaker,
-      start_secs: sql`make_interval(secs => ${seg.start})`,
-      end_secs: sql`make_interval(secs => ${seg.end})`,
+      start_secs: sql`make_interval(secs => ${start})`,
+      end_secs: sql`make_interval(secs => ${end})`,
       words: seg.words,
     });
   }

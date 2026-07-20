@@ -39,11 +39,11 @@ export interface IngestOptions {
 
 export type IngestResult =
   | {
-      youtubeId: string;
-      status: "ingested";
-      meetingId: number;
-      segmentCount: number;
-    }
+    youtubeId: string;
+    status: "ingested";
+    meetingId: number;
+    segmentCount: number;
+  }
   | { youtubeId: string; status: "skipped" };
 
 /** On-disk shape of a work directory's diarization.json. */
@@ -141,10 +141,7 @@ export async function ingestVideo(
     ]),
   );
 
-  const aligned = segments.map((segment) => ({
-    text: segment.words.map((w) => w.text).join(" "),
-    start: segment.words[0]!.start,
-    end: segment.words.at(-1)!.end,
+  const segmentsWithNormedSpeaker = segments.map((segment) => ({
     speaker:
       segment.speaker.type === "segmented"
         ? segment.speaker.speakerNumber
@@ -153,7 +150,7 @@ export async function ingestVideo(
   }));
 
   console.error(
-    `[${youtubeId}] committing meeting with ${aligned.length} segment(s)...`,
+    `[${youtubeId}] committing meeting with ${segmentsWithNormedSpeaker.length} segment(s)...`,
   );
   const meetingId = await db.transaction(async (tx) => {
     const [meeting] = await tx
@@ -174,7 +171,7 @@ export async function ingestVideo(
     await identifyAndInsertSegments(
       tx,
       meeting!.id,
-      aligned,
+      segmentsWithNormedSpeaker,
       speakerEmbeddings,
     );
     return meeting!.id;
@@ -184,7 +181,7 @@ export async function ingestVideo(
     youtubeId,
     status: "ingested",
     meetingId,
-    segmentCount: aligned.length,
+    segmentCount: segmentsWithNormedSpeaker.length,
   };
 }
 
@@ -239,7 +236,7 @@ async function resolveBody(db: DB, youtubeId: string, channelId: string) {
   }
   throw new Error(
     `Video ${youtubeId} is on channel "${channelId}", which matches no ` +
-      `body's video sources. Refusing to ingest an unrelated video.`,
+    `body's video sources. Refusing to ingest an unrelated video.`,
   );
 }
 
