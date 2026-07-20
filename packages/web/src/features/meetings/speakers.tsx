@@ -1,5 +1,5 @@
-import { Link } from "@tanstack/solid-router";
 import { createMemo, For, Show } from "solid-js";
+import { PersonHoverCard } from "~/features/people/person-hover-card";
 import { formatSecsDuration, intervalToSecs } from "~/lib/format";
 import {
   assignSpeakers,
@@ -63,13 +63,10 @@ export function Speakers(props: { segments: Segment[] }) {
                 <span class="min-w-0 flex-1 truncate">
                   <Show when={speaker.person} fallback={speaker.label}>
                     {(person) => (
-                      <Link
-                        to="/people/$id"
-                        params={{ id: String(person().id) }}
-                        class="hover:underline"
-                      >
-                        {speaker.label}
-                      </Link>
+                      <PersonHoverCard
+                        person={person()}
+                        label={speaker.label}
+                      />
                     )}
                   </Show>
                 </span>

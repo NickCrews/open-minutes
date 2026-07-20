@@ -1,4 +1,3 @@
-import { Link } from "@tanstack/solid-router";
 import {
   createEffect,
   createMemo,
@@ -14,6 +13,7 @@ import {
 import { Button } from "~/components/button";
 import { TextField, TextFieldInput } from "~/components/text-field";
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/tooltip";
+import { PersonHoverCard } from "~/features/people/person-hover-card";
 import { formatTimestamp } from "~/lib/format";
 import { PLAYBACK_RATES } from "~/lib/youtube";
 import {
@@ -428,13 +428,10 @@ function SegmentBlock(props: {
             fallback={props.speaker()?.label ?? "Unknown"}
           >
             {(person) => (
-              <Link
-                to="/people/$id"
-                params={{ id: String(person().id) }}
-                class="hover:underline"
-              >
-                {props.speaker()?.label}
-              </Link>
+              <PersonHoverCard
+                person={person()}
+                label={props.speaker()?.label}
+              />
             )}
           </Show>
         </span>
@@ -458,7 +455,8 @@ function SegmentBlock(props: {
                     "opacity-30": i > playheadIndex() && !highlight(),
                     "bg-yellow-200 dark:bg-yellow-500/30":
                       !!highlight() && !highlight()?.current,
-                    "bg-yellow-400 dark:bg-yellow-500/70": !!highlight()?.current,
+                    "bg-yellow-400 dark:bg-yellow-500/70":
+                      !!highlight()?.current,
                   }}
                   data-playhead={i === playheadIndex() ? "" : undefined}
                   data-search-current={
@@ -467,8 +465,7 @@ function SegmentBlock(props: {
                   onClick={() => props.onSeek(word().start)}
                 >
                   {word().text}
-                </span>
-                {" "}
+                </span>{" "}
               </>
             );
           }}

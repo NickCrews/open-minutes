@@ -160,7 +160,10 @@ export const segmentsTable = pgTable(
     // A wordless segment has no text and no position on the timeline — it would
     // sort last under `ORDER BY start_secs` and render as an empty bubble. It's
     // never something the pipeline legitimately produces.
-    check("segments_words_nonempty", sql`jsonb_array_length(${table.words}) > 0`),
+    check(
+      "segments_words_nonempty",
+      sql`jsonb_array_length(${table.words}) > 0`,
+    ),
   ],
 );
 

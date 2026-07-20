@@ -6,11 +6,11 @@ import type {
 
 /**
  * Combine a diarization output and a transcript into speaker-labeled segments.
- * 
+ *
  * The diarization is a sequence of "person 4 spoke from 1:23 to 1:27",
  * and the transcript is a sequence of "the words 'foo bar' were spoken from 1:24 to 1:25".
  * This function produces a sequence of "person 4 said 'foo bar' from 1:24 to 1:25".
- * 
+ *
  * It does this by assigning each word to the diarization turn it overlaps most, and then
  * grouping consecutive words with the same speaker into segments. It also absorbs
  * spurious one-or-two-word speaker changes inside a single utterance, which can

@@ -36,7 +36,8 @@ export function getMeetingById(db: DB, meetingId: number) {
           // The transcript renders word-by-word synced to video playback, so
           // ship the word-level timestamps and skip the derived text column.
           columns: { text: false },
-          with: { person: { columns: { id: true, name: true } } },
+          // bio feeds the hover card on each speaker's name.
+          with: { person: { columns: { id: true, name: true, bio: true } } },
           orderBy: { start_secs: "asc" },
         },
       },

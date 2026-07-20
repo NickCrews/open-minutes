@@ -39,11 +39,11 @@ export interface IngestOptions {
 
 export type IngestResult =
   | {
-    youtubeId: string;
-    status: "ingested";
-    meetingId: number;
-    segmentCount: number;
-  }
+      youtubeId: string;
+      status: "ingested";
+      meetingId: number;
+      segmentCount: number;
+    }
   | { youtubeId: string; status: "skipped" };
 
 /** On-disk shape of a work directory's diarization.json. */
@@ -236,7 +236,7 @@ async function resolveBody(db: DB, youtubeId: string, channelId: string) {
   }
   throw new Error(
     `Video ${youtubeId} is on channel "${channelId}", which matches no ` +
-    `body's video sources. Refusing to ingest an unrelated video.`,
+      `body's video sources. Refusing to ingest an unrelated video.`,
   );
 }
 
