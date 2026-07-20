@@ -11,6 +11,8 @@ import {
 } from "~/components/card";
 import { TextField, TextFieldInput } from "~/components/text-field";
 import { getPersonById, updatePersonName } from "~/features/people";
+import { Bio } from "~/features/people/bio";
+import { assertCanEdit, canEdit } from "~/lib/permissions";
 import {
   formatMeetingTime,
   formatTimestamp,
@@ -27,9 +29,13 @@ const fetchPerson = createServerFn({ method: "GET" })
   .inputValidator((id: number) => id)
   .handler(({ data }) => getPersonById(db(), data));
 
+/** Guarded on both sides of the wire by the same `canEdit` that hides the button. */
 const savePersonName = createServerFn({ method: "POST" })
   .inputValidator((input: { id: number; name: string }) => input)
-  .handler(({ data }) => updatePersonName(db(), data.id, data.name));
+  .handler(({ data }) => {
+    assertCanEdit("names");
+    return updatePersonName(db(), data.id, data.name);
+  });
 
 export const Route = createFileRoute("/people_/$id")({
   loader: ({ params }) => fetchPerson({ data: Number(params.id) }),
@@ -59,20 +65,22 @@ function PersonPage() {
       <Show
         when={editing()}
         fallback={
-          <div class="mb-6 flex items-center gap-3">
+          <div class="mb-2 flex items-center gap-3">
             <h1 class="text-2xl font-bold">{person().name || "(unnamed)"}</h1>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setEditing(true)}
-            >
-              Edit
-            </Button>
+            <Show when={canEdit()}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setEditing(true)}
+              >
+                Edit
+              </Button>
+            </Show>
           </div>
         }
       >
         <form
-          class="mb-6 flex items-center gap-2"
+          class="mb-2 flex items-center gap-2"
           onSubmit={(event) => {
             event.preventDefault();
             const name = new FormData(event.currentTarget).get("name");
@@ -104,6 +112,7 @@ function PersonPage() {
           </Button>
         </form>
       </Show>
+      <Bio personId={person().id} bio={person().bio} />
       <h2 class="mb-4 border-b pb-2 text-lg font-semibold">Meetings</h2>
       <div class="flex flex-col gap-4">
         <For

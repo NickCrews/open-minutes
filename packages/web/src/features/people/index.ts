@@ -20,6 +20,18 @@ export function updatePersonName(db: DB, personId: number, name: string) {
     .where(eq(peopleTable.id, personId));
 }
 
+/**
+ * Sets a person's free-form bio, or clears it when `bio` is blank. Blank stores
+ * NULL rather than "", so "never written" and "deliberately emptied" don't have
+ * to be told apart downstream.
+ */
+export function updatePersonBio(db: DB, personId: number, bio: string) {
+  return db
+    .update(peopleTable)
+    .set({ bio: bio.trim() || null })
+    .where(eq(peopleTable.id, personId));
+}
+
 export function getPersonById(db: DB, personId: number) {
   return db.query.peopleTable
     .findFirst({

@@ -9,6 +9,7 @@ import {
   toZonedInputValue,
   zonedInputValueToDate,
 } from "~/lib/format";
+import { assertCanEdit, canEdit } from "~/lib/permissions";
 import { db } from "~/server/db";
 
 /**
@@ -18,17 +19,12 @@ import { db } from "~/server/db";
  * body on this side, so the stored instant can't disagree with the zone the
  * page will render it back in.
  *
- * Development only on both sides of the wire, and by the same import.meta.env.DEV
- * that hides the button — Vite folds it to a constant in each bundle, so a
- * production build ships an endpoint that can only throw rather than a hidden
- * button with a live endpoint behind it. There's no auth here yet to do
- * anything better.
+ * Guarded on both sides of the wire by the same `canEdit` that hides the button.
  */
 const saveMeetingStartTime = createServerFn({ method: "POST" })
   .inputValidator((input: { id: number; localTime: string }) => input)
   .handler(async ({ data }) => {
-    if (!import.meta.env.DEV)
-      throw new Error("Editing meeting times is a development-only affordance");
+    assertCanEdit("meeting times");
     if (!data.localTime) return updateMeetingStartTime(db(), data.id, null);
     const { body } = await getMeetingById(db(), data.id);
     const start = zonedInputValueToDate(data.localTime, body.timezone);
@@ -73,12 +69,12 @@ export function StartTime(props: {
     <Show
       when={editing()}
       fallback={
-        <Show when={props.startTime || import.meta.env.DEV}>
+        <Show when={props.startTime || canEdit()}>
           {props.prefix}
           <Show when={props.startTime} fallback={<>Date unknown</>}>
             {(at) => <>{formatMeetingTime(at(), props.timezone)}</>}
           </Show>
-          <Show when={import.meta.env.DEV}>
+          <Show when={canEdit()}>
             <button
               type="button"
               onClick={() => setEditing(true)}
