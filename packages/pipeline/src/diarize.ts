@@ -88,7 +88,7 @@ export function diarizeAudio(audio: string | WaveForm): DiarizationTurn[] {
 
   const segments = diarizer.process(wave.samples);
   const rawTurns = segments
-    .map((s) => ({ start: s.start, end: s.end, speaker: s.speaker }))
+    .map((s) => ({ start: s.start, end: s.end, speakerNum: s.speaker }))
     .sort((a, b) => a.start - b.start);
   return mergeSpeakers(wave, rawTurns);
 }
@@ -149,14 +149,14 @@ function mergeSpeakers(
   //    fall back to keeping raw speakers as their own groups.
   const anchors: { mid: number; group: number }[] = [];
   for (const t of turns) {
-    const group = groupOf.get(t.speaker);
+    const group = groupOf.get(t.speakerNum);
     if (group !== undefined) anchors.push({ mid: midpoint(t), group });
   }
 
   const groupForTurn = (t: DiarizationTurn): number => {
-    const group = groupOf.get(t.speaker);
+    const group = groupOf.get(t.speakerNum);
     if (group !== undefined) return group;
-    if (anchors.length === 0) return t.speaker; // degenerate: no voiceprints at all
+    if (anchors.length === 0) return t.speakerNum; // degenerate: no voiceprints at all
     return nearestGroup(midpoint(t), anchors);
   };
 
@@ -175,7 +175,7 @@ function mergeSpeakers(
     .map((t) => ({
       start: t.start,
       end: t.end,
-      speaker: renumber.get(groupForTurn(t))!,
+      speakerNum: renumber.get(groupForTurn(t))!,
     }))
     .sort((a, b) => a.start - b.start);
 }
@@ -308,9 +308,9 @@ function groupBySpeaker(
 ): Map<number, DiarizationTurn[]> {
   const bySpeaker = new Map<number, DiarizationTurn[]>();
   for (const turn of turns) {
-    const list = bySpeaker.get(turn.speaker) ?? [];
+    const list = bySpeaker.get(turn.speakerNum) ?? [];
     list.push(turn);
-    bySpeaker.set(turn.speaker, list);
+    bySpeaker.set(turn.speakerNum, list);
   }
   return bySpeaker;
 }
@@ -372,14 +372,14 @@ async function cli() {
     process.exit(1);
   }
   const turns = diarizeAudio(audioPath);
-  const speakers = new Set(turns.map((t) => t.speaker));
+  const speakers = new Set(turns.map((t) => t.speakerNum));
   console.log(
     `Found ${speakers.size} speaker(s) across ${turns.length} turn(s).`,
   );
   const embeddings = computeSpeakerEmbeddings(audioPath, turns);
   for (const turn of turns) {
     console.log(
-      `${turn.start.toFixed(2)} -- ${turn.end.toFixed(2)} speaker_${turn.speaker}`,
+      `${turn.start.toFixed(2)} -- ${turn.end.toFixed(2)} speaker_${turn.speakerNum}`,
     );
   }
   console.log(`Built ${embeddings.size} speaker embedding(s).`);

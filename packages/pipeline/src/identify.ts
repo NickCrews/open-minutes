@@ -1,6 +1,6 @@
 import { cosineDistance, sql } from "drizzle-orm";
 import { type DB, peopleTable, segmentsTable } from "@open-minutes/core/db";
-import { TranscriptWord } from "@open-minutes/core/transcription";
+import { TranscriptSegment } from "@open-minutes/core/transcription";
 
 // Accepts either a database or a transaction handle, so callers can make
 // segment insertion part of a larger all-or-nothing transaction.
@@ -16,11 +16,7 @@ const MAX_DISTANCE = 1 - MATCH_THRESHOLD;
 export async function identifyAndInsertSegments(
   db: Queryable,
   meetingId: number,
-  segments: Array<{
-    /** References the embedding in `speakerEmbeddings`, or null for an unlabeled segment. */
-    speaker: number | null;
-    words: Array<TranscriptWord>;
-  }>,
+  segments: Array<TranscriptSegment>,
   speakerEmbeddings: Map<number, Float32Array>,
 ): Promise<void> {
   // Resolve each local speaker index to a DB person
@@ -35,10 +31,10 @@ export async function identifyAndInsertSegments(
     await db.insert(segmentsTable).values({
       meeting_id: meetingId,
       person_id:
-        seg.speaker === null
+        seg.speakerNum === null
           ? null
-          : (speakerToPersonId.get(seg.speaker) ?? null),
-      speaker_number: seg.speaker,
+          : (speakerToPersonId.get(seg.speakerNum) ?? null),
+      speaker_number: seg.speakerNum,
       words: seg.words,
     });
   }

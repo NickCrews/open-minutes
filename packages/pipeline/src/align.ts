@@ -22,7 +22,7 @@ export function alignSpeakers(
 ): TranscriptSegment[] {
   if (words.length === 0) return [];
   if (turns.length === 0) {
-    return [{ speaker: { type: "unlabeled" }, words: [...words] }];
+    return [{ speakerNum: null, words: [...words] }];
   }
 
   const segments: TranscriptSegment[] = [];
@@ -30,13 +30,13 @@ export function alignSpeakers(
   let currentSpeaker: number | null = null;
 
   for (const word of words) {
-    const speaker = assignSpeaker(word, turns);
-    if (current === null || speaker !== currentSpeaker) {
+    const speakerNum = assignSpeaker(word, turns);
+    if (current === null || speakerNum !== currentSpeaker) {
       current = {
-        speaker: { type: "segmented", speakerNumber: speaker },
+        speakerNum: speakerNum,
         words: [],
       };
-      currentSpeaker = speaker;
+      currentSpeaker = speakerNum;
       segments.push(current);
     }
     current.words.push(word);
@@ -55,12 +55,12 @@ export function segmentsToTurns(
 ): DiarizationTurn[] {
   const turns: DiarizationTurn[] = [];
   for (const segment of segments) {
-    if (segment.speaker.type !== "segmented") continue;
+    if (segment.speakerNum === null) continue;
     if (segment.words.length === 0) continue;
     turns.push({
       start: segment.words[0]!.start,
       end: segment.words.at(-1)!.end,
-      speaker: segment.speaker.speakerNumber,
+      speakerNum: segment.speakerNum,
     });
   }
   return turns;
@@ -151,10 +151,10 @@ function isWobble(
 }
 
 function sameSpeaker(a: TranscriptSegment, b: TranscriptSegment): boolean {
-  if (a.speaker.type !== "segmented" || b.speaker.type !== "segmented") {
+  if (a.speakerNum === null || b.speakerNum === null) {
     return false;
   }
-  return a.speaker.speakerNumber === b.speaker.speakerNumber;
+  return a.speakerNum === b.speakerNum;
 }
 
 /** Whether a word closes a sentence. */
@@ -167,27 +167,27 @@ function assignSpeaker(
   word: TranscriptWord,
   turns: readonly DiarizationTurn[],
 ): number {
-  let bestSpeaker = turns[0]!.speaker;
+  let bestSpeaker = turns[0]!.speakerNum;
   let bestOverlap = 0;
   for (const turn of turns) {
     const overlap =
       Math.min(word.end, turn.end) - Math.max(word.start, turn.start);
     if (overlap > bestOverlap) {
       bestOverlap = overlap;
-      bestSpeaker = turn.speaker;
+      bestSpeaker = turn.speakerNum;
     }
   }
   if (bestOverlap > 0) return bestSpeaker;
 
   // No turn overlaps this word — attach it to the nearest by midpoint distance.
   const mid = (word.start + word.end) / 2;
-  let nearestSpeaker = turns[0]!.speaker;
+  let nearestSpeaker = turns[0]!.speakerNum;
   let nearestDistance = Infinity;
   for (const turn of turns) {
     const distance = Math.abs(mid - (turn.start + turn.end) / 2);
     if (distance < nearestDistance) {
       nearestDistance = distance;
-      nearestSpeaker = turn.speaker;
+      nearestSpeaker = turn.speakerNum;
     }
   }
   return nearestSpeaker;

@@ -31,7 +31,7 @@ describe("psv parse/serialize", () => {
     const content = [
       "# a comment",
       "start_sec|end_sec|event_type|event_data",
-      '0:00:00.00||meta|{"begin_speaker": "identified:alice-jones"}',
+      '0:00:00.00||meta|{"begin_speaker": "segmented:spk-2"}',
       "0:00:00.08|0:00:00.64|text|Uh",
       "",
       "0:00:00.64|0:00:01.04|text|certainly",
@@ -42,18 +42,18 @@ describe("psv parse/serialize", () => {
     ].join("\n");
     expect(parsePsv(content)).toEqual<TranscriptSegment[]>([
       {
-        speaker: { type: "identified", personId: "alice-jones" },
+        speakerNum: 2,
         words: [
           { text: "Uh", start: 0.08, end: 0.64 },
           { text: "certainly", start: 0.64, end: 1.04 },
         ],
       },
       {
-        speaker: { type: "segmented", speakerNumber: 4 },
+        speakerNum: 4,
         words: [{ text: "What", start: 9921.28, end: 9922.24 }],
       },
       {
-        speaker: { type: "unlabeled" },
+        speakerNum: null,
         words: [{ text: "Nice!", start: 9925.6, end: 9925.68 }],
       },
     ]);
@@ -115,7 +115,7 @@ describe("psv parse/serialize", () => {
     ];
     expect(parsePsv(serializeVadRunsPsv(runs))).toEqual<TranscriptSegment[]>([
       {
-        speaker: { type: "unlabeled" },
+        speakerNum: null,
         words: [
           { text: "Hello", start: 0.08, end: 1.0 },
           { text: "there", start: 1.1, end: 1.5 },
@@ -127,14 +127,14 @@ describe("psv parse/serialize", () => {
   it("round-trips segments through serialize/parse", () => {
     const segments: TranscriptSegment[] = [
       {
-        speaker: { type: "unlabeled" },
+        speakerNum: null,
         words: [
           { text: "Uh", start: 0.08, end: 0.64 },
           { text: "$10", start: 0.64, end: 1.28 },
         ],
       },
       {
-        speaker: { type: "segmented", speakerNumber: 2 },
+        speakerNum: 2,
         words: [{ text: "Thanks!", start: 1.28, end: 1.6 }],
       },
     ];

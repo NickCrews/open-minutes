@@ -49,8 +49,8 @@ function embedding(hotIndex: number): number[] {
 
 const DIARIZATION = {
   turns: [
-    { start: 0.4, end: 1.5, speaker: 0 },
-    { start: 4.9, end: 5.5, speaker: 1 },
+    { start: 0.4, end: 1.5, speakerNum: 0 },
+    { start: 4.9, end: 5.5, speakerNum: 1 },
   ],
 };
 

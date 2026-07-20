@@ -24,7 +24,6 @@
 import { readFileSync, writeFileSync } from "node:fs";
 
 import type {
-  Speaker,
   SpeechSegment,
   TranscriptSegment,
 } from "@open-minutes/core/transcription";
@@ -71,39 +70,22 @@ function pad2(n: number): string {
   return n.toString().padStart(2, "0");
 }
 
-function parseSpeaker(label: string): Speaker {
-  if (label === "unlabeled") return { type: "unlabeled" };
+function parseSpeaker(label: string): number | null {
+  if (label === "unlabeled") return null;
   if (label.startsWith("segmented:")) {
     const m = label.slice("segmented:".length).match(/^spk-(\d+)$/);
     if (!m)
       throw new Error(
         `Invalid segmented speaker label: ${JSON.stringify(label)}`,
       );
-    return { type: "segmented", speakerNumber: Number(m[1]) };
-  }
-  if (label.startsWith("identified:")) {
-    const personId = label.slice("identified:".length);
-    if (!personId)
-      throw new Error(
-        `Invalid identified speaker label (no id): ${JSON.stringify(label)}`,
-      );
-    return { type: "identified", personId };
+    return Number(m[1]);
   }
   throw new Error(`Unknown speaker label: ${JSON.stringify(label)}`);
 }
 
-function formatSpeaker(speaker: Speaker): string {
-  const type = speaker.type;
-  switch (type) {
-    case "unlabeled":
-      return "unlabeled";
-    case "segmented":
-      return `segmented:spk-${speaker.speakerNumber}`;
-    case "identified":
-      return `identified:${speaker.personId}`;
-    default:
-      throw new Error(`Unknown speaker type: ${type satisfies never} `);
-  }
+function formatSpeaker(speaker: number | null): string {
+  if (speaker === null) return "unlabeled";
+  return `segmented:spk-${speaker}`;
 }
 
 function parseEvents(content: string): PsvEvent[] {
@@ -197,7 +179,7 @@ export function parsePsv(
           `Unsupported meta event (expected begin_speaker): ${JSON.stringify(event.data)}`,
         );
       }
-      current = { speaker: parseSpeaker(label), words: [] };
+      current = { speakerNum: parseSpeaker(label), words: [] };
       segments.push(current);
     } else {
       if (!current) {
@@ -229,7 +211,7 @@ export function serializePsv(
   for (const segment of segments) {
     const start = segment.words[0]?.start ?? 0;
     rows.push(
-      `${formatTimestamp(start)}||meta|${JSON.stringify({ begin_speaker: formatSpeaker(segment.speaker) })}`,
+      `${formatTimestamp(start)}||meta|${JSON.stringify({ begin_speaker: formatSpeaker(segment.speakerNum) })}`,
     );
     for (const w of segment.words) {
       rows.push(

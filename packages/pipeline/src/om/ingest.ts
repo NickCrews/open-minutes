@@ -141,16 +141,8 @@ export async function ingestVideo(
     ]),
   );
 
-  const segmentsWithNormedSpeaker = segments.map((segment) => ({
-    speaker:
-      segment.speaker.type === "segmented"
-        ? segment.speaker.speakerNumber
-        : null,
-    words: segment.words,
-  }));
-
   console.error(
-    `[${youtubeId}] committing meeting with ${segmentsWithNormedSpeaker.length} segment(s)...`,
+    `[${youtubeId}] committing meeting with ${segments.length} segment(s)...`,
   );
   const meetingId = await db.transaction(async (tx) => {
     const [meeting] = await tx
@@ -171,7 +163,7 @@ export async function ingestVideo(
     await identifyAndInsertSegments(
       tx,
       meeting!.id,
-      segmentsWithNormedSpeaker,
+      segments,
       speakerEmbeddings,
     );
     return meeting!.id;
@@ -181,7 +173,7 @@ export async function ingestVideo(
     youtubeId,
     status: "ingested",
     meetingId,
-    segmentCount: segmentsWithNormedSpeaker.length,
+    segmentCount: segments.length,
   };
 }
 

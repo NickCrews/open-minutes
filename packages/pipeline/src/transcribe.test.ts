@@ -185,7 +185,7 @@ describe("transcribe", () => {
         );
         const transcribedWords = speechSegments.flatMap((s) => s.words);
         const transcribedSegments = [
-          { words: transcribedWords, speaker: { type: "unlabeled" as const } },
+          { words: transcribedWords, speakerNum: null },
         ];
         // Debug artifact: interleave VAD run markers so a diff shows where the audio
         // was chunked (each run's span + duration) and fed to the recognizer.

@@ -29,33 +29,13 @@ export interface SpeechSegment {
   words: TranscriptWord[];
 }
 
-export interface UnlabeledSpeaker {
-  type: "unlabeled";
-}
-/** eg "speaker 3", we can recognize them across segments but don't know their real identity */
-export interface SegmentedSpeaker {
-  type: "segmented";
-  speakerNumber: number;
-}
-/** A speaker with a known global identity (e.g. "Cathy Giessel, AK Senator"). */
-export interface IdentifiedSpeaker {
-  type: "identified";
-  /**
-   * Human-readable string identity (eg "cathy-giessel" in golden transcripts).
-   * Deliberately NOT the serial `people.id` from the DB — mapping to DB rows
-   * happens at the identify boundary, not in this type.
-   */
-  personId: string;
-}
-export type Speaker = UnlabeledSpeaker | SegmentedSpeaker | IdentifiedSpeaker;
-
 export interface TranscriptSegment {
-  speaker: Speaker;
+  speakerNum: number | null;
   words: TranscriptWord[];
 }
 
 export interface DiarizationTurn {
   start: number;
   end: number;
-  speaker: number;
+  speakerNum: number;
 }

@@ -45,7 +45,7 @@ describe("diarize", () => {
       // A board meeting has multiple speakers, in order, within the recording.
       const duration = wave.samples.length / wave.sampleRate;
       expect(turns.length).toBeGreaterThan(0);
-      expect(new Set(turns.map((t) => t.speaker)).size).toBeGreaterThan(1);
+      expect(new Set(turns.map((t) => t.speakerNum)).size).toBeGreaterThan(1);
       for (let i = 0; i < turns.length; i++) {
         const t = turns[i]!;
         expect(t.end).toBeGreaterThanOrEqual(t.start);
@@ -66,7 +66,7 @@ describe("diarize", () => {
 
       // The golden re-parses cleanly and carries speaker labels.
       const reparsed = parsePsv(serializePsv(aligned));
-      expect(reparsed.every((s) => s.speaker.type === "segmented")).toBe(true);
+      expect(reparsed.every((s) => s.speakerNum !== null)).toBe(true);
     });
   }
 });
