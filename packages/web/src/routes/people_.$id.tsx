@@ -166,6 +166,25 @@ const segmentStart = (segment: PersonSegment) =>
 const segmentEnd = (segment: PersonSegment) =>
   segment.end_secs != null ? intervalToSecs(segment.end_secs) : null;
 
+/** Chevron marking a collapsible section: points down when collapsed, flips up when open. */
+function ExpandChevron(props: { expanded: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+      class="text-muted-foreground size-4 shrink-0 transition-transform"
+      classList={{ "-scale-y-100": props.expanded }}
+    >
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  );
+}
+
 /** One meeting the person spoke in, expandable to reveal all their segments. */
 function MeetingCard(props: {
   group: MeetingGroup;
@@ -184,15 +203,7 @@ function MeetingCard(props: {
       >
         <CardHeader class="py-4">
           <CardTitle class="flex items-center gap-2">
-            <svg
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              aria-hidden="true"
-              class="text-muted-foreground size-4 shrink-0 transition-transform"
-              classList={{ "rotate-90": expanded() }}
-            >
-              <path d="M8 5v14l11-7z" />
-            </svg>
+            <ExpandChevron expanded={expanded()} />
             {props.group.meeting.title || "(untitled)"}
           </CardTitle>
           <CardDescription class="pl-6">
