@@ -30,8 +30,8 @@ export async function identifyAndInsertSegments(
   }
 
   for (const seg of segments) {
-    const start = seg.words[0]!.start;
-    const end = seg.words.at(-1)!.end;
+    // text/start_secs/end_secs/duration_secs are generated columns derived from
+    // `words` — see segmentsTable.
     await db.insert(segmentsTable).values({
       meeting_id: meetingId,
       person_id:
@@ -39,8 +39,6 @@ export async function identifyAndInsertSegments(
           ? null
           : (speakerToPersonId.get(seg.speaker) ?? null),
       speaker_number: seg.speaker,
-      start_secs: sql`make_interval(secs => ${start})`,
-      end_secs: sql`make_interval(secs => ${end})`,
       words: seg.words,
     });
   }

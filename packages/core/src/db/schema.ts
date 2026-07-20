@@ -9,6 +9,7 @@ import {
   varchar,
   vector,
   index,
+  check,
 } from "drizzle-orm/pg-core";
 import { N_DIMENSIONS as VOICE_N_DIMENSIONS } from "../voice_embeddings";
 import { TranscriptWord } from "../transcription";
@@ -116,30 +117,47 @@ export const peopleTable = pgTable(
   ],
 );
 
-export const segmentsTable = pgTable("segments", {
-  id: serial().primaryKey(),
-  meeting_id: integer()
-    .notNull()
-    .references(() => meetingsTable.id),
-  person_id: integer().references(() => peopleTable.id),
-  // Local diarization label within this meeting (eg "speaker 3"). Preserves the
-  // unlabeled/segmented distinction when person_id is null: both null = no
-  // speaker info at all; speaker_number set = diarized but not yet identified.
-  speaker_number: integer(),
-  // Derived from `words` by the words_to_text() SQL function (created by hand in
-  // the migration that introduced this column — drizzle-kit doesn't manage
-  // functions), so it can never drift from the word-level data.
-  text: varchar().generatedAlwaysAs(
-    (): SQL => sql`words_to_text(${segmentsTable.words})`,
-  ),
-  start_secs: secondsInterval(),
-  end_secs: secondsInterval(),
-  duration_secs: secondsInterval().generatedAlwaysAs(
-    (): SQL => sql`${segmentsTable.end_secs} - ${segmentsTable.start_secs}`,
-  ),
-  words: jsonb().$type<TranscriptWord[]>().notNull(),
-  created_at: timestamp().notNull().defaultNow(),
-});
+export const segmentsTable = pgTable(
+  "segments",
+  {
+    id: serial().primaryKey(),
+    meeting_id: integer()
+      .notNull()
+      .references(() => meetingsTable.id),
+    person_id: integer().references(() => peopleTable.id),
+    // Local diarization label within this meeting (eg "speaker 3"). Preserves the
+    // unlabeled/segmented distinction when person_id is null: both null = no
+    // speaker info at all; speaker_number set = diarized but not yet identified.
+    speaker_number: integer(),
+    // Everything below through duration_secs is derived from `words` by SQL
+    // functions (created by hand in the migrations that introduced them —
+    // drizzle-kit doesn't manage functions), so it can never drift from the
+    // word-level data. Note duration_secs re-derives from `words` rather than
+    // subtracting the two columns above: Postgres forbids a generated column
+    // referencing another generated column.
+    text: varchar().generatedAlwaysAs(
+      (): SQL => sql`words_to_text(${segmentsTable.words})`,
+    ),
+    start_secs: secondsInterval().generatedAlwaysAs(
+      (): SQL => sql`words_start_secs(${segmentsTable.words})`,
+    ),
+    end_secs: secondsInterval().generatedAlwaysAs(
+      (): SQL => sql`words_end_secs(${segmentsTable.words})`,
+    ),
+    duration_secs: secondsInterval().generatedAlwaysAs(
+      (): SQL =>
+        sql`words_end_secs(${segmentsTable.words}) - words_start_secs(${segmentsTable.words})`,
+    ),
+    words: jsonb().$type<TranscriptWord[]>().notNull(),
+    created_at: timestamp().notNull().defaultNow(),
+  },
+  (table) => [
+    // A wordless segment has no text and no position on the timeline — it would
+    // sort last under `ORDER BY start_secs` and render as an empty bubble. It's
+    // never something the pipeline legitimately produces.
+    check("segments_words_nonempty", sql`jsonb_array_length(${table.words}) > 0`),
+  ],
+);
 
 export const relations = defineRelations(
   {
