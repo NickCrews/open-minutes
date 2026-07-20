@@ -4,17 +4,17 @@ import type {
   TranscriptWord,
 } from "@open-minutes/core/transcription";
 
-// Attach speakers to a transcript by time overlap — the offline-only port of
-// OpenWhispr's mergeWithTranscript. There's no mic/system split here (single
-// YouTube track), so every word is matched the same way: pick the diarization
-// turn it overlaps most, falling back to the nearest turn by midpoint distance.
-//
-// transcribe.ts emits one ~2-minute segment per chunk, so we align at the word
-// level and then regroup consecutive same-speaker words into speaker turns.
-
 /**
- * Re-segment a flat word stream into speaker-labeled segments using diarization
- * turns. With no turns, returns the words as a single unlabeled segment.
+ * Combine a diarization output and a transcript into speaker-labeled segments.
+ * 
+ * The diarization is a sequence of "person 4 spoke from 1:23 to 1:27",
+ * and the transcript is a sequence of "the words 'foo bar' were spoken from 1:24 to 1:25".
+ * This function produces a sequence of "person 4 said 'foo bar' from 1:24 to 1:25".
+ * 
+ * It does this by assigning each word to the diarization turn it overlaps most, and then
+ * grouping consecutive words with the same speaker into segments. It also absorbs
+ * spurious one-or-two-word speaker changes inside a single utterance, which can
+ * happen due to clustering wobble in the diarization output.
  */
 export function alignSpeakers(
   words: readonly TranscriptWord[],
@@ -42,6 +42,28 @@ export function alignSpeakers(
     current.words.push(word);
   }
   return absorbSlivers(segments);
+}
+
+/**
+ * Derive diarization turns from already-labeled segments — used to re-apply an
+ * existing golden's speaker boundaries onto a freshly re-transcribed word stream
+ * (so a transcription snapshot refresh preserves the diarization layer).
+ * Only `segmented` segments contribute; unlabeled/identified are skipped.
+ */
+export function segmentsToTurns(
+  segments: readonly TranscriptSegment[],
+): DiarizationTurn[] {
+  const turns: DiarizationTurn[] = [];
+  for (const segment of segments) {
+    if (segment.speaker.type !== "segmented") continue;
+    if (segment.words.length === 0) continue;
+    turns.push({
+      start: segment.words[0]!.start,
+      end: segment.words.at(-1)!.end,
+      speaker: segment.speaker.speakerNumber,
+    });
+  }
+  return turns;
 }
 
 /** Longest sliver, in words, that a mid-sentence clustering wobble can produce. */
@@ -169,26 +191,4 @@ function assignSpeaker(
     }
   }
   return nearestSpeaker;
-}
-
-/**
- * Derive diarization turns from already-labeled segments — used to re-apply an
- * existing golden's speaker boundaries onto a freshly re-transcribed word stream
- * (so a transcription snapshot refresh preserves the diarization layer).
- * Only `segmented` segments contribute; unlabeled/identified are skipped.
- */
-export function segmentsToTurns(
-  segments: readonly TranscriptSegment[],
-): DiarizationTurn[] {
-  const turns: DiarizationTurn[] = [];
-  for (const segment of segments) {
-    if (segment.speaker.type !== "segmented") continue;
-    if (segment.words.length === 0) continue;
-    turns.push({
-      start: segment.words[0]!.start,
-      end: segment.words.at(-1)!.end,
-      speaker: segment.speaker.speakerNumber,
-    });
-  }
-  return turns;
 }
