@@ -16,7 +16,13 @@ export const Route = createRootRoute({
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Open Minutes" },
     ],
-    links: [{ rel: "stylesheet", href: appCss }],
+    links: [
+      { rel: "stylesheet", href: appCss },
+      // SVG first for crisp scaling; the PNG is the fallback for browsers
+      // that don't support SVG icons (notably Safari).
+      { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
+      { rel: "icon", type: "image/png", href: "/favicon.png" },
+    ],
   }),
   component: RootComponent,
 });

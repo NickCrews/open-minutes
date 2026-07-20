@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<svg width="64" height="64" xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg">
+ <!-- Yellow light beams emerging from inside -->
+ <!-- Foundation & Steps -->
+ <!-- Pillars -->
+ <!-- Pediment (Roof Base) -->
+ <!-- Lifted & Tilted Dome -->
+ <rect fill="#FFFFFF" height="64" width="64" x="0" y="0"/>
+ <g class="layer" display="inline">
+  <title>Layer 1</title>
+  <path d="m24.69,30.72l9.66,-30.6l29.41,0l-24.05,30.62" fill="#F6E05E" id="svg_15"/>
+  <rect fill="#1A365D" height="4" id="svg_2" rx="1" transform="matrix(1.14106 0 0 1.03613 -3.63439 0.42345)" width="56" x="3.27" y="57.34"/>
+  <rect fill="#1A365D" height="4" id="svg_3" rx="1" transform="matrix(1.14106 0 0 1.03613 -3.63439 0.42345)" width="48" x="7.27" y="53.34"/>
+  <rect fill="#1A365D" height="18" id="svg_4" rx="1" transform="matrix(1.14106 0 0 1.03613 -3.63439 0.42345)" width="6" x="11.27" y="36.66"/>
+  <rect fill="#1A365D" height="18" id="svg_5" rx="1" transform="matrix(1.14106 0 0 1.03613 -3.63439 0.42345)" width="6" x="22.27" y="36.66"/>
+  <rect fill="#1A365D" height="18" id="svg_6" rx="1" transform="matrix(1.14106 0 0 1.03613 -3.63439 0.42345)" width="6" x="34.27" y="36.66"/>
+  <rect fill="#1A365D" height="18" id="svg_7" rx="1" transform="matrix(1.14106 0 0 1.03613 -3.63439 0.42345)" width="6" x="45.27" y="36.66"/>
+  <polygon fill="#1A365D" id="svg_8" points="32.04410934448242,28.956223741173744 4.65873908996582,39.317450776696205 59.42949295043945,39.317450776696205" stroke="#1A365D" stroke-linejoin="round" stroke-width="2"/>
+  <g id="svg_9" transform="translate(0 0.138313) translate(0 0.138313) matrix(1.14106 0 0 1.03613 -3.63439 0.42345) matrix(0.286647 -0.958036 0.958036 0.286647 -2.15724 46.0064)">
+   <path d="m18,21a14,14 0 0 1 28,0l-28,0z" fill="#1A365D" id="svg_10"/>
+   <!-- Dome Cupola -->
+   <rect fill="#1A365D" height="3" id="svg_11" width="4" x="30.15" y="4.29"/>
+  </g>
+ </g>
+</svg>
