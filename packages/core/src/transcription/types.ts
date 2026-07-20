@@ -22,7 +22,7 @@ export interface SpeechSegment {
   start: number;
   /**
    * Seconds from the start of the audio to where this speech run ends
-   * (start + segmentSampleCount / sampleRate). Surrounding silence is excluded.
+   * (start + (samples.length / sampleRate)). Surrounding silence is excluded.
    */
   end: number;
   /** Words recognized in this run. Timestamps are absolute (offset by `start`). */
