@@ -60,7 +60,10 @@ const EXPECTED_SAMPLE_RATE = 16000;
 // every pass well under the ~400s cap. VAD_MAX_SPEECH_SEC force-splits any single
 // run longer than 5 min (preferring the last silence) so no run alone exceeds it.
 const VAD_THRESHOLD = 0.5; // speech-probability threshold
-const VAD_MIN_SILENCE_SEC = 0.5; // pause length that ends a speech run (the cut points)
+// Pause length that ends a speech run (the cut points). Exported because
+// align.ts's MAX_WORD_SEC must stay below it — a derived word end that could
+// span a pause this long would reach into the next speaker's turn.
+export const VAD_MIN_SILENCE_SEC = 0.5;
 const VAD_MIN_SPEECH_SEC = 0.25; // discard speech blips shorter than this
 const VAD_MAX_SPEECH_SEC = 300; // force-split runs longer than this (stays under Parakeet's ~400s cap)
 const VAD_WINDOW_SIZE = 512; // samples per Silero window at 16 kHz
@@ -157,11 +160,7 @@ export async function transcribeAudio(
       const words = tokensToWords(
         result.tokens ?? [],
         result.timestamps ?? [],
-      ).map((w) => ({
-        ...w,
-        start: w.start + start,
-        end: w.end + start,
-      }));
+      ).map((w) => ({ ...w, start: w.start + start }));
       return splitWordsIntoRuns(win.runs, words, wave.sampleRate);
     },
   );
@@ -372,37 +371,14 @@ export function ensureModelFiles() {
   return files;
 }
 
-// How long a single token may sound. Parakeet reports one timestamp per token —
-// the token's *onset*, quantized to the encoder's ~12.5 fps frame grid — and no
-// durations, so a word's end has to be estimated from its last token's onset.
-// Measured on this model, consecutive tokens inside continuous speech land
-// 0.08-0.24s apart; 0.32s (4 frames) is a generous ceiling on that.
-//
-// The upper bound matters more than the exact value: it is deliberately below
-// VAD_MIN_SILENCE_SEC, so an estimated word can never span a pause long enough
-// for VAD to have cut at it. That is what stops a word from reaching across a
-// silence into the next speaker's diarization turn (see alignSpeakers, and the
-// regression test in align.test.ts).
-const MAX_TOKEN_SEC = 0.32;
-
 // NeMo Parakeet uses space-prefixed tokens (e.g. " Ask", "sk") where a leading
 // space marks a word boundary. Punctuation tokens (e.g. ",") have no leading
 // space and attach to the preceding word.
 //
-// A word spans [first token's onset, last *spoken* token's onset + MAX_TOKEN_SEC],
-// truncated at the next word's onset so words never overlap. Two details, both of
-// which otherwise stretch a word forward into the silence that follows it:
-//
-//   - It is the word's *own* last token that ends it. Ending a word at the next
-//     word's onset instead would stretch the last word before a pause across the
-//     entire silence.
-//   - Punctuation tokens are excluded. They attach to the preceding word's text,
-//     but the model emits them where it decides a sentence ended — which is after
-//     the pause, sometimes seconds late ("June." measured 3.8s that way). Nothing
-//     is voiced there, so punctuation contributes text but no duration.
-//
-// Both cases bite hardest on sentence-final words, which are exactly the words
-// sitting at speaker boundaries.
+// Only the word's onset (its first token's timestamp) is kept: Parakeet reports
+// no durations, so any per-word end would be an estimate. Word ends are instead
+// derived from the run structure where needed — see TranscriptWord in
+// @open-minutes/core and deriveTimedWords in align.ts.
 export function tokensToWords(
   tokens: string[],
   timestamps: number[],
@@ -410,16 +386,10 @@ export function tokensToWords(
   const words: TranscriptWord[] = [];
   let currentText = "";
   let currentStart = 0;
-  let currentVoiced = 0; // onset of the last *spoken* token folded into currentText
 
-  const flush = (nextStart?: number) => {
+  const flush = () => {
     if (!currentText) return;
-    const end = currentVoiced + MAX_TOKEN_SEC;
-    words.push({
-      text: currentText,
-      start: currentStart,
-      end: nextStart === undefined ? end : Math.min(end, nextStart),
-    });
+    words.push({ text: currentText, start: currentStart });
   };
 
   for (let i = 0; i < tokens.length; i++) {
@@ -430,23 +400,16 @@ export function tokensToWords(
       token.startsWith(" ") || token.startsWith("▁") || i === 0;
 
     if (isWordStart) {
-      flush(ts);
+      flush();
       currentText = token.replace(/^[ ▁]+/, "");
       currentStart = ts;
-      currentVoiced = ts;
     } else {
       currentText += token;
-      if (isVoiced(token)) currentVoiced = ts;
     }
   }
   flush();
 
-  return words.filter((w) => w.text.length > 0);
-}
-
-/** Does this token represent audible speech, as opposed to punctuation? */
-function isVoiced(token: string): boolean {
-  return /[\p{L}\p{N}]/u.test(token);
+  return words;
 }
 
 async function cli() {

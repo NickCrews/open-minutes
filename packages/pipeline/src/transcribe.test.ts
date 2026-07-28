@@ -35,9 +35,8 @@ function sample16kHz(): string {
 }
 
 // Parakeet reports one timestamp per token — the token's onset — and no
-// durations, so these tests pin down how a word's *end* is estimated from them.
-// Getting this wrong misattributes words at speaker boundaries; see the
-// regression test in align.test.ts for the failure it caused.
+// durations. A word keeps only its first token's onset; ends are derived from
+// the run structure later (see align.ts).
 describe("tokensToWords", () => {
   it("joins space-prefixed tokens into words and attaches punctuation", () => {
     const words = tokensToWords(
@@ -47,33 +46,19 @@ describe("tokensToWords", () => {
     expect(words.map((w) => w.text)).toEqual(["Ask", "not", "what,"]);
   });
 
-  it("ends a word from its own last token, not the next word's onset", () => {
-    // "report." is followed by 1.7s of silence. Its span must not cover it.
-    const words = tokensToWords([" report", " Thanks"], [10.0, 11.7]);
-    expect(words[0]!.start).toBe(10.0);
-    expect(words[0]!.end).toBeCloseTo(10.32);
+  it("takes a word's start from its first token", () => {
+    const words = tokensToWords([" A", "sk", " not"], [0.0, 0.24, 0.4]);
+    expect(words[0]!.start).toBe(0.0);
+    expect(words[1]!.start).toBe(0.4);
   });
 
-  it("truncates a word at the next word's onset so words never overlap", () => {
-    // Tokens 0.16s apart — closer than the max token duration.
-    const words = tokensToWords([" a", " b"], [1.0, 1.16]);
-    expect(words[0]!.end).toBeCloseTo(1.16);
-    expect(words[0]!.end).toBeLessThanOrEqual(words[1]!.start);
-  });
-
-  it("does not let a late punctuation token extend a word", () => {
+  it("does not let a late punctuation token change a word's start", () => {
     // The model emits "." where it decides the sentence ended — well after the
-    // speech stopped. Nothing is voiced there, so it must not add duration.
+    // speech stopped. It attaches to the word's text but carries no timing.
     const words = tokensToWords([" June", ".", " Next"], [5.0, 8.4, 9.0]);
     expect(words[0]!.text).toBe("June.");
-    expect(words[0]!.end).toBeCloseTo(5.32);
-  });
-
-  it("extends a word for a voiced continuation token", () => {
-    // "sk" in "Ask" is not word-initial but *is* spoken, unlike punctuation.
-    const words = tokensToWords([" A", "sk"], [0.0, 0.24]);
-    expect(words[0]!.text).toBe("Ask");
-    expect(words[0]!.end).toBeCloseTo(0.56);
+    expect(words[0]!.start).toBe(5.0);
+    expect(words[1]!.start).toBe(9.0);
   });
 
   it("returns no words for no tokens", () => {
@@ -105,22 +90,18 @@ describe("transcribe", () => {
       "country.",
     ]);
 
-    // Each segment's bounds are ordered and contain its words.
+    // Each segment's bounds are ordered and contain its words' onsets.
     for (const s of segments) {
       expect(s.end).toBeGreaterThanOrEqual(s.start);
       for (const w of s.words) {
         expect(w.start).toBeGreaterThanOrEqual(s.start);
-        expect(w.end).toBeLessThanOrEqual(s.end + 0.5); // small slack for model timing
+        expect(w.start).toBeLessThanOrEqual(s.end + 0.5); // small slack for model timing
       }
     }
 
-    // Word timings are monotonic and non-overlapping across the flattened stream.
-    for (let i = 0; i < words.length; i++) {
-      const w = words[i]!;
-      expect(w.end).toBeGreaterThanOrEqual(w.start);
-      if (i > 0) {
-        expect(w.start).toBeGreaterThanOrEqual(words[i - 1]!.start);
-      }
+    // Word onsets are monotonic across the flattened stream.
+    for (let i = 1; i < words.length; i++) {
+      expect(words[i]!.start).toBeGreaterThanOrEqual(words[i - 1]!.start);
     }
   });
 
@@ -200,7 +181,7 @@ describe("transcribe", () => {
           const turns = segmentsToTurns(meeting.segments);
           const merged =
             turns.length > 0
-              ? alignSpeakers(transcribedWords, turns)
+              ? alignSpeakers(speechSegments, turns)
               : transcribedSegments;
           serializePsv(merged, {
             path: join(meeting.meetingDir, "golden.psv"),
@@ -212,7 +193,7 @@ describe("transcribe", () => {
         const cmp = compareTranscripts(refWords, transcribedWords);
         console.log(
           `[${slug}] WER=${cmp.wer.toFixed(4)} (sub=${cmp.substitutions} del=${cmp.deletions} ins=${cmp.insertions} of ${cmp.refWordCount}); ` +
-            `p95 start=${cmp.p95StartError.toFixed(3)}s end=${cmp.p95EndError.toFixed(3)}s; ${speechSegments.length} segments`,
+            `p95 start=${cmp.p95StartError.toFixed(3)}s; ${speechSegments.length} segments`,
         );
         // First: confirm the check actually has teeth. With strict thresholds the
         // current transcribe output should never pass, so the assertion below MUST
@@ -255,11 +236,6 @@ function assertWithinThresholds(
   if (cmp.p95StartError > thresholds.maxTimestampError) {
     failures.push(
       `p95 word-start error ${cmp.p95StartError.toFixed(3)}s > ${thresholds.maxTimestampError}s (mean=${cmp.meanStartError.toFixed(3)}s, max=${cmp.maxStartError.toFixed(3)}s, n=${cmp.matchedPairs})`,
-    );
-  }
-  if (cmp.p95EndError > thresholds.maxTimestampError) {
-    failures.push(
-      `p95 word-end error ${cmp.p95EndError.toFixed(3)}s > ${thresholds.maxTimestampError}s (mean=${cmp.meanEndError.toFixed(3)}s, max=${cmp.maxEndError.toFixed(3)}s, n=${cmp.matchedPairs})`,
     );
   }
   if (failures.length > 0) {

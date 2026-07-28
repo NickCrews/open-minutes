@@ -120,8 +120,7 @@ export async function ingestVideo(
   // recognizer drops audio, and clustering wobbles mid-utterance. Combining
   // them is what produces our best account of who said what and when, so everything
   // downstream works from the aligned segments rather than either raw input.
-  const words = speechSegments.flatMap((s) => s.words);
-  const segments = alignSpeakers(words, diarization.turns).filter(
+  const segments = alignSpeakers(speechSegments, diarization.turns).filter(
     (segment) => segment.words.length > 0,
   );
 

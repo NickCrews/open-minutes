@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { alignWords, computeWER } from "./wer";
 import type { TranscriptWord } from "@open-minutes/core/transcription";
 
-function w(text: string, start = 0, end = 0): TranscriptWord {
-  return { text, start, end };
+function w(text: string, start = 0): TranscriptWord {
+  return { text, start };
 }
 
 describe("computeWER", () => {

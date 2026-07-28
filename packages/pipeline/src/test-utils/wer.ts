@@ -182,17 +182,15 @@ export interface TranscriptComparison {
   insertions: number;
   refWordCount: number;
   hypWordCount: number;
-  // Timestamp error stats over matched-only pairs (substitutions excluded —
+  // Onset error stats over matched-only pairs (substitutions excluded —
   // they may be different words and timestamps aren't meaningful to compare).
-  // Errors are absolute differences in seconds, separately for start and end.
+  // Errors are absolute differences in seconds. Only starts are compared:
+  // words carry no end timestamps.
   matchedPairs: number;
   meanStartError: number;
-  meanEndError: number;
   maxStartError: number;
-  maxEndError: number;
-  // 95th-percentile absolute errors — robust to a handful of outliers.
+  // 95th-percentile absolute error — robust to a handful of outliers.
   p95StartError: number;
-  p95EndError: number;
 }
 
 export function compareTranscripts(
@@ -211,13 +209,11 @@ export function compareTranscripts(
       : (substitutions + deletions + insertions) / refWordCount;
 
   const startErrs: number[] = [];
-  const endErrs: number[] = [];
   for (const op of ops) {
     if (op.op !== "match") continue;
     const r = ref[op.refIdx]!;
     const h = hyp[op.hypIdx]!;
     startErrs.push(Math.abs(r.start - h.start));
-    endErrs.push(Math.abs(r.end - h.end));
   }
 
   return {
@@ -230,11 +226,8 @@ export function compareTranscripts(
     hypWordCount,
     matchedPairs: startErrs.length,
     meanStartError: mean(startErrs),
-    meanEndError: mean(endErrs),
     maxStartError: max(startErrs),
-    maxEndError: max(endErrs),
     p95StartError: percentile(startErrs, 0.95),
-    p95EndError: percentile(endErrs, 0.95),
   };
 }
 

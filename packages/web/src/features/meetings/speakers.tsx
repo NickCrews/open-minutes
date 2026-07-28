@@ -1,4 +1,5 @@
 import { createMemo, For, Show } from "solid-js";
+import { LAST_WORD_DURATION_SEC } from "@open-minutes/core/transcription";
 import { PersonHoverCard } from "~/features/people/person-hover-card";
 import { formatSecsDuration, intervalToSecs } from "~/lib/format";
 import {
@@ -19,7 +20,10 @@ function segmentSecs(segment: Segment): number {
   if (fromInterval != null) return fromInterval;
   const words = segment.words;
   if (words.length === 0) return 0;
-  return Math.max(0, words[words.length - 1]!.end - words[0]!.start);
+  return Math.max(
+    0,
+    words[words.length - 1]!.start + LAST_WORD_DURATION_SEC - words[0]!.start,
+  );
 }
 
 /**

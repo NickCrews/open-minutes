@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import sherpa_onnx from "sherpa-onnx-node";
 
 import { computeSpeakerEmbeddings, diarizeAudio } from "./diarize";
-import { alignSpeakers } from "./align";
+import { alignSpeakers, segmentsToSpeechRuns } from "./align";
 import { parsePsv, serializePsv } from "./test-utils/psv";
 import { getMeetingData } from "./test-utils/test-data";
 import { N_DIMENSIONS } from "@open-minutes/core/voice_embeddings";
@@ -33,8 +33,13 @@ describe("diarize", () => {
       const turns = diarizeAudio(wave);
 
       // Keep the transcription slice from the existing golden; relabel speakers.
+      // The golden has no VAD run structure, so each of its segments stands in
+      // as a pseudo speech run.
       const words = meeting.segments.flatMap((s) => s.words);
-      const aligned = alignSpeakers(words, turns);
+      const aligned = alignSpeakers(
+        segmentsToSpeechRuns(meeting.segments),
+        turns,
+      );
       serializePsv(aligned, { path: join(runDir, "diarized.gen.psv") });
 
       if (process.env.SNAPSHOT_UPDATE === "1") {

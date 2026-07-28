@@ -30,49 +30,45 @@ describe("psv parse/serialize", () => {
   it("groups text events under the preceding begin_speaker into segments", () => {
     const content = [
       "# a comment",
-      "start_sec|end_sec|event_type|event_data",
-      '0:00:00.00||meta|{"begin_speaker": "segmented:spk-2"}',
-      "0:00:00.08|0:00:00.64|text|Uh",
+      "start_sec|event_type|event_data",
+      '0:00:00.00|meta|{"begin_speaker": "segmented:spk-2"}',
+      "0:00:00.08|text|Uh",
       "",
-      "0:00:00.64|0:00:01.04|text|certainly",
-      '2:45:21.28||meta|{"begin_speaker": "segmented:spk-4"}',
-      "2:45:21.28|2:45:22.24|text|What",
-      '2:45:25.60||meta|{"begin_speaker": "unlabeled"}',
-      "2:45:25.60|2:45:25.68|text|Nice!",
+      "0:00:00.64|text|certainly",
+      '2:45:21.28|meta|{"begin_speaker": "segmented:spk-4"}',
+      "2:45:21.28|text|What",
+      '2:45:25.60|meta|{"begin_speaker": "unlabeled"}',
+      "2:45:25.60|text|Nice!",
     ].join("\n");
     expect(parsePsv(content)).toEqual<TranscriptSegment[]>([
       {
         speakerNum: 2,
         words: [
-          { text: "Uh", start: 0.08, end: 0.64 },
-          { text: "certainly", start: 0.64, end: 1.04 },
+          { text: "Uh", start: 0.08 },
+          { text: "certainly", start: 0.64 },
         ],
       },
       {
         speakerNum: 4,
-        words: [{ text: "What", start: 9921.28, end: 9922.24 }],
+        words: [{ text: "What", start: 9921.28 }],
       },
       {
         speakerNum: null,
-        words: [{ text: "Nice!", start: 9925.6, end: 9925.68 }],
+        words: [{ text: "Nice!", start: 9925.6 }],
       },
     ]);
   });
 
   it("preserves '|' inside a word", () => {
     const content = [
-      '0:00:00.00||meta|{"begin_speaker": "unlabeled"}',
-      "0:00:01.00|0:00:02.00|text|a|b",
+      '0:00:00.00|meta|{"begin_speaker": "unlabeled"}',
+      "0:00:01.00|text|a|b",
     ].join("\n");
-    expect(parsePsv(content)[0]!.words).toEqual([
-      { text: "a|b", start: 1, end: 2 },
-    ]);
+    expect(parsePsv(content)[0]!.words).toEqual([{ text: "a|b", start: 1 }]);
   });
 
   it("rejects text before any begin_speaker", () => {
-    expect(() => parsePsv("0:00:01.00|0:00:02.00|text|orphan")).toThrow(
-      /begin_speaker/,
-    );
+    expect(() => parsePsv("0:00:01.00|text|orphan")).toThrow(/begin_speaker/);
   });
 
   it("emits vad span markers interleaved with each run's words", () => {
@@ -80,23 +76,23 @@ describe("psv parse/serialize", () => {
       {
         start: 0.08,
         end: 1.0,
-        words: [{ text: "Hello", start: 0.08, end: 1.0 }],
+        words: [{ text: "Hello", start: 0.08 }],
       },
       {
         start: 1.1,
         end: 301.1,
-        words: [{ text: "there", start: 1.1, end: 1.5 }],
+        words: [{ text: "there", start: 1.1 }],
       },
     ];
     const content = serializeVadRunsPsv(runs);
     const lines = content.trim().split("\n");
     expect(lines).toEqual([
-      "start_sec|end_sec|event_type|event_data",
-      '0:00:00.08||meta|{"begin_speaker":"unlabeled"}',
-      '0:00:00.08|0:00:01.00|vad|{"index":0,"dur":0.92}',
-      "0:00:00.08|0:00:01.00|text|Hello",
-      '0:00:01.10|0:05:01.10|vad|{"index":1,"dur":300}',
-      "0:00:01.10|0:00:01.50|text|there",
+      "start_sec|event_type|event_data",
+      '0:00:00.08|meta|{"begin_speaker":"unlabeled"}',
+      '0:00:00.08|vad|{"index":0,"dur":0.92}',
+      "0:00:00.08|text|Hello",
+      '0:00:01.10|vad|{"index":1,"dur":300}',
+      "0:00:01.10|text|there",
     ]);
   });
 
@@ -105,20 +101,20 @@ describe("psv parse/serialize", () => {
       {
         start: 0.08,
         end: 1.0,
-        words: [{ text: "Hello", start: 0.08, end: 1.0 }],
+        words: [{ text: "Hello", start: 0.08 }],
       },
       {
         start: 1.1,
         end: 1.5,
-        words: [{ text: "there", start: 1.1, end: 1.5 }],
+        words: [{ text: "there", start: 1.1 }],
       },
     ];
     expect(parsePsv(serializeVadRunsPsv(runs))).toEqual<TranscriptSegment[]>([
       {
         speakerNum: null,
         words: [
-          { text: "Hello", start: 0.08, end: 1.0 },
-          { text: "there", start: 1.1, end: 1.5 },
+          { text: "Hello", start: 0.08 },
+          { text: "there", start: 1.1 },
         ],
       },
     ]);
@@ -129,13 +125,13 @@ describe("psv parse/serialize", () => {
       {
         speakerNum: null,
         words: [
-          { text: "Uh", start: 0.08, end: 0.64 },
-          { text: "$10", start: 0.64, end: 1.28 },
+          { text: "Uh", start: 0.08 },
+          { text: "$10", start: 0.64 },
         ],
       },
       {
         speakerNum: 2,
-        words: [{ text: "Thanks!", start: 1.28, end: 1.6 }],
+        words: [{ text: "Thanks!", start: 1.28 }],
       },
     ];
     expect(parsePsv(serializePsv(segments))).toEqual(segments);

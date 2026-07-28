@@ -14,8 +14,8 @@ function mulberry32(seed: number): () => number {
   };
 }
 
-function w(text: string, start = 0, end = 0): TranscriptWord {
-  return { text, start, end };
+function w(text: string, start = 0): TranscriptWord {
+  return { text, start };
 }
 
 // Build a sequence of `n` already-normalized words from a small vocabulary so
@@ -50,7 +50,7 @@ function makeWords(n: number, rng: () => number): TranscriptWord[] {
   const words: TranscriptWord[] = new Array(n);
   for (let i = 0; i < n; i++) {
     const text = vocab[Math.floor(rng() * vocab.length)]!;
-    words[i] = w(text, i, i + 1);
+    words[i] = w(text, i);
   }
   return words;
 }
@@ -155,12 +155,12 @@ describe("alignWords on full-meeting-sized transcripts", () => {
     // Build hyp = ref with a substitution at every 100th position. Sparse,
     // non-adjacent single-word swaps, so the optimal alignment is exactly those
     // substitutions and the rest matches (no cheaper del+ins path exists).
-    const hyp = ref.map((x) => w(x.text, x.start, x.end));
+    const hyp = ref.map((x) => w(x.text, x.start));
     let expectedSubs = 0;
     for (let i = 0; i < N; i += 100) {
       const cur = hyp[i]!;
       // Pick a different token deterministically.
-      hyp[i] = w(cur.text === "the" ? "zzz" : "the", cur.start, cur.end);
+      hyp[i] = w(cur.text === "the" ? "zzz" : "the", cur.start);
       if (hyp[i]!.text !== ref[i]!.text) expectedSubs++;
     }
 

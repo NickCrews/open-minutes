@@ -5,18 +5,20 @@
 // A TranscriptSegment is serialized as a `meta` begin_speaker line followed by
 // one `text` line per word; parsing inverts that grouping.
 //
-// Grammar (see test-fixtures/*/golden.psv for a worked example):
+// Grammar (see test-data/meetings/*/golden.psv for a worked example):
 //   - Lines starting with `#` are comments; blank lines are ignored.
-//   - The column header `start_sec|end_sec|event_type|event_data` is optional.
-//   - Each remaining line is `start_sec|end_sec|event_type|event_data`.
-//       * event_type "text": a transcribed word. start/end are timestamps and
-//         event_data is the raw word text.
-//       * event_type "meta": a marker with an empty end. event_data is JSON.
+//   - The column header `start_sec|event_type|event_data` is optional.
+//   - Each remaining line is `start_sec|event_type|event_data`.
+//       * event_type "text": a transcribed word. start_sec is the word's onset
+//         and event_data is the raw word text. Words carry no end timestamps —
+//         see TranscriptWord in @open-minutes/core.
+//       * event_type "meta": a marker. event_data is JSON.
 //         {"begin_speaker": "<label>"} opens a new segment for that speaker.
-//       * event_type "vad": a debug marker (written only to *.gen.psv) spanning a
-//         VAD speech run — the chunk of audio fed to the recognizer. start/end are
-//         the run's bounds and event_data is JSON ({"index","dur"}). Purely
-//         informational: parsePsv skips these, so they never affect parsed output.
+//       * event_type "vad": a debug marker (written only to *.gen.psv) at the
+//         start of a VAD speech run — the chunk of audio fed to the recognizer.
+//         event_data is JSON ({"index","dur"}, dur being the run's length in
+//         seconds). Purely informational: parsePsv skips these, so they never
+//         affect parsed output.
 //   - Speaker labels: "unlabeled", "segmented:spk-<n>", "identified:<personId>".
 //   - Timestamps are `H:MM:SS.ss` (hours:minutes:seconds.hundredths).
 //   - event_data is the final field, so it may itself contain `|`.
@@ -30,11 +32,11 @@ import type {
 
 // Internal line-level representation. Not part of the public API.
 type PsvEvent =
-  | { type: "text"; start: number; end: number; text: string }
+  | { type: "text"; start: number; text: string }
   | { type: "meta"; start: number; data: Record<string, unknown> }
-  | { type: "vad"; start: number; end: number; data: Record<string, unknown> };
+  | { type: "vad"; start: number; data: Record<string, unknown> };
 
-const COLUMN_HEADER = "start_sec|end_sec|event_type|event_data";
+const COLUMN_HEADER = "start_sec|event_type|event_data";
 
 /** Format seconds as `H:MM:SS.ss` (rounded to the nearest hundredth). */
 export function formatTimestamp(sec: number): string {
@@ -96,19 +98,17 @@ function parseEvents(content: string): PsvEvent[] {
     const line = raw.trim();
     if (line.length === 0 || line.startsWith("#")) continue;
 
-    // Split into at most 4 fields; event_data keeps any embedded `|`.
+    // Split into at most 3 fields; event_data keeps any embedded `|`.
     const sep1 = line.indexOf("|");
     const sep2 = line.indexOf("|", sep1 + 1);
-    const sep3 = line.indexOf("|", sep2 + 1);
-    if (sep1 < 0 || sep2 < 0 || sep3 < 0) {
+    if (sep1 < 0 || sep2 < 0) {
       throw new Error(
-        `Malformed PSV line ${i + 1} (expected 4 fields): ${JSON.stringify(raw)}`,
+        `Malformed PSV line ${i + 1} (expected 3 fields): ${JSON.stringify(raw)}`,
       );
     }
     const startField = line.slice(0, sep1);
-    const endField = line.slice(sep1 + 1, sep2);
-    const eventType = line.slice(sep2 + 1, sep3);
-    const eventData = line.slice(sep3 + 1);
+    const eventType = line.slice(sep1 + 1, sep2);
+    const eventData = line.slice(sep2 + 1);
 
     if (startField === "start_sec") continue; // optional column header
 
@@ -116,7 +116,6 @@ function parseEvents(content: string): PsvEvent[] {
       events.push({
         type: "text",
         start: parseTimestamp(startField),
-        end: parseTimestamp(endField),
         text: eventData,
       });
     } else if (eventType === "meta") {
@@ -143,7 +142,6 @@ function parseEvents(content: string): PsvEvent[] {
       events.push({
         type: "vad",
         start: parseTimestamp(startField),
-        end: parseTimestamp(endField),
         data,
       });
     } else {
@@ -190,7 +188,6 @@ export function parsePsv(
       current.words.push({
         text: event.text,
         start: event.start,
-        end: event.end,
       });
     }
   }
@@ -211,12 +208,10 @@ export function serializePsv(
   for (const segment of segments) {
     const start = segment.words[0]?.start ?? 0;
     rows.push(
-      `${formatTimestamp(start)}||meta|${JSON.stringify({ begin_speaker: formatSpeaker(segment.speakerNum) })}`,
+      `${formatTimestamp(start)}|meta|${JSON.stringify({ begin_speaker: formatSpeaker(segment.speakerNum) })}`,
     );
     for (const w of segment.words) {
-      rows.push(
-        `${formatTimestamp(w.start)}|${formatTimestamp(w.end)}|text|${w.text}`,
-      );
+      rows.push(`${formatTimestamp(w.start)}|text|${w.text}`);
     }
   }
   const content = [COLUMN_HEADER, ...rows].join("\n") + "\n";
@@ -229,10 +224,10 @@ export function serializePsv(
 /**
  * Serialize VAD speech runs for the debug `transcribed.gen.psv` artifact: one
  * unlabeled speaker segment whose words are interleaved with `vad` marker lines
- * showing where each run was cut and fed to the recognizer. Each marker spans the
- * run (start/end) and carries its `index` and `dur` in seconds — so a diff makes a
- * changed chunk boundary visible. Round-trips through parsePsv, which skips the
- * markers and recovers the flat word list.
+ * showing where each run was cut and fed to the recognizer. Each marker sits at
+ * the run's start and carries its `index` and `dur` in seconds — so a diff makes
+ * a changed chunk boundary visible. Round-trips through parsePsv, which skips
+ * the markers and recovers the flat word list.
  */
 export function serializeVadRunsPsv(
   runs: readonly SpeechSegment[],
@@ -240,20 +235,16 @@ export function serializeVadRunsPsv(
 ): string {
   const rows: string[] = [];
   rows.push(
-    `${formatTimestamp(runs[0]?.start ?? 0)}||meta|${JSON.stringify({ begin_speaker: "unlabeled" })}`,
+    `${formatTimestamp(runs[0]?.start ?? 0)}|meta|${JSON.stringify({ begin_speaker: "unlabeled" })}`,
   );
   runs.forEach((run, i) => {
     const data = {
       index: i,
       dur: Math.round((run.end - run.start) * 100) / 100,
     };
-    rows.push(
-      `${formatTimestamp(run.start)}|${formatTimestamp(run.end)}|vad|${JSON.stringify(data)}`,
-    );
+    rows.push(`${formatTimestamp(run.start)}|vad|${JSON.stringify(data)}`);
     for (const w of run.words) {
-      rows.push(
-        `${formatTimestamp(w.start)}|${formatTimestamp(w.end)}|text|${w.text}`,
-      );
+      rows.push(`${formatTimestamp(w.start)}|text|${w.text}`);
     }
   });
   const content = [COLUMN_HEADER, ...rows].join("\n") + "\n";

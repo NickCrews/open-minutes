@@ -32,11 +32,11 @@ const TRANSCRIPTION: SpeechSegment[] = [
     start: 0.4,
     end: 1.5,
     words: [
-      { text: "Hello", start: 0.5, end: 0.9 },
-      { text: "everyone", start: 1.0, end: 1.4 },
+      { text: "Hello", start: 0.5 },
+      { text: "everyone", start: 1.0 },
     ],
   },
-  { start: 4.9, end: 5.5, words: [{ text: "Thanks", start: 5.0, end: 5.4 }] },
+  { start: 4.9, end: 5.5, words: [{ text: "Thanks", start: 5.0 }] },
 ];
 
 // Orthogonal voiceprints (cosine similarity 0), so the two speakers must

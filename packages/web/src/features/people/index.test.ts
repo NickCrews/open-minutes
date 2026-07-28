@@ -62,7 +62,7 @@ async function insertMeeting(
     await db.insert(segmentsTable).values({
       meeting_id: meeting!.id,
       person_id: personId,
-      words: [{ text: "hi", start: i, end: i + 1 }],
+      words: [{ text: "hi", start: i }],
     });
   }
 }

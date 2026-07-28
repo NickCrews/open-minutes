@@ -37,8 +37,8 @@ describe("segments.text generated column", () => {
       .values({
         meeting_id: meetingId,
         words: [
-          { text: "hello", start: 0, end: 0.5 },
-          { text: "world", start: 0.5, end: 1 },
+          { text: "hello", start: 0 },
+          { text: "world", start: 0.5 },
         ],
       })
       .returning({ text: segmentsTable.text });
@@ -51,12 +51,12 @@ describe("segments.text generated column", () => {
       .insert(segmentsTable)
       .values({
         meeting_id: meetingId,
-        words: [{ text: "helo", start: 0, end: 0.5 }],
+        words: [{ text: "helo", start: 0 }],
       })
       .returning({ id: segmentsTable.id });
     const [updated] = await db
       .update(segmentsTable)
-      .set({ words: [{ text: "hello", start: 0, end: 0.5 }] })
+      .set({ words: [{ text: "hello", start: 0 }] })
       .where(eq(segmentsTable.id, seg!.id))
       .returning({ text: segmentsTable.text });
     expect(updated!.text).toBe("hello");
@@ -68,7 +68,6 @@ describe("segments.text generated column", () => {
     const words = Array.from({ length: 200 }, (_, i) => ({
       text: `w${i}`,
       start: i,
-      end: i + 1,
     }));
     const [seg] = await db
       .insert(segmentsTable)
@@ -79,7 +78,7 @@ describe("segments.text generated column", () => {
 });
 
 describe("segments timing generated columns", () => {
-  test("spans the first word's onset to the last word's offset", async ({
+  test("spans the first word's onset to just past the last word's onset", async ({
     db,
   }) => {
     const meetingId = await insertMeeting(db);
@@ -88,9 +87,9 @@ describe("segments timing generated columns", () => {
       .values({
         meeting_id: meetingId,
         words: [
-          { text: "hello", start: 2, end: 2.5 },
-          { text: "there", start: 2.5, end: 3 },
-          { text: "world", start: 3.25, end: 4.5 },
+          { text: "hello", start: 2 },
+          { text: "there", start: 2.5 },
+          { text: "world", start: 3.25 },
         ],
       })
       .returning({
@@ -99,8 +98,10 @@ describe("segments timing generated columns", () => {
         duration: segmentsTable.duration_secs,
       });
     expect(seg!.start).toBe("00:00:02");
-    expect(seg!.end).toBe("00:00:04.5");
-    expect(seg!.duration).toBe("00:00:02.5");
+    // Words store no end, so the segment's end is the last word's onset plus
+    // LAST_WORD_DURATION_SEC (0.5, mirrored in the words_end_secs function).
+    expect(seg!.end).toBe("00:00:03.75");
+    expect(seg!.duration).toBe("00:00:01.75");
   });
 
   test("follows words on update, so they can never drift", async ({ db }) => {
@@ -109,12 +110,12 @@ describe("segments timing generated columns", () => {
       .insert(segmentsTable)
       .values({
         meeting_id: meetingId,
-        words: [{ text: "hello", start: 0, end: 0.5 }],
+        words: [{ text: "hello", start: 0 }],
       })
       .returning({ id: segmentsTable.id });
     const [updated] = await db
       .update(segmentsTable)
-      .set({ words: [{ text: "hello", start: 10, end: 10.5 }] })
+      .set({ words: [{ text: "hello", start: 10 }] })
       .where(eq(segmentsTable.id, seg!.id))
       .returning({ start: segmentsTable.start_secs });
     expect(updated!.start).toBe("00:00:10");
