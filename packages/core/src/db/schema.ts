@@ -102,6 +102,12 @@ export const peopleTable = pgTable(
   "people",
   {
     id: serial().primaryKey(),
+    // Stable, globally-unique handle for a KNOWN person (eg "margaret-tyler"), the same
+    // across every meeting. Null for people auto-created during ingestion, who are
+    // a distinct voice we cannot yet put a name to. Seeded/known people carry a
+    // slug so cross-meeting identity is a fact (the "margaret-tyler" recognized in one
+    // meeting is the same row as in another), not a coincidence of matching.
+    slug: varchar().unique(),
     // Null until a human identifies this voice. Nullable rather than "" so the
     // "not yet identified" branch is a type-level obligation everywhere a name
     // renders — the UI substitutes a per-meeting placeholder there.

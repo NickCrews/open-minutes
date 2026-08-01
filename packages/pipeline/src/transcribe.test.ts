@@ -12,9 +12,12 @@ import {
   type TranscribeWindowEndEvent,
 } from "./transcribe";
 import { compareTranscripts } from "./test-utils/wer";
-import { serializePsv, serializeVadRunsPsv } from "./test-utils/psv";
+import {
+  reapplySpeakerLayer,
+  serializePsv,
+  serializeVadRunsPsv,
+} from "./test-utils/psv";
 import { getMeetingData } from "./test-utils/test-data";
-import { alignSpeakers, segmentsToTurns } from "./align";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const RUNS_DIR = join(HERE, "..", "test-runs");
@@ -165,9 +168,6 @@ describe("transcribe", () => {
           await meeting.getAudio().then((a) => a.path),
         );
         const transcribedWords = speechSegments.flatMap((s) => s.words);
-        const transcribedSegments = [
-          { words: transcribedWords, speakerNum: null },
-        ];
         // Debug artifact: interleave VAD run markers so a diff shows where the audio
         // was chunked (each run's span + duration) and fed to the recognizer.
         serializeVadRunsPsv(speechSegments, {
@@ -175,14 +175,11 @@ describe("transcribe", () => {
         });
         if (process.env.SNAPSHOT_UPDATE === "1") {
           // golden.psv is shared with diarize.test.ts. This test owns only the
-          // transcription, so preserve the existing speaker boundaries (the
-          // diarization layer) instead of overwriting them with `unlabeled`:
-          // re-apply the golden's turns to the freshly transcribed words.
-          const turns = segmentsToTurns(meeting.segments);
-          const merged =
-            turns.length > 0
-              ? alignSpeakers(speechSegments, turns)
-              : transcribedSegments;
+          // transcription, so preserve the existing speaker layer (the diarization
+          // clusters AND any hand-assigned identified people) instead of
+          // overwriting it: redistribute the freshly transcribed words back into
+          // the golden's existing speaker segments by time.
+          const merged = reapplySpeakerLayer(transcribedWords, meeting.segments);
           serializePsv(merged, {
             path: join(meeting.meetingDir, "golden.psv"),
           });

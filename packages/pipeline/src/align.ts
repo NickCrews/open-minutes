@@ -141,7 +141,7 @@ export function segmentsToTurns(
  * more eager here than in the live pipeline.
  */
 export function segmentsToSpeechRuns(
-  segments: readonly TranscriptSegment[],
+  segments: readonly { words: readonly TranscriptWord[] }[],
 ): SpeechSegment[] {
   return segments
     .filter((s) => s.words.length > 0)

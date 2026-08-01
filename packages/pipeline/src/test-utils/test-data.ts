@@ -1,8 +1,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { type CachedAudio, getCachedAudio } from "./audio-cache";
-import { TranscriptSegment } from "@open-minutes/core/transcription";
-import { parsePsv } from "./psv";
+import { type GoldenSegment, parsePsv } from "./psv";
 import { symlink } from "node:fs/promises";
 
 const TEST_DATA_ROOT = new URL("../../test-data/", import.meta.url).pathname;
@@ -43,7 +42,7 @@ export interface GoldenMeeting {
   youtube_id: string;
   title: string;
   duration_secs: number;
-  segments: TranscriptSegment[];
+  segments: GoldenSegment[];
   meetingDir: string; // path to the meeting's fixture directory (used internally for loading audio and PSV)
   getAudio(): Promise<CachedAudio>;
   /** SHA-256 of the canonical WAV file — used to validate the audio cache. Not a DB column. */
@@ -98,6 +97,19 @@ export function loadAllTestData(): TestData {
     people,
     meetings,
   };
+}
+
+/**
+ * Load just the people registry (people.jsonl) without touching meetings. Unlike
+ * {@link loadAllTestData}, this never parses any golden.psv, so it stays usable
+ * while a meeting fixture is mid-generation (meeting.json present, golden.psv not
+ * yet written).
+ */
+export function loadPeople(): GoldenPerson[] {
+  const peoplePath = join(TEST_DATA_ROOT, "people.jsonl");
+  if (!existsSync(peoplePath))
+    throw new Error(`People file not found: ${peoplePath}`);
+  return parseJsonl<GoldenPerson>(peoplePath);
 }
 
 export function getMeetingData(meetingSlug: string): GoldenMeeting {

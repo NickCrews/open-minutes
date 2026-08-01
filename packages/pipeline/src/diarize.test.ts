@@ -7,7 +7,7 @@ import sherpa_onnx from "sherpa-onnx-node";
 
 import { computeSpeakerEmbeddings, diarizeAudio } from "./diarize";
 import { alignSpeakers, segmentsToSpeechRuns } from "./align";
-import { parsePsv, serializePsv } from "./test-utils/psv";
+import { parsePsv, serializePsv, toGoldenSegment } from "./test-utils/psv";
 import { getMeetingData } from "./test-utils/test-data";
 import { N_DIMENSIONS } from "@open-minutes/core/voice_embeddings";
 
@@ -40,10 +40,15 @@ describe("diarize", () => {
         segmentsToSpeechRuns(meeting.segments),
         turns,
       );
-      serializePsv(aligned, { path: join(runDir, "diarized.gen.psv") });
+      // Diarization only knows anonymous clusters; lift them into golden segments
+      // (segmented:spk-N). A human relabels the recurring ones to identified:<slug>.
+      const goldenSegments = aligned.map(toGoldenSegment);
+      serializePsv(goldenSegments, { path: join(runDir, "diarized.gen.psv") });
 
       if (process.env.SNAPSHOT_UPDATE === "1") {
-        serializePsv(aligned, { path: join(meeting.meetingDir, "golden.psv") });
+        serializePsv(goldenSegments, {
+          path: join(meeting.meetingDir, "golden.psv"),
+        });
         return;
       }
 
@@ -70,8 +75,8 @@ describe("diarize", () => {
       expect(aligned.flatMap((s) => s.words).length).toBe(words.length);
 
       // The golden re-parses cleanly and carries speaker labels.
-      const reparsed = parsePsv(serializePsv(aligned));
-      expect(reparsed.every((s) => s.speakerNum !== null)).toBe(true);
+      const reparsed = parsePsv(serializePsv(goldenSegments));
+      expect(reparsed.every((s) => s.speaker.kind !== "unlabeled")).toBe(true);
     });
   }
 });

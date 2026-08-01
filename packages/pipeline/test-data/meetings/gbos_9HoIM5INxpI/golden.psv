@@ -1,5 +1,5 @@
 start_sec|event_type|event_data
-0:00:07.81|meta|{"begin_speaker":"segmented:bryan-burnett"}
+0:00:07.81|meta|{"begin_speaker":"identified:bryan-burnett"}
 0:00:07.81|text|Make
 0:00:07.97|text|sure
 0:00:08.21|text|the
@@ -9,7 +9,7 @@ start_sec|event_type|event_data
 0:00:09.17|text|us
 0:00:09.49|text|out
 0:00:09.73|text|there.
-0:00:23.79|meta|{"begin_speaker":"segmented:kyle-kelly"}
+0:00:23.79|meta|{"begin_speaker":"identified:kyle-kelly"}
 0:00:23.79|text|Okay,
 0:00:24.24|text|you
 0:00:24.40|text|guys
@@ -18,11 +18,11 @@ start_sec|event_type|event_data
 0:00:24.96|text|whenever
 0:00:25.12|text|you
 0:00:25.24|text|want
-0:00:42.97|meta|{"begin_speaker":"segmented:jennifer-wingard"}
+0:00:42.97|meta|{"begin_speaker":"identified:jennifer-wingard"}
 0:00:42.97|text|no
 0:00:43.13|text|your
 0:00:43.25|text|turn
-0:00:44.69|meta|{"begin_speaker":"segmented:mike-edgington"}
+0:00:44.69|meta|{"begin_speaker":"identified:mike-edgington"}
 0:00:44.69|text|oh
 0:00:44.93|text|sorry
 0:00:46.05|text|I
@@ -117,13 +117,13 @@ start_sec|event_type|event_data
 0:01:21.73|text|the
 0:01:21.83|text|land
 0:01:21.95|text|acknowledgement?
-0:01:22.41|meta|{"begin_speaker":"segmented:bryan-burnett"}
+0:01:22.41|meta|{"begin_speaker":"identified:bryan-burnett"}
 0:01:22.41|text|I
 0:01:22.54|text|would
 0:01:22.76|text|be
 0:01:22.88|text|glad
 0:01:23.10|text|to
-0:01:24.43|meta|{"begin_speaker":"segmented:bryan-burnett"}
+0:01:24.43|meta|{"begin_speaker":"identified:bryan-burnett"}
 0:01:24.43|text|So
 0:01:24.67|text|the
 0:01:24.83|text|Girdwood
@@ -201,7 +201,7 @@ start_sec|event_type|event_data
 0:01:50.13|text|and
 0:01:50.29|text|future
 0:01:50.85|text|peoples.
-0:01:51.73|meta|{"begin_speaker":"segmented:mike-edgington"}
+0:01:51.73|meta|{"begin_speaker":"identified:mike-edgington"}
 0:01:51.73|text|Thank
 0:01:51.97|text|you
 0:01:52.13|text|very
@@ -217,7 +217,7 @@ start_sec|event_type|event_data
 0:01:54.88|text|roll
 0:01:54.97|text|call
 0:01:55.30|text|please
-0:02:06.82|meta|{"begin_speaker":"segmented:margaret"}
+0:02:06.82|meta|{"begin_speaker":"identified:margaret-tyler"}
 0:02:06.82|text|Jennifer
 0:02:07.22|text|Wingard
 0:02:08.10|text|present.
@@ -229,7 +229,7 @@ start_sec|event_type|event_data
 0:02:11.38|text|five
 0:02:11.70|text|are
 0:02:12.02|text|here.
-0:02:12.66|meta|{"begin_speaker":"segmented:mike-edgington"}
+0:02:12.66|meta|{"begin_speaker":"identified:mike-edgington"}
 0:02:12.66|text|Thank
 0:02:12.98|text|you.
 0:02:13.46|text|And
@@ -304,7 +304,7 @@ start_sec|event_type|event_data
 0:02:33.46|text|of
 0:02:33.70|text|everyone's
 0:02:34.10|text|opinions.
-0:02:36.00|meta|{"begin_speaker":"segmented:mike-edgington"}
+0:02:36.00|meta|{"begin_speaker":"identified:mike-edgington"}
 0:02:36.00|text|I'd
 0:02:36.35|text|entertain
 0:02:36.61|text|a
@@ -313,14 +313,14 @@ start_sec|event_type|event_data
 0:02:37.44|text|approve
 0:02:37.66|text|tonights
 0:02:38.06|text|agenda
-0:02:43.70|meta|{"begin_speaker":"segmented:mike-edgington"}
+0:02:43.70|meta|{"begin_speaker":"identified:mike-edgington"}
 0:02:43.70|text|I'll
 0:02:43.86|text|second.
 0:02:45.22|text|I
 0:02:45.38|text|have
 0:02:45.62|text|an
 0:02:46.58|text|okay.
-0:02:48.98|meta|{"begin_speaker":"segmented:kellie-okonek"}
+0:02:48.98|meta|{"begin_speaker":"identified:kellie-okonek"}
 0:02:48.98|text|I
 0:02:49.22|text|echo
 0:02:49.70|text|Brian's
@@ -359,17 +359,17 @@ start_sec|event_type|event_data
 0:03:03.14|text|from
 0:03:03.38|text|tonight's
 0:03:03.86|text|agenda.
-0:03:04.58|meta|{"begin_speaker":"segmented:mike-edgington"}
+0:03:04.58|meta|{"begin_speaker":"identified:mike-edgington"}
 0:03:04.58|text|Okay,
 0:03:04.82|text|do
 0:03:05.06|text|I
 0:03:05.22|text|get
 0:03:05.38|text|a
 0:03:05.46|text|second?
-0:03:07.54|meta|{"begin_speaker":"segmented:bryan-burnett"}
+0:03:07.54|meta|{"begin_speaker":"identified:bryan-burnett"}
 0:03:07.54|text|I'll
 0:03:07.78|text|second.
-0:03:08.66|meta|{"begin_speaker":"segmented:mike-edgington"}
+0:03:08.66|meta|{"begin_speaker":"identified:mike-edgington"}
 0:03:08.66|text|Okay,
 0:03:09.14|text|thank
 0:03:09.54|text|you.
@@ -440,19 +440,19 @@ start_sec|event_type|event_data
 0:03:52.18|text|performed
 0:03:52.58|text|in
 0:03:52.74|text|January.
-0:03:54.74|meta|{"begin_speaker":"segmented:bryan-burnett"}
+0:03:54.74|meta|{"begin_speaker":"identified:bryan-burnett"}
 0:03:54.74|text|I
 0:03:55.06|text|would
 0:03:55.38|text|like
 0:03:55.62|text|to
 0:03:55.78|text|hear
 0:03:56.10|text|that.
-0:03:59.14|meta|{"begin_speaker":"segmented:mike-edgington"}
+0:03:59.14|meta|{"begin_speaker":"identified:mike-edgington"}
 0:03:59.14|text|Okay,
 0:03:59.54|text|any
 0:03:59.78|text|more
 0:04:00.02|text|discussion?
-0:04:03.49|meta|{"begin_speaker":"segmented:jennifer-wingard"}
+0:04:03.49|meta|{"begin_speaker":"identified:jennifer-wingard"}
 0:04:03.49|text|Yeah,
 0:04:03.73|text|I'll
 0:04:04.05|text|say
@@ -560,7 +560,7 @@ start_sec|event_type|event_data
 0:04:43.41|text|uh
 0:04:45.17|text|we're
 0:04:46.93|text|done.
-0:04:47.89|meta|{"begin_speaker":"segmented:kellie-okonek"}
+0:04:47.89|meta|{"begin_speaker":"identified:kellie-okonek"}
 0:04:47.89|text|And
 0:04:48.13|text|I
 0:04:48.29|text|would
@@ -656,7 +656,7 @@ start_sec|event_type|event_data
 0:05:15.41|text|discuss
 0:05:15.81|text|this
 0:05:16.05|text|topic.
-0:05:17.65|meta|{"begin_speaker":"segmented:mike-edgington"}
+0:05:17.65|meta|{"begin_speaker":"identified:mike-edgington"}
 0:05:17.65|text|I
 0:05:17.73|text|would
 0:05:17.89|text|say
@@ -696,7 +696,7 @@ start_sec|event_type|event_data
 0:05:27.73|text|to
 0:05:27.97|text|the
 0:05:28.11|text|vote
-0:05:29.01|meta|{"begin_speaker":"segmented:bryan-burnett"}
+0:05:29.01|meta|{"begin_speaker":"identified:bryan-burnett"}
 0:05:29.01|text|question
 0:05:29.97|text|um
 0:05:30.53|text|how
@@ -711,7 +711,7 @@ start_sec|event_type|event_data
 0:05:32.85|text|the
 0:05:33.01|text|meeting
 0:05:33.41|text|tonight?
-0:05:34.13|meta|{"begin_speaker":"segmented:mike-edgington"}
+0:05:34.13|meta|{"begin_speaker":"identified:mike-edgington"}
 0:05:34.13|text|Um
 0:05:34.45|text|it
 0:05:34.61|text|was
@@ -744,7 +744,7 @@ start_sec|event_type|event_data
 0:05:43.33|text|uh
 0:05:43.73|text|illegal
 0:05:44.29|text|processes.
-0:05:46.13|meta|{"begin_speaker":"segmented:bryan-burnett"}
+0:05:46.13|meta|{"begin_speaker":"identified:bryan-burnett"}
 0:05:46.13|text|And
 0:05:46.61|text|is
 0:05:47.09|text|that
@@ -757,7 +757,7 @@ start_sec|event_type|event_data
 0:05:51.09|text|the
 0:05:51.25|text|January
 0:05:51.65|text|meeting?
-0:05:52.13|meta|{"begin_speaker":"segmented:mike-edgington"}
+0:05:52.13|meta|{"begin_speaker":"identified:mike-edgington"}
 0:05:52.13|text|Yes,
 0:05:52.45|text|the
 0:05:52.53|text|January
@@ -775,7 +775,7 @@ start_sec|event_type|event_data
 0:05:55.09|text|matter
 0:05:55.33|text|under
 0:05:55.57|text|consideration.
-0:05:57.49|meta|{"begin_speaker":"segmented:bryan-burnett"}
+0:05:57.49|meta|{"begin_speaker":"identified:bryan-burnett"}
 0:05:57.49|text|One
 0:05:57.89|text|more
 0:05:58.21|text|question,
@@ -794,7 +794,7 @@ start_sec|event_type|event_data
 0:06:05.33|text|and
 0:06:05.41|text|for
 0:06:05.60|text|all?
-0:06:06.00|meta|{"begin_speaker":"segmented:mike-edgington"}
+0:06:06.00|meta|{"begin_speaker":"identified:mike-edgington"}
 0:06:06.00|text|I
 0:06:06.16|text|hope
 0:06:06.47|text|so
@@ -809,7 +809,7 @@ start_sec|event_type|event_data
 0:06:09.49|text|on
 0:06:09.57|text|the
 0:06:09.73|text|agenda.
-0:06:10.53|meta|{"begin_speaker":"segmented:jennifer-wingard"}
+0:06:10.53|meta|{"begin_speaker":"identified:jennifer-wingard"}
 0:06:10.53|text|May
 0:06:10.85|text|I
 0:06:10.93|text|also
@@ -832,7 +832,7 @@ start_sec|event_type|event_data
 0:06:15.97|text|regarding
 0:06:16.53|text|this
 0:06:16.85|text|issue?
-0:06:17.81|meta|{"begin_speaker":"segmented:mike-edgington"}
+0:06:17.81|meta|{"begin_speaker":"identified:mike-edgington"}
 0:06:17.81|text|This
 0:06:17.97|text|was
 0:06:18.21|text|a
@@ -871,7 +871,7 @@ start_sec|event_type|event_data
 0:06:36.05|text|of
 0:06:36.13|text|the
 0:06:36.21|text|item.
-0:06:38.93|meta|{"begin_speaker":"segmented:jennifer-wingard"}
+0:06:38.93|meta|{"begin_speaker":"identified:jennifer-wingard"}
 0:06:38.93|text|If
 0:06:39.17|text|I
 0:06:39.33|text|may
@@ -899,7 +899,7 @@ start_sec|event_type|event_data
 0:06:49.09|text|to
 0:06:49.41|text|staff
 0:06:50.69|text|tonight?
-0:06:51.49|meta|{"begin_speaker":"segmented:mike-edgington"}
+0:06:51.49|meta|{"begin_speaker":"identified:mike-edgington"}
 0:06:51.49|text|Um
 0:06:51.73|text|I
 0:06:51.81|text|don't
@@ -944,14 +944,14 @@ start_sec|event_type|event_data
 0:07:06.93|text|the
 0:07:07.09|text|responsible
 0:07:07.65|text|act.
-0:07:08.21|meta|{"begin_speaker":"segmented:jennifer-wingard"}
+0:07:08.21|meta|{"begin_speaker":"identified:jennifer-wingard"}
 0:07:08.21|text|So
 0:07:08.45|text|that
 0:07:08.69|text|means
 0:07:08.93|text|no.
 0:07:09.17|text|Thank
 0:07:09.33|text|you.
-0:07:10.85|meta|{"begin_speaker":"segmented:mike-edgington"}
+0:07:10.85|meta|{"begin_speaker":"identified:mike-edgington"}
 0:07:10.85|text|Yes,
 0:07:11.09|text|correct.
 0:07:11.49|text|There's
@@ -959,7 +959,7 @@ start_sec|event_type|event_data
 0:07:11.81|text|need
 0:07:11.97|text|for
 0:07:12.05|text|that.
-0:07:12.50|meta|{"begin_speaker":"segmented:jennifer-wingard"}
+0:07:12.50|meta|{"begin_speaker":"identified:jennifer-wingard"}
 0:07:12.50|text|That
 0:07:12.80|text|wasn't
 0:07:13.09|text|the
@@ -971,7 +971,7 @@ start_sec|event_type|event_data
 0:07:14.21|text|answer
 0:07:14.45|text|is
 0:07:14.61|text|no.
-0:07:15.97|meta|{"begin_speaker":"segmented:mike-edgington"}
+0:07:15.97|meta|{"begin_speaker":"identified:mike-edgington"}
 0:07:15.97|text|The
 0:07:16.13|text|answer
 0:07:16.53|text|is
@@ -1052,14 +1052,14 @@ start_sec|event_type|event_data
 0:07:43.05|text|Roll
 0:07:43.21|text|call
 0:07:43.42|text|please?
-0:07:43.75|meta|{"begin_speaker":"segmented:kyle-kelly"}
+0:07:43.75|meta|{"begin_speaker":"identified:kyle-kelly"}
 0:07:43.75|text|Uh
 0:07:43.89|text|Brian
 0:07:44.21|text|Burnett?
-0:07:45.01|meta|{"begin_speaker":"segmented:bryan-burnett"}
+0:07:45.01|meta|{"begin_speaker":"identified:bryan-burnett"}
 0:07:45.01|text|So
 0:07:45.65|text|um
-0:07:46.37|meta|{"begin_speaker":"segmented:mike-edgington"}
+0:07:46.37|meta|{"begin_speaker":"identified:mike-edgington"}
 0:07:46.37|text|Yes
 0:07:46.85|text|would
 0:07:47.01|text|be
@@ -1079,12 +1079,12 @@ start_sec|event_type|event_data
 0:07:50.21|text|from
 0:07:50.37|text|our
 0:07:50.62|text|attorney.
-0:07:51.59|meta|{"begin_speaker":"segmented:bryan-burnett"}
+0:07:51.59|meta|{"begin_speaker":"identified:bryan-burnett"}
 0:07:51.59|text|I'm
 0:07:51.73|text|gonna
 0:07:52.02|text|vote
 0:07:52.29|text|no.
-0:07:53.49|meta|{"begin_speaker":"segmented:kyle-kelly"}
+0:07:53.49|meta|{"begin_speaker":"identified:kyle-kelly"}
 0:07:53.49|text|Okay,
 0:07:53.97|text|okay.
 0:07:54.37|text|Yes.
@@ -1103,12 +1103,12 @@ start_sec|event_type|event_data
 0:08:02.69|text|fails
 0:08:04.14|text|three
 0:08:04.39|text|two.
-0:08:05.16|meta|{"begin_speaker":"segmented:mike-edgington"}
+0:08:05.16|meta|{"begin_speaker":"identified:mike-edgington"}
 0:08:05.16|text|Okay,
 0:08:05.56|text|thank
 0:08:05.80|text|you.
 0:08:06.28|text|Um,
-0:08:10.28|meta|{"begin_speaker":"segmented:brianna-sullivan"}
+0:08:10.28|meta|{"begin_speaker":"identified:brianna-sullivan"}
 0:08:10.28|text|I'd
 0:08:10.76|text|like
 0:08:11.00|text|to
@@ -1156,7 +1156,7 @@ start_sec|event_type|event_data
 0:08:28.04|text|like
 0:08:28.20|text|to
 0:08:28.36|text|suggest.
-0:08:33.10|meta|{"begin_speaker":"segmented:mike-edgington"}
+0:08:33.10|meta|{"begin_speaker":"identified:mike-edgington"}
 0:08:33.10|text|Okay,
 0:08:33.64|text|can
 0:08:33.74|text|I
@@ -1213,7 +1213,7 @@ start_sec|event_type|event_data
 0:08:51.24|text|data
 0:08:51.54|text|for
 0:08:51.61|text|Girdwood
-0:08:53.72|meta|{"begin_speaker":"segmented:brianna-sullivan"}
+0:08:53.72|meta|{"begin_speaker":"identified:brianna-sullivan"}
 0:08:53.72|text|I
 0:08:54.36|text|uh
 0:08:54.76|text|appreciate
@@ -1221,12 +1221,12 @@ start_sec|event_type|event_data
 0:08:56.08|text|edit
 0:08:56.68|text|very
 0:08:57.08|text|much.
-0:08:59.88|meta|{"begin_speaker":"segmented:mike-edgington"}
+0:08:59.88|meta|{"begin_speaker":"identified:mike-edgington"}
 0:08:59.88|text|Second?
-0:09:01.55|meta|{"begin_speaker":"segmented:bryan-burnett"}
+0:09:01.55|meta|{"begin_speaker":"identified:bryan-burnett"}
 0:09:01.55|text|I'll
 0:09:01.67|text|second.
-0:09:02.12|meta|{"begin_speaker":"segmented:mike-edgington"}
+0:09:02.12|meta|{"begin_speaker":"identified:mike-edgington"}
 0:09:02.12|text|Thank
 0:09:02.36|text|you.
 0:09:02.76|text|So
@@ -1326,9 +1326,9 @@ start_sec|event_type|event_data
 0:09:54.68|text|Keeper
 0:09:55.00|text|from
 0:09:55.16|text|Holly.
-0:10:05.62|meta|{"begin_speaker":"segmented:kyle-kelly"}
+0:10:05.62|meta|{"begin_speaker":"identified:kyle-kelly"}
 0:10:05.62|text|Yes.
-0:10:06.58|meta|{"begin_speaker":"segmented:jennifer-wingard"}
+0:10:06.58|meta|{"begin_speaker":"identified:jennifer-wingard"}
 0:10:06.58|text|All
 0:10:06.90|text|right.
 0:10:08.66|text|Is
@@ -1340,7 +1340,7 @@ start_sec|event_type|event_data
 0:10:09.86|text|share
 0:10:10.18|text|my
 0:10:10.34|text|screen?
-0:10:11.06|meta|{"begin_speaker":"segmented:kyle-kelly"}
+0:10:11.06|meta|{"begin_speaker":"identified:kyle-kelly"}
 0:10:11.06|text|Yes,
 0:10:11.38|text|go
 0:10:11.46|text|ahead.
@@ -1350,7 +1350,7 @@ start_sec|event_type|event_data
 0:10:12.18|text|to
 0:10:12.34|text|you.
 0:10:13.30|text|Great.
-0:10:19.78|meta|{"begin_speaker":"segmented:jennifer-wingard"}
+0:10:19.78|meta|{"begin_speaker":"identified:jennifer-wingard"}
 0:10:19.78|text|Can
 0:10:20.02|text|you
 0:10:20.18|text|guide
@@ -2129,7 +2129,7 @@ start_sec|event_type|event_data
 0:15:20.23|text|next
 0:15:20.47|text|agenda
 0:15:20.95|text|items?
-0:15:22.63|meta|{"begin_speaker":"segmented:mike-edgington"}
+0:15:22.63|meta|{"begin_speaker":"identified:mike-edgington"}
 0:15:22.63|text|It's
 0:15:23.03|text|normally
 0:15:23.51|text|10
@@ -2150,12 +2150,12 @@ start_sec|event_type|event_data
 0:15:27.03|text|think
 0:15:27.59|text|we're
 0:15:27.75|text|welcome.
-0:15:28.61|meta|{"begin_speaker":"segmented:jennifer-wingard"}
+0:15:28.61|meta|{"begin_speaker":"identified:jennifer-wingard"}
 0:15:28.61|text|Yes.
-0:15:29.33|meta|{"begin_speaker":"segmented:mike-edgington"}
+0:15:29.33|meta|{"begin_speaker":"identified:mike-edgington"}
 0:15:29.33|text|Happy
 0:15:29.81|text|to.
-0:15:30.69|meta|{"begin_speaker":"segmented:jennifer-wingard"}
+0:15:30.69|meta|{"begin_speaker":"identified:jennifer-wingard"}
 0:15:30.69|text|All
 0:15:31.01|text|right.
 0:15:31.41|text|I'm
@@ -2572,7 +2572,7 @@ start_sec|event_type|event_data
 0:18:16.95|text|anything
 0:18:17.35|text|to
 0:18:17.67|text|add.
-0:18:20.39|meta|{"begin_speaker":"segmented:kyle-kelly"}
+0:18:20.39|meta|{"begin_speaker":"identified:kyle-kelly"}
 0:18:20.39|text|No,
 0:18:20.71|text|uh
 0:18:20.87|text|we
@@ -2704,7 +2704,7 @@ start_sec|event_type|event_data
 0:18:53.51|text|display
 0:18:53.91|text|it
 0:18:54.15|text|here.
-0:18:56.63|meta|{"begin_speaker":"segmented:kellie-okonek"}
+0:18:56.63|meta|{"begin_speaker":"identified:kellie-okonek"}
 0:18:56.63|text|Any
 0:18:56.87|text|questions.
 0:18:59.54|text|Yeah,
@@ -2764,7 +2764,7 @@ start_sec|event_type|event_data
 0:19:20.34|text|with
 0:19:20.58|text|their
 0:19:20.90|text|identity?
-0:19:23.54|meta|{"begin_speaker":"segmented:jennifer-wingard"}
+0:19:23.54|meta|{"begin_speaker":"identified:jennifer-wingard"}
 0:19:23.54|text|Um
 0:19:24.82|text|yes.
 0:19:25.54|text|Well,
@@ -2833,7 +2833,7 @@ start_sec|event_type|event_data
 0:19:52.26|text|concerns
 0:19:52.90|text|about
 0:19:53.22|text|that.
-0:19:54.34|meta|{"begin_speaker":"segmented:kellie-okonek"}
+0:19:54.34|meta|{"begin_speaker":"identified:kellie-okonek"}
 0:19:54.34|text|No,
 0:19:54.74|text|thank
 0:19:54.98|text|you.
@@ -2894,7 +2894,7 @@ start_sec|event_type|event_data
 0:20:10.58|text|curious.
 0:20:11.30|text|Thank
 0:20:11.46|text|you.
-0:20:11.86|meta|{"begin_speaker":"segmented:jennifer-wingard"}
+0:20:11.86|meta|{"begin_speaker":"identified:jennifer-wingard"}
 0:20:11.86|text|Yeah,
 0:20:12.26|text|yes,
 0:20:12.66|text|that
@@ -2949,7 +2949,7 @@ start_sec|event_type|event_data
 0:20:27.14|text|great,
 0:20:27.54|text|thank
 0:20:27.86|text|you.
-0:20:30.26|meta|{"begin_speaker":"segmented:mike-edgington"}
+0:20:30.26|meta|{"begin_speaker":"identified:mike-edgington"}
 0:20:30.26|text|One
 0:20:30.50|text|quick
 0:20:30.82|text|question
@@ -2984,7 +2984,7 @@ start_sec|event_type|event_data
 0:20:38.82|text|plan
 0:20:39.14|text|itself.
 0:20:40.58|text|Yes,
-0:20:42.50|meta|{"begin_speaker":"segmented:jennifer-wingard"}
+0:20:42.50|meta|{"begin_speaker":"identified:jennifer-wingard"}
 0:20:42.50|text|yes,
 0:20:42.90|text|we
 0:20:43.14|text|spoke
@@ -3023,7 +3023,7 @@ start_sec|event_type|event_data
 0:20:59.75|text|planning
 0:21:00.15|text|and
 0:21:00.31|text|zoning.
-0:21:01.27|meta|{"begin_speaker":"segmented:mike-edgington"}
+0:21:01.27|meta|{"begin_speaker":"identified:mike-edgington"}
 0:21:01.27|text|Excellent.
 0:21:03.03|text|Thank
 0:21:03.27|text|you.
@@ -3036,7 +3036,7 @@ start_sec|event_type|event_data
 0:21:11.03|text|Good.
 0:21:11.59|text|Go
 0:21:11.83|text|ahead.
-0:21:12.79|meta|{"begin_speaker":"segmented:kellie-okonek"}
+0:21:12.79|meta|{"begin_speaker":"identified:kellie-okonek"}
 0:21:12.79|text|I
 0:21:12.87|text|just
 0:21:13.03|text|have
@@ -3078,7 +3078,7 @@ start_sec|event_type|event_data
 0:21:23.51|text|your
 0:21:23.83|text|final
 0:21:24.31|text|plan?
-0:21:26.39|meta|{"begin_speaker":"segmented:jennifer-wingard"}
+0:21:26.39|meta|{"begin_speaker":"identified:jennifer-wingard"}
 0:21:26.39|text|Um
 0:21:27.19|text|typically
 0:21:28.15|text|we
@@ -3184,7 +3184,7 @@ start_sec|event_type|event_data
 0:22:07.83|text|that
 0:22:07.99|text|what
 0:22:08.15|text|the
-0:22:08.87|meta|{"begin_speaker":"segmented:kellie-okonek"}
+0:22:08.87|meta|{"begin_speaker":"identified:kellie-okonek"}
 0:22:08.87|text|substantive
 0:22:10.07|text|so
 0:22:10.31|text|like
@@ -3233,7 +3233,7 @@ start_sec|event_type|event_data
 0:22:23.91|text|or
 0:22:24.07|text|not.
 0:22:25.03|text|I
-0:22:25.27|meta|{"begin_speaker":"segmented:jennifer-wingard"}
+0:22:25.27|meta|{"begin_speaker":"identified:jennifer-wingard"}
 0:22:25.27|text|would
 0:22:25.59|text|say
 0:22:25.91|text|uh
@@ -3247,14 +3247,14 @@ start_sec|event_type|event_data
 0:22:29.03|text|process
 0:22:29.35|text|of
 0:22:29.59|text|like
-0:22:30.55|meta|{"begin_speaker":"segmented:kellie-okonek"}
+0:22:30.55|meta|{"begin_speaker":"identified:kellie-okonek"}
 0:22:30.55|text|created.
 0:22:31.11|text|Yeah,
 0:22:31.35|text|if
-0:22:31.99|meta|{"begin_speaker":"segmented:jennifer-wingard"}
+0:22:31.99|meta|{"begin_speaker":"identified:jennifer-wingard"}
 0:22:31.99|text|it
 0:22:32.23|text|yeah,
-0:22:33.19|meta|{"begin_speaker":"segmented:kellie-okonek"}
+0:22:33.19|meta|{"begin_speaker":"identified:kellie-okonek"}
 0:22:33.19|text|that
 0:22:33.43|text|is
 0:22:33.75|text|best.
@@ -3262,7 +3262,7 @@ start_sec|event_type|event_data
 0:22:34.63|text|Thank
 0:22:34.79|text|you.
 0:22:35.27|text|Okay,
-0:22:37.99|meta|{"begin_speaker":"segmented:mike-edgington"}
+0:22:37.99|meta|{"begin_speaker":"identified:mike-edgington"}
 0:22:37.99|text|I
 0:22:38.15|text|have
 0:22:38.39|text|uh
@@ -3314,7 +3314,7 @@ start_sec|event_type|event_data
 0:23:00.53|text|um
 0:23:01.33|text|are
 0:23:01.81|text|unveiled.
-0:23:04.77|meta|{"begin_speaker":"segmented:jennifer-wingard"}
+0:23:04.77|meta|{"begin_speaker":"identified:jennifer-wingard"}
 0:23:04.77|text|Um
 0:23:05.33|text|right
 0:23:05.73|text|now
@@ -3416,7 +3416,7 @@ start_sec|event_type|event_data
 0:23:44.21|text|that
 0:23:44.45|text|at
 0:23:44.61|text|all.
-0:23:45.17|meta|{"begin_speaker":"segmented:kyle-kelly"}
+0:23:45.17|meta|{"begin_speaker":"identified:kyle-kelly"}
 0:23:45.17|text|Yeah,
 0:23:45.49|text|no,
 0:23:45.89|text|I
@@ -3558,7 +3558,7 @@ start_sec|event_type|event_data
 0:24:22.45|text|through
 0:24:22.61|text|those
 0:24:22.85|text|projects.
-0:24:23.81|meta|{"begin_speaker":"segmented:mike-edgington"}
+0:24:23.81|meta|{"begin_speaker":"identified:mike-edgington"}
 0:24:23.81|text|Thank
 0:24:23.97|text|you,
 0:24:24.21|text|guys.
@@ -3678,7 +3678,7 @@ start_sec|event_type|event_data
 0:25:11.94|text|on
 0:25:12.10|text|the
 0:25:12.18|text|way.
-0:25:13.62|meta|{"begin_speaker":"segmented:margaret"}
+0:25:13.62|meta|{"begin_speaker":"identified:margaret-tyler"}
 0:25:13.62|text|Yes,
 0:25:14.10|text|good
 0:25:14.42|text|evening.
@@ -4463,13 +4463,13 @@ start_sec|event_type|event_data
 0:30:29.93|text|very
 0:30:30.09|text|much,
 0:30:30.41|text|Mike.
-0:30:31.53|meta|{"begin_speaker":"segmented:mike-edgington"}
+0:30:31.53|meta|{"begin_speaker":"identified:mike-edgington"}
 0:30:31.53|text|Thank
 0:30:31.69|text|you.
 0:30:32.17|text|Question,
 0:30:32.57|text|please
 0:30:32.89|text|go
-0:30:32.97|meta|{"begin_speaker":"segmented:kellie-okonek"}
+0:30:32.97|meta|{"begin_speaker":"identified:kellie-okonek"}
 0:30:32.97|text|ahead.
 0:30:33.37|text|Uh
 0:30:33.61|text|just
@@ -4500,7 +4500,7 @@ start_sec|event_type|event_data
 0:30:40.81|text|our
 0:30:41.05|text|state
 0:30:41.45|text|budget?
-0:30:43.21|meta|{"begin_speaker":"segmented:margaret"}
+0:30:43.21|meta|{"begin_speaker":"identified:margaret-tyler"}
 0:30:43.21|text|Well,
 0:30:43.93|text|you
 0:30:44.25|text|know.
@@ -4587,7 +4587,7 @@ start_sec|event_type|event_data
 0:31:15.81|text|that
 0:31:15.97|text|for
 0:31:16.13|text|yourself.
-0:31:17.01|meta|{"begin_speaker":"segmented:kellie-okonek"}
+0:31:17.01|meta|{"begin_speaker":"identified:kellie-okonek"}
 0:31:17.01|text|No,
 0:31:17.25|text|I
 0:31:17.73|text|points
@@ -4618,7 +4618,7 @@ start_sec|event_type|event_data
 0:31:25.89|text|Sure.
 0:31:26.37|text|You're
 0:31:26.69|text|welcome.
-0:31:27.41|meta|{"begin_speaker":"segmented:mike-edgington"}
+0:31:27.41|meta|{"begin_speaker":"identified:mike-edgington"}
 0:31:27.41|text|Any
 0:31:27.73|text|other
 0:31:27.89|text|questions?
@@ -5593,7 +5593,7 @@ start_sec|event_type|event_data
 0:37:08.73|text|you.
 0:37:09.05|text|Thank
 0:37:09.37|text|you.
-0:37:11.37|meta|{"begin_speaker":"segmented:mike-edgington"}
+0:37:11.37|meta|{"begin_speaker":"identified:mike-edgington"}
 0:37:11.37|text|Thank
 0:37:11.61|text|you.
 0:37:12.01|text|Any
@@ -5719,7 +5719,7 @@ start_sec|event_type|event_data
 0:38:03.59|text|to
 0:38:03.75|text|the
 0:38:03.99|text|set.
-0:38:04.79|meta|{"begin_speaker":"segmented:kellie-okonek"}
+0:38:04.79|meta|{"begin_speaker":"identified:kellie-okonek"}
 0:38:04.79|text|Okay,
 0:38:05.27|text|so
 0:38:05.75|text|for
@@ -5951,7 +5951,7 @@ start_sec|event_type|event_data
 0:39:16.63|text|to
 0:39:16.79|text|do
 0:39:17.03|text|something.
-0:39:18.71|meta|{"begin_speaker":"segmented:mike-edgington"}
+0:39:18.71|meta|{"begin_speaker":"identified:mike-edgington"}
 0:39:18.71|text|Just
 0:39:19.03|text|a
 0:39:19.27|text|process
@@ -5989,7 +5989,7 @@ start_sec|event_type|event_data
 0:39:26.39|text|it
 0:39:26.63|text|first.
 0:39:27.75|text|Or
-0:39:27.99|meta|{"begin_speaker":"segmented:kellie-okonek"}
+0:39:27.99|meta|{"begin_speaker":"identified:kellie-okonek"}
 0:39:27.99|text|does
 0:39:28.23|text|it
 0:39:28.39|text|need
@@ -5997,7 +5997,7 @@ start_sec|event_type|event_data
 0:39:28.71|text|go
 0:39:28.87|text|to
 0:39:29.03|text|LUC?
-0:39:30.47|meta|{"begin_speaker":"segmented:mike-edgington"}
+0:39:30.47|meta|{"begin_speaker":"identified:mike-edgington"}
 0:39:30.47|text|Or
 0:39:30.79|text|both.
 0:39:31.75|text|I
@@ -6013,7 +6013,7 @@ start_sec|event_type|event_data
 0:39:34.63|text|committee.
 0:39:35.67|text|Yeah,
 0:39:35.99|text|but
-0:39:37.43|meta|{"begin_speaker":"segmented:kellie-okonek"}
+0:39:37.43|meta|{"begin_speaker":"identified:kellie-okonek"}
 0:39:37.43|text|it
 0:39:37.59|text|so
 0:39:37.83|text|public
@@ -6121,7 +6121,7 @@ start_sec|event_type|event_data
 0:40:09.16|text|you
 0:40:09.32|text|guys
 0:40:09.72|text|think?
-0:40:12.20|meta|{"begin_speaker":"segmented:mike-edgington"}
+0:40:12.20|meta|{"begin_speaker":"identified:mike-edgington"}
 0:40:12.20|text|If
 0:40:12.36|text|we're
 0:40:12.52|text|gonna
@@ -6138,17 +6138,17 @@ start_sec|event_type|event_data
 0:40:14.68|text|on
 0:40:14.76|text|the
 0:40:14.84|text|agenda.
-0:40:15.40|meta|{"begin_speaker":"segmented:kellie-okonek"}
+0:40:15.40|meta|{"begin_speaker":"identified:kellie-okonek"}
 0:40:15.40|text|Okay,
 0:40:15.64|text|then
-0:40:16.12|meta|{"begin_speaker":"segmented:mike-edgington"}
+0:40:16.12|meta|{"begin_speaker":"identified:mike-edgington"}
 0:40:16.12|text|I
 0:40:16.20|text|mean
 0:40:16.44|text|if
 0:40:17.08|meta|{"begin_speaker":"segmented:spk-17"}
 0:40:17.08|text|we
 0:40:17.32|text|could
-0:40:17.88|meta|{"begin_speaker":"segmented:kellie-okonek"}
+0:40:17.88|meta|{"begin_speaker":"identified:kellie-okonek"}
 0:40:17.88|text|does
 0:40:18.12|text|it
 0:40:18.20|text|go
@@ -6164,12 +6164,12 @@ start_sec|event_type|event_data
 0:40:21.24|text|discussed
 0:40:21.48|text|it
 0:40:21.64|text|before.
-0:40:24.84|meta|{"begin_speaker":"segmented:mike-edgington"}
+0:40:24.84|meta|{"begin_speaker":"identified:mike-edgington"}
 0:40:24.84|text|So
 0:40:25.00|text|I'm
 0:40:25.40|text|gonna
 0:40:25.48|text|make
-0:40:26.20|meta|{"begin_speaker":"segmented:kellie-okonek"}
+0:40:26.20|meta|{"begin_speaker":"identified:kellie-okonek"}
 0:40:26.20|text|add
 0:40:26.44|text|it
 0:40:26.68|text|to
@@ -6185,7 +6185,7 @@ start_sec|event_type|event_data
 0:40:30.84|text|of
 0:40:30.92|text|the
 0:40:31.00|text|PSEC
-0:40:31.56|meta|{"begin_speaker":"segmented:mike-edgington"}
+0:40:31.56|meta|{"begin_speaker":"identified:mike-edgington"}
 0:40:31.56|text|meeting.
 0:40:31.96|text|Okay,
 0:40:32.36|text|and
@@ -6216,7 +6216,7 @@ start_sec|event_type|event_data
 0:40:41.96|text|business.
 0:40:44.28|text|Okay,
 0:40:44.92|text|sorry.
-0:40:45.80|meta|{"begin_speaker":"segmented:kellie-okonek"}
+0:40:45.80|meta|{"begin_speaker":"identified:kellie-okonek"}
 0:40:45.80|text|No,
 0:40:46.12|text|that's
 0:40:46.68|text|um
@@ -6286,7 +6286,7 @@ start_sec|event_type|event_data
 0:41:09.80|text|and
 0:41:09.96|text|Roll
 0:41:10.28|text|Lev.
-0:41:11.16|meta|{"begin_speaker":"segmented:mike-edgington"}
+0:41:11.16|meta|{"begin_speaker":"identified:mike-edgington"}
 0:41:11.16|text|Sorry.
 0:41:13.56|text|Backing
 0:41:13.96|text|up
@@ -6308,7 +6308,7 @@ start_sec|event_type|event_data
 0:41:20.20|text|right?
 0:41:21.16|text|The
 0:41:21.32|text|request
-0:41:22.44|meta|{"begin_speaker":"segmented:kyle-kelly"}
+0:41:22.44|meta|{"begin_speaker":"identified:kyle-kelly"}
 0:41:22.44|text|what
 0:41:22.60|text|we
 0:41:22.68|text|should
@@ -6349,7 +6349,7 @@ start_sec|event_type|event_data
 0:41:31.40|text|retired.
 0:41:32.04|text|Okay,
 0:41:32.28|text|or
-0:41:33.96|meta|{"begin_speaker":"segmented:mike-edgington"}
+0:41:33.96|meta|{"begin_speaker":"identified:mike-edgington"}
 0:41:33.96|text|it's
 0:41:34.12|text|all
 0:41:34.28|text|sounding
@@ -6358,10 +6358,10 @@ start_sec|event_type|event_data
 0:41:35.16|text|do
 0:41:35.32|text|all
 0:41:35.40|text|over
-0:41:35.48|meta|{"begin_speaker":"segmented:kyle-kelly"}
+0:41:35.48|meta|{"begin_speaker":"identified:kyle-kelly"}
 0:41:35.48|text|again.
 0:41:35.80|text|Yeah.
-0:41:37.09|meta|{"begin_speaker":"segmented:mike-edgington"}
+0:41:37.09|meta|{"begin_speaker":"identified:mike-edgington"}
 0:41:37.09|text|Yeah,
 0:41:37.57|text|it's
 0:41:37.97|text|it's
@@ -6715,7 +6715,7 @@ start_sec|event_type|event_data
 0:43:51.33|text|not
 0:43:51.57|text|being
 0:43:51.89|text|discussed.
-0:43:53.09|meta|{"begin_speaker":"segmented:kellie-okonek"}
+0:43:53.09|meta|{"begin_speaker":"identified:kellie-okonek"}
 0:43:53.09|text|Thank
 0:43:53.41|text|you.
 0:43:56.45|text|Thank
@@ -7165,7 +7165,7 @@ start_sec|event_type|event_data
 0:46:47.17|text|cover
 0:46:47.89|text|for
 0:46:48.21|text|now.
-0:46:50.13|meta|{"begin_speaker":"segmented:mike-edgington"}
+0:46:50.13|meta|{"begin_speaker":"identified:mike-edgington"}
 0:46:50.13|text|Thank
 0:46:50.61|text|you.
 0:46:51.73|text|Did
@@ -7199,7 +7199,7 @@ start_sec|event_type|event_data
 0:47:01.01|text|in
 0:47:01.17|text|this
 0:47:01.33|text|context.
-0:47:03.09|meta|{"begin_speaker":"segmented:kellie-okonek"}
+0:47:03.09|meta|{"begin_speaker":"identified:kellie-okonek"}
 0:47:03.09|text|Right.
 0:47:03.57|text|I
 0:47:03.81|text|know
@@ -7265,7 +7265,7 @@ start_sec|event_type|event_data
 0:47:26.05|text|for
 0:47:26.77|text|um
 0:47:27.33|text|dwellings.
-0:47:28.69|meta|{"begin_speaker":"segmented:kyle-kelly"}
+0:47:28.69|meta|{"begin_speaker":"identified:kyle-kelly"}
 0:47:28.69|text|Yes
 0:47:29.09|text|I
 0:47:29.17|text|think
@@ -7321,7 +7321,7 @@ start_sec|event_type|event_data
 0:47:45.19|text|down
 0:47:45.35|text|your
 0:47:45.51|text|area
-0:47:47.99|meta|{"begin_speaker":"segmented:mike-edgington"}
+0:47:47.99|meta|{"begin_speaker":"identified:mike-edgington"}
 0:47:47.99|text|so
 0:47:48.31|text|you
 0:47:48.55|text|must
@@ -7476,7 +7476,7 @@ start_sec|event_type|event_data
 0:48:43.27|text|local
 0:48:43.67|text|water
 0:48:44.07|text|sources
-0:48:47.67|meta|{"begin_speaker":"segmented:mike-edgington"}
+0:48:47.67|meta|{"begin_speaker":"identified:mike-edgington"}
 0:48:47.67|text|okay
 0:48:48.63|text|um
 0:48:49.43|text|I
@@ -7888,7 +7888,7 @@ start_sec|event_type|event_data
 0:51:08.66|text|have
 0:51:09.14|text|uh
 0:51:10.58|text|sorry.
-0:51:12.82|meta|{"begin_speaker":"segmented:kyle-kelly"}
+0:51:12.82|meta|{"begin_speaker":"identified:kyle-kelly"}
 0:51:12.82|text|There's
 0:51:13.30|text|a
 0:51:13.46|text|report
@@ -8187,7 +8187,7 @@ start_sec|event_type|event_data
 0:52:49.16|text|you,
 0:52:49.40|text|Kyle.
 0:52:49.88|text|I
-0:52:50.04|meta|{"begin_speaker":"segmented:kellie-okonek"}
+0:52:50.04|meta|{"begin_speaker":"identified:kellie-okonek"}
 0:52:50.04|text|just
 0:52:50.20|text|wanted
 0:52:50.36|text|to
@@ -8242,7 +8242,7 @@ start_sec|event_type|event_data
 0:53:08.84|text|conference.
 0:53:09.88|text|Thank
 0:53:10.12|text|you.
-0:53:12.13|meta|{"begin_speaker":"segmented:kyle-kelly"}
+0:53:12.13|meta|{"begin_speaker":"identified:kyle-kelly"}
 0:53:12.13|text|And
 0:53:12.29|text|the
 0:53:12.37|text|other
@@ -8303,7 +8303,7 @@ start_sec|event_type|event_data
 0:53:29.49|text|apparatus
 0:53:30.05|text|coming
 0:53:30.37|text|in.
-0:53:32.69|meta|{"begin_speaker":"segmented:mike-edgington"}
+0:53:32.69|meta|{"begin_speaker":"identified:mike-edgington"}
 0:53:32.69|text|Thank
 0:53:33.09|text|you.
 0:53:33.57|text|Uh
@@ -8320,7 +8320,7 @@ start_sec|event_type|event_data
 0:53:38.53|text|to
 0:53:38.77|text|police.
 0:53:39.89|text|Uh
-0:53:40.13|meta|{"begin_speaker":"segmented:kyle-kelly"}
+0:53:40.13|meta|{"begin_speaker":"identified:kyle-kelly"}
 0:53:40.13|text|Chief
 0:53:41.01|text|couldn't
 0:53:41.25|text|make
@@ -8573,7 +8573,7 @@ start_sec|event_type|event_data
 0:54:56.37|text|thought
 0:54:56.69|text|going
 0:54:57.01|text|on.
-0:54:58.37|meta|{"begin_speaker":"segmented:mike-edgington"}
+0:54:58.37|meta|{"begin_speaker":"identified:mike-edgington"}
 0:54:58.37|text|Thank
 0:54:58.69|text|you.
 0:54:59.17|text|Any
@@ -8751,7 +8751,7 @@ start_sec|event_type|event_data
 0:55:53.05|text|good,
 0:55:53.29|text|but
 0:55:53.53|text|I
-0:55:54.97|meta|{"begin_speaker":"segmented:kyle-kelly"}
+0:55:54.97|meta|{"begin_speaker":"identified:kyle-kelly"}
 0:55:54.97|text|and
 0:55:55.37|text|last
 0:55:55.61|text|thing
@@ -8818,7 +8818,7 @@ start_sec|event_type|event_data
 0:56:12.49|text|need
 0:56:12.65|text|to
 0:56:12.73|text|return
-0:56:12.97|meta|{"begin_speaker":"segmented:mike-edgington"}
+0:56:12.97|meta|{"begin_speaker":"identified:mike-edgington"}
 0:56:12.97|text|it
 0:56:13.05|text|to
 0:56:13.13|text|us
@@ -8891,7 +8891,7 @@ start_sec|event_type|event_data
 0:56:31.85|text|Rosen.
 0:56:34.09|text|Sure.
 0:56:34.73|text|Um
-0:56:36.01|meta|{"begin_speaker":"segmented:kyle-kelly"}
+0:56:36.01|meta|{"begin_speaker":"identified:kyle-kelly"}
 0:56:36.01|text|start
 0:56:36.33|text|with
 0:56:36.49|text|parts.
@@ -11003,7 +11003,7 @@ start_sec|event_type|event_data
 1:06:47.88|text|good
 1:06:48.04|text|with
 1:06:48.20|text|funding.
-1:06:49.69|meta|{"begin_speaker":"segmented:kellie-okonek"}
+1:06:49.69|meta|{"begin_speaker":"identified:kellie-okonek"}
 1:06:49.69|text|Is
 1:06:49.93|text|construction
 1:06:50.49|text|this
@@ -11013,7 +11013,7 @@ start_sec|event_type|event_data
 1:06:51.21|text|it
 1:06:51.37|text|still
 1:06:51.69|text|bigger?
-1:06:52.73|meta|{"begin_speaker":"segmented:kyle-kelly"}
+1:06:52.73|meta|{"begin_speaker":"identified:kyle-kelly"}
 1:06:52.73|text|It
 1:06:52.89|text|probably
 1:06:53.21|text|will
@@ -11980,7 +11980,7 @@ start_sec|event_type|event_data
 1:11:32.13|text|all
 1:11:32.37|text|I
 1:11:32.61|text|got.
-1:11:34.21|meta|{"begin_speaker":"segmented:mike-edgington"}
+1:11:34.21|meta|{"begin_speaker":"identified:mike-edgington"}
 1:11:34.21|text|Any
 1:11:34.61|text|questions?
 1:11:38.74|text|I
@@ -11998,7 +11998,7 @@ start_sec|event_type|event_data
 1:11:43.22|text|what
 1:11:43.46|text|you
 1:11:43.62|text|expected.
-1:11:44.42|meta|{"begin_speaker":"segmented:kyle-kelly"}
+1:11:44.42|meta|{"begin_speaker":"identified:kyle-kelly"}
 1:11:44.42|text|Yes.
 1:11:45.62|text|Uh
 1:11:45.94|text|I'd
@@ -12166,7 +12166,7 @@ start_sec|event_type|event_data
 1:12:26.50|text|were
 1:12:26.66|text|needed
 1:12:26.90|text|to
-1:12:26.98|meta|{"begin_speaker":"segmented:mike-edgington"}
+1:12:26.98|meta|{"begin_speaker":"identified:mike-edgington"}
 1:12:26.98|text|be.
 1:12:27.38|text|So
 1:12:30.26|text|a
@@ -12212,7 +12212,7 @@ start_sec|event_type|event_data
 1:12:39.70|text|for
 1:12:39.78|text|the
 1:12:39.94|text|construction?
-1:12:41.14|meta|{"begin_speaker":"segmented:kyle-kelly"}
+1:12:41.14|meta|{"begin_speaker":"identified:kyle-kelly"}
 1:12:41.14|text|They
 1:12:41.38|text|they
 1:12:41.54|text|just
@@ -12473,7 +12473,7 @@ start_sec|event_type|event_data
 1:13:44.76|text|a
 1:13:44.84|text|room
 1:13:45.08|text|together.
-1:13:46.12|meta|{"begin_speaker":"segmented:mike-edgington"}
+1:13:46.12|meta|{"begin_speaker":"identified:mike-edgington"}
 1:13:46.12|text|Thank
 1:13:46.36|text|you
 1:13:46.52|text|for
@@ -12587,7 +12587,7 @@ start_sec|event_type|event_data
 1:14:20.04|text|a
 1:14:20.12|text|second
 1:14:20.60|text|truck?
-1:14:21.64|meta|{"begin_speaker":"segmented:kyle-kelly"}
+1:14:21.64|meta|{"begin_speaker":"identified:kyle-kelly"}
 1:14:21.64|text|Uh
 1:14:21.96|text|you
 1:14:22.20|text|mean
@@ -12599,7 +12599,7 @@ start_sec|event_type|event_data
 1:14:24.36|text|a
 1:14:24.44|text|second
 1:14:24.68|text|truck.
-1:14:25.16|meta|{"begin_speaker":"segmented:mike-edgington"}
+1:14:25.16|meta|{"begin_speaker":"identified:mike-edgington"}
 1:14:25.16|text|Right,
 1:14:25.56|text|or
 1:14:25.88|text|at
@@ -12620,7 +12620,7 @@ start_sec|event_type|event_data
 1:14:28.60|text|one
 1:14:28.84|text|down
 1:14:29.00|text|here.
-1:14:29.56|meta|{"begin_speaker":"segmented:kyle-kelly"}
+1:14:29.56|meta|{"begin_speaker":"identified:kyle-kelly"}
 1:14:29.56|text|Yeah.
 1:14:30.52|text|The
 1:14:30.68|text|problem
@@ -12828,7 +12828,7 @@ start_sec|event_type|event_data
 1:15:32.52|meta|{"begin_speaker":"segmented:spk-16"}
 1:15:32.52|text|We
 1:15:32.76|text|get
-1:15:33.00|meta|{"begin_speaker":"segmented:mike-edgington"}
+1:15:33.00|meta|{"begin_speaker":"identified:mike-edgington"}
 1:15:33.00|text|some
 1:15:33.24|text|there
 1:15:33.56|text|in
@@ -12915,7 +12915,7 @@ start_sec|event_type|event_data
 1:16:05.64|text|if
 1:16:05.80|text|it
 1:16:05.88|text|is?
-1:16:06.52|meta|{"begin_speaker":"segmented:kyle-kelly"}
+1:16:06.52|meta|{"begin_speaker":"identified:kyle-kelly"}
 1:16:06.52|text|Well,
 1:16:07.24|text|what
 1:16:07.48|text|we
@@ -13035,7 +13035,7 @@ start_sec|event_type|event_data
 1:16:37.25|text|need
 1:16:37.41|text|for
 1:16:37.57|text|annual
-1:16:37.81|meta|{"begin_speaker":"segmented:mike-edgington"}
+1:16:37.81|meta|{"begin_speaker":"identified:mike-edgington"}
 1:16:37.81|text|budget
 1:16:38.13|text|with
 1:16:38.21|text|that
@@ -13058,7 +13058,7 @@ start_sec|event_type|event_data
 1:16:42.77|text|what's
 1:16:43.09|text|needed
 1:16:43.25|text|for
-1:16:43.81|meta|{"begin_speaker":"segmented:kyle-kelly"}
+1:16:43.81|meta|{"begin_speaker":"identified:kyle-kelly"}
 1:16:43.81|text|yes
 1:16:44.21|text|it's
 1:16:44.93|text|becoming
@@ -13095,7 +13095,7 @@ start_sec|event_type|event_data
 1:16:53.65|text|assign
 1:16:53.97|text|them
 1:16:54.05|text|to.
-1:16:54.61|meta|{"begin_speaker":"segmented:mike-edgington"}
+1:16:54.61|meta|{"begin_speaker":"identified:mike-edgington"}
 1:16:54.61|text|Okay.
 1:16:55.25|text|Thank
 1:16:55.65|text|you.
@@ -13273,7 +13273,7 @@ start_sec|event_type|event_data
 1:17:59.33|text|make
 1:17:59.49|text|public
 1:17:59.89|text|comment
-1:18:04.53|meta|{"begin_speaker":"segmented:kellie-okonek"}
+1:18:04.53|meta|{"begin_speaker":"identified:kellie-okonek"}
 1:18:04.53|text|I
 1:18:04.93|text|made
 1:18:05.25|text|a
@@ -13347,7 +13347,7 @@ start_sec|event_type|event_data
 1:18:27.70|text|you.
 1:18:28.10|text|Thank
 1:18:28.50|text|you.
-1:18:37.70|meta|{"begin_speaker":"segmented:mike-edgington"}
+1:18:37.70|meta|{"begin_speaker":"identified:mike-edgington"}
 1:18:37.70|text|Hello,
 1:18:38.18|text|everyone.
 1:18:38.66|text|Uh
@@ -14121,7 +14121,7 @@ start_sec|event_type|event_data
 1:23:54.05|text|On
 1:23:54.37|text|the
 1:23:55.09|text|agenda.
-1:24:01.01|meta|{"begin_speaker":"segmented:mike-edgington"}
+1:24:01.01|meta|{"begin_speaker":"identified:mike-edgington"}
 1:24:01.01|text|Um
 1:24:03.17|text|I
 1:24:03.33|text|do
@@ -14429,7 +14429,7 @@ start_sec|event_type|event_data
 1:26:02.60|text|a
 1:26:02.68|text|public
 1:26:02.84|text|comment?
-1:26:04.07|meta|{"begin_speaker":"segmented:kellie-okonek"}
+1:26:04.07|meta|{"begin_speaker":"identified:kellie-okonek"}
 1:26:04.07|text|No,
 1:26:04.31|text|I
 1:26:04.47|text|was
@@ -14443,7 +14443,7 @@ start_sec|event_type|event_data
 1:26:06.39|text|all
 1:26:06.63|text|thank
 1:26:06.87|text|you.
-1:26:07.19|meta|{"begin_speaker":"segmented:mike-edgington"}
+1:26:07.19|meta|{"begin_speaker":"identified:mike-edgington"}
 1:26:07.19|text|Yep,
 1:26:07.51|text|yep,
 1:26:07.91|text|thank
@@ -14745,7 +14745,7 @@ start_sec|event_type|event_data
 1:28:06.20|text|take
 1:28:06.44|text|any
 1:28:06.76|text|questions.
-1:28:08.44|meta|{"begin_speaker":"segmented:mike-edgington"}
+1:28:08.44|meta|{"begin_speaker":"identified:mike-edgington"}
 1:28:08.44|text|Thank
 1:28:08.68|text|you.
 1:28:09.08|text|Any
@@ -15570,7 +15570,7 @@ start_sec|event_type|event_data
 1:32:34.13|text|folks
 1:32:34.45|text|have
 1:32:34.69|text|questions
-1:32:36.45|meta|{"begin_speaker":"segmented:mike-edgington"}
+1:32:36.45|meta|{"begin_speaker":"identified:mike-edgington"}
 1:32:36.45|text|thank
 1:32:36.69|text|you
 1:32:37.25|text|any
@@ -15742,7 +15742,7 @@ start_sec|event_type|event_data
 1:33:26.85|text|Or
 1:33:27.25|text|yes
 1:33:27.65|text|tomorrow.
-1:33:28.37|meta|{"begin_speaker":"segmented:mike-edgington"}
+1:33:28.37|meta|{"begin_speaker":"identified:mike-edgington"}
 1:33:28.37|text|Yeah
 1:33:28.69|text|tomorrow
 1:33:29.17|text|thank
@@ -15827,7 +15827,7 @@ start_sec|event_type|event_data
 1:33:49.11|text|get
 1:33:49.35|text|something
 1:33:49.67|text|drafted.
-1:33:50.63|meta|{"begin_speaker":"segmented:mike-edgington"}
+1:33:50.63|meta|{"begin_speaker":"identified:mike-edgington"}
 1:33:50.63|text|Thanks.
 1:33:51.51|text|Thank
 1:33:51.75|text|you.
@@ -16136,7 +16136,7 @@ start_sec|event_type|event_data
 1:35:26.39|text|work
 1:35:26.63|text|on
 1:35:26.87|text|it.
-1:35:29.91|meta|{"begin_speaker":"segmented:mike-edgington"}
+1:35:29.91|meta|{"begin_speaker":"identified:mike-edgington"}
 1:35:29.91|text|Thanks.
 1:35:30.63|text|Thanks.
 1:35:31.43|text|Just
@@ -16266,7 +16266,7 @@ start_sec|event_type|event_data
 1:36:12.55|text|have
 1:36:12.71|text|a
 1:36:12.95|text|question?
-1:36:14.39|meta|{"begin_speaker":"segmented:kellie-okonek"}
+1:36:14.39|meta|{"begin_speaker":"identified:kellie-okonek"}
 1:36:14.39|text|I'd
 1:36:14.71|text|like
 1:36:14.95|text|to
@@ -16279,7 +16279,7 @@ start_sec|event_type|event_data
 1:36:16.55|text|to
 1:36:16.71|text|30
 1:36:17.11|text|minutes.
-1:36:19.91|meta|{"begin_speaker":"segmented:mike-edgington"}
+1:36:19.91|meta|{"begin_speaker":"identified:mike-edgington"}
 1:36:19.91|text|Okay,
 1:36:20.55|text|thank
 1:36:20.95|text|you.
@@ -16308,14 +16308,14 @@ start_sec|event_type|event_data
 1:36:29.51|text|time.
 1:36:32.23|text|Thank
 1:36:32.71|text|you.
-1:36:33.83|meta|{"begin_speaker":"segmented:kellie-okonek"}
+1:36:33.83|meta|{"begin_speaker":"identified:kellie-okonek"}
 1:36:33.83|text|Can
 1:36:33.99|text|I
 1:36:34.15|text|move
 1:36:34.47|text|that
 1:36:40.39|text|second?
 1:36:42.55|text|Okay.
-1:36:49.27|meta|{"begin_speaker":"segmented:mike-edgington"}
+1:36:49.27|meta|{"begin_speaker":"identified:mike-edgington"}
 1:36:49.27|text|Okay,
 1:36:49.67|text|15
 1:36:50.15|text|minutes.
@@ -16727,7 +16727,7 @@ start_sec|event_type|event_data
 1:39:41.81|text|for
 1:39:41.97|text|that
 1:39:42.29|text|chair
-1:39:45.17|meta|{"begin_speaker":"segmented:mike-edgington"}
+1:39:45.17|meta|{"begin_speaker":"identified:mike-edgington"}
 1:39:45.17|text|thank
 1:39:45.41|text|you
 1:39:45.81|text|so
@@ -16897,7 +16897,7 @@ start_sec|event_type|event_data
 1:40:43.33|text|answer
 1:40:43.73|text|on
 1:40:43.97|text|that.
-1:40:44.77|meta|{"begin_speaker":"segmented:mike-edgington"}
+1:40:44.77|meta|{"begin_speaker":"identified:mike-edgington"}
 1:40:44.77|text|Okay,
 1:40:45.17|text|thank
 1:40:45.57|text|you.
@@ -16938,7 +16938,7 @@ start_sec|event_type|event_data
 1:41:01.49|text|I'm
 1:41:01.81|text|listening
 1:41:02.53|text|okay
-1:41:04.77|meta|{"begin_speaker":"segmented:kellie-okonek"}
+1:41:04.77|meta|{"begin_speaker":"identified:kellie-okonek"}
 1:41:04.77|text|uh
 1:41:05.09|text|thank
 1:41:05.33|text|you
@@ -17044,7 +17044,7 @@ start_sec|event_type|event_data
 1:41:47.56|text|members
 1:41:47.88|text|travel
 1:41:48.28|text|to
-1:41:50.92|meta|{"begin_speaker":"segmented:mike-edgington"}
+1:41:50.92|meta|{"begin_speaker":"identified:mike-edgington"}
 1:41:50.92|text|thank
 1:41:51.32|text|you
 1:41:55.88|text|thank
@@ -17167,12 +17167,12 @@ start_sec|event_type|event_data
 1:42:42.60|text|made
 1:42:45.32|text|a
 1:42:45.40|text|second
-1:42:48.68|meta|{"begin_speaker":"segmented:kellie-okonek"}
+1:42:48.68|meta|{"begin_speaker":"identified:kellie-okonek"}
 1:42:48.68|text|second
 1:42:49.40|text|this
 1:42:49.56|text|is
 1:42:49.80|text|Brianna
-1:42:53.72|meta|{"begin_speaker":"segmented:mike-edgington"}
+1:42:53.72|meta|{"begin_speaker":"identified:mike-edgington"}
 1:42:53.72|text|do
 1:42:53.88|text|we
 1:42:53.96|text|have
@@ -17274,7 +17274,7 @@ start_sec|event_type|event_data
 1:43:18.44|text|save
 1:43:18.76|text|that
 1:43:19.08|text|trouble.
-1:43:19.96|meta|{"begin_speaker":"segmented:kellie-okonek"}
+1:43:19.96|meta|{"begin_speaker":"identified:kellie-okonek"}
 1:43:19.96|text|I'm
 1:43:20.28|text|grateful
 1:43:21.00|text|uh
@@ -17429,7 +17429,7 @@ start_sec|event_type|event_data
 1:44:10.34|text|is
 1:44:10.58|text|not
 1:44:10.82|text|him
-1:44:13.62|meta|{"begin_speaker":"segmented:mike-edgington"}
+1:44:13.62|meta|{"begin_speaker":"identified:mike-edgington"}
 1:44:13.62|text|okay
 1:44:13.94|text|thank
 1:44:14.10|text|you
@@ -17441,10 +17441,10 @@ start_sec|event_type|event_data
 1:44:15.70|text|to
 1:44:15.86|text|call
 1:44:16.18|text|vote.
-1:44:17.86|meta|{"begin_speaker":"segmented:kyle-kelly"}
+1:44:17.86|meta|{"begin_speaker":"identified:kyle-kelly"}
 1:44:17.86|text|Sure.
 1:44:18.58|text|Uh
-1:44:20.02|meta|{"begin_speaker":"segmented:kellie-okonek"}
+1:44:20.02|meta|{"begin_speaker":"identified:kellie-okonek"}
 1:44:20.02|text|state
 1:44:20.34|text|the
 1:44:20.50|text|vote
@@ -17457,7 +17457,7 @@ start_sec|event_type|event_data
 1:44:23.30|text|to
 1:44:23.46|text|interrupt
 1:44:23.94|text|yes
-1:44:24.50|meta|{"begin_speaker":"segmented:mike-edgington"}
+1:44:24.50|meta|{"begin_speaker":"identified:mike-edgington"}
 1:44:24.50|text|so
 1:44:24.98|text|the
 1:44:25.30|text|motion
@@ -17552,7 +17552,7 @@ start_sec|event_type|event_data
 1:45:04.26|text|we
 1:45:04.34|text|have
 1:45:04.50|text|a
-1:45:06.42|meta|{"begin_speaker":"segmented:kellie-okonek"}
+1:45:06.42|meta|{"begin_speaker":"identified:kellie-okonek"}
 1:45:06.42|text|I'm
 1:45:06.58|text|going
 1:45:06.66|text|to
@@ -17595,7 +17595,7 @@ start_sec|event_type|event_data
 1:45:17.72|text|we're
 1:45:17.88|text|actually
 1:45:18.12|text|voting.
-1:45:18.68|meta|{"begin_speaker":"segmented:mike-edgington"}
+1:45:18.68|meta|{"begin_speaker":"identified:mike-edgington"}
 1:45:18.68|text|What
 1:45:18.84|text|would
 1:45:19.08|text|be
@@ -17604,7 +17604,7 @@ start_sec|event_type|event_data
 1:45:19.48|text|these
 1:45:19.72|text|vagues
 1:45:20.20|text|against
-1:45:20.44|meta|{"begin_speaker":"segmented:kellie-okonek"}
+1:45:20.44|meta|{"begin_speaker":"identified:kellie-okonek"}
 1:45:20.44|text|it?
 1:45:20.84|text|I
 1:45:20.92|text|asked
@@ -17637,7 +17637,7 @@ start_sec|event_type|event_data
 1:45:28.68|text|we
 1:45:28.84|text|can
 1:45:29.00|text|vote.
-1:45:30.12|meta|{"begin_speaker":"segmented:mike-edgington"}
+1:45:30.12|meta|{"begin_speaker":"identified:mike-edgington"}
 1:45:30.12|text|Well,
 1:45:30.44|text|actually,
 1:45:30.84|text|I
@@ -17664,7 +17664,7 @@ start_sec|event_type|event_data
 1:45:37.80|text|as
 1:45:38.04|text|originally
 1:45:38.60|text|made.
-1:45:42.92|meta|{"begin_speaker":"segmented:kellie-okonek"}
+1:45:42.92|meta|{"begin_speaker":"identified:kellie-okonek"}
 1:45:42.92|text|No,
 1:45:43.24|text|which
 1:45:43.56|text|motion
@@ -17692,7 +17692,7 @@ start_sec|event_type|event_data
 1:45:48.04|text|table
 1:45:48.44|text|right
 1:45:48.68|text|now
-1:45:49.00|meta|{"begin_speaker":"segmented:mike-edgington"}
+1:45:49.00|meta|{"begin_speaker":"identified:mike-edgington"}
 1:45:49.00|text|is
 1:45:49.72|text|a
 1:45:49.96|text|recusal
@@ -17778,7 +17778,7 @@ start_sec|event_type|event_data
 1:46:47.72|meta|{"begin_speaker":"segmented:spk-14"}
 1:46:47.72|text|Okay.
 1:46:48.36|text|So
-1:46:51.40|meta|{"begin_speaker":"segmented:mike-edgington"}
+1:46:51.40|meta|{"begin_speaker":"identified:mike-edgington"}
 1:46:51.40|text|we
 1:46:51.72|text|are
 1:46:52.12|text|we
@@ -17835,7 +17835,7 @@ start_sec|event_type|event_data
 1:47:19.51|text|vote
 1:47:19.99|text|in
 1:47:20.15|text|January.
-1:47:21.83|meta|{"begin_speaker":"segmented:kyle-kelly"}
+1:47:21.83|meta|{"begin_speaker":"identified:kyle-kelly"}
 1:47:21.83|text|So
 1:47:22.07|text|that's
 1:47:22.31|text|a
@@ -17856,7 +17856,7 @@ start_sec|event_type|event_data
 1:47:36.31|text|two.
 1:47:36.95|text|Thank
 1:47:37.27|text|you.
-1:47:39.67|meta|{"begin_speaker":"segmented:mike-edgington"}
+1:47:39.67|meta|{"begin_speaker":"identified:mike-edgington"}
 1:47:39.67|text|Are
 1:47:39.83|text|there
 1:47:39.99|text|any
@@ -18011,7 +18011,7 @@ start_sec|event_type|event_data
 1:48:44.23|text|what
 1:48:44.31|text|was
 1:48:44.55|text|repeated.
-1:48:45.67|meta|{"begin_speaker":"segmented:kellie-okonek"}
+1:48:45.67|meta|{"begin_speaker":"identified:kellie-okonek"}
 1:48:45.67|text|And
 1:48:46.15|text|before
 1:48:46.63|text|we
@@ -18135,7 +18135,7 @@ start_sec|event_type|event_data
 1:49:24.63|text|any
 1:49:24.87|text|formal
 1:49:25.27|text|entity.
-1:49:26.07|meta|{"begin_speaker":"segmented:mike-edgington"}
+1:49:26.07|meta|{"begin_speaker":"identified:mike-edgington"}
 1:49:26.07|text|We've
 1:49:26.31|text|just
 1:49:26.55|text|we
@@ -18198,7 +18198,7 @@ start_sec|event_type|event_data
 1:49:47.91|text|thing
 1:49:48.15|text|to
 1:49:48.31|text|do.
-1:49:49.91|meta|{"begin_speaker":"segmented:kellie-okonek"}
+1:49:49.91|meta|{"begin_speaker":"identified:kellie-okonek"}
 1:49:49.91|text|I
 1:49:50.07|text|motion
 1:49:50.47|text|I
@@ -18226,7 +18226,7 @@ start_sec|event_type|event_data
 1:49:56.87|text|interest,
 1:49:57.11|text|and
 1:49:57.27|text|nothing.
-1:49:57.75|meta|{"begin_speaker":"segmented:mike-edgington"}
+1:49:57.75|meta|{"begin_speaker":"identified:mike-edgington"}
 1:49:57.75|text|There
 1:49:57.91|text|is
 1:49:57.99|text|no
@@ -18238,7 +18238,7 @@ start_sec|event_type|event_data
 1:49:59.35|text|do
 1:49:59.67|text|you
 1:49:59.75|text|cannot.
-1:50:00.31|meta|{"begin_speaker":"segmented:kellie-okonek"}
+1:50:00.31|meta|{"begin_speaker":"identified:kellie-okonek"}
 1:50:00.31|text|There
 1:50:00.39|text|has
 1:50:00.55|text|been
@@ -18251,7 +18251,7 @@ start_sec|event_type|event_data
 1:50:02.63|text|of
 1:50:02.71|text|interest.
 1:50:03.11|text|And
-1:50:03.19|meta|{"begin_speaker":"segmented:kyle-kelly"}
+1:50:03.19|meta|{"begin_speaker":"identified:kyle-kelly"}
 1:50:03.19|text|the
 1:50:03.27|text|ruling
 1:50:03.67|text|was
@@ -18271,17 +18271,17 @@ start_sec|event_type|event_data
 1:50:07.19|text|was
 1:50:07.35|text|just
 1:50:07.43|text|taken.
-1:50:07.83|meta|{"begin_speaker":"segmented:kellie-okonek"}
+1:50:07.83|meta|{"begin_speaker":"identified:kellie-okonek"}
 1:50:07.83|text|I'm
 1:50:08.23|text|reconciled.
-1:50:09.19|meta|{"begin_speaker":"segmented:kyle-kelly"}
+1:50:09.19|meta|{"begin_speaker":"identified:kyle-kelly"}
 1:50:09.19|text|Okay,
 1:50:09.67|text|see
-1:50:11.51|meta|{"begin_speaker":"segmented:kellie-okonek"}
+1:50:11.51|meta|{"begin_speaker":"identified:kellie-okonek"}
 1:50:11.51|text|a
 1:50:11.59|text|second.
 1:50:12.95|text|I
-1:50:13.03|meta|{"begin_speaker":"segmented:mike-edgington"}
+1:50:13.03|meta|{"begin_speaker":"identified:mike-edgington"}
 1:50:13.03|text|am
 1:50:13.35|text|and
 1:50:13.59|text|I
@@ -18440,7 +18440,7 @@ start_sec|event_type|event_data
 1:51:03.99|text|position
 1:51:04.31|text|to
 1:51:04.47|text|do
-1:51:04.63|meta|{"begin_speaker":"segmented:kyle-kelly"}
+1:51:04.63|meta|{"begin_speaker":"identified:kyle-kelly"}
 1:51:04.63|text|that.
 1:51:05.59|text|Yeah,
 1:51:05.91|text|that's
@@ -18457,7 +18457,7 @@ start_sec|event_type|event_data
 1:51:10.07|text|the
 1:51:10.31|text|prevailing
 1:51:10.87|text|side.
-1:51:14.18|meta|{"begin_speaker":"segmented:mike-edgington"}
+1:51:14.18|meta|{"begin_speaker":"identified:mike-edgington"}
 1:51:14.18|text|Okay,
 1:51:14.50|text|I'm
 1:51:14.66|text|not
@@ -19461,7 +19461,7 @@ start_sec|event_type|event_data
 1:57:37.40|text|or
 1:57:37.56|text|comments
 1:57:37.96|text|Brian
-1:57:39.08|meta|{"begin_speaker":"segmented:kellie-okonek"}
+1:57:39.08|meta|{"begin_speaker":"identified:kellie-okonek"}
 1:57:39.08|text|uh
 1:57:39.40|text|thank
 1:57:39.56|text|you
@@ -19555,7 +19555,7 @@ start_sec|event_type|event_data
 1:58:13.08|text|it's
 1:58:13.40|text|supporting
 1:58:13.96|text|it.
-1:58:16.92|meta|{"begin_speaker":"segmented:mike-edgington"}
+1:58:16.92|meta|{"begin_speaker":"identified:mike-edgington"}
 1:58:16.92|text|Right
 1:58:17.80|text|um
 1:58:18.52|text|I
@@ -19879,7 +19879,7 @@ start_sec|event_type|event_data
 2:00:28.44|text|is
 2:00:31.24|text|briefly
 2:00:31.72|text|state
-2:00:32.04|meta|{"begin_speaker":"segmented:mike-edgington"}
+2:00:32.04|meta|{"begin_speaker":"identified:mike-edgington"}
 2:00:32.04|text|why
 2:00:32.68|text|how
 2:00:32.84|text|I
@@ -20014,7 +20014,7 @@ start_sec|event_type|event_data
 2:01:15.54|text|to
 2:01:15.62|text|you,
 2:01:15.86|text|Brooks.
-2:01:18.66|meta|{"begin_speaker":"segmented:spk-7"}
+2:01:18.66|meta|{"begin_speaker":"identified:brooks-chandler"}
 2:01:18.66|text|Uh
 2:01:18.98|text|thank
 2:01:19.22|text|you.
@@ -20436,7 +20436,7 @@ start_sec|event_type|event_data
 2:04:27.19|text|take
 2:04:27.43|text|questions.
 2:04:28.23|text|Thank
-2:04:28.39|meta|{"begin_speaker":"segmented:mike-edgington"}
+2:04:28.39|meta|{"begin_speaker":"identified:mike-edgington"}
 2:04:28.39|text|you,
 2:04:28.63|text|Brooks.
 2:04:29.43|text|Before
@@ -20463,7 +20463,7 @@ start_sec|event_type|event_data
 2:04:33.11|text|yes
 2:04:33.43|text|to
 2:04:33.59|text|this.
-2:04:34.23|meta|{"begin_speaker":"segmented:kyle-kelly"}
+2:04:34.23|meta|{"begin_speaker":"identified:kyle-kelly"}
 2:04:34.23|text|Uh
 2:04:34.63|text|then
 2:04:34.87|text|I
@@ -20547,7 +20547,7 @@ start_sec|event_type|event_data
 2:04:56.89|text|we're
 2:04:57.13|text|just
 2:04:57.45|text|getting
-2:04:57.93|meta|{"begin_speaker":"segmented:mike-edgington"}
+2:04:57.93|meta|{"begin_speaker":"identified:mike-edgington"}
 2:04:57.93|text|out
 2:04:58.25|text|to
 2:04:58.81|text|get
@@ -20602,7 +20602,7 @@ start_sec|event_type|event_data
 2:05:12.65|text|else
 2:05:12.81|text|to
 2:05:12.97|text|that
-2:05:13.61|meta|{"begin_speaker":"segmented:kyle-kelly"}
+2:05:13.61|meta|{"begin_speaker":"identified:kyle-kelly"}
 2:05:13.61|text|I
 2:05:13.77|text|would
 2:05:14.01|text|probably
@@ -20667,7 +20667,7 @@ start_sec|event_type|event_data
 2:05:34.25|text|um
 2:05:35.45|text|we
 2:05:35.69|text|would
-2:05:35.93|meta|{"begin_speaker":"segmented:mike-edgington"}
+2:05:35.93|meta|{"begin_speaker":"identified:mike-edgington"}
 2:05:35.93|text|go
 2:05:36.17|text|out
 2:05:36.33|text|and
@@ -21211,7 +21211,7 @@ start_sec|event_type|event_data
 2:09:28.01|text|a
 2:09:28.09|text|broad
 2:09:28.49|text|study.
-2:09:31.37|meta|{"begin_speaker":"segmented:mike-edgington"}
+2:09:31.37|meta|{"begin_speaker":"identified:mike-edgington"}
 2:09:31.37|text|Thank
 2:09:31.69|text|you.
 2:09:38.41|text|But
@@ -21286,7 +21286,7 @@ start_sec|event_type|event_data
 2:10:01.53|text|RFP.
 2:10:04.33|text|Okay,
 2:10:04.97|text|uh
-2:10:05.29|meta|{"begin_speaker":"segmented:kyle-kelly"}
+2:10:05.29|meta|{"begin_speaker":"identified:kyle-kelly"}
 2:10:05.29|text|let's
 2:10:05.53|text|do
 2:10:05.69|text|this
@@ -21313,7 +21313,7 @@ start_sec|event_type|event_data
 2:10:16.97|text|zero.
 2:10:17.45|text|Thank
 2:10:17.61|text|you.
-2:10:18.01|meta|{"begin_speaker":"segmented:mike-edgington"}
+2:10:18.01|meta|{"begin_speaker":"identified:mike-edgington"}
 2:10:18.01|text|Um
 2:10:18.49|text|Kyle,
 2:10:18.97|text|did
@@ -21744,7 +21744,7 @@ start_sec|event_type|event_data
 2:12:49.78|text|Go
 2:12:49.94|text|ahead.
 2:12:50.58|text|Yeah.
-2:12:51.62|meta|{"begin_speaker":"segmented:kellie-okonek"}
+2:12:51.62|meta|{"begin_speaker":"identified:kellie-okonek"}
 2:12:51.62|text|Well
 2:12:51.86|text|thank
 2:12:52.10|text|you.
@@ -21785,7 +21785,7 @@ start_sec|event_type|event_data
 2:13:03.62|text|Is
 2:13:03.86|text|that
 2:13:04.10|text|correct?
-2:13:05.46|meta|{"begin_speaker":"segmented:mike-edgington"}
+2:13:05.46|meta|{"begin_speaker":"identified:mike-edgington"}
 2:13:05.46|text|Uh
 2:13:05.78|text|my
 2:13:06.02|text|motion,
@@ -21811,7 +21811,7 @@ start_sec|event_type|event_data
 2:13:12.50|text|for
 2:13:12.66|text|parliamentary
 2:13:13.22|text|training.
-2:13:14.02|meta|{"begin_speaker":"segmented:kellie-okonek"}
+2:13:14.02|meta|{"begin_speaker":"identified:kellie-okonek"}
 2:13:14.02|text|Great,
 2:13:14.42|text|thank
 2:13:14.66|text|you.
@@ -21877,7 +21877,7 @@ start_sec|event_type|event_data
 2:13:36.26|text|us.
 2:13:36.58|text|So
 2:13:36.98|text|thank
-2:13:37.46|meta|{"begin_speaker":"segmented:mike-edgington"}
+2:13:37.46|meta|{"begin_speaker":"identified:mike-edgington"}
 2:13:37.46|text|you.
 2:13:39.06|text|Thank
 2:13:39.46|text|you.
@@ -22411,7 +22411,7 @@ start_sec|event_type|event_data
 2:17:41.32|text|Renette.
 2:17:41.80|text|Yes.
 2:17:42.12|text|Kelly.
-2:17:43.08|meta|{"begin_speaker":"segmented:kyle-kelly"}
+2:17:43.08|meta|{"begin_speaker":"identified:kyle-kelly"}
 2:17:43.08|text|Yes.
 2:17:43.64|text|Rihanna
 2:17:44.20|text|Sullivan.
@@ -22424,7 +22424,7 @@ start_sec|event_type|event_data
 2:17:48.92|text|Motion
 2:17:49.24|text|passes
 2:17:49.64|text|five
-2:17:49.96|meta|{"begin_speaker":"segmented:mike-edgington"}
+2:17:49.96|meta|{"begin_speaker":"identified:mike-edgington"}
 2:17:49.96|text|zero.
 2:17:50.44|text|Thank
 2:17:50.76|text|you.
@@ -22949,7 +22949,7 @@ start_sec|event_type|event_data
 2:21:00.58|text|alive.
 2:21:01.22|text|That's
 2:21:01.62|text|all
-2:21:02.50|meta|{"begin_speaker":"segmented:mike-edgington"}
+2:21:02.50|meta|{"begin_speaker":"identified:mike-edgington"}
 2:21:02.50|text|okay.
 2:21:03.14|text|Um
 2:21:03.46|text|I
@@ -23110,7 +23110,7 @@ start_sec|event_type|event_data
 2:21:55.54|text|was
 2:21:55.70|text|going
 2:21:55.86|text|to
-2:21:56.42|meta|{"begin_speaker":"segmented:kellie-okonek"}
+2:21:56.42|meta|{"begin_speaker":"identified:kellie-okonek"}
 2:21:56.42|text|uh
 2:21:56.58|text|I
 2:21:56.74|text|think
@@ -23158,7 +23158,7 @@ start_sec|event_type|event_data
 2:22:11.54|text|actual
 2:22:12.18|text|public
 2:22:12.50|text|hearing
-2:22:16.82|meta|{"begin_speaker":"segmented:mike-edgington"}
+2:22:16.82|meta|{"begin_speaker":"identified:mike-edgington"}
 2:22:16.82|text|to
 2:22:16.98|text|offer
 2:22:17.38|text|that
@@ -23179,12 +23179,12 @@ start_sec|event_type|event_data
 2:22:21.62|text|do
 2:22:21.86|text|with
 2:22:22.02|text|that.
-2:22:22.42|meta|{"begin_speaker":"segmented:kellie-okonek"}
+2:22:22.42|meta|{"begin_speaker":"identified:kellie-okonek"}
 2:22:22.42|text|Yeah,
-2:22:23.54|meta|{"begin_speaker":"segmented:mike-edgington"}
+2:22:23.54|meta|{"begin_speaker":"identified:mike-edgington"}
 2:22:23.54|text|but
 2:22:23.70|text|it
-2:22:23.94|meta|{"begin_speaker":"segmented:kellie-okonek"}
+2:22:23.94|meta|{"begin_speaker":"identified:kellie-okonek"}
 2:22:23.94|text|it's
 2:22:24.18|text|come
 2:22:24.42|text|up.
@@ -23256,7 +23256,7 @@ start_sec|event_type|event_data
 2:22:44.90|text|one
 2:22:45.14|text|that
 2:22:45.46|text|is.
-2:22:46.58|meta|{"begin_speaker":"segmented:mike-edgington"}
+2:22:46.58|meta|{"begin_speaker":"identified:mike-edgington"}
 2:22:46.58|text|Can
 2:22:46.82|text|I
 2:22:46.98|text|ask
@@ -23289,7 +23289,7 @@ start_sec|event_type|event_data
 2:22:57.94|text|a
 2:22:58.02|text|second
 2:22:58.34|text|first.
-2:23:00.50|meta|{"begin_speaker":"segmented:kellie-okonek"}
+2:23:00.50|meta|{"begin_speaker":"identified:kellie-okonek"}
 2:23:00.50|text|Well,
 2:23:00.66|text|my
 2:23:00.82|text|understanding
@@ -23344,7 +23344,7 @@ start_sec|event_type|event_data
 2:23:13.54|text|we're
 2:23:13.70|text|gonna
 2:23:14.10|text|do.
-2:23:15.38|meta|{"begin_speaker":"segmented:mike-edgington"}
+2:23:15.38|meta|{"begin_speaker":"identified:mike-edgington"}
 2:23:15.38|text|Okay,
 2:23:15.78|text|well,
 2:23:16.02|text|let's
@@ -23353,7 +23353,7 @@ start_sec|event_type|event_data
 2:23:16.50|text|specific
 2:23:16.90|text|recommend
 2:23:17.94|text|suggestion.
-2:23:18.90|meta|{"begin_speaker":"segmented:kellie-okonek"}
+2:23:18.90|meta|{"begin_speaker":"identified:kellie-okonek"}
 2:23:18.90|text|Okay,
 2:23:19.14|text|I
 2:23:19.38|text|move
@@ -23406,7 +23406,7 @@ start_sec|event_type|event_data
 2:23:32.50|text|the
 2:23:32.58|text|community
 2:23:33.06|text|said.
-2:23:33.94|meta|{"begin_speaker":"segmented:mike-edgington"}
+2:23:33.94|meta|{"begin_speaker":"identified:mike-edgington"}
 2:23:33.94|text|Excellent.
 2:23:34.50|text|I'll
 2:23:34.74|text|say
@@ -23441,7 +23441,7 @@ start_sec|event_type|event_data
 2:23:45.46|text|proposal.
 2:23:46.50|text|So
 2:23:46.74|text|Sean
-2:23:47.06|meta|{"begin_speaker":"segmented:kyle-kelly"}
+2:23:47.06|meta|{"begin_speaker":"identified:kyle-kelly"}
 2:23:47.06|text|Holland
 2:23:47.78|text|uh
 2:23:48.02|text|retired
@@ -23809,7 +23809,7 @@ start_sec|event_type|event_data
 2:25:43.29|text|limit
 2:25:43.61|text|out
 2:25:43.69|text|there.
-2:25:44.09|meta|{"begin_speaker":"segmented:kellie-okonek"}
+2:25:44.09|meta|{"begin_speaker":"identified:kellie-okonek"}
 2:25:44.09|text|I
 2:25:44.17|text|actually
 2:25:44.49|text|think
@@ -24018,7 +24018,7 @@ start_sec|event_type|event_data
 2:26:52.42|text|a
 2:26:52.50|text|collaborative
 2:26:53.22|text|discussion.
-2:26:57.94|meta|{"begin_speaker":"segmented:mike-edgington"}
+2:26:57.94|meta|{"begin_speaker":"identified:mike-edgington"}
 2:26:57.94|text|I'd
 2:26:58.18|text|like
 2:26:58.42|text|to
@@ -24057,7 +24057,7 @@ start_sec|event_type|event_data
 2:27:11.62|text|the
 2:27:11.78|text|swoops.
 2:27:14.82|text|Well
-2:27:17.46|meta|{"begin_speaker":"segmented:kellie-okonek"}
+2:27:17.46|meta|{"begin_speaker":"identified:kellie-okonek"}
 2:27:17.46|text|they
 2:27:17.78|text|do
 2:27:18.02|text|say
@@ -24085,7 +24085,7 @@ start_sec|event_type|event_data
 2:27:26.02|text|my
 2:27:26.18|text|point.
 2:27:26.58|text|Yeah.
-2:27:27.38|meta|{"begin_speaker":"segmented:kyle-kelly"}
+2:27:27.38|meta|{"begin_speaker":"identified:kyle-kelly"}
 2:27:27.38|text|Well
 2:27:27.62|text|it
 2:27:27.86|text|it
@@ -24269,7 +24269,7 @@ start_sec|event_type|event_data
 2:28:13.14|text|things
 2:28:13.38|text|that
 2:28:13.54|text|the
-2:28:13.62|meta|{"begin_speaker":"segmented:kellie-okonek"}
+2:28:13.62|meta|{"begin_speaker":"identified:kellie-okonek"}
 2:28:13.62|text|DOT
 2:28:14.34|text|has
 2:28:14.58|text|created.
@@ -24366,7 +24366,7 @@ start_sec|event_type|event_data
 2:28:44.34|text|community
 2:28:44.74|text|impact.
 2:28:46.10|text|And
-2:28:46.34|meta|{"begin_speaker":"segmented:kyle-kelly"}
+2:28:46.34|meta|{"begin_speaker":"identified:kyle-kelly"}
 2:28:46.34|text|that
 2:28:46.50|text|could
 2:28:46.66|text|be
@@ -24388,7 +24388,7 @@ start_sec|event_type|event_data
 2:28:50.34|text|to
 2:28:50.42|text|come.
 2:28:50.74|text|Yeah
-2:28:53.06|meta|{"begin_speaker":"segmented:kellie-okonek"}
+2:28:53.06|meta|{"begin_speaker":"identified:kellie-okonek"}
 2:28:53.06|text|that's
 2:28:53.30|text|probably
 2:28:53.46|text|the
@@ -24423,7 +24423,7 @@ start_sec|event_type|event_data
 2:29:03.06|text|it
 2:29:03.30|text|your
 2:29:03.62|text|idea
-2:29:04.74|meta|{"begin_speaker":"segmented:mike-edgington"}
+2:29:04.74|meta|{"begin_speaker":"identified:mike-edgington"}
 2:29:04.74|text|I'm
 2:29:05.06|text|assuming
 2:29:05.54|text|the
@@ -24456,7 +24456,7 @@ start_sec|event_type|event_data
 2:29:21.78|text|getting
 2:29:22.10|text|someone
 2:29:22.50|text|here
-2:29:23.54|meta|{"begin_speaker":"segmented:kyle-kelly"}
+2:29:23.54|meta|{"begin_speaker":"identified:kyle-kelly"}
 2:29:23.54|text|see
 2:29:23.70|text|if
 2:29:23.78|text|we
@@ -24486,7 +24486,7 @@ start_sec|event_type|event_data
 2:29:28.90|text|in
 2:29:29.06|text|place.
 2:29:29.38|text|Okay.
-2:29:30.74|meta|{"begin_speaker":"segmented:kellie-okonek"}
+2:29:30.74|meta|{"begin_speaker":"identified:kellie-okonek"}
 2:29:30.74|text|If
 2:29:30.90|text|it
 2:29:30.98|text|makes
@@ -24499,7 +24499,7 @@ start_sec|event_type|event_data
 2:29:32.34|text|the
 2:29:32.42|text|right
 2:29:32.66|text|person
-2:29:33.22|meta|{"begin_speaker":"segmented:kyle-kelly"}
+2:29:33.22|meta|{"begin_speaker":"identified:kyle-kelly"}
 2:29:33.22|text|I
 2:29:33.30|text|think
 2:29:33.46|text|I'll
@@ -24603,7 +24603,7 @@ start_sec|event_type|event_data
 2:29:56.82|text|it
 2:29:56.90|text|all
 2:29:57.06|text|work.
-2:29:57.62|meta|{"begin_speaker":"segmented:kellie-okonek"}
+2:29:57.62|meta|{"begin_speaker":"identified:kellie-okonek"}
 2:29:57.62|text|And
 2:29:57.70|text|I
 2:29:57.78|text|will
@@ -24700,7 +24700,7 @@ start_sec|event_type|event_data
 2:30:26.10|text|really
 2:30:26.34|text|helpful.
 2:30:26.98|text|Yeah.
-2:30:28.34|meta|{"begin_speaker":"segmented:mike-edgington"}
+2:30:28.34|meta|{"begin_speaker":"identified:mike-edgington"}
 2:30:28.34|text|Um
 2:30:28.66|text|one
 2:30:28.98|text|thing
@@ -24737,7 +24737,7 @@ start_sec|event_type|event_data
 2:30:41.30|text|send
 2:30:41.54|text|by
 2:30:41.70|text|God
-2:30:42.26|meta|{"begin_speaker":"segmented:kyle-kelly"}
+2:30:42.26|meta|{"begin_speaker":"identified:kyle-kelly"}
 2:30:42.26|text|which
 2:30:42.42|text|we're
 2:30:42.82|text|good
@@ -24925,7 +24925,7 @@ start_sec|event_type|event_data
 2:31:34.42|text|biggest
 2:31:34.74|text|aspect
 2:31:35.30|text|education.
-2:31:36.10|meta|{"begin_speaker":"segmented:mike-edgington"}
+2:31:36.10|meta|{"begin_speaker":"identified:mike-edgington"}
 2:31:36.10|text|Yep.
 2:31:37.14|text|So
 2:31:37.46|text|education
@@ -25017,7 +25017,7 @@ start_sec|event_type|event_data
 2:32:16.57|text|Parks
 2:32:16.97|text|Master
 2:32:17.29|text|Plan.
-2:32:18.49|meta|{"begin_speaker":"segmented:kyle-kelly"}
+2:32:18.49|meta|{"begin_speaker":"identified:kyle-kelly"}
 2:32:18.49|text|I
 2:32:18.65|text|know
 2:32:18.89|text|we
@@ -25106,7 +25106,7 @@ start_sec|event_type|event_data
 2:32:41.53|text|get
 2:32:41.69|text|on
 2:32:41.77|text|the
-2:32:41.85|meta|{"begin_speaker":"segmented:mike-edgington"}
+2:32:41.85|meta|{"begin_speaker":"identified:mike-edgington"}
 2:32:41.85|text|schedule
 2:32:42.25|text|to
 2:32:42.33|text|go
@@ -25153,7 +25153,7 @@ start_sec|event_type|event_data
 2:32:52.81|text|do
 2:32:52.89|text|in
 2:32:53.21|text|our
-2:32:54.41|meta|{"begin_speaker":"segmented:kyle-kelly"}
+2:32:54.41|meta|{"begin_speaker":"identified:kyle-kelly"}
 2:32:54.41|text|uh
 2:32:55.61|text|if
 2:32:56.01|text|we
@@ -25187,7 +25187,7 @@ start_sec|event_type|event_data
 2:33:04.01|text|PNZ
 2:33:04.49|text|schedule,
 2:33:04.89|text|we're
-2:33:05.05|meta|{"begin_speaker":"segmented:mike-edgington"}
+2:33:05.05|meta|{"begin_speaker":"identified:mike-edgington"}
 2:33:05.05|text|we're
 2:33:05.37|text|pretty
 2:33:05.61|text|stuck
@@ -25218,7 +25218,7 @@ start_sec|event_type|event_data
 2:33:12.89|text|Yes,
 2:33:13.45|text|okay,
 2:33:13.85|text|thank
-2:33:14.01|meta|{"begin_speaker":"segmented:kyle-kelly"}
+2:33:14.01|meta|{"begin_speaker":"identified:kyle-kelly"}
 2:33:14.01|text|you.
 2:33:14.25|text|Yeah,
 2:33:14.65|text|we
@@ -25239,7 +25239,7 @@ start_sec|event_type|event_data
 2:33:17.21|text|they
 2:33:17.37|text|were
 2:33:17.53|text|good.
-2:33:18.81|meta|{"begin_speaker":"segmented:mike-edgington"}
+2:33:18.81|meta|{"begin_speaker":"identified:mike-edgington"}
 2:33:18.81|text|Thank
 2:33:19.05|text|you.
 2:33:19.85|text|Yeah,
@@ -25916,7 +25916,7 @@ start_sec|event_type|event_data
 2:37:29.62|text|that's
 2:37:29.86|text|been
 2:37:30.02|text|done
-2:37:31.22|meta|{"begin_speaker":"segmented:kellie-okonek"}
+2:37:31.22|meta|{"begin_speaker":"identified:kellie-okonek"}
 2:37:31.22|text|I
 2:37:31.30|text|think
 2:37:31.70|text|we
@@ -26083,7 +26083,7 @@ start_sec|event_type|event_data
 2:38:30.09|text|we
 2:38:30.17|text|did
 2:38:30.41|text|that?
-2:38:31.21|meta|{"begin_speaker":"segmented:mike-edgington"}
+2:38:31.21|meta|{"begin_speaker":"identified:mike-edgington"}
 2:38:31.21|text|Well
 2:38:31.45|text|the
 2:38:31.61|text|timeline
@@ -26095,7 +26095,7 @@ start_sec|event_type|event_data
 2:38:33.69|text|the
 2:38:34.01|text|suggestions
 2:38:37.77|text|once
-2:38:38.09|meta|{"begin_speaker":"segmented:kellie-okonek"}
+2:38:38.09|meta|{"begin_speaker":"identified:kellie-okonek"}
 2:38:38.09|text|the
 2:38:38.17|text|new
 2:38:38.41|text|board
@@ -26142,7 +26142,7 @@ start_sec|event_type|event_data
 2:38:53.61|text|balance
 2:38:54.09|text|of
 2:38:54.33|text|input.
-2:38:55.37|meta|{"begin_speaker":"segmented:mike-edgington"}
+2:38:55.37|meta|{"begin_speaker":"identified:mike-edgington"}
 2:38:55.37|text|Right,
 2:38:55.69|text|and
 2:38:55.85|text|hopefully
@@ -26196,7 +26196,7 @@ start_sec|event_type|event_data
 2:39:08.97|text|my
 2:39:09.05|text|thought
 2:39:09.29|text|too.
-2:39:09.69|meta|{"begin_speaker":"segmented:kellie-okonek"}
+2:39:09.69|meta|{"begin_speaker":"identified:kellie-okonek"}
 2:39:09.69|text|I'm
 2:39:09.85|text|super
 2:39:10.09|text|anti-work
@@ -26290,7 +26290,7 @@ start_sec|event_type|event_data
 2:39:37.09|text|truth
 2:39:37.49|text|of
 2:39:37.73|text|them.
-2:39:40.21|meta|{"begin_speaker":"segmented:mike-edgington"}
+2:39:40.21|meta|{"begin_speaker":"identified:mike-edgington"}
 2:39:40.21|text|So
 2:39:40.53|text|we're
 2:39:40.77|text|not
@@ -26535,7 +26535,7 @@ start_sec|event_type|event_data
 2:41:06.77|text|tourism
 2:41:07.33|text|improvement
 2:41:07.81|text|project.
-2:41:08.37|meta|{"begin_speaker":"segmented:kyle-kelly"}
+2:41:08.37|meta|{"begin_speaker":"identified:kyle-kelly"}
 2:41:08.37|text|I
 2:41:08.61|text|just
 2:41:08.69|text|said
@@ -26546,7 +26546,7 @@ start_sec|event_type|event_data
 2:41:09.25|text|what
 2:41:09.41|text|it
 2:41:09.49|text|was.
-2:41:09.89|meta|{"begin_speaker":"segmented:mike-edgington"}
+2:41:09.89|meta|{"begin_speaker":"identified:mike-edgington"}
 2:41:09.89|text|Yes,
 2:41:10.37|text|yes.
 2:41:11.25|text|We
@@ -26586,7 +26586,7 @@ start_sec|event_type|event_data
 2:41:23.17|text|follow
 2:41:23.41|text|ups.
 2:41:23.73|text|Yeah,
-2:41:24.69|meta|{"begin_speaker":"segmented:kellie-okonek"}
+2:41:24.69|meta|{"begin_speaker":"identified:kellie-okonek"}
 2:41:24.69|text|is
 2:41:24.85|text|it
 2:41:25.01|text|a
@@ -26700,7 +26700,7 @@ start_sec|event_type|event_data
 2:42:05.45|text|ourselves
 2:42:05.85|text|some
 2:42:06.09|text|favors.
-2:42:09.85|meta|{"begin_speaker":"segmented:mike-edgington"}
+2:42:09.85|meta|{"begin_speaker":"identified:mike-edgington"}
 2:42:09.85|text|Okay,
 2:42:10.25|text|we
 2:42:10.41|text|don't
@@ -27009,7 +27009,7 @@ start_sec|event_type|event_data
 2:44:09.88|text|to
 2:44:09.96|text|that,
 2:44:10.12|text|Brianna?
-2:44:11.16|meta|{"begin_speaker":"segmented:kellie-okonek"}
+2:44:11.16|meta|{"begin_speaker":"identified:kellie-okonek"}
 2:44:11.16|text|Oh,
 2:44:11.40|text|thank
 2:44:11.64|text|you,
@@ -27164,7 +27164,7 @@ start_sec|event_type|event_data
 2:45:03.88|text|all
 2:45:04.20|text|next
 2:45:04.52|text|meeting.
-2:45:05.24|meta|{"begin_speaker":"segmented:mike-edgington"}
+2:45:05.24|meta|{"begin_speaker":"identified:mike-edgington"}
 2:45:05.24|text|Yeah,
 2:45:05.64|text|perhaps
 2:45:05.96|text|we
@@ -27178,7 +27178,7 @@ start_sec|event_type|event_data
 2:45:07.80|text|meeting
 2:45:08.20|text|as
 2:45:08.44|text|well.
-2:45:09.16|meta|{"begin_speaker":"segmented:kellie-okonek"}
+2:45:09.16|meta|{"begin_speaker":"identified:kellie-okonek"}
 2:45:09.16|text|Yeah,
 2:45:09.56|text|hopefully
 2:45:10.04|text|it
@@ -27188,13 +27188,13 @@ start_sec|event_type|event_data
 2:45:11.16|text|woo
 2:45:11.56|text|we
 2:45:11.80|text|cat.
-2:45:12.28|meta|{"begin_speaker":"segmented:mike-edgington"}
+2:45:12.28|meta|{"begin_speaker":"identified:mike-edgington"}
 2:45:12.28|text|Well
 2:45:13.32|text|next
 2:45:13.56|text|month
 2:45:13.72|text|it
 2:45:13.88|text|won't
-2:45:14.36|meta|{"begin_speaker":"segmented:kellie-okonek"}
+2:45:14.36|meta|{"begin_speaker":"identified:kellie-okonek"}
 2:45:14.36|text|be.
 2:45:14.52|text|It
 2:45:14.68|text|won't
@@ -27203,7 +27203,7 @@ start_sec|event_type|event_data
 2:45:15.56|text|joking,
 2:45:15.96|text|so
 2:45:16.28|text|it
-2:45:16.44|meta|{"begin_speaker":"segmented:mike-edgington"}
+2:45:16.44|meta|{"begin_speaker":"identified:mike-edgington"}
 2:45:16.44|text|won't
 2:45:16.92|text|um
 2:45:17.48|text|one

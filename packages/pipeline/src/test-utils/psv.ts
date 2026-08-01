@@ -19,16 +19,78 @@
 //         event_data is JSON ({"index","dur"}, dur being the run's length in
 //         seconds). Purely informational: parsePsv skips these, so they never
 //         affect parsed output.
-//   - Speaker labels: "unlabeled", "segmented:spk-<n>", "identified:<personId>".
+//   - Speaker labels name who is speaking, in one of three forms:
+//       * "unlabeled"          — no speaker info.
+//       * "segmented:spk-<n>"  — a distinct voice the diarizer separated but that
+//                                is not tied to a known person. The number is a
+//                                per-meeting cluster id: spk-3 in one meeting has
+//                                nothing to do with spk-3 in another.
+//       * "identified:<slug>"  — a known, recurring person, keyed by a stable
+//                                slug (eg "margaret-tyler"). The SAME slug is the SAME
+//                                person in every golden — that global identity is
+//                                what lets cross-meeting speaker recognition be
+//                                tested end to end (seed people + voiceprints from
+//                                two goldens, then recognize them in a third).
 //   - Timestamps are `H:MM:SS.ss` (hours:minutes:seconds.hundredths).
 //   - event_data is the final field, so it may itself contain `|`.
 
 import { readFileSync, writeFileSync } from "node:fs";
 
+import { LAST_WORD_DURATION_SEC } from "@open-minutes/core/transcription";
 import type {
   SpeechSegment,
   TranscriptSegment,
+  TranscriptWord,
 } from "@open-minutes/core/transcription";
+
+/**
+ * Who a golden segment is attributed to. Two tiers of identity:
+ *   - `segmented` is a per-meeting diarization cluster — a voice we separated but
+ *     have not tied to a known person. `cluster` is local to one meeting.
+ *   - `identified` is a global person, keyed by a stable `person` slug that means
+ *     the same individual across every meeting.
+ *
+ * The live diarization/alignment pipeline only ever produces `unlabeled` or
+ * `segmented` (it cannot know who a voice belongs to — that is identify.ts's job,
+ * later, against stored voiceprints). `identified` exists only in goldens, where
+ * a human has supplied the ground-truth answer.
+ */
+export type SpeakerLabel =
+  | { kind: "unlabeled" }
+  | { kind: "segmented"; cluster: number }
+  | { kind: "identified"; person: string };
+
+/**
+ * A speaker-grouped run of words in a golden transcript. The golden counterpart
+ * of the pipeline's {@link TranscriptSegment}: same word grouping, but its
+ * speaker is a rich {@link SpeakerLabel} rather than a bare cluster number, so it
+ * can carry the identified-person ground truth the pipeline has to work out.
+ */
+export interface GoldenSegment {
+  speaker: SpeakerLabel;
+  words: TranscriptWord[];
+}
+
+/** Lift a pipeline segment (bare cluster number) into a golden segment. */
+export function toGoldenSegment(seg: TranscriptSegment): GoldenSegment {
+  return {
+    speaker:
+      seg.speakerNum === null
+        ? { kind: "unlabeled" }
+        : { kind: "segmented", cluster: seg.speakerNum },
+    words: seg.words,
+  };
+}
+
+/** Structural equality of two speaker labels. */
+export function sameSpeakerLabel(a: SpeakerLabel, b: SpeakerLabel): boolean {
+  if (a.kind !== b.kind) return false;
+  if (a.kind === "segmented" && b.kind === "segmented")
+    return a.cluster === b.cluster;
+  if (a.kind === "identified" && b.kind === "identified")
+    return a.person === b.person;
+  return true; // both "unlabeled"
+}
 
 // Internal line-level representation. Not part of the public API.
 type PsvEvent =
@@ -72,22 +134,37 @@ function pad2(n: number): string {
   return n.toString().padStart(2, "0");
 }
 
-function parseSpeaker(label: string): number | null {
-  if (label === "unlabeled") return null;
+function parseSpeaker(label: string): SpeakerLabel {
+  if (label === "unlabeled") return { kind: "unlabeled" };
   if (label.startsWith("segmented:")) {
     const m = label.slice("segmented:".length).match(/^spk-(\d+)$/);
     if (!m)
       throw new Error(
-        `Invalid segmented speaker label: ${JSON.stringify(label)}`,
+        `Invalid segmented speaker label (expected "segmented:spk-<n>"): ${JSON.stringify(label)}`,
       );
-    return Number(m[1]);
+    return { kind: "segmented", cluster: Number(m[1]) };
+  }
+  if (label.startsWith("identified:")) {
+    const person = label.slice("identified:".length);
+    if (!/^[a-z0-9][a-z0-9-]*$/.test(person)) {
+      throw new Error(
+        `Invalid identified speaker slug (expected kebab-case, eg "identified:margaret-tyler"): ${JSON.stringify(label)}`,
+      );
+    }
+    return { kind: "identified", person };
   }
   throw new Error(`Unknown speaker label: ${JSON.stringify(label)}`);
 }
 
-function formatSpeaker(speaker: number | null): string {
-  if (speaker === null) return "unlabeled";
-  return `segmented:spk-${speaker}`;
+function formatSpeaker(speaker: SpeakerLabel): string {
+  switch (speaker.kind) {
+    case "unlabeled":
+      return "unlabeled";
+    case "segmented":
+      return `segmented:spk-${speaker.cluster}`;
+    case "identified":
+      return `identified:${speaker.person}`;
+  }
 }
 
 function parseEvents(content: string): PsvEvent[] {
@@ -159,13 +236,11 @@ function parseEvents(content: string): PsvEvent[] {
  * Pass a content string to parse it directly, or `{ path }` to read and parse
  * the file at that path.
  */
-export function parsePsv(
-  source: string | { path: string },
-): TranscriptSegment[] {
+export function parsePsv(source: string | { path: string }): GoldenSegment[] {
   const content =
     typeof source === "string" ? source : readFileSync(source.path, "utf8");
-  const segments: TranscriptSegment[] = [];
-  let current: TranscriptSegment | null = null;
+  const segments: GoldenSegment[] = [];
+  let current: GoldenSegment | null = null;
 
   for (const event of parseEvents(content)) {
     if (event.type === "vad") {
@@ -177,7 +252,7 @@ export function parsePsv(
           `Unsupported meta event (expected begin_speaker): ${JSON.stringify(event.data)}`,
         );
       }
-      current = { speakerNum: parseSpeaker(label), words: [] };
+      current = { speaker: parseSpeaker(label), words: [] };
       segments.push(current);
     } else {
       if (!current) {
@@ -201,14 +276,14 @@ export function parsePsv(
  * is also written to that file.
  */
 export function serializePsv(
-  segments: readonly TranscriptSegment[],
+  segments: readonly GoldenSegment[],
   options?: { path?: string },
 ): string {
   const rows: string[] = [];
   for (const segment of segments) {
     const start = segment.words[0]?.start ?? 0;
     rows.push(
-      `${formatTimestamp(start)}|meta|${JSON.stringify({ begin_speaker: formatSpeaker(segment.speakerNum) })}`,
+      `${formatTimestamp(start)}|meta|${JSON.stringify({ begin_speaker: formatSpeaker(segment.speaker) })}`,
     );
     for (const w of segment.words) {
       rows.push(`${formatTimestamp(w.start)}|text|${w.text}`);
@@ -219,6 +294,66 @@ export function serializePsv(
     writeFileSync(options.path, content);
   }
   return content;
+}
+
+/**
+ * Re-apply the speaker layer of an existing golden onto a freshly transcribed
+ * word stream, preserving the golden's segment boundaries AND their speaker
+ * labels (including hand-assigned `identified` people).
+ *
+ * This backs the transcription snapshot refresh: re-transcribing shifts word
+ * text/timings slightly, but the diarization + identification layers are curated
+ * by hand and must survive. So rather than re-diarizing, we keep the reference's
+ * segments and redistribute the new words into them by time. Boundaries between
+ * two adjacent same-speaker reference segments are preserved (words are bucketed
+ * by segment index, not merged by label), so the refresh never collapses the
+ * hand-curated structure. Words are placed into the reference segment whose
+ * `[firstWord, lastWord + LAST_WORD_DURATION_SEC]` span contains them, or the
+ * nearest by midpoint when none does. Empty segments are dropped.
+ *
+ * Unlike align.ts's `alignSpeakers`, this is golden-only and label-aware; the
+ * live pipeline stays ignorant of the `identified` tier.
+ */
+export function reapplySpeakerLayer(
+  words: readonly TranscriptWord[],
+  reference: readonly GoldenSegment[],
+): GoldenSegment[] {
+  const ref = reference.filter((s) => s.words.length > 0);
+  if (ref.length === 0) {
+    return words.length > 0 ? [{ speaker: { kind: "unlabeled" }, words: [...words] }] : [];
+  }
+  const spans = ref.map((s) => ({
+    start: s.words[0]!.start,
+    end: s.words.at(-1)!.start + LAST_WORD_DURATION_SEC,
+  }));
+  const buckets: TranscriptWord[][] = ref.map(() => []);
+  for (const word of words) {
+    buckets[nearestSpanIndex(word.start, spans)]!.push(word);
+  }
+  return ref
+    .map((s, i) => ({ speaker: s.speaker, words: buckets[i]! }))
+    .filter((s) => s.words.length > 0);
+}
+
+/** Index of the span containing `t`, else the nearest span by midpoint. */
+function nearestSpanIndex(
+  t: number,
+  spans: readonly { start: number; end: number }[],
+): number {
+  for (let i = 0; i < spans.length; i++) {
+    if (t >= spans[i]!.start && t < spans[i]!.end) return i;
+  }
+  let best = 0;
+  let bestDist = Infinity;
+  for (let i = 0; i < spans.length; i++) {
+    const mid = (spans[i]!.start + spans[i]!.end) / 2;
+    const dist = Math.abs(t - mid);
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = i;
+    }
+  }
+  return best;
 }
 
 /**
