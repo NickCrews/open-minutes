@@ -9,7 +9,7 @@ import {
   LAST_WORD_DURATION_SEC,
   type DiarizationTurn,
 } from "@open-minutes/core/transcription";
-import { computeSpeakerEmbeddings } from "../diarize";
+import { computeSpeakerEmbeddings } from "../embed";
 import type { GoldenMeeting, GoldenPerson } from "../test-utils/test-data";
 
 // Seed a hand-verified golden meeting into the database as established ground

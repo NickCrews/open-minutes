@@ -5,7 +5,8 @@ import { fileURLToPath } from "node:url";
 
 import sherpa_onnx from "sherpa-onnx-node";
 
-import { computeSpeakerEmbeddings, diarizeAudio } from "./diarize";
+import { computeSpeakerEmbeddings } from "./embed";
+import { diarizeAudio } from "./diarize";
 import { alignSpeakers, segmentsToSpeechRuns } from "./align";
 import { parsePsv, serializePsv, toGoldenSegment } from "./test-utils/psv";
 import { getMeetingData } from "./test-utils/test-data";

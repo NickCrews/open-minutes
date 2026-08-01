@@ -3,20 +3,29 @@ import { fileURLToPath } from "node:url";
 
 import sherpa_onnx, {
   type OfflineSpeakerDiarization,
-  type SpeakerEmbeddingExtractor,
   type WaveForm,
 } from "sherpa-onnx-node";
 
 import { ensureDownloaded, type ModelSpec } from "./model.js";
+import {
+  assertSampleRate,
+  computeSpeakerEmbeddings,
+  cosineSimilarity,
+  EMBEDDING_MODEL_SPEC,
+  ensureWaveAudio,
+  getEmbeddingExtractor,
+  groupBySpeaker,
+  NUM_THREADS,
+  speakerCentroid,
+} from "./embed.js";
 import type { DiarizationTurn } from "@open-minutes/core/transcription";
 
-// Ported from OpenWhispr's offline speaker-diarization path. Two layers:
-//   - diarizeAudio():            anonymous, time-stamped speaker turns (Tier A).
-//   - computeSpeakerEmbeddings(): one CAM++ voiceprint per speaker (Tier B), for
-//                                 matching against known people downstream.
-// Unlike OpenWhispr (a native binary + an ONNX worker), sherpa-onnx-node exposes
-// both the diarizer and the embedding extractor in-process, so there's no
-// subprocess and no worker_threads here.
+// Ported from OpenWhispr's offline speaker-diarization path. This module owns
+// segmentation (Tier A): anonymous, time-stamped speaker turns from diarizeAudio.
+// The voiceprint machinery it leans on for the post-clustering merge lives in
+// embed.ts (Tier B). Unlike OpenWhispr (a native binary + an ONNX worker),
+// sherpa-onnx-node exposes both the diarizer and the embedding extractor
+// in-process, so there's no subprocess and no worker_threads here.
 
 // pyannote segmentation 3.0 — finds speaker boundaries / overlapping speech.
 const SEGMENTATION_MODEL_SPEC = {
@@ -24,23 +33,6 @@ const SEGMENTATION_MODEL_SPEC = {
   url: "https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-segmentation-models/sherpa-onnx-pyannote-segmentation-3-0.tar.bz2",
   files: {
     "model.onnx": true,
-  },
-} as const satisfies ModelSpec;
-
-// 3D-Speaker CAM++ (zh_en-common_advanced) — produces 192-dim voice embeddings.
-// Used both by the diarizer internally (for clustering) and by us directly (for
-// centroids + the post-clustering merge below). We deliberately use the
-// "common_advanced" variant rather than en_voxceleb: on GBOS audio it separates
-// speakers far more cleanly (different speakers ~0.1-0.25 cosine vs en_voxceleb's
-// muddy 0.45-0.5), which is what makes both clustering and identify.ts reliable.
-// NOTE: the release tag "speaker-recongition-models" is misspelled upstream;
-// that misspelling is the correct, canonical URL.
-const EMBEDDING_MODEL_SPEC = {
-  name: "3dspeaker_speech_campplus_sv_zh_en_16k-common_advanced",
-  url: "https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-recongition-models/3dspeaker_speech_campplus_sv_zh_en_16k-common_advanced.onnx",
-  single_file: true,
-  files: {
-    "3dspeaker_speech_campplus_sv_zh_en_16k-common_advanced.onnx": true,
   },
 } as const satisfies ModelSpec;
 
@@ -62,17 +54,6 @@ const MIN_DURATION_OFF = 0.5; // ignore silences shorter than this when splittin
 // DIARIZATION_FINDINGS.md for the data behind this value.
 const MERGE_THRESHOLD = 0.5;
 
-// Centroid construction. We embed a speaker's longest turns and average them.
-const LONGEST_SEGMENTS = 3; // how many turns per speaker feed the centroid
-const MIN_SEGMENT_SECONDS = 1.5; // turns shorter than this don't embed reliably
-const MAX_EMBEDDING_SECONDS = 8; // cap audio fed to the embedder (use the tail)
-
-const EXPECTED_SAMPLE_RATE = 16000;
-
-// ONNX intra-op threads. The 166-min meeting is CPU-bound in sherpa's process();
-// 4 roughly halves wall time vs 2 while leaving headroom on typical machines.
-const NUM_THREADS = 4;
-
 /**
  * Split audio into anonymous, time-stamped speaker turns. Turns are sorted by
  * start time and speakers are integer ids (0, 1, …), numbered by talk time
@@ -91,27 +72,6 @@ export function diarizeAudio(audio: string | WaveForm): DiarizationTurn[] {
     .map((s) => ({ start: s.start, end: s.end, speakerNum: s.speaker }))
     .sort((a, b) => a.start - b.start);
   return mergeSpeakers(wave, rawTurns);
-}
-
-/**
- * Build one voiceprint per speaker: for each speaker take their longest turns
- * (≥ MIN_SEGMENT_SECONDS, up to LONGEST_SEGMENTS), embed each, and average into
- * a centroid. Speakers with no qualifying turn are omitted.
- */
-export function computeSpeakerEmbeddings(
-  audio: string | WaveForm,
-  turns: DiarizationTurn[],
-): Map<number, Float32Array> {
-  const wave = ensureWaveAudio(audio);
-  const extractor = getEmbeddingExtractor();
-  assertSampleRate(wave.sampleRate, EXPECTED_SAMPLE_RATE);
-
-  const centroids = new Map<number, Float32Array>();
-  for (const [speaker, speakerTurns] of groupBySpeaker(turns)) {
-    const centroid = speakerCentroid(extractor, wave, speakerTurns);
-    if (centroid) centroids.set(speaker, centroid);
-  }
-  return centroids;
 }
 
 /**
@@ -236,96 +196,8 @@ function nearestGroup(
   return best;
 }
 
-/** Voiceprint for a speaker: mean of their up-to-LONGEST_SEGMENTS longest embeddable turns, or null if none qualify. */
-function speakerCentroid(
-  extractor: SpeakerEmbeddingExtractor,
-  wave: WaveForm,
-  turns: DiarizationTurn[],
-): Float32Array | null {
-  const longest = turns
-    .filter((t) => t.end - t.start >= MIN_SEGMENT_SECONDS)
-    .sort((a, b) => b.end - b.start - (a.end - a.start))
-    .slice(0, LONGEST_SEGMENTS);
-  if (longest.length === 0) return null;
-
-  const embeddings = longest.map((t) =>
-    extractEmbedding(extractor, wave, t.start, t.end),
-  );
-  return computeCentroid(embeddings, extractor.dim);
-}
-
-function extractEmbedding(
-  extractor: SpeakerEmbeddingExtractor,
-  wave: WaveForm,
-  startSec: number,
-  endSec: number,
-): Float32Array {
-  // Cap to the last MAX_EMBEDDING_SECONDS of the turn (long turns gain nothing
-  // from more audio and cost more to embed).
-  const clampedStart = Math.max(startSec, endSec - MAX_EMBEDDING_SECONDS);
-  const startIdx = Math.floor(clampedStart * wave.sampleRate);
-  const endIdx = Math.floor(endSec * wave.sampleRate);
-  const samples = wave.samples.subarray(startIdx, endIdx);
-
-  const stream = extractor.createStream();
-  stream.acceptWaveform({ sampleRate: wave.sampleRate, samples });
-  stream.inputFinished();
-  return extractor.compute(stream);
-}
-
-/** Element-wise mean of N equal-length embeddings. */
-function computeCentroid(
-  embeddings: Float32Array[],
-  dim: number,
-): Float32Array {
-  const centroid = new Float32Array(dim);
-  for (const emb of embeddings) {
-    for (let i = 0; i < dim; i++) centroid[i]! += emb[i]!;
-  }
-  for (let i = 0; i < dim; i++) centroid[i]! /= embeddings.length;
-  return centroid;
-}
-
-/** Cosine similarity of two (not necessarily normalized) vectors. */
-function cosineSimilarity(a: Float32Array, b: Float32Array): number {
-  let dot = 0;
-  let na = 0;
-  let nb = 0;
-  for (let i = 0; i < a.length; i++) {
-    dot += a[i]! * b[i]!;
-    na += a[i]! * a[i]!;
-    nb += b[i]! * b[i]!;
-  }
-  return dot / (Math.sqrt(na) * Math.sqrt(nb) || 1);
-}
-
 function midpoint(t: DiarizationTurn): number {
   return (t.start + t.end) / 2;
-}
-
-function groupBySpeaker(
-  turns: DiarizationTurn[],
-): Map<number, DiarizationTurn[]> {
-  const bySpeaker = new Map<number, DiarizationTurn[]>();
-  for (const turn of turns) {
-    const list = bySpeaker.get(turn.speakerNum) ?? [];
-    list.push(turn);
-    bySpeaker.set(turn.speakerNum, list);
-  }
-  return bySpeaker;
-}
-
-function ensureWaveAudio(audio: string | WaveForm): WaveForm {
-  return typeof audio === "string" ? sherpa_onnx.readWave(audio) : audio;
-}
-
-function assertSampleRate(actual: number, expected: number): void {
-  if (actual !== expected) {
-    throw new Error(
-      `Diarization expects ${expected} Hz mono audio, got ${actual} Hz. ` +
-        `Resample first (e.g. ffmpeg -ar 16000 -ac 1).`,
-    );
-  }
 }
 
 let _diarizer: OfflineSpeakerDiarization | null = null;
@@ -350,19 +222,6 @@ function getDiarizer(): OfflineSpeakerDiarization {
     minDurationOff: MIN_DURATION_OFF,
   });
   return _diarizer;
-}
-
-let _extractor: SpeakerEmbeddingExtractor | null = null;
-
-function getEmbeddingExtractor(): SpeakerEmbeddingExtractor {
-  if (_extractor) return _extractor;
-  const emb = ensureDownloaded(EMBEDDING_MODEL_SPEC).files;
-  _extractor = new sherpa_onnx.SpeakerEmbeddingExtractor({
-    model: emb["3dspeaker_speech_campplus_sv_zh_en_16k-common_advanced.onnx"],
-    numThreads: NUM_THREADS,
-    provider: "cpu",
-  });
-  return _extractor;
 }
 
 async function cli() {

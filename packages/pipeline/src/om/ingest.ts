@@ -16,7 +16,8 @@ import type {
   SpeechSegment,
 } from "@open-minutes/core/transcription";
 import { transcribeAudio } from "../transcribe";
-import { computeSpeakerEmbeddings, diarizeAudio } from "../diarize";
+import { computeSpeakerEmbeddings } from "../embed";
+import { diarizeAudio } from "../diarize";
 import { alignSpeakers, segmentsToTurns } from "../align";
 import { identifyAndInsertSegments } from "../identify";
 
