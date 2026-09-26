@@ -47,3 +47,17 @@ export function getMeetingById(db: DB, meetingId: number) {
       return meeting;
     });
 }
+
+/**
+ * A meeting's whole transcript, in the same shape as `getMeetingById`'s
+ * segments so it renders with the same components. For pages that show a
+ * meeting's transcript on demand rather than up front.
+ */
+export function getMeetingSegments(db: DB, meetingId: number) {
+  return db.query.segmentsTable.findMany({
+    where: { meeting_id: meetingId },
+    columns: { text: false },
+    with: { person: { columns: { id: true, name: true, bio: true } } },
+    orderBy: { start_secs: "asc" },
+  });
+}
