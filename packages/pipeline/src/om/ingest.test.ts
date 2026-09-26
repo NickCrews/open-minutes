@@ -153,7 +153,8 @@ describe("ingestVideo", () => {
       youtube_id: VIDEO_ID,
       title: METADATA.title,
       description: METADATA.description,
-      start_time: null,
+      date: null,
+      time: null,
     });
     expect(meeting!.duration_secs).toBe("01:00:00");
 
@@ -265,7 +266,7 @@ describe("listIngested", () => {
     const yt = fakeYouTube({ fetchVideoMetadata: async () => METADATA });
     await ingestVideo(db, VIDEO_ID, { yt, workRoot });
     // An older meeting with no segments.
-    await insertMeeting(db, gbos.id, "older-video", new Date("2020-01-01"));
+    await insertMeeting(db, gbos.id, "older-video", "2020-01-01");
 
     const all = await listIngested(db);
     expect(all.map((m) => m.youtubeId)).toEqual([VIDEO_ID, "older-video"]);

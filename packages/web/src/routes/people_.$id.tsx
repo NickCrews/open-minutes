@@ -14,7 +14,7 @@ import { getPersonById, updatePersonName } from "~/features/people";
 import { Bio } from "~/features/people/bio";
 import { assertCanEdit, canEdit } from "~/lib/permissions";
 import {
-  formatMeetingTime,
+  formatMeetingDate,
   formatTimestamp,
   intervalToSecs,
 } from "~/lib/format";
@@ -24,6 +24,7 @@ import {
   type YTPlayer,
 } from "~/lib/youtube";
 import { db } from "~/server/db";
+import { compareMeetingsNewestFirst } from "@open-minutes/core/meeting-date";
 
 const fetchPerson = createServerFn({ method: "GET" })
   .inputValidator((id: number) => id)
@@ -141,7 +142,8 @@ type MeetingGroup = {
 /**
  * Collects a person's segments into one group per meeting: most recent meeting
  * first, and within a meeting the segments in the order they were spoken.
- * Meetings with no start time sort last, since we can't place them in time.
+ * Meetings with no date sort last, since we can't place them in time; on the
+ * same day, a known time sorts before an unknown one.
  */
 function groupByMeeting(segments: PersonSegment[]): MeetingGroup[] {
   const groups = new Map<number, MeetingGroup>();
@@ -158,15 +160,11 @@ function groupByMeeting(segments: PersonSegment[]): MeetingGroup[] {
       (a, b) => (segmentStart(a) ?? 0) - (segmentStart(b) ?? 0),
     );
   }
-  return [...groups.values()].sort((a, b) => {
-    const aTime = a.meeting.start_time?.getTime();
-    const bTime = b.meeting.start_time?.getTime();
-    if (aTime == null || bTime == null) {
-      if (aTime == null && bTime == null) return b.meeting.id - a.meeting.id;
-      return aTime == null ? 1 : -1;
-    }
-    return bTime - aTime;
-  });
+  return [...groups.values()].sort(
+    (a, b) =>
+      compareMeetingsNewestFirst(a.meeting, b.meeting) ||
+      b.meeting.id - a.meeting.id,
+  );
 }
 
 const segmentStart = (segment: PersonSegment) =>
@@ -216,12 +214,7 @@ function MeetingCard(props: {
             {props.group.meeting.title || "(untitled)"}
           </CardTitle>
           <CardDescription class="pl-6">
-            {props.group.meeting.start_time
-              ? formatMeetingTime(
-                  props.group.meeting.start_time,
-                  props.group.meeting.body.timezone,
-                )
-              : "Date unknown"}
+            {formatMeetingDate(props.group.meeting) ?? "Date unknown"}
             {" · "}
             {count()} {count() === 1 ? "segment" : "segments"}
           </CardDescription>

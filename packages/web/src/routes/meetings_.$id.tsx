@@ -68,7 +68,8 @@ function MeetingPage() {
           </Link>
           <StartTime
             meetingId={meeting().id}
-            startTime={meeting().start_time}
+            date={meeting().date}
+            time={meeting().time}
             timezone={meeting().body.timezone}
             prefix=" — "
             onSaved={() => void router.invalidate()}

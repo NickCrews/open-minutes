@@ -1,68 +1,15 @@
 import { describe, expect, it } from "vitest";
-import {
-  formatDuration,
-  formatMeetingTime,
-  toZonedInputValue,
-  zonedInputValueToDate,
-} from "./format";
+import { formatDuration, formatZoneAbbreviation } from "./format";
 
-const ANCHORAGE = "America/Anchorage";
-
-describe("meeting times in a body's timezone", () => {
-  it("renders an instant as the wall clock the body saw", () => {
-    // 2026-06-15T03:00Z is 7 PM the previous evening in Anchorage (UTC-8, DST).
-    const at = new Date("2026-06-15T03:00:00Z");
-    expect(formatMeetingTime(at, ANCHORAGE)).toBe("June 14, 2026 7:00 PM");
-  });
-
-  it("does not depend on the machine's own timezone", () => {
-    const at = new Date("2026-06-15T03:00:00Z");
-    expect(formatMeetingTime(at, "America/New_York")).toBe(
-      "June 14, 2026 11:00 PM",
+describe("zone abbreviations", () => {
+  it("follows DST for the moment given", () => {
+    const tz = "America/Anchorage";
+    expect(formatZoneAbbreviation(new Date("2026-06-14T20:00:00Z"), tz)).toBe(
+      "AKDT",
     );
-    expect(formatMeetingTime(at, "UTC")).toBe("June 15, 2026 3:00 AM");
-  });
-});
-
-describe("datetime-local input round trip", () => {
-  it("shows an instant as the body's wall clock", () => {
-    const at = new Date("2026-06-15T03:00:00Z");
-    expect(toZonedInputValue(at, ANCHORAGE)).toBe("2026-06-14T19:00");
-  });
-
-  it("reads a wall clock back as the same instant", () => {
-    const at = zonedInputValueToDate("2026-06-14T19:00", ANCHORAGE);
-    expect(at?.toISOString()).toBe("2026-06-15T03:00:00.000Z");
-  });
-
-  it("round trips across both sides of DST", () => {
-    // Anchorage is UTC-8 in June and UTC-9 in January, so a helper that hard
-    // coded one offset would pass the summer case and fail the winter one.
-    for (const wall of ["2026-06-14T19:00", "2026-01-14T19:00"]) {
-      const at = zonedInputValueToDate(wall, ANCHORAGE)!;
-      expect(toZonedInputValue(at, ANCHORAGE)).toBe(wall);
-    }
-    expect(
-      zonedInputValueToDate("2026-01-14T19:00", ANCHORAGE)?.toISOString(),
-    ).toBe("2026-01-15T04:00:00.000Z");
-  });
-
-  it("handles midnight, which en-US renders as hour 24", () => {
-    const at = zonedInputValueToDate("2026-06-14T00:00", ANCHORAGE)!;
-    expect(toZonedInputValue(at, ANCHORAGE)).toBe("2026-06-14T00:00");
-  });
-
-  it("resolves the fall-back hour to a single instant", () => {
-    // 1 AM happens twice on 2026-11-01 in Anchorage. Either instant is a
-    // defensible reading; what matters is that we pick one and that rendering
-    // it back yields the time that was typed, rather than drifting an hour.
-    const at = zonedInputValueToDate("2026-11-01T01:00", ANCHORAGE)!;
-    expect(toZonedInputValue(at, ANCHORAGE)).toBe("2026-11-01T01:00");
-  });
-
-  it("rejects a string that isn't a time", () => {
-    expect(zonedInputValueToDate("", ANCHORAGE)).toBeNull();
-    expect(zonedInputValueToDate("not a date", ANCHORAGE)).toBeNull();
+    expect(formatZoneAbbreviation(new Date("2026-01-14T20:00:00Z"), tz)).toBe(
+      "AKST",
+    );
   });
 });
 

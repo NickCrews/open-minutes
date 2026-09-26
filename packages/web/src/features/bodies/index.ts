@@ -15,7 +15,7 @@ export function getBodyById(db: DB, bodyId: number) {
         jurisdiction: true,
         videoSources: true,
         meetings: {
-          orderBy: { start_time: "desc" },
+          orderBy: { date: "desc", time: "desc" },
         },
       },
     })

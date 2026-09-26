@@ -42,11 +42,11 @@ async function insertPerson(db: DB, name: string): Promise<number> {
 /** youtube_id is unique and defaults to "", so meetings need distinct ones. */
 let nextYoutubeId = 0;
 
-/** A meeting of `bodyId` at `start`, with `segments` segments by `personId`. */
+/** A meeting of `bodyId` on `date`, with `segments` segments by `personId`. */
 async function insertMeeting(
   db: DB,
   bodyId: number,
-  start: string | null,
+  date: string | null,
   personId: number | null,
   segments = 1,
 ) {
@@ -55,7 +55,7 @@ async function insertMeeting(
     .values({
       body_id: bodyId,
       youtube_id: `vid${nextYoutubeId++}`,
-      start_time: start ? new Date(start) : null,
+      date,
     })
     .returning({ id: meetingsTable.id });
   for (let i = 0; i < segments; i++) {
@@ -73,17 +73,16 @@ describe("getAllPeople attendance", () => {
   }) => {
     const gbos = await insertBody(db, "GBOS");
     const alice = await insertPerson(db, "Alice");
-    await insertMeeting(db, gbos, "2023-04-10T18:00:00Z", alice, 5);
-    await insertMeeting(db, gbos, "2026-02-03T18:00:00Z", alice, 3);
+    await insertMeeting(db, gbos, "2023-04-10", alice, 5);
+    await insertMeeting(db, gbos, "2026-02-03", alice, 3);
 
     const [person] = await getAllPeople(db);
     expect(person!.attendance).toEqual([
       {
         body: "GBOS",
-        timezone: "America/Anchorage",
         meetings: 2,
-        first: new Date("2023-04-10T18:00:00Z"),
-        last: new Date("2026-02-03T18:00:00Z"),
+        first: "2023-04-10",
+        last: "2026-02-03",
       },
     ]);
   });
@@ -92,9 +91,9 @@ describe("getAllPeople attendance", () => {
     const gbos = await insertBody(db, "GBOS");
     const assembly = await insertBody(db, "Assembly");
     const alice = await insertPerson(db, "Alice");
-    await insertMeeting(db, gbos, "2023-04-10T18:00:00Z", alice);
-    await insertMeeting(db, assembly, "2024-01-10T18:00:00Z", alice);
-    await insertMeeting(db, assembly, "2024-06-10T18:00:00Z", alice);
+    await insertMeeting(db, gbos, "2023-04-10", alice);
+    await insertMeeting(db, assembly, "2024-01-10", alice);
+    await insertMeeting(db, assembly, "2024-06-10", alice);
 
     const [person] = await getAllPeople(db);
     expect(person!.attendance.map((a) => [a.body, a.meetings])).toEqual([
@@ -114,7 +113,7 @@ describe("getAllPeople attendance", () => {
   }) => {
     const gbos = await insertBody(db, "GBOS");
     const alice = await insertPerson(db, "Alice");
-    await insertMeeting(db, gbos, "2023-04-10T18:00:00Z", null);
+    await insertMeeting(db, gbos, "2023-04-10", null);
 
     const people = await getAllPeople(db);
     expect(people).toHaveLength(1);
@@ -122,7 +121,7 @@ describe("getAllPeople attendance", () => {
     expect(people[0]!.attendance).toEqual([]);
   });
 
-  test("still counts meetings whose start time is unknown", async ({ db }) => {
+  test("still counts meetings whose date is unknown", async ({ db }) => {
     const gbos = await insertBody(db, "GBOS");
     const alice = await insertPerson(db, "Alice");
     await insertMeeting(db, gbos, null, alice);
@@ -131,7 +130,6 @@ describe("getAllPeople attendance", () => {
     expect(person!.attendance).toEqual([
       {
         body: "GBOS",
-        timezone: "America/Anchorage",
         meetings: 1,
         first: null,
         last: null,

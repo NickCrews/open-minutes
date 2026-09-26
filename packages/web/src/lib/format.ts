@@ -1,72 +1,10 @@
-/**
- * Format a meeting time like "June 14, 2026 7:30 PM", in the timezone the body
- * meets in — a meeting reads the same to everyone, whatever zone the browser
- * (or the server rendering the page) happens to be in.
- */
-export function formatMeetingTime(date: Date, timeZone: string): string {
-  const day = date.toLocaleDateString("en-US", {
-    timeZone,
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
-  const time = date.toLocaleTimeString("en-US", {
-    timeZone,
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
-  return `${day} ${time}`;
-}
-
-/**
- * Format a month like "Apr 2023", in the timezone the body meets in — the same
- * reasoning as `formatMeetingTime`, and it matters at the edges: a 6pm meeting
- * on the 31st in Anchorage falls in the next month read as UTC.
- */
-export function formatMonthYear(date: Date, timeZone: string): string {
-  return date.toLocaleDateString("en-US", {
-    timeZone,
-    month: "short",
-    year: "numeric",
-  });
-}
-
-/**
- * The wall-clock time `date` shows in `timeZone`, as the "YYYY-MM-DDTHH:mm"
- * that `<input type="datetime-local">` wants.
- */
-export function toZonedInputValue(date: Date, timeZone: string): string {
-  const parts = zonedParts(date, timeZone);
-  return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
-}
-
-/**
- * Inverse of `toZonedInputValue`: the instant at which `timeZone`'s clocks read
- * `value` (a "YYYY-MM-DDTHH:mm" from a datetime-local input). Returns null if
- * the string isn't a time we can place.
- *
- * There's no direct "wall clock in a zone → instant" API, so we guess that the
- * wall time is UTC and correct by the zone's offset. The offset itself depends
- * on the instant (DST), so the corrected guess is fed back through once. That
- * second pass settles every time except the hour that doesn't exist on a
- * spring-forward date, which lands on the hour after the jump.
- */
-export function zonedInputValueToDate(
-  value: string,
-  timeZone: string,
-): Date | null {
-  // Date.parse is lenient enough to read the leftovers of a garbage input as a
-  // date (it takes "" here, via ":00Z", as the year 2000), so the shape has to
-  // be checked before parsing. Seconds are optional: some browsers include them.
-  const match = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})(:\d{2})?$/.exec(value);
-  if (!match) return null;
-  const asUtc = Date.parse(`${match[1]}${match[2] ?? ":00"}Z`);
-  if (Number.isNaN(asUtc)) return null;
-  const once = asUtc - zoneOffsetMs(new Date(asUtc), timeZone);
-  const twice = asUtc - zoneOffsetMs(new Date(once), timeZone);
-  return new Date(twice);
-}
+// Meeting dates are wall-clock strings formatted by core, so the server and
+// every browser render them identically. Re-exported so pages can keep pulling
+// all their formatting from one place.
+export {
+  formatMeetingDate,
+  formatMonthYear,
+} from "@open-minutes/core/meeting-date";
 
 /** Short zone label for a moment, eg "AKDT". */
 export function formatZoneAbbreviation(date: Date, timeZone: string): string {
@@ -77,47 +15,6 @@ export function formatZoneAbbreviation(date: Date, timeZone: string): string {
     .formatToParts(date)
     .find((p) => p.type === "timeZoneName");
   return part?.value ?? timeZone;
-}
-
-/** How far ahead of UTC `timeZone` is at `date`, in milliseconds. */
-function zoneOffsetMs(date: Date, timeZone: string): number {
-  const p = zonedParts(date, timeZone);
-  const wallAsUtc = Date.UTC(
-    Number(p.year),
-    Number(p.month) - 1,
-    Number(p.day),
-    Number(p.hour),
-    Number(p.minute),
-    Number(p.second),
-  );
-  return wallAsUtc - date.getTime();
-}
-
-/** The zero-padded calendar fields `date` shows in `timeZone`. */
-function zonedParts(date: Date, timeZone: string) {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone,
-    hour12: false,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  }).formatToParts(date);
-  const get = (type: Intl.DateTimeFormatPartTypes) =>
-    parts.find((p) => p.type === type)!.value;
-  // en-US with hour12: false renders midnight as hour 24; the rest of the
-  // calendar fields are already the next day's, so only the hour needs fixing.
-  const hour = get("hour") === "24" ? "00" : get("hour");
-  return {
-    year: get("year"),
-    month: get("month"),
-    day: get("day"),
-    hour,
-    minute: get("minute"),
-    second: get("second"),
-  };
 }
 
 /** Format seconds as a clock-style timestamp: "0:07", "4:05", "1:02:33". */

@@ -3,6 +3,11 @@ import { join } from "node:path";
 import { type CachedAudio, getCachedAudio } from "./audio-cache";
 import { type GoldenSegment, parsePsv } from "./psv";
 import { symlink } from "node:fs/promises";
+import {
+  type MeetingWhen,
+  parseMeetingDate,
+  parseMeetingTime,
+} from "@open-minutes/core/meeting-date";
 
 const TEST_DATA_ROOT = new URL("../../test-data/", import.meta.url).pathname;
 
@@ -41,6 +46,13 @@ export interface GoldenMeeting {
   body_id: string;
   youtube_id: string;
   title: string;
+  /**
+   * "YYYY-MM-DD" in the body's timezone, or null if unknown. Optional in
+   * meeting.json (absent means unknown); always present once loaded.
+   */
+  date: string | null;
+  /** "HH:MM:SS" in the body's timezone, or null if unknown. */
+  time: string | null;
   duration_secs: number;
   segments: GoldenSegment[];
   meetingDir: string; // path to the meeting's fixture directory (used internally for loading audio and PSV)
@@ -120,6 +132,7 @@ export function getMeetingData(meetingSlug: string): GoldenMeeting {
   if (!existsSync(meetingPath))
     throw new Error(`Meeting file not found: ${meetingPath}`);
   const meeting = parseJson<GoldenMeeting>(meetingPath);
+  const when = parseGoldenWhen(meeting, meetingPath);
 
   const segments = parsePsv({ path: join(meetingDir, "golden.psv") });
 
@@ -140,10 +153,38 @@ export function getMeetingData(meetingSlug: string): GoldenMeeting {
 
   return {
     ...meeting,
+    ...when,
     meetingDir,
     getAudio,
     segments,
   };
+}
+
+/**
+ * Validate and normalize a meeting.json's `date`/`time` (both optional; "HH:MM"
+ * is accepted for time). Throws on a malformed value rather than seeding
+ * garbage, and on a time with no date, which the database would refuse anyway.
+ */
+export function parseGoldenWhen(
+  raw: { date?: unknown; time?: unknown },
+  source: string,
+): MeetingWhen {
+  const field = (
+    name: "date" | "time",
+    parse: (v: string) => string | null,
+  ): string | null => {
+    const value = raw[name];
+    if (value == null) return null;
+    const parsed = typeof value === "string" ? parse(value) : null;
+    if (parsed === null)
+      throw new Error(`${source}: invalid ${name} ${JSON.stringify(value)}`);
+    return parsed;
+  };
+  const date = field("date", parseMeetingDate);
+  const time = field("time", parseMeetingTime);
+  if (time !== null && date === null)
+    throw new Error(`${source}: has a time but no date`);
+  return { date, time };
 }
 
 function listDirs(parent: string): string[] {
