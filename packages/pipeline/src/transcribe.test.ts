@@ -179,7 +179,10 @@ describe("transcribe", () => {
           // clusters AND any hand-assigned identified people) instead of
           // overwriting it: redistribute the freshly transcribed words back into
           // the golden's existing speaker segments by time.
-          const merged = reapplySpeakerLayer(transcribedWords, meeting.segments);
+          const merged = reapplySpeakerLayer(
+            transcribedWords,
+            meeting.segments,
+          );
           serializePsv(merged, {
             path: join(meeting.meetingDir, "golden.psv"),
           });
