@@ -5,6 +5,8 @@ import {
   interval,
   jsonb,
   timestamp,
+  date,
+  time,
   serial,
   varchar,
   vector,
@@ -44,10 +46,9 @@ export const bodiesTable = pgTable("bodies", {
   name: varchar().notNull().default(""),
   name_short: varchar().notNull().default(""),
   homepage_url: varchar(),
-  // IANA zone the body meets in, eg "America/Anchorage". Meeting times are
-  // stored as UTC instants, so this is what turns one back into the wall-clock
-  // time that was on the agenda — the only time a reader (or an editor typing
-  // one in) ever thinks in.
+  // IANA zone the body meets in, eg "America/Anchorage". A meeting's `date` and
+  // `time` are wall-clock readings in this zone (see ADR 0003); this is what
+  // would turn one into an instant, should anything ever need one.
   timezone: varchar().notNull(),
   created_at: timestamp().notNull().defaultNow(),
 });
@@ -77,26 +78,40 @@ export const videoSourcesTable = pgTable("video_sources", {
   created_at: timestamp().notNull().defaultNow(),
 });
 
-export const meetingsTable = pgTable("meetings", {
-  id: serial().primaryKey(),
-  body_id: integer()
-    .notNull()
-    .references(() => bodiesTable.id),
-  youtube_id: varchar().notNull().default("").unique(),
-  youtube_url: varchar().generatedAlwaysAs(
-    (): SQL =>
-      sql`CASE WHEN ${meetingsTable.youtube_id} != '' THEN 'https://www.youtube.com/watch?v=' || ${meetingsTable.youtube_id} ELSE '' END`,
-  ),
-  title: varchar().notNull().default(""),
-  description: varchar().notNull().default(""),
-  // An instant, not a wall-clock reading: the meeting is over and the moment it
-  // gavelled in is a fact, one that has to line up with video timestamps and
-  // sort against meetings in other zones. Render it through the body's
-  // `timezone` to get back the time that was on the agenda.
-  start_time: timestamp({ withTimezone: true }),
-  duration_secs: secondsInterval(),
-  created_at: timestamp().notNull().defaultNow(),
-});
+export const meetingsTable = pgTable(
+  "meetings",
+  {
+    id: serial().primaryKey(),
+    body_id: integer()
+      .notNull()
+      .references(() => bodiesTable.id),
+    youtube_id: varchar().notNull().default("").unique(),
+    youtube_url: varchar().generatedAlwaysAs(
+      (): SQL =>
+        sql`CASE WHEN ${meetingsTable.youtube_id} != '' THEN 'https://www.youtube.com/watch?v=' || ${meetingsTable.youtube_id} ELSE '' END`,
+    ),
+    title: varchar().notNull().default(""),
+    description: varchar().notNull().default(""),
+    // When the meeting happened, as the wall clock read in the body's `timezone`
+    // — the form it appears in on an agenda, and the only one anyone reads off a
+    // video. Split in two because we often know the day but not the hour: a null
+    // `time` means "time unknown", never midnight. Both are null until someone
+    // supplies them (ingestion can't derive either); a time without a date is
+    // meaningless and forbidden. Kept as strings ("2026-06-14", "19:30:00") so no
+    // JS Date — and no machine timezone — ever gets a chance to shift them. See
+    // ADR 0003.
+    date: date({ mode: "string" }),
+    time: time(),
+    duration_secs: secondsInterval(),
+    created_at: timestamp().notNull().defaultNow(),
+  },
+  (table) => [
+    check(
+      "meetings_time_requires_date",
+      sql`${table.time} IS NULL OR ${table.date} IS NOT NULL`,
+    ),
+  ],
+);
 
 export const peopleTable = pgTable(
   "people",

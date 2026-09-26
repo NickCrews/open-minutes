@@ -2,62 +2,63 @@ import { createServerFn } from "@tanstack/solid-start";
 import { createSignal, Show } from "solid-js";
 import { Button } from "~/components/button";
 import { TextField, TextFieldInput } from "~/components/text-field";
-import { getMeetingById, updateMeetingStartTime } from "~/features/meetings";
+import { updateMeetingDate } from "~/features/meetings";
+import { formatMeetingDate, formatZoneAbbreviation } from "~/lib/format";
 import {
-  formatMeetingTime,
-  formatZoneAbbreviation,
-  toZonedInputValue,
-  zonedInputValueToDate,
-} from "~/lib/format";
+  parseMeetingDate,
+  parseMeetingTime,
+} from "@open-minutes/core/meeting-date";
 import { assertCanEdit, canEdit } from "~/lib/permissions";
 import { db } from "~/server/db";
 
 /**
- * Start times are entered by hand, in the body's own timezone — the wall-clock
- * time on the agenda is the only form anyone reads off the video. The client
- * sends that wall time and nothing else; the zone to read it in comes from the
- * body on this side, so the stored instant can't disagree with the zone the
- * page will render it back in.
+ * Dates and times are entered by hand as the wall clock read in the body's own
+ * timezone — the form on the agenda, and the form they're stored in (ADR 0003),
+ * so nothing is converted on the way in. The time is optional: often the day is
+ * all anyone knows, and leaving it blank stores "time unknown" rather than a
+ * made-up midnight. Clearing the date clears the time with it.
  *
  * Guarded on both sides of the wire by the same `canEdit` that hides the button.
  */
-const saveMeetingStartTime = createServerFn({ method: "POST" })
-  .inputValidator((input: { id: number; localTime: string }) => input)
+const saveMeetingDate = createServerFn({ method: "POST" })
+  .inputValidator((input: { id: number; date: string; time: string }) => input)
   .handler(async ({ data }) => {
-    assertCanEdit("meeting times");
-    if (!data.localTime) return updateMeetingStartTime(db(), data.id, null);
-    const { body } = await getMeetingById(db(), data.id);
-    const start = zonedInputValueToDate(data.localTime, body.timezone);
-    if (!start) throw new Error(`Unrecognized start time: ${data.localTime}`);
-    return updateMeetingStartTime(db(), data.id, start);
+    assertCanEdit("meeting dates");
+    if (!data.date)
+      return updateMeetingDate(db(), data.id, { date: null, time: null });
+    const date = parseMeetingDate(data.date);
+    if (!date) throw new Error(`Unrecognized date: ${data.date}`);
+    const time = data.time ? parseMeetingTime(data.time) : null;
+    if (data.time && !time) throw new Error(`Unrecognized time: ${data.time}`);
+    return updateMeetingDate(db(), data.id, { date, time });
   });
 
 /**
- * When a meeting started, shown in the body's timezone. In development it
- * doubles as an editor, since ingestion can't derive a start time and someone
- * has to read it off the video — that's also why the unset state stays visible
- * there instead of collapsing away: an unset time is the thing you came to fix.
+ * When a meeting happened, in the body's timezone: the date, plus the time when
+ * it's known. In development it doubles as an editor, since ingestion can't
+ * derive either and someone has to read it off the video — that's also why the
+ * unset state stays visible there instead of collapsing away: an unset date is
+ * the thing you came to fix.
  *
- * Takes the three fields it needs rather than a meeting row, so the list and
- * detail pages can share it despite selecting different columns.
+ * Takes the fields it needs rather than a meeting row, so the list and detail
+ * pages can share it despite selecting different columns.
  */
 export function StartTime(props: {
   meetingId: number;
-  startTime: Date | null;
+  date: string | null;
+  time: string | null;
   timezone: string;
-  /** Rendered before the time, but only when there is something to separate. */
+  /** Rendered before the date, but only when there is something to separate. */
   prefix?: string;
   onSaved: () => void;
 }) {
   const [editing, setEditing] = createSignal(false);
   const [saving, setSaving] = createSignal(false);
 
-  const save = async (localTime: string) => {
+  const save = async (date: string, time: string) => {
     setSaving(true);
     try {
-      await saveMeetingStartTime({
-        data: { id: props.meetingId, localTime },
-      });
+      await saveMeetingDate({ data: { id: props.meetingId, date, time } });
       props.onSaved();
       setEditing(false);
     } finally {
@@ -69,11 +70,9 @@ export function StartTime(props: {
     <Show
       when={editing()}
       fallback={
-        <Show when={props.startTime || canEdit()}>
+        <Show when={props.date || canEdit()}>
           {props.prefix}
-          <Show when={props.startTime} fallback={<>Date unknown</>}>
-            {(at) => <>{formatMeetingTime(at(), props.timezone)}</>}
-          </Show>
+          {formatMeetingDate(props) ?? "Date unknown"}
           <Show when={canEdit()}>
             <button
               type="button"
@@ -90,27 +89,35 @@ export function StartTime(props: {
         class="mt-1 flex items-center gap-2"
         onSubmit={(event) => {
           event.preventDefault();
-          const value = new FormData(event.currentTarget).get("start_time");
-          void save(String(value ?? ""));
+          const form = new FormData(event.currentTarget);
+          void save(
+            String(form.get("date") ?? ""),
+            String(form.get("time") ?? ""),
+          );
         }}
       >
         {/* TextField is `w-full` by default, which in a flex row stretches the
-            date picker across the whole container. It only ever holds a
-            fixed-width "07/13/2026, 06:30 PM", so pin it to that. */}
+            pickers across the whole container. They only ever hold a
+            fixed-width "07/13/2026" and "06:30 PM", so pin them to that. */}
+        <TextField name="date" class="w-40" defaultValue={props.date ?? ""}>
+          <TextFieldInput type="date" autofocus class="h-8" />
+        </TextField>
         <TextField
-          name="start_time"
-          class="w-56"
-          defaultValue={
-            props.startTime
-              ? toZonedInputValue(props.startTime, props.timezone)
-              : ""
-          }
+          name="time"
+          class="w-32"
+          defaultValue={props.time?.slice(0, 5) ?? ""}
         >
-          <TextFieldInput type="datetime-local" autofocus class="h-8" />
+          <TextFieldInput
+            type="time"
+            class="h-8"
+            aria-label="Time (optional)"
+          />
         </TextField>
         <span class="text-muted-foreground text-xs">
+          {/* Noon UTC is the small hours in the Americas, so it lands on the
+              day being edited and past any 2 AM DST switch. */}
           {formatZoneAbbreviation(
-            props.startTime ?? new Date(),
+            props.date ? new Date(`${props.date}T12:00:00Z`) : new Date(),
             props.timezone,
           )}
         </span>

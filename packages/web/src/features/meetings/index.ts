@@ -1,28 +1,30 @@
 import { type DB, meetingsTable } from "@open-minutes/core/db";
+import type { MeetingWhen } from "@open-minutes/core/meeting-date";
 import { eq } from "drizzle-orm";
 
 export function getAllMeetings(db: DB) {
   return db.query.meetingsTable.findMany({
     with: { body: { with: { jurisdiction: true } } },
-    orderBy: { start_time: "desc" },
+    orderBy: { date: "desc", time: "desc" },
   });
 }
 
 /**
- * Sets when a meeting started, or clears it back to unknown. Ingestion can't
+ * Sets when a meeting happened, or clears it back to unknown. Ingestion can't
  * derive this — YouTube's publish and stream times don't reliably match when
- * the body actually gavelled in — so it arrives from a human reading the video.
- * `start` is a UTC instant; the caller is responsible for having interpreted
- * any wall-clock input in the body's timezone.
+ * the body actually gavelled in — so it arrives from a human (or a parser)
+ * reading the video or agenda. `date` ("YYYY-MM-DD") and `time` ("HH:MM:SS")
+ * are wall-clock readings in the body's timezone; a null `time` means the day
+ * is known but the hour isn't. A time without a date is refused by the database.
  */
-export function updateMeetingStartTime(
+export function updateMeetingDate(
   db: DB,
   meetingId: number,
-  start: Date | null,
+  when: MeetingWhen,
 ) {
   return db
     .update(meetingsTable)
-    .set({ start_time: start })
+    .set({ date: when.date, time: when.time })
     .where(eq(meetingsTable.id, meetingId));
 }
 

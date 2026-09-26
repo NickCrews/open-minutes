@@ -54,7 +54,8 @@ function MeetingsPage() {
                 <CardDescription class="flex flex-wrap items-center gap-x-3 gap-y-1">
                   <StartTime
                     meetingId={meeting.id}
-                    startTime={meeting.start_time}
+                    date={meeting.date}
+                    time={meeting.time}
                     timezone={meeting.body.timezone}
                     onSaved={() => void router.invalidate()}
                   />

@@ -7,7 +7,7 @@ export function searchSegments(db: DB, query: string) {
     columns: { words: false },
     with: {
       meeting: {
-        columns: { id: true, title: true, start_time: true },
+        columns: { id: true, title: true, date: true, time: true },
         with: { body: { columns: { timezone: true } } },
       },
       person: { columns: { id: true, name: true } },

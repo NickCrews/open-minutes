@@ -11,6 +11,7 @@
     "./youtube": "./src/youtube/index.ts",
     "./bodies": "./src/bodies/index.ts",
     "./timeline": "./src/timeline.ts",
+    "./meeting-date": "./src/meeting-date.ts",
     "./transcription": "./src/transcription/index.ts",
     "./voice_embeddings": "./src/voice_embeddings/index.ts"
   },

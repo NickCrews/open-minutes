@@ -13,7 +13,10 @@ export interface IngestedMeeting {
   /** Body slug (eg "gbos"). */
   body: string;
   title: string;
-  startTime: Date | null;
+  /** "YYYY-MM-DD" in the body's timezone, or null if unknown. */
+  date: string | null;
+  /** "HH:MM:SS" in the body's timezone, or null if unknown. */
+  time: string | null;
   /** Postgres interval rendering (eg "01:23:45"), or null if unknown. */
   durationSecs: string | null;
   segmentCount: number;
@@ -33,7 +36,8 @@ export async function listIngested(
       youtubeId: meetingsTable.youtube_id,
       nameShort: bodiesTable.name_short,
       title: meetingsTable.title,
-      startTime: meetingsTable.start_time,
+      date: meetingsTable.date,
+      time: meetingsTable.time,
       durationSecs: meetingsTable.duration_secs,
       segmentCount: count(segmentsTable.id),
     })
@@ -46,7 +50,11 @@ export async function listIngested(
         : undefined,
     )
     .groupBy(meetingsTable.id, bodiesTable.id)
-    .orderBy(desc(meetingsTable.start_time), desc(meetingsTable.id));
+    .orderBy(
+      desc(meetingsTable.date),
+      desc(meetingsTable.time),
+      desc(meetingsTable.id),
+    );
 
   return rows.map(({ nameShort, ...row }) => ({
     ...row,

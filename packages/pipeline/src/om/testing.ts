@@ -75,14 +75,14 @@ export async function insertMeeting(
   db: DB,
   bodyId: number,
   youtubeId: string,
-  startTime?: Date,
+  date?: string,
 ): Promise<number> {
   const [row] = await db
     .insert(meetingsTable)
     .values({
       body_id: bodyId,
       youtube_id: youtubeId,
-      start_time: startTime,
+      date,
     })
     .returning({ id: meetingsTable.id });
   return row!.id;

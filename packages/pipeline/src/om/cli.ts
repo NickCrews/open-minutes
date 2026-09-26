@@ -61,7 +61,7 @@ function printStatusTable(meetings: IngestedMeeting[]): void {
   const rows = meetings.map((m) => [
     m.youtubeId,
     m.body,
-    m.startTime?.toISOString().slice(0, 10) ?? "",
+    m.date ?? "",
     String(m.segmentCount),
     m.title,
   ]);

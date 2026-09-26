@@ -70,7 +70,7 @@ describe("e2e cross-meeting speaker recognition", () => {
       }
       console.log(
         `[e2e] seeded ${seededSlugs.size} people with voiceprints: ` +
-        `${[...seededSlugs].sort().join(", ")}`,
+          `${[...seededSlugs].sort().join(", ")}`,
       );
       expect(seededSlugs.size).toBeGreaterThan(0);
 
@@ -118,8 +118,8 @@ describe("e2e cross-meeting speaker recognition", () => {
       const cmp = compareTranscripts(refWords, ingestedWords);
       console.log(
         `[e2e] WER=${cmp.wer.toFixed(4)} ` +
-        `(sub=${cmp.substitutions} del=${cmp.deletions} ins=${cmp.insertions} ` +
-        `of ${cmp.refWordCount})`,
+          `(sub=${cmp.substitutions} del=${cmp.deletions} ins=${cmp.insertions} ` +
+          `of ${cmp.refWordCount})`,
       );
       // The golden is (for now) itself derived from this pipeline's transcription
       // of this audio, so WER is ~0 until the golden's words are hand-cleaned; this
@@ -139,7 +139,7 @@ describe("e2e cross-meeting speaker recognition", () => {
       }
       console.log(
         `[e2e] segments matched to a seeded person: ` +
-        `${JSON.stringify(Object.fromEntries(recognized))}`,
+          `${JSON.stringify(Object.fromEntries(recognized))}`,
       );
 
       // 3c. Identification accuracy — only meaningful once the held-out golden has
@@ -148,15 +148,15 @@ describe("e2e cross-meeting speaker recognition", () => {
       if (identityScore.total > 0) {
         console.log(
           `[e2e] identification accuracy: ` +
-          `${identityScore.correct}/${identityScore.total} ` +
-          `(${((identityScore.correct / identityScore.total) * 100).toFixed(0)}%)`,
+            `${identityScore.correct}/${identityScore.total} ` +
+            `(${((identityScore.correct / identityScore.total) * 100).toFixed(0)}%)`,
         );
         // Lax first-pass floor; raise once labels + transcript are cleaned up.
         expect(identityScore.correct / identityScore.total).toBeGreaterThan(0);
       } else {
         console.log(
           `[e2e] held-out golden has no identified people yet — ` +
-          `label ${HELD_OUT_SLUG} to score identification accuracy.`,
+            `label ${HELD_OUT_SLUG} to score identification accuracy.`,
         );
       }
     },
