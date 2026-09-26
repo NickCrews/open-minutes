@@ -48,6 +48,10 @@ function tallySpeakers(segments: Segment[]): Speaker[] {
     .sort((a, b) => b.secs - a.secs);
 }
 
+/**
+ * Each speaker's share of the talking, as a list. Unheaded and unbounded: it
+ * lives in a tab of the meeting page's side pane, which supplies both.
+ */
 export function Speakers(props: { segments: Segment[] }) {
   const speakers = createMemo(() => tallySpeakers(props.segments));
   const total = createMemo(() =>
@@ -56,41 +60,38 @@ export function Speakers(props: { segments: Segment[] }) {
   const share = (secs: number) => (total() > 0 ? secs / total() : 0);
 
   return (
-    <Show when={speakers().length > 0}>
-      <section class="flex min-h-0 shrink-0 flex-col gap-2">
-        <h2 class="text-sm font-semibold">Speakers</h2>
-        <ul class="max-h-48 overflow-y-auto text-sm">
-          <For each={speakers()}>
-            {(speaker) => (
-              <li class="flex items-baseline gap-2 py-1">
-                <SpeakerSwatch speaker={() => speaker} />
-                <span class="min-w-0 flex-1 truncate">
-                  <Show when={speaker.person} fallback={speaker.label}>
-                    {(person) => (
-                      <PersonHoverCard
-                        person={person()}
-                        label={speaker.label}
-                      />
-                    )}
-                  </Show>
-                </span>
+    <Show
+      when={speakers().length > 0}
+      fallback={<p class="text-muted-foreground text-sm">No speakers yet.</p>}
+    >
+      <ul class="text-sm">
+        <For each={speakers()}>
+          {(speaker) => (
+            <li class="flex items-baseline gap-2 py-1">
+              <SpeakerSwatch speaker={() => speaker} />
+              <span class="min-w-0 flex-1 truncate">
+                <Show when={speaker.person} fallback={speaker.label}>
+                  {(person) => (
+                    <PersonHoverCard person={person()} label={speaker.label} />
+                  )}
+                </Show>
+              </span>
+              <span
+                class="bg-muted h-1.5 w-24 shrink-0 self-center rounded-full"
+                aria-hidden="true"
+              >
                 <span
-                  class="bg-muted h-1.5 w-24 shrink-0 self-center rounded-full"
-                  aria-hidden="true"
-                >
-                  <span
-                    class="bg-primary/60 block h-full rounded-full"
-                    style={{ width: `${share(speaker.secs) * 100}%` }}
-                  />
-                </span>
-                <span class="text-muted-foreground w-20 shrink-0 text-right tabular-nums">
-                  {formatSecsDuration(speaker.secs)}
-                </span>
-              </li>
-            )}
-          </For>
-        </ul>
-      </section>
+                  class="bg-primary/60 block h-full rounded-full"
+                  style={{ width: `${share(speaker.secs) * 100}%` }}
+                />
+              </span>
+              <span class="text-muted-foreground w-20 shrink-0 text-right tabular-nums">
+                {formatSecsDuration(speaker.secs)}
+              </span>
+            </li>
+          )}
+        </For>
+      </ul>
     </Show>
   );
 }

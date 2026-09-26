@@ -30,7 +30,9 @@ export const Route = createRootRoute({
 function RootComponent() {
   return (
     <RootDocument>
-      <nav class="flex gap-4 border-b px-4 py-3">
+      {/* A fixed height that never wraps (it scrolls sideways if it must),
+          so full-viewport pages like the meeting page can subtract it. */}
+      <nav class="flex h-12 items-center gap-4 overflow-x-auto whitespace-nowrap border-b px-4 text-sm sm:text-base">
         <Link to="/" class="font-semibold hover:underline">
           Home
         </Link>
