@@ -27,14 +27,14 @@ Measured on a real fixture (`gbos_9HoIM5INxpI/golden.psv`, 26,993 words, 228
 segments) by re-encoding it into each candidate format and applying four
 representative edits. Diff cost is `git diff --numstat` (added/deleted lines).
 
-| Format | Bytes | Gzip | Delete word | Add word | Fix spelling | Shift 5 words |
-| --- | --- | --- | --- | --- | --- | --- |
-| **psv** | 585 KB | 154 KB | +0/−1 | +1/−0 | +1/−1 | +5/−5 |
-| json (compact) | 874 KB | 157 KB | +1/−1 | +1/−1 | +1/−1 | +1/−1 |
-| json (pretty) | 1,797 KB | 182 KB | +0/−4 | +4/−0 | +1/−1 | +5/−5 |
-| jsonl | 872 KB | 157 KB | +0/−1 | +1/−0 | +1/−1 | +5/−5 |
-| csv | 873 KB | 171 KB | +0/−1 | +1/−0 | +1/−1 | +5/−5 |
-| bin | 362 KB | 146 KB | binary | binary | binary | binary |
+| Format         | Bytes    | Gzip   | Delete word | Add word | Fix spelling | Shift 5 words |
+| -------------- | -------- | ------ | ----------- | -------- | ------------ | ------------- |
+| **psv**        | 585 KB   | 154 KB | +0/−1       | +1/−0    | +1/−1        | +5/−5         |
+| json (compact) | 874 KB   | 157 KB | +1/−1       | +1/−1    | +1/−1        | +1/−1         |
+| json (pretty)  | 1,797 KB | 182 KB | +0/−4       | +4/−0    | +1/−1        | +5/−5         |
+| jsonl          | 872 KB   | 157 KB | +0/−1       | +1/−0    | +1/−1        | +5/−5         |
+| csv            | 873 KB   | 171 KB | +0/−1       | +1/−0    | +1/−1        | +5/−5         |
+| bin            | 362 KB   | 146 KB | binary      | binary   | binary       | binary        |
 
 Reading the table:
 
