@@ -26,17 +26,17 @@ _entity_ is a jurisdiction. The web UI's reader-facing heading for bodies is
 
 ## Meetings and transcripts
 
-| Term                | Definition                                                                                                                                               | Aliases to avoid                                           |
-| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| **Meeting**         | One gathering of one body, recorded as one video, and the unit we ingest, store, and display. `meetings`                                                 | session, hearing, video, event, recording                  |
-| **Video**           | The YouTube recording of a meeting, identified by its `youtube_id`; the meeting's audio comes from it.                                                   | stream, clip, media                                        |
-| **Start time**      | The instant a meeting gavelled in, stored in UTC and always rendered in its body's `timezone`. `start_time`                                              | date, meeting date, local time                             |
-| **Transcript**      | The ordered segments of one meeting: everything that was said, who said it, and when.                                                                    | minutes, captions, transcription (for the artifact), notes |
-| **Word**            | One recognized word and its onset, the atomic unit of a transcript. `TranscriptWord`                                                                     | token, term                                                |
-| **Onset**           | The number of seconds from the start of the meeting's audio to where a word begins; words store no end time. `TranscriptWord.start`                      | timestamp (ambiguous), start_time (that's the meeting's)   |
-| **Segment**         | A non-empty run of consecutive words spoken by one speaker; its text and times are derived from its words. `segments`, `TranscriptSegment`               | utterance, turn, bubble, block, paragraph, line, clip      |
-| **Speaking time**   | The total duration of a speaker's segments within one meeting, as shown in the meeting page's Speakers list.                                             | talk time, airtime                                         |
-| **Minutes** (avoid) | Formal written minutes are _not_ something this project produces. Open Minutes publishes transcripts; say "transcript" unless you mean the legal record. | —                                                          |
+| Term                                | Definition                                                                                                                                                         | Aliases to avoid                                           |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------- |
+| **Meeting**                         | One gathering of one body, recorded as one video, and the unit we ingest, store, and display. `meetings`                                                           | session, hearing, video, event, recording                  |
+| **Video**                           | The YouTube recording of a meeting, identified by its `youtube_id`; the meeting's audio comes from it.                                                             | stream, clip, media                                        |
+| **Meeting date** / **meeting time** | The local wall-clock day, and optionally time of day, a meeting gavelled in, in its body's `timezone`. A null time means "time unknown" (ADR 0003). `date`, `time` | start time, start_time (removed), timestamp                |
+| **Transcript**                      | The ordered segments of one meeting: everything that was said, who said it, and when.                                                                              | minutes, captions, transcription (for the artifact), notes |
+| **Word**                            | One recognized word and its onset, the atomic unit of a transcript. `TranscriptWord`                                                                               | token, term                                                |
+| **Onset**                           | The number of seconds from the start of the meeting's audio to where a word begins; words store no end time. `TranscriptWord.start`                                | timestamp (ambiguous), meeting time (that's the meeting's) |
+| **Segment**                         | A non-empty run of consecutive words spoken by one speaker; its text and times are derived from its words. `segments`, `TranscriptSegment`                         | utterance, turn, bubble, block, paragraph, line, clip      |
+| **Speaking time**                   | The total duration of a speaker's segments within one meeting, as shown in the meeting page's Speakers list.                                                       | talk time, airtime                                         |
+| **Minutes** (avoid)                 | Formal written minutes are _not_ something this project produces. Open Minutes publishes transcripts; say "transcript" unless you mean the legal record.           | —                                                          |
 
 ## Speakers and people
 

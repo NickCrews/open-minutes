@@ -57,7 +57,7 @@ A [pnpm](https://pnpm.io) workspace with three packages:
   transcript browser, built with [SolidJS](https://www.solidjs.com) +
   [TanStack Start](https://tanstack.com/start) and Tailwind. Pages for meetings
   (transcript alongside the YouTube video), people, boards & councils, and
-  transcript search. Editing (eg a meeting's start time or a person's bio) is
+  transcript search. Editing (eg a meeting's date and time or a person's bio) is
   only enabled on the dev server; there is no auth yet.
 
 **Database:** PostgreSQL with [pgvector](https://github.com/pgvector/pgvector)
@@ -132,7 +132,7 @@ default and needs no configuration. To target another, define
   JOIN meetings m ON m.id = s.meeting_id
   LEFT JOIN people p ON p.id = s.person_id
   WHERE s.text ILIKE '%snow removal%'
-  ORDER BY m.start_time, s.start_secs;
+  ORDER BY m.date, m.time, s.start_secs;
   ```
 
 - **Script it:** the pipeline's API (`listIngested`, `listAvailable`,
