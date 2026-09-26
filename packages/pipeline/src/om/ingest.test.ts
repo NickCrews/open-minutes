@@ -146,6 +146,8 @@ describe("ingestVideo", () => {
       youtubeId: VIDEO_ID,
       status: "ingested",
       segmentCount: 2,
+      // Neither the title nor the transcript says when the meeting was.
+      when: { date: null, time: null },
     });
 
     const [meeting] = await db.select().from(meetingsTable);
