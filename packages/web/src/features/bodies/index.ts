@@ -5,8 +5,8 @@ import { count, max, min } from "drizzle-orm";
 export type Coverage = {
   meetings: number;
   /** Null when none of the meetings has a known start time. */
-  first: Date | null;
-  last: Date | null;
+  first: string | null;
+  last: string | null;
 };
 
 const NO_COVERAGE: Coverage = { meetings: 0, first: null, last: null };
@@ -36,8 +36,8 @@ async function getCoverageByBody(db: DB): Promise<Map<number, Coverage>> {
     .select({
       body_id: meetingsTable.body_id,
       meetings: count(),
-      first: min(meetingsTable.start_time),
-      last: max(meetingsTable.start_time),
+      first: min(meetingsTable.date),
+      last: max(meetingsTable.date),
     })
     .from(meetingsTable)
     .groupBy(meetingsTable.body_id);

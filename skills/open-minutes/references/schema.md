@@ -48,15 +48,16 @@ table. Rarely needed for questions about content.
 One meeting = one YouTube video. A row exists only once ingestion fully
 succeeded (there is no partial state).
 
-| column          | type        | notes                                                                                  |
-| --------------- | ----------- | -------------------------------------------------------------------------------------- |
-| `body_id`       | int         | → `bodies.id`                                                                          |
-| `youtube_id`    | varchar     | unique video id, e.g. `9HoIM5INxpI`; `''` if no video                                  |
-| `youtube_url`   | varchar     | generated: `https://www.youtube.com/watch?v=<youtube_id>`, or `''`                     |
-| `title`         | varchar     | the video title as published; often contains the date; may be `''`                     |
-| `description`   | varchar     | the video description; sometimes holds the agenda                                      |
-| `start_time`    | timestamptz | UTC instant the meeting gavelled in. **Often NULL** — set by a human, not by ingestion |
-| `duration_secs` | interval    | video length; nullable                                                                 |
+| column          | type     | notes                                                                              |
+| --------------- | -------- | ---------------------------------------------------------------------------------- |
+| `body_id`       | int      | → `bodies.id`                                                                      |
+| `youtube_id`    | varchar  | unique video id, e.g. `9HoIM5INxpI`; `''` if no video                              |
+| `youtube_url`   | varchar  | generated: `https://www.youtube.com/watch?v=<youtube_id>`, or `''`                 |
+| `title`         | varchar  | the video title as published; often contains the date; may be `''`                 |
+| `description`   | varchar  | the video description; sometimes holds the agenda                                  |
+| `date`          | date     | local wall-clock date in `bodies.timezone`. May be NULL (unknown)                  |
+| `time`          | time     | local wall-clock start time. **NULL means time unknown**; never set without `date` |
+| `duration_secs` | interval | video length; nullable                                                             |
 
 ## people
 

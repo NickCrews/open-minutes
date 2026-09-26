@@ -52,10 +52,10 @@ look for them; answer those questions by searching segment text.
    A segment's `end_secs` is an estimate (last word's onset + 0.5 s).
 2. **Link to a moment** with the meeting's `youtube_url` plus
    `&t=<floor(seconds)>s`. `youtube_url` is `''` when there is no video.
-3. **`meetings.start_time` is a UTC instant and is often NULL** (ingestion can't
-   know when the gavel fell; a human fills it in). Render it in
-   `bodies.timezone` (e.g. `America/Anchorage`), never in UTC or your local
-   zone. `ORDER BY start_time DESC` puts NULLs first — add `NULLS LAST`.
+3. **A meeting's `date` and `time` are separate, local wall-clock values** in
+   `bodies.timezone` (e.g. `America/Anchorage`); no conversion needed. `time`
+   NULL means "date known, time unknown" — don't invent midnight. `date` may
+   be NULL too. `ORDER BY date DESC` puts NULLs first — add `NULLS LAST`.
 4. **Speaker attribution has tiers** — check which one you have before claiming
    who said something:
    - `person_id` NULL, `speaker_number` NULL → no speaker info ("Unknown";
@@ -84,7 +84,7 @@ look for them; answer those questions by searching segment text.
 ## Citing an answer
 
 For every claim, give: the speaker (per rule 4), the meeting title and
-body, the local date if `start_time` is known, the quoted `text`, and a
+body, the date (and time, if known), the quoted `text`, and a
 YouTube link at the segment's `start_secs`. If the user runs the web app,
 its pages are `/meetings/<id>`, `/people/<id>`, `/bodies/<id>` and
 `/search?q=<text>`.

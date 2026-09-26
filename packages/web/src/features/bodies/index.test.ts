@@ -28,11 +28,11 @@ async function insertBody(db: DB, name: string): Promise<number> {
 /** youtube_id is unique and defaults to "", so meetings need distinct ones. */
 let nextYoutubeId = 0;
 
-async function insertMeeting(db: DB, bodyId: number, start: string | null) {
+async function insertMeeting(db: DB, bodyId: number, date: string | null) {
   await db.insert(meetingsTable).values({
     body_id: bodyId,
     youtube_id: `vid${nextYoutubeId++}`,
-    start_time: start ? new Date(start) : null,
+    date,
   });
 }
 
@@ -42,10 +42,10 @@ describe("getAllBodies coverage", () => {
   }) => {
     const assembly = await insertBody(db, "Assembly");
     const gbos = await insertBody(db, "GBOS");
-    await insertMeeting(db, gbos, "2026-02-03T18:00:00Z");
-    await insertMeeting(db, gbos, "2023-04-10T18:00:00Z");
+    await insertMeeting(db, gbos, "2026-02-03");
+    await insertMeeting(db, gbos, "2023-04-10");
     await insertMeeting(db, gbos, null);
-    await insertMeeting(db, assembly, "2024-01-10T18:00:00Z");
+    await insertMeeting(db, assembly, "2024-01-10");
 
     const bodies = await getAllBodies(db);
     expect(bodies.map((b) => [b.id, b.coverage])).toEqual([
@@ -53,8 +53,8 @@ describe("getAllBodies coverage", () => {
         assembly,
         {
           meetings: 1,
-          first: new Date("2024-01-10T18:00:00Z"),
-          last: new Date("2024-01-10T18:00:00Z"),
+          first: "2024-01-10",
+          last: "2024-01-10",
         },
       ],
       [
@@ -62,8 +62,8 @@ describe("getAllBodies coverage", () => {
         {
           // The undated meeting still counts; it just can't bound the span.
           meetings: 3,
-          first: new Date("2023-04-10T18:00:00Z"),
-          last: new Date("2026-02-03T18:00:00Z"),
+          first: "2023-04-10",
+          last: "2026-02-03",
         },
       ],
     ]);
@@ -75,9 +75,7 @@ describe("getAllBodies coverage", () => {
     expect(body!.coverage).toEqual({ meetings: 0, first: null, last: null });
   });
 
-  test("leaves the span unknown when no meeting has a start time", async ({
-    db,
-  }) => {
+  test("leaves the span unknown when no meeting has a date", async ({ db }) => {
     const gbos = await insertBody(db, "GBOS");
     await insertMeeting(db, gbos, null);
     const [body] = await getAllBodies(db);

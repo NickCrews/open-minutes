@@ -18,10 +18,9 @@ Helpers used below:
 - **Seconds** from an interval: `extract(epoch from s.start_secs)`.
 - **Deep link**: `m.youtube_url || '&t=' || floor(extract(epoch from s.start_secs))::int || 's'`
   (only when `m.youtube_url <> ''`).
-- **Local meeting time**: `m.start_time AT TIME ZONE b.timezone` (a wall-clock
-  `timestamp` in the body's zone; NULL if the start time is unknown). JS
-  drivers turn that zoneless value into a `Date` that _looks_ like UTC; wrap
-  it in `to_char(…, 'YYYY-MM-DD HH24:MI')` when the text is what you need.
+- **Meeting date/time**: `m.date` and `m.time` are already local wall-clock
+  values in `bodies.timezone` — no conversion needed. `time` is NULL when only
+  the date is known; `date` is NULL when neither is.
 
 ## Orient: what's in this database?
 
@@ -41,21 +40,21 @@ ingested meeting with its body slug, date and segment count.
 ## List meetings for a body
 
 ```sql
-SELECT m.id, m.title, m.start_time AT TIME ZONE b.timezone AS local_start,
+SELECT m.id, m.title, m.date, m.time,
        m.duration_secs, m.youtube_url
 FROM meetings m
 JOIN bodies b ON b.id = m.body_id
 WHERE b.name_short ILIKE 'gbos'          -- or b.id = …, or b.name ILIKE '%girdwood%'
-ORDER BY m.start_time DESC NULLS LAST, m.id DESC;
+ORDER BY m.date DESC NULLS LAST, m.time DESC NULLS LAST, m.id DESC;
 ```
 
-Meetings with a NULL `start_time` may still have the date in `title`
+Meetings with a NULL `date` may still have the date in `title`
 ("… Regular Meeting March 23, 2026").
 
 ```ts
 const body = await db.query.bodiesTable.findFirst({
   where: { name_short: "GBOS" },
-  with: { jurisdiction: true, meetings: { orderBy: { start_time: "desc" } } },
+  with: { jurisdiction: true, meetings: { orderBy: { date: "desc" } } },
 });
 ```
 
@@ -73,7 +72,7 @@ Never `SELECT *` here: `voice_embedding` is a 192-dim vector.
 
 ```sql
 SELECT m.title, b.name_short AS body,
-       m.start_time AT TIME ZONE b.timezone AS local_start,
+       m.date, m.time,
        s.start_secs, s.text,
        CASE WHEN m.youtube_url <> '' THEN
          m.youtube_url || '&t=' || floor(extract(epoch FROM s.start_secs))::int || 's'
@@ -83,7 +82,7 @@ JOIN meetings m ON m.id = s.meeting_id
 JOIN bodies b ON b.id = m.body_id
 WHERE s.person_id = 42
   AND s.text ILIKE '%snow removal%'      -- drop for everything they said
-ORDER BY m.start_time DESC NULLS LAST, m.id DESC, s.start_secs;
+ORDER BY m.date DESC NULLS LAST, m.id DESC, s.start_secs;
 ```
 
 ```ts
@@ -92,7 +91,13 @@ const rows = await db.query.segmentsTable.findMany({
   columns: { words: false },
   with: {
     meeting: {
-      columns: { id: true, title: true, start_time: true, youtube_url: true },
+      columns: {
+        id: true,
+        title: true,
+        date: true,
+        time: true,
+        youtube_url: true,
+      },
       with: { body: { columns: { name_short: true, timezone: true } } },
     },
   },
@@ -191,7 +196,7 @@ ORDER BY speaking_time DESC;
 
 ```sql
 SELECT b.name_short AS body, count(DISTINCT s.meeting_id) AS meetings,
-       min(m.start_time) AS first, max(m.start_time) AS last
+       min(m.date) AS first, max(m.date) AS last
 FROM segments s
 JOIN meetings m ON m.id = s.meeting_id
 JOIN bodies b ON b.id = m.body_id
