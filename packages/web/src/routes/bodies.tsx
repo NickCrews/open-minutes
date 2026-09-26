@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/solid-router";
 import { createServerFn } from "@tanstack/solid-start";
 import { For, Show } from "solid-js";
-import { getAllBodies } from "~/features/bodies";
+import { type Coverage, getAllBodies } from "~/features/bodies";
+import { formatMonthYear } from "~/lib/format";
 import { db } from "~/server/db";
 
 const fetchBodies = createServerFn({ method: "GET" }).handler(() =>
@@ -12,6 +13,20 @@ export const Route = createFileRoute("/bodies")({
   loader: () => fetchBodies(),
   component: BodiesPage,
 });
+
+/**
+ * How much of a body's record we hold, eg "42 meetings · Mar 2019 – Sep 2026".
+ * Months are read in the body's own timezone, and a span within one month
+ * collapses to that month so a lone meeting doesn't read "Mar 2019 – Mar 2019".
+ */
+function formatCoverage(c: Coverage, timezone: string): string {
+  if (c.meetings === 0) return "No meetings yet";
+  const count = `${c.meetings} ${c.meetings === 1 ? "meeting" : "meetings"}`;
+  if (!c.first || !c.last) return count;
+  const first = formatMonthYear(c.first, timezone);
+  const last = formatMonthYear(c.last, timezone);
+  return `${count} · ${first === last ? first : `${first} – ${last}`}`;
+}
 
 function BodiesPage() {
   const bodies = Route.useLoaderData();
@@ -43,6 +58,9 @@ function BodiesPage() {
                   </span>
                 )}
               </Show>
+              <p class="text-muted-foreground text-sm">
+                {formatCoverage(body.coverage, body.timezone)}
+              </p>
             </li>
           )}
         </For>
