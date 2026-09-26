@@ -1,6 +1,6 @@
 # @open-minutes/pipeline
 
-The offline processing pipeline that turns raw meeting audio into speaker-attributed transcripts in the database. It transcribes audio locally with sherpa-onnx (downloading ONNX models on demand), diarizes it into anonymous speaker turns with per-speaker voiceprint embeddings, aligns those turns with the transcript at the word level, and then matches voiceprints against known people (by cosine similarity against embeddings stored in the database) before inserting the resulting segments. Everything runs in-process with no external services or GPUs required.
+The offline processing pipeline that turns raw meeting audio into speaker-attributed transcripts in the database. It transcribes audio locally with sherpa-onnx (downloading ONNX models on demand), diarizes it into anonymous speaker turns with per-speaker voiceprint embeddings, aligns those turns with the transcript at the word level, and then recognizes speakers by matching their voiceprints against the people already in the database (by cosine similarity) before inserting the resulting segments. Everything runs in-process with no external services or GPUs required.
 
 ## The `om` CLI
 
@@ -10,7 +10,7 @@ human progress/logs go to stderr, so results can be piped:
 
 ```sh
 om status              # list ingested meetings (--json for JSON-lines, ids to filter)
-om available           # video IDs on muni channels not yet ingested, newest first (--muni <slug> to filter)
+om available           # video IDs on bodies' video sources not yet ingested, newest first (--body <slug> to filter)
 om ingest [ids...]     # run the full pipeline per video (reads stdin if no args)
 
 om available | head -5 | om ingest   # ingest the 5 newest available meetings
@@ -21,7 +21,7 @@ Commands default to the `local` database; target any named database with
 the meeting row and its segments are committed in one transaction only after
 every stage succeeds. Each stage's artifact (audio, transcription JSON,
 diarization JSON) is cached in a gitignored per-meeting work directory under
-`data/meetings/<muni-slug>_<youtubeId>/`, so an interrupted run resumes from
+`data/meetings/<body-slug>_<youtubeId>/`, so an interrupted run resumes from
 the last completed stage; to fully reprocess a meeting, delete its DB row and
 its work directory. The CLI is a thin wrapper over the exported API
 (`listIngested`, `listAvailable`, `ingestVideo` from
