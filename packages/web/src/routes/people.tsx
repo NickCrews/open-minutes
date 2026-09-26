@@ -1,7 +1,16 @@
-import { createFileRoute, Link } from "@tanstack/solid-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/solid-router";
 import { createServerFn } from "@tanstack/solid-start";
-import { For, Show } from "solid-js";
+import {
+  createEffect,
+  createMemo,
+  createSignal,
+  For,
+  on,
+  Show,
+} from "solid-js";
+import { TextField, TextFieldInput } from "~/components/text-field";
 import { type Attendance, getAllPeople } from "~/features/people";
+import { matchesName } from "~/features/people/search";
 import { formatMonthYear } from "~/lib/format";
 import { db } from "~/server/db";
 
@@ -10,6 +19,12 @@ const fetchPeople = createServerFn({ method: "GET" }).handler(() =>
 );
 
 export const Route = createFileRoute("/people")({
+  // Optional, so plain links to /people need no search params and an empty
+  // box leaves no dangling "?q=" in the URL.
+  validateSearch: (search: Record<string, unknown>): { q?: string } =>
+    typeof search.q === "string" && search.q ? { q: search.q } : {},
+  // Filtering happens client-side over the whole list, so `q` is deliberately
+  // not a loader dep: typing mustn't refetch everyone on each keystroke.
   loader: () => fetchPeople(),
   component: PeoplePage,
 });
@@ -27,15 +42,65 @@ function formatAttendance(a: Attendance): string {
   return `${count}, ${first === last ? first : `${first}–${last}`}`;
 }
 
+/** "37 people", or "3 of 37 people" while a search narrows the list. */
+function formatPeopleCount(shown: number, total: number): string {
+  const noun = total === 1 ? "person" : "people";
+  return shown === total ? `${total} ${noun}` : `${shown} of ${total} ${noun}`;
+}
+
 function PeoplePage() {
   const people = Route.useLoaderData();
+  const search = Route.useSearch();
+  const navigate = useNavigate();
+
+  // The box filters as you type, so it keeps its own copy of the query rather
+  // than reading the URL, which only catches up after navigation resolves.
+  const [query, setQuery] = createSignal(search().q ?? "");
+  // Follow URL changes made elsewhere, eg the "People" nav link clearing it.
+  createEffect(
+    on(
+      () => search().q ?? "",
+      (q) => setQuery(q),
+      { defer: true },
+    ),
+  );
+  const onQueryChange = (q: string) => {
+    setQuery(q);
+    // Replace, not push: each keystroke shouldn't become a history entry.
+    void navigate({
+      to: "/people",
+      search: q ? { q } : {},
+      replace: true,
+    });
+  };
+
+  const filtered = createMemo(() =>
+    people().filter((person) => matchesName(person.name, query())),
+  );
+
   return (
     <div class="mx-auto max-w-3xl">
       <h1 class="mb-6 text-2xl font-bold">People</h1>
+      <div class="mb-4 flex items-center gap-4">
+        <TextField value={query()} onChange={onQueryChange} class="flex-1">
+          <TextFieldInput
+            type="search"
+            placeholder="Search by name…"
+            aria-label="Search people by name"
+          />
+        </TextField>
+        <p class="text-muted-foreground shrink-0 text-sm" aria-live="polite">
+          {formatPeopleCount(filtered().length, people().length)}
+        </p>
+      </div>
       <ul class="divide-y">
         <For
-          each={people()}
-          fallback={<li class="text-muted-foreground py-2">No people yet.</li>}
+          each={filtered()}
+          fallback={
+            <li class="text-muted-foreground py-2">
+              {people().length ? "No matching people." : "No people yet."}
+            </li>
+          }
         >
           {(person) => (
             <li class="py-2">
