@@ -20,6 +20,11 @@ import { computeSpeakerEmbeddings } from "../embed";
 import { diarizeAudio } from "../diarize";
 import { alignSpeakers, segmentsToTurns } from "../align";
 import { identifyAndInsertSegments } from "../identify";
+import {
+  type MeetingDateTime,
+  openingText,
+  resolveMeetingDateTime,
+} from "../meeting_date";
 
 /**
  * Root of the per-meeting work directories (one `<body-slug>_<youtubeId>` dir
@@ -44,6 +49,8 @@ export type IngestResult =
       status: "ingested";
       meetingId: number;
       segmentCount: number;
+      /** When the meeting happened, read from its title and opening minutes. */
+      when: MeetingDateTime;
     }
   | { youtubeId: string; status: "skipped" };
 
@@ -111,6 +118,19 @@ export async function ingestVideo(
     () => transcribeAudio(audioPath),
   );
 
+  // When the meeting happened: the title's date, the chair's gavel-in time.
+  const when = resolveMeetingDateTime(
+    metadata.title,
+    openingText(speechSegments),
+  );
+  console.error(
+    `[${youtubeId}] meeting date ${when.date ?? "unknown"} (from ${when.dateSource ?? "nothing"}), ` +
+      `start ${when.time ?? "unknown"} (from ${when.timeSource ?? "nothing"})`,
+  );
+  for (const warning of when.warnings) {
+    console.error(`[${youtubeId}] WARNING: ${warning}`);
+  }
+
   const diarization = await cachedStage<DiarizationArtifact>(
     youtubeId,
     join(workDir, "diarization.json"),
@@ -152,8 +172,11 @@ export async function ingestVideo(
         youtube_id: youtubeId,
         title: metadata.title,
         description: metadata.description,
-        // date and time are left null: YouTube publish/stream times don't
-        // reliably reflect when the meeting actually happened.
+        // Parsed from the title and the chair's gavel-in (see meeting_date.ts),
+        // not YouTube publish/stream times, which don't reliably reflect when
+        // the meeting happened. A time without a date is meaningless.
+        date: when.date,
+        time: when.date ? when.time : null,
         duration_secs:
           metadata.durationSecs === null
             ? null
@@ -174,6 +197,7 @@ export async function ingestVideo(
     status: "ingested",
     meetingId,
     segmentCount: segments.length,
+    when,
   };
 }
 
