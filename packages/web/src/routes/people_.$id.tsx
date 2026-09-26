@@ -1,6 +1,14 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/solid-router";
 import { createServerFn } from "@tanstack/solid-start";
-import { createSignal, For, onCleanup, Show } from "solid-js";
+import {
+  createEffect,
+  createMemo,
+  createSignal,
+  For,
+  Match,
+  Show,
+  Switch,
+} from "solid-js";
 import { Button } from "~/components/button";
 import {
   Card,
@@ -10,25 +18,28 @@ import {
   CardTitle,
 } from "~/components/card";
 import { TextField, TextFieldInput } from "~/components/text-field";
+import { getMeetingSegments } from "~/features/meetings";
+import type { Segment } from "~/features/meetings/speaker-identity";
 import { getPersonById, updatePersonName } from "~/features/people";
 import { Bio } from "~/features/people/bio";
+import {
+  createHiddenPlayer,
+  type HiddenPlayer,
+} from "~/features/people/hidden-player";
+import { MeetingExcerpt } from "~/features/people/meeting-excerpt";
 import { assertCanEdit, canEdit } from "~/lib/permissions";
-import {
-  formatMeetingDate,
-  formatTimestamp,
-  intervalToSecs,
-} from "~/lib/format";
-import {
-  loadYouTubeIframeApi,
-  PlayerState,
-  type YTPlayer,
-} from "~/lib/youtube";
+import { formatMeetingDate, intervalToSecs } from "~/lib/format";
 import { db } from "~/server/db";
 import { compareMeetingsNewestFirst } from "@open-minutes/core/meeting-date";
 
 const fetchPerson = createServerFn({ method: "GET" })
   .inputValidator((id: number) => id)
   .handler(({ data }) => getPersonById(db(), data));
+
+/** A meeting's whole transcript, fetched when its card first opens. */
+const fetchMeetingSegments = createServerFn({ method: "GET" })
+  .inputValidator((meetingId: number) => meetingId)
+  .handler(({ data }) => getMeetingSegments(db(), data));
 
 /** Guarded on both sides of the wire by the same `canEdit` that hides the button. */
 const savePersonName = createServerFn({ method: "POST" })
@@ -46,7 +57,8 @@ export const Route = createFileRoute("/people_/$id")({
 function PersonPage() {
   const person = Route.useLoaderData();
   const router = useRouter();
-  const audio = createHiddenAudio();
+  const player = createHiddenPlayer();
+  const groups = createMemo(() => groupByMeeting(person().segments));
   const [editing, setEditing] = createSignal(false);
   const [saving, setSaving] = createSignal(false);
 
@@ -117,14 +129,22 @@ function PersonPage() {
       <h2 class="mb-4 border-b pb-2 text-lg font-semibold">Meetings</h2>
       <div class="flex flex-col gap-4">
         <For
-          each={groupByMeeting(person().segments)}
+          each={groups()}
           fallback={<p class="text-muted-foreground">No segments yet.</p>}
         >
-          {(group) => <MeetingCard group={group} audio={audio} />}
+          {(group) => (
+            <MeetingCard
+              personId={person().id}
+              group={group}
+              player={player}
+              // Nothing to choose between, so skip the click.
+              defaultExpanded={groups().length === 1}
+            />
+          )}
         </For>
       </div>
       <div
-        ref={audio.setHost}
+        ref={player.setHost}
         aria-hidden="true"
         class="pointer-events-none fixed right-0 bottom-0 h-px w-px overflow-hidden opacity-0"
       />
@@ -170,9 +190,6 @@ function groupByMeeting(segments: PersonSegment[]): MeetingGroup[] {
 const segmentStart = (segment: PersonSegment) =>
   segment.start_secs != null ? intervalToSecs(segment.start_secs) : null;
 
-const segmentEnd = (segment: PersonSegment) =>
-  segment.end_secs != null ? intervalToSecs(segment.end_secs) : null;
-
 /** Chevron marking a collapsible section: points down when collapsed, flips up when open. */
 function ExpandChevron(props: { expanded: boolean }) {
   return (
@@ -192,13 +209,33 @@ function ExpandChevron(props: { expanded: boolean }) {
   );
 }
 
-/** One meeting the person spoke in, expandable to reveal all their segments. */
+/**
+ * One meeting the person spoke in, expandable to their segments in context.
+ * The meeting's transcript is fetched the first time the card opens, and kept
+ * for as long as the page is.
+ */
 function MeetingCard(props: {
+  personId: number;
   group: MeetingGroup;
-  audio: ReturnType<typeof createHiddenAudio>;
+  player: HiddenPlayer;
+  defaultExpanded: boolean;
 }) {
-  const [expanded, setExpanded] = createSignal(false);
+  // Only the initial value is wanted; the card is the user's to toggle after.
+  const [expanded, setExpanded] = createSignal(props.defaultExpanded);
+  const [transcript, setTranscript] = createSignal<Segment[]>();
+  const [failed, setFailed] = createSignal(false);
   const count = () => props.group.segments.length;
+
+  let loading = false;
+  // Effects don't run during SSR, so a card that starts open fetches once it
+  // reaches the browser.
+  createEffect(() => {
+    if (!expanded() || transcript() || failed() || loading) return;
+    loading = true;
+    fetchMeetingSegments({ data: props.group.meeting.id })
+      .then(setTranscript, () => setFailed(true))
+      .finally(() => (loading = false));
+  });
 
   return (
     <Card class="gap-0 py-0">
@@ -221,10 +258,45 @@ function MeetingCard(props: {
         </CardHeader>
       </button>
       <Show when={expanded()}>
-        <CardContent class="flex flex-col gap-3 border-t py-4">
-          <For each={props.group.segments}>
-            {(segment) => <SegmentRow segment={segment} audio={props.audio} />}
-          </For>
+        <CardContent class="flex flex-col gap-4 border-t py-4">
+          <Switch>
+            <Match when={transcript()}>
+              {(segments) => (
+                <MeetingExcerpt
+                  personId={props.personId}
+                  meetingId={props.group.meeting.id}
+                  youtubeId={props.group.meeting.youtube_id}
+                  segments={segments()}
+                  player={props.player}
+                />
+              )}
+            </Match>
+            <Match when={failed()}>
+              <p class="text-destructive text-sm">
+                Couldn't load the transcript.{" "}
+                <button
+                  type="button"
+                  class="cursor-pointer underline"
+                  onClick={() => setFailed(false)}
+                >
+                  Try again
+                </button>
+              </p>
+            </Match>
+            <Match when={true}>
+              {/* The person's own words, which the page already has, stand in
+                  until the full transcript arrives. */}
+              <div class="flex flex-col gap-4" aria-busy="true">
+                <For each={props.group.segments}>
+                  {(segment) => (
+                    <p class="text-muted-foreground pl-10 leading-relaxed">
+                      {segment.text}
+                    </p>
+                  )}
+                </For>
+              </div>
+            </Match>
+          </Switch>
           <Link
             to="/meetings/$id"
             params={{ id: String(props.group.meeting.id) }}
@@ -236,162 +308,4 @@ function MeetingCard(props: {
       </Show>
     </Card>
   );
-}
-
-function SegmentRow(props: {
-  segment: PersonSegment;
-  audio: ReturnType<typeof createHiddenAudio>;
-}) {
-  const start = () => segmentStart(props.segment);
-  const playing = () => props.audio.playingId() === props.segment.id;
-
-  return (
-    <div class="flex items-start gap-2">
-      <Show
-        when={props.segment.meeting.youtube_id && start() != null}
-        fallback={<div class="size-8 shrink-0" />}
-      >
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          class="shrink-0 rounded-full"
-          aria-label={playing() ? "Pause audio" : "Play audio"}
-          onClick={() =>
-            props.audio.toggle(
-              props.segment.id,
-              props.segment.meeting.youtube_id,
-              start()!,
-              segmentEnd(props.segment),
-            )
-          }
-        >
-          <Show
-            when={playing()}
-            fallback={
-              <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M8 5v14l11-7z" />
-              </svg>
-            }
-          >
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M6 5h4v14H6zM14 5h4v14h-4z" />
-            </svg>
-          </Show>
-        </Button>
-      </Show>
-      <p class="leading-relaxed">
-        <Show when={start() != null}>
-          <span class="text-muted-foreground mr-2 font-mono text-sm">
-            {formatTimestamp(start()!)}
-          </span>
-        </Show>
-        {props.segment.text}
-      </p>
-    </div>
-  );
-}
-
-/**
- * An invisible YouTube player used for audio-only playback of segments.
- * Created lazily on the first play click; switching segments reuses the
- * same player. Playback stops at the end of the segment; playing a
- * finished segment again restarts it from the beginning.
- */
-function createHiddenAudio() {
-  const [playingId, setPlayingId] = createSignal<number | null>(null);
-  let host: HTMLDivElement | undefined;
-  let playerPromise: Promise<YTPlayer> | undefined;
-  // Segment whose audio is (being) loaded into the player.
-  let loadedId: number | null = null;
-  // Playhead position at which to stop, if the segment has an end time.
-  let stopAt: number | null = null;
-  let poll: ReturnType<typeof setInterval> | undefined;
-  let disposed = false;
-
-  onCleanup(() => {
-    disposed = true;
-    clearInterval(poll);
-    void playerPromise?.then((player) => player.destroy());
-  });
-
-  const createPlayer = (videoId: string, startSecs: number) =>
-    loadYouTubeIframeApi().then(
-      (YT) =>
-        new Promise<YTPlayer>((resolve) => {
-          const mount = document.createElement("div");
-          host?.appendChild(mount);
-          const player = new YT.Player(mount, {
-            videoId,
-            playerVars: {
-              autoplay: 1,
-              start: Math.floor(startSecs),
-              playsinline: 1,
-            },
-            events: {
-              onReady: () => {
-                // The IFrame API has no timeupdate event, so poll for the
-                // playhead crossing the end of the segment.
-                poll = setInterval(() => {
-                  if (playingId() === null || stopAt === null) return;
-                  if (player.getCurrentTime() >= stopAt) {
-                    player.pauseVideo();
-                    setPlayingId(null);
-                    // Forget the segment so playing it again restarts it.
-                    loadedId = null;
-                  }
-                }, 250);
-                resolve(player);
-              },
-              onStateChange: (event) => {
-                if (event.data === PlayerState.playing) setPlayingId(loadedId);
-                else if (
-                  event.data === PlayerState.paused ||
-                  event.data === PlayerState.ended
-                )
-                  setPlayingId(null);
-              },
-            },
-          });
-        }),
-    );
-
-  const toggle = async (
-    segmentId: number,
-    videoId: string,
-    startSecs: number,
-    endSecs: number | null,
-  ) => {
-    if (playingId() === segmentId) {
-      setPlayingId(null);
-      void playerPromise?.then((player) => {
-        if (playingId() === null) player.pauseVideo();
-      });
-      return;
-    }
-    setPlayingId(segmentId);
-    if (!playerPromise) {
-      loadedId = segmentId;
-      stopAt = endSecs;
-      playerPromise = createPlayer(videoId, startSecs);
-      return;
-    }
-    const player = await playerPromise;
-    if (disposed) return;
-    if (loadedId === segmentId) {
-      stopAt = endSecs;
-      player.playVideo();
-    } else {
-      loadedId = segmentId;
-      // Set stopAt only after loading the new video, so the poll never
-      // compares the old video's playhead against the new segment's end.
-      player.loadVideoById({ videoId, startSeconds: startSecs });
-      stopAt = endSecs;
-    }
-  };
-
-  return {
-    playingId,
-    toggle,
-    setHost: (el: HTMLDivElement) => (host = el),
-  };
 }

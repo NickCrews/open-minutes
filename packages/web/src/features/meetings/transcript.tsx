@@ -34,7 +34,7 @@ const MIN_QUERY_LENGTH = 2;
 /** How far the skip buttons jump, in seconds. */
 const JUMP_SECS = 15;
 
-function segmentStart(segment: Segment): number {
+export function segmentStart(segment: Segment): number {
   return segment.words[0]?.start ?? 0;
 }
 
@@ -375,20 +375,21 @@ function PlayheadIcon() {
   );
 }
 
-function SegmentBlock(props: {
+export function SegmentBlock(props: {
   segment: Segment;
   speaker: () => SpeakerIdentity | undefined;
   status: () => SegmentStatus;
   currentTime: () => number;
   onSeek: (secs: number) => void;
-  matches: () => Match[];
-  currentMatch: () => Match | undefined;
+  /** Search hits in this segment; omit where there's no search. */
+  matches?: () => Match[];
+  currentMatch?: () => Match | undefined;
 }) {
   // Word index -> whether it belongs to a hit, and to the focused one.
   const highlights = createMemo(() => {
-    const focused = props.currentMatch();
+    const focused = props.currentMatch?.();
     const byWord = new Map<number, { current: boolean; first: boolean }>();
-    for (const match of props.matches()) {
+    for (const match of props.matches?.() ?? []) {
       const current = match === focused;
       for (let i = match.from; i <= match.to; i++) {
         byWord.set(i, { current, first: i === match.from });
@@ -504,7 +505,7 @@ function findMatches(segments: Segment[], query: string): Match[] {
 }
 
 /** Index of the last value in a sorted array that is <= target, or -1. */
-function lastIndexAtOrBefore(sorted: number[], target: number): number {
+export function lastIndexAtOrBefore(sorted: number[], target: number): number {
   let lo = 0;
   let hi = sorted.length - 1;
   let result = -1;
