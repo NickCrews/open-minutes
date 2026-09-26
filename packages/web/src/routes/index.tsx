@@ -39,7 +39,7 @@ function HomePage(): JSX.Element {
         <Link to="/people">
           <SectionCard
             title="People"
-            description="Speakers identified across meetings."
+            description="People recognized by voice across meetings."
           />
         </Link>
         <Link to="/bodies">
@@ -51,7 +51,7 @@ function HomePage(): JSX.Element {
         <Link to="/search" search={{ q: "" }}>
           <SectionCard
             title="Search"
-            description="Full-text search across all transcripts."
+            description="Search what was said across all transcripts."
           />
         </Link>
       </div>
