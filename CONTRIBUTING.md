@@ -54,7 +54,7 @@ transcript is a sequence of **segments** (a run of words by one speaker, with
 word-level onsets). Segments are attributed to **people**, who carry a
 voiceprint so they can be recognized in later meetings. See
 [`packages/core/src/db/schema.ts`](packages/core/src/db/schema.ts). The
-configured bodies and video sources live in the seed data under
+configured bodies and video sources live in the test data under
 [`packages/pipeline/test-data/`](packages/pipeline/test-data/); adding a body
 means adding rows there.
 
@@ -99,7 +99,7 @@ Tests always use `local`, whatever `DB` is set to.
 ```sh
 pnpm db:up                    # start Postgres (docker-compose.yml)
 pnpm db:migrate               # apply migrations
-pnpm db:seed                  # load fixtures from packages/pipeline/test-data/
+pnpm db:seed                  # load the test data from packages/pipeline/test-data/
 ```
 
 The other database scripts:
@@ -122,8 +122,8 @@ packages/
   core/       @open-minutes/core: DB schema, migrations and connection resolution;
               YouTube (yt-dlp), bodies, transcription and voice-embedding types
   pipeline/   @open-minutes/pipeline: offline audio → transcript pipeline
-              (transcribe, diarize, align, identify), the `om` CLI, db seeding,
-              golden test fixtures in test-data/. See packages/pipeline/README.md.
+              (transcribe, diarize, align, recognize), the `om` CLI, db seeding,
+              test data and golden meetings in test-data/. See packages/pipeline/README.md.
   web/        @open-minutes/web: transcript browser (SolidStart + TanStack Router,
               Kobalte, Tailwind), deployed to Cloudflare Workers
 adrs/         Architecture Decision Records
@@ -151,7 +151,8 @@ which `test:slow` and `test:all` set for you.
 ## Web dev server
 
 ```sh
-pnpm web:dev
+pnpm dev       # start the local Postgres, then the web dev server
+pnpm web:dev   # just the web dev server
 ```
 
 This serves the app at http://localhost:3000 against the `local` database by
