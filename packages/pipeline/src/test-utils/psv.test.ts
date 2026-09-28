@@ -79,7 +79,9 @@ describe("psv parse/serialize", () => {
 
   it("rejects a non-kebab identified slug", () => {
     expect(() =>
-      parsePsv('0:00:00.00|meta|{"begin_speaker": "identified:Margaret Smith"}'),
+      parsePsv(
+        '0:00:00.00|meta|{"begin_speaker": "identified:Margaret Smith"}',
+      ),
     ).toThrow(/identified/);
   });
 
@@ -208,7 +210,10 @@ describe("reapplySpeakerLayer", () => {
     const fresh = [{ text: "hello", start: 0.0 }];
     const result = reapplySpeakerLayer(fresh, reference);
     expect(result).toHaveLength(1);
-    expect(result[0]!.speaker).toEqual({ kind: "identified", person: "margaret-tyler" });
+    expect(result[0]!.speaker).toEqual({
+      kind: "identified",
+      person: "margaret-tyler",
+    });
   });
 
   it("falls back to a single unlabeled segment when the reference is empty", () => {
