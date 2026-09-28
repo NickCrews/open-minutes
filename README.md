@@ -1,160 +1,57 @@
-# Open Minutes — Meeting Transcript Database
+# Open Minutes
 
-Open Minutes turns recorded local-government meetings into a searchable,
-speaker-attributed transcript database.
+**Find out what was said at your local government's public meetings, and who
+said it, without watching hours of video.**
 
-## Why
+Local boards and assemblies make many decisions in public meetings, but the
+record is usually a multi-hour YouTube video and a few pages of written minutes.
+Finding out what your representatives said about snow removal, a zoning change
+or the budget means scrubbing through all that video.
 
-Local boards, assemblies and councils make a lot of decisions in public
-meetings, but the record is usually a multi-hour YouTube video plus terse
-written minutes. Finding out _who said what, and when_ means scrubbing through
-hours of video. Open Minutes downloads those recordings, transcribes them,
-works out who is speaking (and recognizes the same person across meetings by
-voice), and stores the result as structured data you can browse, search and
-query.
+Open Minutes turns those recordings into searchable transcripts. For each
+meeting you can read everything that was said, see who said it, and jump
+straight to that moment in the video.
 
-## What data it covers
+Open Minutes is an early work in progress.
 
-The data model is general: **jurisdictions** (a government, eg the Municipality
-of Anchorage) contain **bodies** (a group that actually meets, eg the Girdwood
-Board of Supervisors or the Anchorage Assembly), each with one or more YouTube
-**video sources** (channels or playlists). **Meetings** belong to a body, and
-each meeting's transcript is a sequence of **segments** (a run of words by one
-speaker, with word-level timestamps). Segments are attributed to **people**,
-who carry a voiceprint so they can be recognized in later meetings. See
-[`packages/core/src/db/schema.ts`](packages/core/src/db/schema.ts).
+## What you can do
 
-Currently configured sources (the seed snapshot in
-[`packages/pipeline/test-data/`](packages/pipeline/test-data/)):
+- **Read a meeting** as a transcript alongside its video. Click any word to
+  play the video from that point.
+- **Search what was said** across every meeting, with each result linking to
+  its meeting.
+- **Follow a person** across meetings: see every meeting they spoke in and
+  everything they said.
+- **Browse by board or council** to see which meetings are available.
 
-| Jurisdiction                  | Body                                 | Source                                                                      |
-| ----------------------------- | ------------------------------------ | --------------------------------------------------------------------------- |
-| Municipality of Anchorage, AK | Girdwood Board of Supervisors (GBOS) | [YouTube channel](https://www.youtube.com/channel/UCOUlNInprZEjhbpVPiJOlEA) |
+## Which meetings are covered
 
-The schema is designed to grow to other bodies, such as the Anchorage Assembly,
-Planning & Zoning and the school board, which share the MOA channel; adding one
-is a matter of adding rows to the seed data. The test data also includes three
-hand-checked "golden" GBOS transcripts (March, May and June 2026) used to
-measure transcription and speaker-recognition accuracy.
+So far, meetings of the **Girdwood Board of Supervisors** in the Municipality of
+Anchorage, Alaska, taken from its
+[YouTube channel](https://www.youtube.com/channel/UCOUlNInprZEjhbpVPiJOlEA).
+More boards and councils, starting with others in Anchorage, can be added
+the same way.
 
-## Architecture
+## How it works, and what to keep in mind
 
-A [pnpm](https://pnpm.io) workspace with three packages:
+Open Minutes downloads the public meeting videos, and a computer does the rest.
+It writes down the words, works out where one speaker stops and the next one
+starts, and recognizes people who speak at more than one meeting by the sound
+of their voice. Nobody types up these transcripts by hand, so:
 
-- **[`packages/core`](packages/core)** (`@open-minutes/core`): shared domain
-  code. The [Drizzle](https://orm.drizzle.team) schema and migrations, database
-  connection/resolution, the YouTube boundary (via `yt-dlp`), transcript and
-  timeline types, and voice-embedding helpers.
-- **[`packages/pipeline`](packages/pipeline)** (`@open-minutes/pipeline`): the
-  offline ingestion pipeline and the `om` CLI. It downloads audio, transcribes
-  it locally with [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) (NeMo
-  Parakeet ASR + Silero VAD), diarizes it into speaker turns (pyannote
-  segmentation + CAM++ voice embeddings), aligns turns to words, matches
-  voiceprints against known people, and writes the meeting to the database. No
-  GPU or external API is needed; models are downloaded on first use. Also holds
-  the database seeder. See the [pipeline README](packages/pipeline/README.md).
-- **[`packages/web`](packages/web)** (`@open-minutes/web`): the public
-  transcript browser, built with [SolidJS](https://www.solidjs.com) +
-  [TanStack Start](https://tanstack.com/start) and Tailwind. Pages for meetings
-  (transcript alongside the YouTube video), people, boards & councils, and
-  transcript search. Editing (eg a meeting's start time or a person's bio) is
-  only enabled on the dev server; there is no auth yet.
+- **Transcripts contain mistakes.** Names, local places and technical terms are
+  the most likely to be misheard. The video is always the real record: check
+  it before you quote someone.
+- **Who said what can be wrong.** Voice recognition sometimes mixes up two
+  people or splits one person in two. Until someone puts a name to a voice, a
+  speaker shows as, say, "Anonymous Beaver".
+- **These are not official minutes.** Your government's approved minutes remain
+  the legal record of what was decided.
 
-**Database:** PostgreSQL with [pgvector](https://github.com/pgvector/pgvector)
-(voiceprints are stored as vectors with an HNSW index). Locally it runs in
-Docker via [`docker-compose.yml`](docker-compose.yml). For a hosted database
-the web app supports [Neon](https://neon.tech), which it reaches over Neon's
-HTTP driver (Workers can't open raw TCP sockets).
+## Get involved
 
-**Deploy target:** the web app deploys to
-[Cloudflare Workers](https://workers.cloudflare.com) (worker `open-minutes`,
-configured in [`packages/web/wrangler.jsonc`](packages/web/wrangler.jsonc)) via
-`pnpm --filter @open-minutes/web run deploy`. The pipeline runs offline on a
-developer machine and writes to the target database directly.
-
-```
-YouTube ──yt-dlp──▶ pipeline (om ingest) ──▶ Postgres + pgvector ◀── web (Cloudflare Workers)
-                    transcribe / diarize /       (local Docker or Neon)
-                    align / identify
-```
-
-## Quickstart
-
-Prerequisites: Node 22+, [pnpm](https://pnpm.io) 10, Docker. To ingest
-meetings you also need [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) and
-[`ffmpeg`](https://ffmpeg.org) on your `PATH`.
-
-```sh
-pnpm install
-pnpm db:reset      # start local Postgres (Docker), migrate, and seed jurisdictions/bodies/sources
-pnpm web:dev       # run the transcript browser against the local database
-```
-
-Ingest some meetings with the `om` CLI:
-
-```sh
-pnpm om available                  # video IDs on configured sources not yet ingested, newest first
-pnpm om available | head -3 | pnpm om ingest   # transcribe + diarize + store the 3 newest
-pnpm om status                     # list ingested meetings
-```
-
-### Choosing a database
-
-Every entrypoint targets the `local` database (the docker-compose Postgres) by
-default and needs no configuration. To target another, define
-`DATABASE_URL_<NAME>` in a root `.env.local` (see
-[`.env.example`](.env.example)) and pass `DB=<name>`, eg
-`DB=prod pnpm db:migrate` or `DB=prod pnpm om status`. `DB` may also be a full
-`postgres://` URL.
-
-### Useful scripts
-
-| Command                           | What it does                                         |
-| --------------------------------- | ---------------------------------------------------- |
-| `pnpm check`                      | typecheck, format check, lint and fast tests         |
-| `pnpm test` / `pnpm test:all`     | fast tests / all tests including slow pipeline tests |
-| `pnpm format`                     | format everything with Prettier                      |
-| `pnpm db:migrate` / `db:generate` | apply / generate Drizzle migrations                  |
-| `pnpm db:seed` / `db:nuke`        | seed the database / wipe and re-migrate it           |
-| `pnpm db:studio`                  | open Drizzle Studio                                  |
-
-## Using the data
-
-- **Browse it:** run the web app and explore meetings, people, bodies and
-  search.
-- **Query it:** it's plain Postgres. Transcripts live in `segments` (with
-  generated `text`, `start_secs` and `end_secs` columns derived from the
-  word-level `words` JSON), joined to `meetings`, `bodies` and `people`. Eg:
-
-  ```sql
-  SELECT m.title, p.name, s.start_secs, s.text
-  FROM segments s
-  JOIN meetings m ON m.id = s.meeting_id
-  LEFT JOIN people p ON p.id = s.person_id
-  WHERE s.text ILIKE '%snow removal%'
-  ORDER BY m.start_time, s.start_secs;
-  ```
-
-- **Script it:** the pipeline's API (`listIngested`, `listAvailable`,
-  `ingestVideo` from `@open-minutes/pipeline/om`) and `om`'s JSON output
-  (`om status --json`) are designed to be composed.
-
-### Agent skill
-
-Open Minutes ships an agent skill that teaches coding agents (eg Claude Code)
-how to find and query meeting transcripts. Install it with:
-
-```sh
-npx skills add nickcrews/open-minutes
-```
-
-The skill lives in [`skills/`](skills/).
-
-## Contributing and further reading
-
-- [CONTRIBUTING.md](CONTRIBUTING.md): development workflow and conventions.
-- [UBIQUITOUS_LANGUAGE.md](UBIQUITOUS_LANGUAGE.md): glossary of domain terms
-  (jurisdiction, body, meeting, segment, speaker, ...).
-- [`adrs/`](adrs/): architecture decision records.
-- [Pipeline README](packages/pipeline/README.md): details of the `om` CLI and
-  ingestion stages.
+- **Spot a mistake, or want a board or council added?**
+  [Open an issue](https://github.com/nickcrews/open-minutes/issues).
+- **Developers, data analysts and AI-assistant users:** to run Open Minutes
+  yourself, query its database directly, or install an AI agent skill for
+  working with the data, see [CONTRIBUTING.md](CONTRIBUTING.md).
