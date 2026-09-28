@@ -45,7 +45,7 @@ Tests always use `local`, whatever `DB` is set to.
 ### Database
 
 ```sh
-docker compose up -d --wait   # start Postgres (docker-compose.yml)
+pnpm db:up                    # start Postgres (docker-compose.yml)
 pnpm db:migrate               # apply migrations
 pnpm db:seed                  # load fixtures from packages/pipeline/test-data/
 ```

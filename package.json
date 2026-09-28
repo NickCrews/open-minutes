@@ -12,6 +12,7 @@
     "test:all": "SLOW=1 vitest run",
     "typecheck": "pnpm --filter @open-minutes/* run typecheck",
     "check": "pnpm typecheck && pnpm run format:check && pnpm run lint && pnpm run test",
+    "db:up": "pnpm --filter @open-minutes/core run db:up",
     "db:generate": "pnpm --filter @open-minutes/core run db:generate",
     "db:migrate": "pnpm --filter @open-minutes/core run db:migrate",
     "db:nuke": "pnpm --filter @open-minutes/core run db:nuke",
