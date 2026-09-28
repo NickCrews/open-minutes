@@ -4,9 +4,9 @@ import {
   bodiesTable,
   meetingsTable,
   videoSourcesTable,
-} from "@open-minutes/core/db";
+} from "@open-minutes/db";
 import { bodySlug } from "@open-minutes/core/bodies";
-import { realYouTube, type YouTube } from "@open-minutes/core/youtube";
+import { realYouTube, type YouTube } from "../youtube";
 
 export interface ListAvailableOptions {
   /** Restrict the scrape to the body with this slug (eg "gbos"). */

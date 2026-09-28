@@ -6,10 +6,12 @@ import {
   writeFileSync,
 } from "node:fs";
 import { createHash } from "node:crypto";
+import { symlink } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import sherpa from "sherpa-onnx-node";
-import { downloadVideoAudio } from "@open-minutes/core/youtube";
+import type { GoldenMeeting } from "@open-minutes/fixtures/test-data";
+import { downloadVideoAudio } from "../youtube";
 
 const CACHE_ROOT = join(homedir(), ".cache", "open-minutes", "meetings");
 
@@ -91,4 +93,24 @@ async function sha256File(path: string): Promise<string> {
     stream.on("end", () => resolve(hash.digest("hex")));
     stream.on("error", reject);
   });
+}
+
+/**
+ * The audio for a golden meeting, from the cache (downloaded on first use), also
+ * symlinked into the meeting's fixture directory for inspection.
+ */
+export async function getMeetingAudio(
+  meeting: GoldenMeeting,
+): Promise<CachedAudio> {
+  const audio = await getCachedAudio({
+    youtubeId: meeting.youtube_id,
+    sha256: meeting._audio_sha256,
+  });
+
+  const symlinkPath = join(meeting.meetingDir, "audio.gen.wav");
+  if (!existsSync(symlinkPath)) {
+    await symlink(audio.path, symlinkPath);
+  }
+
+  return audio;
 }

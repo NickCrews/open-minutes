@@ -4,7 +4,7 @@ import {
   meetingsTable,
   peopleTable,
   segmentsTable,
-} from "@open-minutes/core/db";
+} from "@open-minutes/db";
 import { countDistinct, desc, eq, isNotNull, max, min } from "drizzle-orm";
 
 /** One body a person has spoken before, and the span over which they did. */

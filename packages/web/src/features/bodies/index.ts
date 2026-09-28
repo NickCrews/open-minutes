@@ -1,4 +1,4 @@
-import { type DB } from "@open-minutes/core/db";
+import { type DB } from "@open-minutes/db";
 
 export function getAllBodies(db: DB) {
   return db.query.bodiesTable.findMany({

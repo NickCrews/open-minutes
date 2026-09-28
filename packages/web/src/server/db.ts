@@ -6,7 +6,7 @@ import {
   relations,
   resolveDatabaseUrl,
   type DB,
-} from "@open-minutes/core/db";
+} from "@open-minutes/db";
 
 let neonInstance: DB | undefined;
 const perRequest = new WeakMap<Request, DB>();

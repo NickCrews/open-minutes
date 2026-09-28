@@ -1,4 +1,4 @@
-import { type DB } from "@open-minutes/core/db";
+import { type DB } from "@open-minutes/db";
 
 /** Basic substring search over transcript segment text. */
 export function searchSegments(db: DB, query: string) {

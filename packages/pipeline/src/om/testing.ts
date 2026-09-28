@@ -7,9 +7,9 @@ import {
   jurisdictionsTable,
   meetingsTable,
   videoSourcesTable,
-} from "@open-minutes/core/db";
-import type { YouTube } from "@open-minutes/core/youtube";
-import { test as dbTest } from "@open-minutes/core/db/testing/vitest";
+} from "@open-minutes/db";
+import type { YouTube } from "../youtube";
+import { test as dbTest } from "@open-minutes/db/testing/vitest";
 
 // Test helpers for the om API tests (not collected by vitest — no .test suffix).
 

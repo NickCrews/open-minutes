@@ -1,10 +1,8 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { type CachedAudio, getCachedAudio } from "./audio-cache";
 import { type GoldenSegment, parsePsv } from "./psv";
-import { symlink } from "node:fs/promises";
 
-const TEST_DATA_ROOT = new URL("../../test-data/", import.meta.url).pathname;
+const TEST_DATA_ROOT = new URL("../test-data/", import.meta.url).pathname;
 
 // DB-shaped row types (mirrors schema.ts columns that are relevant to fixtures).
 // Fields prefixed with _ are test-only and do not exist in the DB.
@@ -44,7 +42,6 @@ export interface GoldenMeeting {
   duration_secs: number;
   segments: GoldenSegment[];
   meetingDir: string; // path to the meeting's fixture directory (used internally for loading audio and PSV)
-  getAudio(): Promise<CachedAudio>;
   /** SHA-256 of the canonical WAV file — used to validate the audio cache. Not a DB column. */
   _audio_sha256: string;
 }
@@ -123,25 +120,9 @@ export function getMeetingData(meetingSlug: string): GoldenMeeting {
 
   const segments = parsePsv({ path: join(meetingDir, "golden.psv") });
 
-  const getAudio = async (): Promise<CachedAudio> => {
-    const audio = await getCachedAudio({
-      youtubeId: meeting.youtube_id,
-      sha256: meeting._audio_sha256,
-    });
-
-    // Symlink the cached audio into the meeting directory for inspection
-    const symlinkPath = join(meetingDir, "audio.gen.wav");
-    if (!existsSync(symlinkPath)) {
-      await symlink(audio.path, symlinkPath);
-    }
-
-    return audio;
-  };
-
   return {
     ...meeting,
     meetingDir,
-    getAudio,
     segments,
   };
 }

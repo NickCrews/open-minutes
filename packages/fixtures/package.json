@@ -1,0 +1,27 @@
+{
+  "name": "@open-minutes/fixtures",
+  "version": "0.1.0",
+  "description": "Open Minutes test data: golden jurisdictions, bodies, people and meetings, and the seeder that loads them",
+  "type": "module",
+  "exports": {
+    "./test-data": "./src/test-data.ts",
+    "./psv": "./src/psv.ts",
+    "./seed": "./src/seed/seed.ts",
+    "./gbos": "./src/gbos.ts"
+  },
+  "scripts": {
+    "db:seed": "tsx src/seed/cli.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@open-minutes/core": "workspace:*",
+    "@open-minutes/db": "workspace:*",
+    "drizzle-orm": "1.0.0-beta.21"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "tsx": "^4.21.0",
+    "vitest": "^4.0.18"
+  }
+}

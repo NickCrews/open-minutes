@@ -4,8 +4,8 @@ import {
   bodiesTable,
   jurisdictionsTable,
   videoSourcesTable,
-} from "@open-minutes/core/db";
-import { loadAllTestData } from "../test-utils/test-data";
+} from "@open-minutes/db";
+import { loadAllTestData } from "../test-data";
 import { mapSnapshot } from "./map";
 
 // Tables the seeder owns, parents before children. `TRUNCATE ... CASCADE`

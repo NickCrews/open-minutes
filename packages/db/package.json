@@ -1,0 +1,32 @@
+{
+  "name": "@open-minutes/db",
+  "version": "0.1.0",
+  "description": "Open Minutes database: schema, migrations, connections, and test databases",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./resolve": "./src/resolve.mjs",
+    "./testing": "./src/testing/index.ts",
+    "./testing/vitest": "./src/testing/vitest.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:up": "docker compose -f ../../docker-compose.yml up -d --wait",
+    "db:setup": "pnpm db:up && pnpm db:migrate",
+    "db:studio": "drizzle-kit studio",
+    "db:nuke": "pnpm db:up && node src/nuke.mjs && pnpm db:migrate"
+  },
+  "dependencies": {
+    "@open-minutes/core": "workspace:*",
+    "drizzle-orm": "1.0.0-beta.21",
+    "postgres": "^3"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "drizzle-kit": "1.0.0-beta.22",
+    "vitest": "^4.0.18"
+  }
+}

@@ -1,5 +1,5 @@
 import { cosineDistance, sql } from "drizzle-orm";
-import { type DB, peopleTable, segmentsTable } from "@open-minutes/core/db";
+import { type DB, peopleTable, segmentsTable } from "@open-minutes/db";
 import { TranscriptSegment } from "@open-minutes/core/transcription";
 
 // Accepts either a database or a transaction handle, so callers can make

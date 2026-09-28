@@ -2,18 +2,19 @@ import { copyFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { describe, expect } from "vitest";
 import { eq } from "drizzle-orm";
-import { peopleTable, segmentsTable } from "@open-minutes/core/db";
+import { peopleTable, segmentsTable } from "@open-minutes/db";
 import {
   GBOS_YOUTUBE_CHANNEL_ID,
   getOrCreateGbos,
-} from "@open-minutes/core/bodies";
+} from "@open-minutes/fixtures/gbos";
 import type { TranscriptWord } from "@open-minutes/core/transcription";
-import { getMeetingData, loadPeople } from "../test-utils/test-data";
-import type { GoldenSegment } from "../test-utils/psv";
+import { getMeetingData, loadPeople } from "@open-minutes/fixtures/test-data";
+import type { GoldenSegment } from "@open-minutes/fixtures/psv";
 import { compareTranscripts } from "../test-utils/wer";
 import { fakeYouTube, test } from "./testing";
 import { seedGoldenMeeting } from "../seed/golden-meeting";
 import { ingestVideo } from "./ingest";
+import { getMeetingAudio } from "../test-utils/audio-cache";
 
 // End-to-end cross-meeting speaker recognition.
 //
@@ -78,7 +79,7 @@ describe("e2e cross-meeting speaker recognition", () => {
       //    boundary hands the pipeline the cached golden audio and GBOS metadata,
       //    but never the golden's labels.
       const held = getMeetingData(HELD_OUT_SLUG);
-      const heldAudio = await held.getAudio();
+      const heldAudio = await getMeetingAudio(held);
       const yt = fakeYouTube({
         fetchVideoMetadata: async (id: string) => ({
           id,

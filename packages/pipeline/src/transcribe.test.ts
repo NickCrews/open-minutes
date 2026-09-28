@@ -16,8 +16,9 @@ import {
   reapplySpeakerLayer,
   serializePsv,
   serializeVadRunsPsv,
-} from "./test-utils/psv";
-import { getMeetingData } from "./test-utils/test-data";
+} from "@open-minutes/fixtures/psv";
+import { getMeetingData } from "@open-minutes/fixtures/test-data";
+import { getMeetingAudio } from "./test-utils/audio-cache";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const RUNS_DIR = join(HERE, "..", "test-runs");
@@ -165,7 +166,7 @@ describe("transcribe", () => {
         const runDir = join(RUNS_DIR, slug);
         cpDirSymlinked(meeting.meetingDir, runDir);
         const speechSegments = await transcribeAudio(
-          await meeting.getAudio().then((a) => a.path),
+          await getMeetingAudio(meeting).then((a) => a.path),
         );
         const transcribedWords = speechSegments.flatMap((s) => s.words);
         // Debug artifact: interleave VAD run markers so a diff shows where the audio

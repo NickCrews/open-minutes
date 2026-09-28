@@ -5,8 +5,8 @@ import {
   meetingsTable,
   peopleTable,
   segmentsTable,
-} from "@open-minutes/core/db";
-import { test } from "@open-minutes/core/db/testing/vitest";
+} from "@open-minutes/db";
+import { test } from "@open-minutes/db/testing/vitest";
 import { N_DIMENSIONS as VOICE_N_DIMENSIONS } from "@open-minutes/core/voice_embeddings";
 import { describe, expect } from "vitest";
 import { getAllPeople } from "./index";

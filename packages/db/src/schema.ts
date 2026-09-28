@@ -11,8 +11,8 @@ import {
   index,
   check,
 } from "drizzle-orm/pg-core";
-import { N_DIMENSIONS as VOICE_N_DIMENSIONS } from "../voice_embeddings";
-import { TranscriptWord } from "../transcription";
+import { N_DIMENSIONS as VOICE_N_DIMENSIONS } from "@open-minutes/core/voice_embeddings";
+import { TranscriptWord } from "@open-minutes/core/transcription";
 
 const secondsInterval = () => interval({ fields: "second", precision: 3 });
 

@@ -7,7 +7,7 @@
 // migration.
 //
 // Plain JavaScript (not TypeScript) so it runs under bare `node` using only
-// gbos-core's existing `postgres` and `dotenv` dependencies — no extra runner.
+// this package's existing `postgres` and `dotenv` dependencies — no extra runner.
 import process from "node:process";
 import { URL } from "node:url";
 import postgres from "postgres";

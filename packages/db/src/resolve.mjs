@@ -11,7 +11,7 @@
 import console from "node:console";
 import process from "node:process";
 import { URL } from "node:url";
-import { loadRootDotEnv } from "../dotenv.mjs";
+import { loadRootDotEnv } from "@open-minutes/core/dotenv";
 
 // The zero-config default for "local". The single source of truth for this
 // URL; it must match the postgres service in docker-compose.yml. Setting

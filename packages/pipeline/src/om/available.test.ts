@@ -2,7 +2,7 @@ import { describe, expect } from "vitest";
 import {
   GBOS_YOUTUBE_CHANNEL_ID,
   getOrCreateGbos,
-} from "@open-minutes/core/bodies";
+} from "@open-minutes/fixtures/gbos";
 import { listAvailable } from "./available";
 import { fakeYouTube, insertBody, insertMeeting, test } from "./testing";
 
