@@ -415,7 +415,7 @@ export function openingText(
 // date or time only counts when it sits near one of these.
 const ANCHOR_RE =
   /\bto order\b|\b(?:regular|special|this|tonight'?s|today'?s)\s+(?:\w+\s+)?meeting\b|\bmeeting of\b|\b(?:today|tonight) is\b|\bwork session\b/gi;
-// "to order" is the gavel itself; the time next to it is the start time.
+// "to order" is the gavel itself; the time next to it is the meeting time.
 const GAVEL_RE = /\bto order\b/gi;
 
 /** Characters between two spans (0 when they touch or overlap). */
@@ -448,7 +448,7 @@ function nearest<T extends Span>(
 }
 
 /**
- * Read the meeting date and start time from the opening of a transcript
+ * Read the meeting date and meeting time from the opening of a transcript
  * (see {@link openingText}), eg "call to order the regular meeting ... on
  * Tuesday, June 15th, 2026 at 6:02 p.m." or "It's March 23rd, 2026, GBOS
  * regular meeting ... Call the meeting to order seven o'clock."
@@ -518,7 +518,7 @@ function minutesOf(time: string): number {
 }
 
 /**
- * Decide the meeting's date and start time from its title and the opening of
+ * Decide the meeting date and meeting time from its title and the opening of
  * its transcript.
  *
  * - Date: the title's, falling back to the transcript's. Titles are typed by
