@@ -26,7 +26,7 @@ jurisdictions 1─* bodies 1─* meetings 1─* segments *─0..1 people
 
 Use these words (jurisdiction, body, meeting, segment, word, person, speaker)
 exactly — they are the table names and the project's
-[ubiquitous language](https://github.com/nickcrews/open-minutes/blob/main/UBIQUITOUS_LANGUAGE.md).
+[terminology](https://github.com/nickcrews/open-minutes/blob/main/TERMINOLOGY.md).
 There are no "chapters", "agenda items", "votes" or "motions" tables — don't
 look for them; answer those questions by searching segment text.
 
