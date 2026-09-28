@@ -188,17 +188,6 @@ The pipeline's API (`listIngested`, `listAvailable`, `ingestVideo` from
 `@open-minutes/pipeline/om`) and `om`'s JSON output (`om status --json`) are
 designed to be composed.
 
-### Agent skill
-
-Open Minutes ships an agent skill that teaches coding agents (eg Claude Code)
-how to find and query meeting transcripts. Install it with:
-
-```sh
-npx skills add nickcrews/open-minutes
-```
-
-The skill lives in [`skills/`](skills/).
-
 ## Architecture Decision Records
 
 Significant design decisions are recorded in [`adrs/`](adrs/) as numbered
