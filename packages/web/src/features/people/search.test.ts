@@ -18,7 +18,7 @@ describe("matchesName", () => {
     expect(matchesName("Jane Q. Doe", "jane smith")).toBe(false);
   });
 
-  test("never matches an unnamed person on a real query", () => {
+  test("never matches an anonymous person on a real query", () => {
     expect(matchesName(null, "unnamed")).toBe(false);
   });
 });
