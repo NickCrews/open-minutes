@@ -4,6 +4,7 @@
   "packageManager": "pnpm@10.33.0",
   "type": "module",
   "scripts": {
+    "dev": "pnpm db:up && pnpm web:dev",
     "format": "prettier --experimental-cli --ignore-unknown '**/*' --write",
     "format:check": "prettier --experimental-cli --ignore-unknown '**/*' --check",
     "lint": "eslint .",

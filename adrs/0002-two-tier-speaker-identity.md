@@ -12,7 +12,7 @@ That number is invented fresh by the diarizer for each meeting — `spk-3` in on
 no relation to `spk-3` in another.
 
 We want an end-to-end test of the thing the product actually promises: that a
-person is *recognized across meetings by their voice*. The scenario:
+person is _recognized across meetings by their voice_. The scenario:
 
 1. Start from a blank database.
 2. Seed it from two golden meetings — transcripts **and** a voiceprint per known
@@ -21,7 +21,7 @@ person is *recognized across meetings by their voice*. The scenario:
 4. Compare that ingestion against the third golden — did we transcribe it well,
    and did we put the right names to the voices?
 
-For step 4 to mean anything, "Margaret" in golden 1 has to be the *same identity*
+For step 4 to mean anything, "Margaret" in golden 1 has to be the _same identity_
 as "Margaret" in golden 3. A per-meeting cluster number cannot express that. We
 need a speaker identity that is stable across meetings.
 
@@ -59,7 +59,7 @@ property of the data, not a guess from whether the slug looks like `spk-N`.
 ### Two types, not one — diarization stays identity-blind
 
 The live pipeline's `TranscriptSegment` keeps `speakerNum: number | null`
-unchanged. Diarization and alignment cannot know *who* a voice is — identification
+unchanged. Diarization and alignment cannot know _who_ a voice is — identification
 happens later, against the database — so pushing an `identified` case into them
 would add a state they can never produce. The richer representation lives only on
 the golden side:
@@ -70,10 +70,13 @@ type SpeakerLabel =
   | { kind: "segmented"; cluster: number }
   | { kind: "identified"; person: string };
 
-interface GoldenSegment { speaker: SpeakerLabel; words: TranscriptWord[] }
+interface GoldenSegment {
+  speaker: SpeakerLabel;
+  words: TranscriptWord[];
+}
 ```
 
-The golden is ground truth, so it *can* carry the identified-person answer the
+The golden is ground truth, so it _can_ carry the identified-person answer the
 pipeline has to work out. `toGoldenSegment()` lifts a pipeline segment (a bare
 cluster) into a `GoldenSegment`; nothing converts the other way, because the
 pipeline never asserts an identity.
@@ -109,7 +112,7 @@ person was recognized.
 ## Alternatives considered
 
 - **String label everywhere, including the DB.** Replace `speaker_number:
-  integer` with a text label and thread strings through diarize/align/identify.
+integer` with a text label and thread strings through diarize/align/identify.
   Rejected: it forces the identity-blind stages to carry an `identified` case they
   never produce, and rewrites a working numeric column for no pipeline benefit.
 - **Keep everything under `segmented:` and infer person-ness from the slug shape.**
