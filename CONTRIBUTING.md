@@ -1,10 +1,62 @@
 # Contributing to Open Minutes
 
+This is the technical guide: how Open Minutes works, how to run it, and how to
+work with its data directly. For what the project is and who it's for, see the
+[README](README.md).
+
 ## Vocabulary
 
 Terms like _body_, _meeting_, _segment_, _speaker_, and _person_ have specific
-meanings here. See the glossary in [`UBIQUITOUS_LANGUAGE.md`](UBIQUITOUS_LANGUAGE.md)
-and use those terms in code, comments, and commit messages.
+meanings here. See [`TERMINOLOGY.md`](TERMINOLOGY.md) and use those terms in
+code, comments, and commit messages.
+
+## How it works
+
+A [pnpm](https://pnpm.io) workspace with three packages:
+
+- **[`packages/core`](packages/core)** (`@open-minutes/core`): shared domain
+  code. The [Drizzle](https://orm.drizzle.team) schema and migrations, database
+  connection/resolution, the YouTube boundary (via `yt-dlp`), transcript and
+  timeline types, and voice-embedding helpers.
+- **[`packages/pipeline`](packages/pipeline)** (`@open-minutes/pipeline`): the
+  offline ingestion pipeline and the `om` CLI. It downloads audio, transcribes
+  it locally with [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) (NeMo
+  Parakeet ASR + Silero VAD), diarizes it into speaker turns (pyannote
+  segmentation + CAM++ voice embeddings), aligns turns to words, recognizes
+  speakers against known voiceprints, and writes the meeting to the database.
+  No GPU or external API is needed; models are downloaded on first use. Also
+  holds the database seeder. See the [pipeline README](packages/pipeline/README.md).
+- **[`packages/web`](packages/web)** (`@open-minutes/web`): the public
+  transcript browser, built with [SolidJS](https://www.solidjs.com) +
+  [TanStack Start](https://tanstack.com/start), Kobalte and Tailwind.
+
+**Database:** PostgreSQL with [pgvector](https://github.com/pgvector/pgvector)
+(voiceprints are stored as vectors with an HNSW index). Locally it runs in
+Docker via [`docker-compose.yml`](docker-compose.yml). For a hosted database
+the web app supports [Neon](https://neon.tech), which it reaches over Neon's
+HTTP driver (Workers can't open raw TCP sockets).
+
+**Deploy target:** the web app deploys to
+[Cloudflare Workers](https://workers.cloudflare.com) (worker `open-minutes`,
+configured in [`packages/web/wrangler.jsonc`](packages/web/wrangler.jsonc)) via
+`pnpm --filter @open-minutes/web run deploy`. The pipeline runs offline on a
+developer machine and writes to the target database directly.
+
+```
+YouTube ──yt-dlp──▶ pipeline (om ingest) ──▶ Postgres + pgvector ◀── web (Cloudflare Workers)
+                    transcribe / diarize /       (local Docker or Neon)
+                    align / recognize
+```
+
+The data model: **jurisdictions** contain **bodies**, each with one or more
+YouTube **video sources**. **Meetings** belong to a body, and each meeting's
+transcript is a sequence of **segments** (a run of words by one speaker, with
+word-level onsets). Segments are attributed to **people**, who carry a
+voiceprint so they can be recognized in later meetings. See
+[`packages/core/src/db/schema.ts`](packages/core/src/db/schema.ts). The
+configured bodies and video sources live in the seed data under
+[`packages/pipeline/test-data/`](packages/pipeline/test-data/); adding a body
+means adding rows there.
 
 ## Local setup
 
@@ -115,6 +167,36 @@ pnpm om ingest <id>     # run the full pipeline for a video
 ```
 
 See [`packages/pipeline/README.md`](packages/pipeline/README.md) for details.
+
+## Working with the data directly
+
+It's plain Postgres. Transcripts live in `segments` (with generated `text`,
+`start_secs` and `end_secs` columns derived from the word-level `words` JSON),
+joined to `meetings`, `bodies` and `people`. For example:
+
+```sql
+SELECT m.title, p.name, s.start_secs, s.text
+FROM segments s
+JOIN meetings m ON m.id = s.meeting_id
+LEFT JOIN people p ON p.id = s.person_id
+WHERE s.text ILIKE '%snow removal%'
+ORDER BY m.start_time, s.start_secs;
+```
+
+The pipeline's API (`listIngested`, `listAvailable`, `ingestVideo` from
+`@open-minutes/pipeline/om`) and `om`'s JSON output (`om status --json`) are
+designed to be composed.
+
+### Agent skill
+
+Open Minutes ships an agent skill that teaches coding agents (eg Claude Code)
+how to find and query meeting transcripts. Install it with:
+
+```sh
+npx skills add nickcrews/open-minutes
+```
+
+The skill lives in [`skills/`](skills/).
 
 ## Architecture Decision Records
 
