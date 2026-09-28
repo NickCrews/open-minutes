@@ -124,7 +124,7 @@ search for a distinctive single word if a phrase comes up empty.
 ```sql
 SELECT s.start_secs,
        coalesce(p.name,
-                CASE WHEN s.person_id IS NOT NULL THEN 'unidentified person #' || s.person_id
+                CASE WHEN s.person_id IS NOT NULL THEN 'anonymous person #' || s.person_id
                      WHEN s.speaker_number IS NOT NULL THEN 'speaker ' || s.speaker_number
                      ELSE 'unknown' END) AS speaker,
        s.text
@@ -151,7 +151,7 @@ const meeting = await db.query.meetingsTable.findFirst({
 });
 ```
 
-## Jump to a timestamp
+## Jump to a moment in the video
 
 Given a meeting and a time in the video (e.g. "1:02:30" = 3750 s):
 
@@ -202,7 +202,7 @@ ORDER BY meetings DESC;
 
 `first`/`last` are UTC instants; render them in `bodies.timezone`.
 
-## Find unnamed recurring voices worth identifying
+## Find anonymous people worth naming
 
 ```sql
 SELECT p.id, count(DISTINCT s.meeting_id) AS meetings, sum(s.duration_secs) AS speaking_time

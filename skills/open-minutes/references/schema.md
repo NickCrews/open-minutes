@@ -62,12 +62,12 @@ succeeded (there is no partial state).
 
 A recurring voice, recognized across meetings by its voiceprint.
 
-| column            | type        | notes                                                                                                       |
-| ----------------- | ----------- | ----------------------------------------------------------------------------------------------------------- |
-| `slug`            | varchar     | unique, nullable. Stable handle for a known person (`margaret-tyler`). NULL for auto-created voices         |
-| `name`            | varchar     | nullable. NULL = nobody has identified this voice yet. May include a role, "Mike Edgington (GBOS co-chair)" |
-| `bio`             | varchar     | nullable free-form prose: role, affiliation, tenure                                                         |
-| `voice_embedding` | vector(192) | the voiceprint; HNSW index. Exclude it from selects                                                         |
+| column            | type        | notes                                                                                                                       |
+| ----------------- | ----------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `slug`            | varchar     | unique, nullable. Stable handle for a known person (`margaret-tyler`). NULL for auto-created voices                         |
+| `name`            | varchar     | nullable. NULL = an anonymous person: nobody has named this voice yet. May include a role, "Mike Edgington (GBOS co-chair)" |
+| `bio`             | varchar     | nullable free-form prose: role, affiliation, tenure                                                                         |
+| `voice_embedding` | vector(192) | the voiceprint; HNSW index. Exclude it from selects                                                                         |
 
 ## segments
 

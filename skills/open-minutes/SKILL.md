@@ -6,7 +6,7 @@ description: Query and cite Open Minutes data — speaker-attributed transcripts
 # Open Minutes data
 
 Open Minutes turns YouTube videos of local-government meetings into
-speaker-attributed, word-timestamped transcripts. All data lives in one
+speaker-attributed, transcripts with word-level timing. All data lives in one
 Postgres database (with pgvector). **There is no public HTTP/JSON API**: the web
 app's server functions are internal, so query the database directly with SQL,
 or with drizzle via `@open-minutes/core/db` when working inside the repo.
@@ -63,12 +63,12 @@ look for them; answer those questions by searching segment text.
    - `person_id` NULL, `speaker_number` set → a diarized voice, local to that
      meeting only. `speaker_number` 3 in one meeting ≠ 3 in another.
    - `person_id` set, `people.name` NULL → a recurring voice nobody has named
-     yet (the UI shows "Anonymous <Animal>"). Say "an unidentified speaker".
+     yet (the UI shows "Anonymous <Animal>"). Say "an anonymous speaker".
    - `person_id` set, `people.name` set → a named person. `people.slug` (e.g.
      `margaret-tyler`) is the stable cross-meeting handle for known people.
 5. **Voice matching is automatic and fallible.** Ingestion assigns a segment
    to the nearest stored voiceprint (cosine similarity ≥ 0.55) or creates a
-   new unnamed person. Hedge attributions ("the transcript attributes this
+   new anonymous person. Hedge attributions ("the transcript attributes this
    to…") and quote the exact text.
 6. **Transcripts are machine-generated.** `segments.text` is the words joined
    with spaces, with ASR errors and imperfect punctuation. Search
