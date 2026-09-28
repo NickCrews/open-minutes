@@ -4,7 +4,7 @@ import { count, max, min } from "drizzle-orm";
 /** How much of a body's record we hold: its meetings, and the span they cover. */
 export type Coverage = {
   meetings: number;
-  /** Null when none of the meetings has a known start time. */
+  /** Null when none of the meetings has a known date. */
   first: string | null;
   last: string | null;
 };
