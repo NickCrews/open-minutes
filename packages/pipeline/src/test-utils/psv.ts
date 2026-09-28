@@ -320,7 +320,9 @@ export function reapplySpeakerLayer(
 ): GoldenSegment[] {
   const ref = reference.filter((s) => s.words.length > 0);
   if (ref.length === 0) {
-    return words.length > 0 ? [{ speaker: { kind: "unlabeled" }, words: [...words] }] : [];
+    return words.length > 0
+      ? [{ speaker: { kind: "unlabeled" }, words: [...words] }]
+      : [];
   }
   const spans = ref.map((s) => ({
     start: s.words[0]!.start,
