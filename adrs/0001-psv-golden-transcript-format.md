@@ -17,7 +17,7 @@ format therefore has to serve three goals, in priority order:
 3. **File size.** These are committed, so repo weight and clone time matter —
    but only as a tiebreaker, never at the cost of (1) or (2).
 
-We use PSV (`packages/pipeline/src/test-utils/psv.ts`): one event per line,
+We use PSV (`packages/fixtures/src/psv.ts`): one event per line,
 `start_sec|event_type|event_data`, absolute `H:MM:SS.ss` timestamps, one line per
 word, speaker changes as `meta` marker lines.
 

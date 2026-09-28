@@ -2,18 +2,19 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect } from "vitest";
-import { meetingsTable, segmentsTable } from "@open-minutes/core/db";
+import { meetingsTable, segmentsTable } from "@open-minutes/db";
 import {
   GBOS_YOUTUBE_CHANNEL_ID,
   getOrCreateGbos,
-} from "@open-minutes/core/bodies";
-import type { VideoMetadata } from "@open-minutes/core/youtube";
+} from "@open-minutes/fixtures/gbos";
+import type { VideoMetadata } from "../youtube";
 import type { SpeechSegment } from "@open-minutes/core/transcription";
 import { N_DIMENSIONS } from "@open-minutes/core/voice_embeddings";
-import { getMeetingData } from "../test-utils/test-data";
+import { getMeetingData } from "@open-minutes/fixtures/test-data";
 import { ingestVideo, ingestVideos } from "./ingest";
 import { listIngested } from "./ingested";
 import { fakeYouTube, insertMeeting, test } from "./testing";
+import { getMeetingAudio } from "../test-utils/audio-cache";
 
 const VIDEO_ID = "test-video-1";
 
@@ -188,7 +189,7 @@ describe("ingestVideo", () => {
     async ({ db, workRoot }) => {
       await getOrCreateGbos(db);
       const meeting = getMeetingData("gbos_9HoIM5INxpI");
-      const audio = await meeting.getAudio();
+      const audio = await getMeetingAudio(meeting);
 
       // Fake only the network boundary: metadata is canned and "download"
       // symlinks the cached fixture audio. Transcribe/diarize/align/identify

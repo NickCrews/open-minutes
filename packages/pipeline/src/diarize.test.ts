@@ -8,9 +8,14 @@ import sherpa_onnx from "sherpa-onnx-node";
 import { computeSpeakerEmbeddings } from "./embed";
 import { diarizeAudio } from "./diarize";
 import { alignSpeakers, segmentsToSpeechRuns } from "./align";
-import { parsePsv, serializePsv, toGoldenSegment } from "./test-utils/psv";
-import { getMeetingData } from "./test-utils/test-data";
+import {
+  parsePsv,
+  serializePsv,
+  toGoldenSegment,
+} from "@open-minutes/fixtures/psv";
+import { getMeetingData } from "@open-minutes/fixtures/test-data";
 import { N_DIMENSIONS } from "@open-minutes/core/voice_embeddings";
+import { getMeetingAudio } from "./test-utils/audio-cache";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const RUNS_DIR = join(HERE, "..", "test-runs");
@@ -29,7 +34,7 @@ describe("diarize", () => {
       const runDir = join(RUNS_DIR, slug);
       cpDirSymlinked(meeting.meetingDir, runDir);
 
-      const audioPath = await meeting.getAudio().then((a) => a.path);
+      const audioPath = await getMeetingAudio(meeting).then((a) => a.path);
       const wave = sherpa_onnx.readWave(audioPath);
       const turns = diarizeAudio(wave);
 

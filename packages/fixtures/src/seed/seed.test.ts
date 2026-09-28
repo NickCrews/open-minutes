@@ -1,7 +1,7 @@
 import { describe, expect } from "vitest";
-import { bodiesTable, jurisdictionsTable } from "@open-minutes/core/db";
-import { test } from "@open-minutes/core/db/testing/vitest";
-import { loadAllTestData } from "../test-utils/test-data";
+import { bodiesTable, jurisdictionsTable } from "@open-minutes/db";
+import { test } from "@open-minutes/db/testing/vitest";
+import { loadAllTestData } from "../test-data";
 import { seedDatabase } from "./seed";
 
 // Integration test: each test gets its own freshly-migrated Postgres database

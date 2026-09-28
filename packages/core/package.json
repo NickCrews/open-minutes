@@ -3,12 +3,7 @@
   "version": "0.1.0",
   "type": "module",
   "exports": {
-    "./db": "./src/db/index.ts",
-    "./db/resolve": "./src/db/resolve.mjs",
     "./dotenv": "./src/dotenv.mjs",
-    "./db/testing": "./src/db/testing/index.ts",
-    "./db/testing/vitest": "./src/db/testing/vitest.ts",
-    "./youtube": "./src/youtube/index.ts",
     "./bodies": "./src/bodies/index.ts",
     "./timeline": "./src/timeline.ts",
     "./transcription": "./src/transcription/index.ts",
@@ -16,25 +11,13 @@
   },
   "scripts": {
     "test": "vitest run",
-    "typecheck": "tsc --noEmit",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
-    "db:up": "docker compose -f ../../docker-compose.yml up -d --wait",
-    "db:setup": "pnpm db:up && pnpm db:migrate",
-    "db:studio": "drizzle-kit studio",
-    "db:nuke": "pnpm db:up && node src/db/nuke.mjs && pnpm db:migrate"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@neondatabase/serverless": "^1.1.0",
-    "@t3-oss/env-core": "^0.13.11",
-    "dotenv": "^17.4.2",
-    "drizzle-orm": "1.0.0-beta.21",
-    "postgres": "^3",
-    "zod": "^4.3.6"
+    "dotenv": "^17.4.2"
   },
   "devDependencies": {
     "@types/node": "^25.6.0",
-    "drizzle-kit": "1.0.0-beta.22",
     "vitest": "^4.0.18"
   }
 }

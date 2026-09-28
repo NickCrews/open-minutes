@@ -4,7 +4,7 @@ import {
   bodiesTable,
   meetingsTable,
   segmentsTable,
-} from "@open-minutes/core/db";
+} from "@open-minutes/db";
 import { bodySlug } from "@open-minutes/core/bodies";
 
 /** One fully ingested meeting, as listed by `om status`. */

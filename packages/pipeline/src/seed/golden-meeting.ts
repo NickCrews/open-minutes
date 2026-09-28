@@ -4,13 +4,17 @@ import {
   meetingsTable,
   peopleTable,
   segmentsTable,
-} from "@open-minutes/core/db";
+} from "@open-minutes/db";
 import {
   LAST_WORD_DURATION_SEC,
   type DiarizationTurn,
 } from "@open-minutes/core/transcription";
 import { computeSpeakerEmbeddings } from "../embed";
-import type { GoldenMeeting, GoldenPerson } from "../test-utils/test-data";
+import type {
+  GoldenMeeting,
+  GoldenPerson,
+} from "@open-minutes/fixtures/test-data";
+import { getMeetingAudio } from "../test-utils/audio-cache";
 
 // Seed a hand-verified golden meeting into the database as established ground
 // truth: the meeting row, its speaker-attributed segments, and a voiceprint per
@@ -43,7 +47,7 @@ export async function seedGoldenMeeting(
   const slugToPersonId = hasIdentified
     ? await seedIdentifiedPeople(
         db,
-        await meeting.getAudio().then((a) => a.path),
+        await getMeetingAudio(meeting).then((a) => a.path),
         meeting.segments,
         peopleBySlug,
       )

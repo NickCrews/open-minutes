@@ -1,4 +1,4 @@
-import { type DB, meetingsTable } from "@open-minutes/core/db";
+import { type DB, meetingsTable } from "@open-minutes/db";
 import { eq } from "drizzle-orm";
 
 export function getAllMeetings(db: DB) {

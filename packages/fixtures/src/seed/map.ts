@@ -2,8 +2,8 @@ import {
   bodiesTable,
   jurisdictionsTable,
   videoSourcesTable,
-} from "@open-minutes/core/db";
-import type { TestData } from "../test-utils/test-data";
+} from "@open-minutes/db";
+import type { TestData } from "../test-data";
 
 type JurisdictionInsert = typeof jurisdictionsTable.$inferInsert;
 type BodyInsert = typeof bodiesTable.$inferInsert;

@@ -5,7 +5,7 @@ import { createTestDb, ensureTestTemplate, type TestDb } from "./index";
 // Vitest fixture giving each test its own fresh, migrated, empty database,
 // dropped automatically when the test finishes:
 //
-//   import { test } from "@open-minutes/core/db/testing/vitest";
+//   import { test } from "@open-minutes/db/testing/vitest";
 //
 //   test("plays in its own sandbox", async ({ db }) => { ... });
 //

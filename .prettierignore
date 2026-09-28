@@ -1,2 +1,2 @@
 pnpm-lock.yaml
-packages/core/src/db/migrations/
+packages/db/src/migrations/

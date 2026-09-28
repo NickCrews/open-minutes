@@ -12,12 +12,20 @@ code, comments, and commit messages.
 
 ## How it works
 
-A [pnpm](https://pnpm.io) workspace with three packages:
+A [pnpm](https://pnpm.io) workspace with five packages. Each depends only on
+the ones listed above it:
 
 - **[`packages/core`](packages/core)** (`@open-minutes/core`): shared domain
-  code. The [Drizzle](https://orm.drizzle.team) schema and migrations, database
-  connection/resolution, the YouTube boundary (via `yt-dlp`), transcript and
-  timeline types, and voice-embedding helpers.
+  code with no database or I/O: transcript and timeline types, voice-embedding
+  constants, body slugs, and root `.env.local` loading.
+- **[`packages/db`](packages/db)** (`@open-minutes/db`): the
+  [Drizzle](https://orm.drizzle.team) schema and migrations, database
+  connection/resolution, the `db:*` scripts, and the per-test database helpers
+  (`@open-minutes/db/testing/vitest`).
+- **[`packages/fixtures`](packages/fixtures)** (`@open-minutes/fixtures`): the
+  test data (jurisdictions, bodies, people and golden meetings in
+  `test-data/`), its loaders and PSV parser, and the database seeder. Used by
+  tests and by local development; nothing ships with it.
 - **[`packages/pipeline`](packages/pipeline)** (`@open-minutes/pipeline`): the
   offline ingestion pipeline and the `om` CLI. It downloads audio, transcribes
   it locally with [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) (NeMo
@@ -25,7 +33,8 @@ A [pnpm](https://pnpm.io) workspace with three packages:
   segmentation + CAM++ voice embeddings), aligns turns to words, recognizes
   speakers against known voiceprints, and writes the meeting to the database.
   No GPU or external API is needed; models are downloaded on first use. Also
-  holds the database seeder. See the [pipeline README](packages/pipeline/README.md).
+  holds the YouTube boundary (via `yt-dlp`). See the
+  [pipeline README](packages/pipeline/README.md).
 - **[`packages/web`](packages/web)** (`@open-minutes/web`): the public
   transcript browser, built with [SolidJS](https://www.solidjs.com) +
   [TanStack Start](https://tanstack.com/start), Kobalte and Tailwind.
@@ -53,9 +62,9 @@ YouTube **video sources**. **Meetings** belong to a body, and each meeting's
 transcript is a sequence of **segments** (a run of words by one speaker, with
 word-level onsets). Segments are attributed to **people**, who carry a
 voiceprint so they can be recognized in later meetings. See
-[`packages/core/src/db/schema.ts`](packages/core/src/db/schema.ts). The
+[`packages/db/src/schema.ts`](packages/db/src/schema.ts). The
 configured bodies and video sources live in the test data under
-[`packages/pipeline/test-data/`](packages/pipeline/test-data/); adding a body
+[`packages/fixtures/test-data/`](packages/fixtures/test-data/); adding a body
 means adding rows there.
 
 ## Local setup
@@ -99,7 +108,7 @@ Tests always use `local`, whatever `DB` is set to.
 ```sh
 pnpm db:up                    # start Postgres (docker-compose.yml)
 pnpm db:migrate               # apply migrations
-pnpm db:seed                  # load the test data from packages/pipeline/test-data/
+pnpm db:seed                  # load the test data from packages/fixtures/test-data/
 ```
 
 The other database scripts:
@@ -108,10 +117,10 @@ The other database scripts:
 | ------------------ | -------------------------------------------------------------------------------- |
 | `pnpm db:reset`    | `db:nuke` then `db:seed`: a clean, migrated, seeded database                     |
 | `pnpm db:nuke`     | Starts Postgres if needed, drops the `public` and `drizzle` schemas, re-migrates |
-| `pnpm db:generate` | Generates a migration from `packages/core/src/db/schema.ts` changes              |
+| `pnpm db:generate` | Generates a migration from `packages/db/src/schema.ts` changes                   |
 | `pnpm db:studio`   | Opens Drizzle Studio                                                             |
 
-Migrations live in `packages/core/src/db/migrations/` and are committed. After
+Migrations live in `packages/db/src/migrations/` and are committed. After
 you edit `schema.ts`, run `pnpm db:generate` and commit the generated migration
 with the change.
 
@@ -119,11 +128,15 @@ with the change.
 
 ```
 packages/
-  core/       @open-minutes/core: DB schema, migrations and connection resolution;
-              YouTube (yt-dlp), bodies, transcription and voice-embedding types
+  core/       @open-minutes/core: transcription, timeline and voice-embedding types,
+              body slugs, .env.local loading
+  db/         @open-minutes/db: DB schema, migrations, connection resolution,
+              test databases
+  fixtures/   @open-minutes/fixtures: test data and golden meetings in test-data/,
+              the PSV parser, and db seeding
   pipeline/   @open-minutes/pipeline: offline audio → transcript pipeline
-              (transcribe, diarize, align, recognize), the `om` CLI, db seeding,
-              test data and golden meetings in test-data/. See packages/pipeline/README.md.
+              (transcribe, diarize, align, recognize), YouTube (yt-dlp), and the
+              `om` CLI. See packages/pipeline/README.md.
   web/        @open-minutes/web: transcript browser (SolidStart + TanStack Router,
               Kobalte, Tailwind), deployed to Cloudflare Workers
 adrs/         Architecture Decision Records

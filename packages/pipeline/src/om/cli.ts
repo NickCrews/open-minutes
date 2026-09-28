@@ -14,7 +14,7 @@ process.stdout.on("error", (error: NodeJS.ErrnoException) => {
   if (error.code === "EPIPE") process.exit(0);
   throw error;
 });
-import { getDb, type DB } from "@open-minutes/core/db";
+import { getDb, type DB } from "@open-minutes/db";
 import { listIngested, type IngestedMeeting } from "./ingested";
 import { listAvailable } from "./available";
 import { ingestVideos } from "./ingest";

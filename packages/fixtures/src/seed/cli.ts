@@ -1,4 +1,4 @@
-import { getDb } from "@open-minutes/core/db";
+import { getDb } from "@open-minutes/db";
 import { seedDatabase } from "./seed";
 
 const { db, client } = getDb();
