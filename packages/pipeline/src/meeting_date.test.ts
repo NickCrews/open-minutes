@@ -242,7 +242,7 @@ describe("parseDateTimeFromTranscript", () => {
     ).toBeNull();
   });
 
-  test("a bare H:MM far from the gavel is not the start time", () => {
+  test("a bare H:MM far from the gavel is not the meeting time", () => {
     const filler = " and so on".repeat(20);
     expect(
       parseDateTimeFromTranscript(
