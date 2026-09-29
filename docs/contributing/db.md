@@ -99,15 +99,15 @@ URLs are stable), then advance the id sequences past them.
 
 ## The other commands
 
-| Command            | What it does                                                                                                                                              |
-| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm db migrate`  | Applies pending migrations (up to `--schema-version`). Never resets or seeds; fails if the database can't be migrated forward. What deploys run.          |
-| `pnpm db wipe`     | Drops all tables, data and migration history.                                                                                                             |
-| `pnpm db status`   | Shows the schema version, the dataset and whether it's current, and any pending or unexpected migrations. `--check` exits non-zero if it needs migrating. |
-| `pnpm db generate` | Writes a new migration from your `schema.ts` changes.                                                                                                     |
-| `pnpm db check`    | Checks the migrations for conflicts.                                                                                                                      |
-| `pnpm db studio`   | Opens Drizzle Studio on the database.                                                                                                                     |
-| `pnpm db prune`    | Lists databases of deleted branches, leftover test databases and outdated test templates. `--yes` drops them.                                             |
+| Command            | What it does                                                                                                                                                                                           |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `pnpm db migrate`  | Applies pending migrations (up to `--schema-version`). Never resets or seeds; fails if the database can't be migrated forward. What deploys run.                                                       |
+| `pnpm db wipe`     | Drops all tables, data and migration history.                                                                                                                                                          |
+| `pnpm db status`   | Shows the schema version, the dataset and whether it's current, and any pending or unexpected migrations. `--check` exits non-zero if it needs migrating; `--check-diverged` only if history diverged. |
+| `pnpm db generate` | Writes a new migration from your `schema.ts` changes.                                                                                                                                                  |
+| `pnpm db check`    | Checks the migrations for conflicts.                                                                                                                                                                   |
+| `pnpm db studio`   | Opens Drizzle Studio on the database.                                                                                                                                                                  |
+| `pnpm db prune`    | Lists databases of deleted branches, leftover test databases and outdated test templates. `--yes` drops them.                                                                                          |
 
 `migrate`, `wipe`, `status`, `studio` and `up` all take `--db`.
 
@@ -122,6 +122,44 @@ URLs are stable), then advance the id sequences past them.
 `pnpm deploy:prod` migrates prod, then deploys the Worker, so new code never
 runs on an old schema. Old code does briefly run on the new schema, so
 migrations must be backward-compatible: add first, deploy, remove later.
+
+## Neon branches
+
+`pnpm db neon branch` gets or creates a Neon branch (a copy-on-write fork of
+production) for this workspace and prints its URL. The default name is
+`dev/<git branch>` and it expires after 7 days (`--ttl-hours`). `--save mybranch`
+writes `DATABASE_URL_MYBRANCH`, so `DB=mybranch` targets it. `neon reset`
+re-forks a branch from production without changing its URLs, and `neon delete`
+and `neon list` do what they say. None of them will hand out or delete the
+default or a protected branch.
+
+They need `NEON_API_KEY` (project-scoped) and `NEON_PROJECT_ID`; mark the
+production branch protected in Neon. A remote agent session that needs
+production data can run `pnpm db neon branch --save mybranch` in its setup
+script; the TTL cleans up after abandoned sessions.
+
+### PR previews
+
+[`.github/workflows/pr-preview.yml`](../../.github/workflows/pr-preview.yml)
+gives each PR a Neon branch (`preview/pr-N`), migrates it in deploy mode, and
+deploys a separate Worker, `open-minutes-pr-N`, at
+`https://open-minutes-pr-N.<account>.workers.dev`, with the branch's pooled URL
+uploaded as a secret in the same request (`wrangler deploy --secrets-file`). It
+comments the URL on the PR and deletes both when the PR closes.
+
+The branch persists across pushes, so data reviewers enter survives. If a push
+edits a migration the branch already has (`pnpm db status --check-diverged`),
+the workflow resets the branch from production before migrating.
+
+It's opt-in: it needs the `NEON_API_KEY` and `CLOUDFLARE_API_TOKEN` secrets,
+the `NEON_PROJECT_ID` and `CLOUDFLARE_ACCOUNT_ID` variables, and a registered
+workers.dev subdomain. A Worker per PR was chosen over preview versions of the
+production Worker: versions inherit production's secrets, can't be deleted,
+and would need the database URL as a plaintext var.
+
+Previews are public URLs serving a copy of production data. That's fine for
+public meeting records; put Cloudflare Access in front if that changes. A
+Worker whose cleanup fails leaks: unlike Neon branches, Workers have no TTL.
 
 ## Changing the schema
 
@@ -182,7 +220,7 @@ pass `setupTimeoutMs` for slow datasets like that.
 Previously every branch shared one hand-managed local database. Migrating on a
 feature branch and switching back left `main`'s code on a schema it didn't
 know, and drizzle, which tracks migrations only by name, didn't notice.
-Worktrees, agent sessions and CI also each need their own database.
+Worktrees, agent sessions, PR previews and CI also each need their own database.
 
 So every database, local or remote, dev or test, is brought to a **declared
 state** by one function, `ensureDatabase` in
@@ -239,7 +277,10 @@ data is renamed to `open_minutes__main` on first use.
 - **CI** ([`.github/workflows/db.yml`](../../.github/workflows/db.yml)) checks
   for migration conflicts and ungenerated schema changes, runs `up` twice (the
   second must do nothing), wipes, rebuilds with `migrate`, and runs the
-  database tests.
+  database tests. With Neon configured, a second job applies the PR's
+  migrations to a throwaway fork of production in deploy mode, catching
+  migrations that fail on real rows (a `NOT NULL` over existing nulls, a unique
+  index over duplicates) and PRs missing `main`'s migrations.
 
 The deployed Worker doesn't check its schema at runtime, which would cost a
 query per cold start; migrating before deploying covers it.

@@ -462,7 +462,7 @@ describe("divergenceMessage for a remote database", () => {
       modified: ["20260101000000_a"],
     });
     expect(message).toMatch(/edited after being applied/);
-    expect(message).toMatch(/recreate it from production/);
+    expect(message).toMatch(/pnpm db neon reset/);
     expect(message).not.toMatch(/merge it into yours/);
   });
 
