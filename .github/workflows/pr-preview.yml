@@ -1,0 +1,182 @@
+# A live preview of the web app per pull request: its own Cloudflare Worker
+# (open-minutes-pr-N, served at https://open-minutes-pr-N.<account>.workers.dev)
+# backed by its own Neon branch (preview/pr-N), a copy-on-write fork of
+# production migrated to the PR's schema. That also proves the PR's migrations
+# apply to real production data (and that the PR has main's migrations) before
+# merge. Both are deleted when the PR closes; the Neon branch also expires on
+# its own after 14 days.
+#
+# Opt-in: does nothing until the repo has
+#   secret   NEON_API_KEY           (a project-scoped Neon API key)
+#   secret   CLOUDFLARE_API_TOKEN   (Account > Workers Scripts > Edit)
+#   variable NEON_PROJECT_ID
+#   variable CLOUDFLARE_ACCOUNT_ID
+# and the Cloudflare account has a workers.dev subdomain registered.
+#
+# Skipped for PRs from forks: they get no secrets.
+name: pr-preview
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, closed]
+
+concurrency:
+  group: pr-preview-${{ github.event.number }}
+  # Queue rather than cancel: a cancelled deploy is harmless, but a cancelled
+  # cleanup would leak the Worker and the Neon branch.
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+  NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+  NEON_BRANCH: preview/pr-${{ github.event.number }}
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+  WORKER_NAME: open-minutes-pr-${{ github.event.number }}
+  WRANGLER_SEND_METRICS: "false"
+  COMMENT_MARKER: "<!-- pr-preview -->"
+
+jobs:
+  deploy:
+    if: >-
+      vars.NEON_PROJECT_ID != '' && vars.CLOUDFLARE_ACCOUNT_ID != ''
+      && github.event.action != 'closed'
+      && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Create (or reuse) the PR's Neon branch and migrate it
+        id: neon
+        run: |
+          # Idempotent: the second call reuses the branch the first created.
+          url=$(pnpm -s db neon branch --name "$NEON_BRANCH" --ttl-hours 336)
+          echo "::add-mask::$url"
+          pooled=$(pnpm -s db neon branch --name "$NEON_BRANCH" --ttl-hours 336 --pooled)
+          echo "::add-mask::$pooled"
+          # The branch persists across pushes, so data reviewers enter survives
+          # and each push only applies its new migrations. But editing or
+          # regenerating a migration the branch already has leaves its history
+          # diverged, which deploy mode rightly refuses to touch. The branch is
+          # disposable, so start it over from production (same URLs, so the
+          # Worker's secret stays valid). If production itself has migrations
+          # this PR lacks, it still diverges after the reset, and the migrate
+          # below fails with "merge the base branch into yours".
+          if ! pnpm -s db status --db "$url" --check-diverged; then
+            echo "Preview branch diverged from this PR's migrations; resetting it from production."
+            pnpm -s db neon reset --name "$NEON_BRANCH"
+          fi
+          pnpm db migrate --db "$url"
+          pnpm db status --db "$url" --check
+          # Hand the pooled URL (what the Worker uses) to the deploy step as a
+          # file, not a step output, so it never lands in the job's outputs.
+          jq -n --arg url "$pooled" '{DATABASE_URL: $url}' > "$RUNNER_TEMP/worker-secrets.json"
+
+      # The build never touches a database: vite.config.ts only resolves one
+      # for the dev server, so dist/server/wrangler.json has no vars.
+      - name: Build
+        run: pnpm --filter @open-minutes/web build
+
+      - name: Deploy the preview Worker
+        id: deploy
+        working-directory: packages/web
+        env:
+          WRANGLER_OUTPUT_FILE_PATH: ${{ runner.temp }}/wrangler-output.ndjson
+        run: |
+          # --name overrides the name in the vite plugin's generated
+          # dist/server/wrangler.json. --secrets-file uploads DATABASE_URL as a
+          # secret_text binding in the same request as the code, so there is
+          # no window where the Worker runs without it.
+          pnpm exec wrangler deploy \
+            --name "$WORKER_NAME" \
+            --secrets-file "$RUNNER_TEMP/worker-secrets.json" \
+            --message "PR #${{ github.event.number }} @ ${{ github.event.pull_request.head.sha }}"
+          rm -f "$RUNNER_TEMP/worker-secrets.json"
+          url=$(jq -r 'select(.type == "deploy") | .targets[]? | select(endswith(".workers.dev"))' \
+            "$WRANGLER_OUTPUT_FILE_PATH" | head -n1)
+          if [ -z "$url" ]; then
+            echo "::error::wrangler reported no workers.dev URL (is a workers.dev subdomain registered?)"
+            exit 1
+          fi
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+
+      - name: Comment the preview URL on the PR
+        uses: actions/github-script@v7
+        env:
+          PREVIEW_URL: ${{ steps.deploy.outputs.url }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        with:
+          script: |
+            const marker = process.env.COMMENT_MARKER;
+            const body = [
+              marker,
+              `**Preview:** ${process.env.PREVIEW_URL}`,
+              '',
+              `Deployed \`${process.env.HEAD_SHA.slice(0, 7)}\` as Worker \`${process.env.WORKER_NAME}\`, ` +
+                `backed by Neon branch \`${process.env.NEON_BRANCH}\`. Torn down when this PR closes.`,
+            ].join('\n');
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+            const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number, per_page: 100 });
+            const mine = comments.find((c) => c.user?.type === 'Bot' && c.body?.startsWith(marker));
+            if (mine) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: mine.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body });
+            }
+
+  cleanup:
+    if: >-
+      vars.NEON_PROJECT_ID != '' && vars.CLOUDFLARE_ACCOUNT_ID != ''
+      && github.event.action == 'closed'
+      && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete the preview Worker
+        run: |
+          # The API directly, so a Worker that's already gone (404) is success;
+          # `wrangler delete` would fail on it. force=true: nothing binds to it.
+          status=$(curl -sS -o "$RUNNER_TEMP/resp.json" -w '%{http_code}' -X DELETE \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/$WORKER_NAME?force=true")
+          case "$status" in
+            200) echo "Deleted Worker $WORKER_NAME." ;;
+            404) echo "No Worker $WORKER_NAME." ;;
+            *) cat "$RUNNER_TEMP/resp.json"; echo "::error::Deleting $WORKER_NAME failed (HTTP $status)"; exit 1 ;;
+          esac
+
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Prints "No Neon branch ..." and succeeds when it's already gone.
+      - run: pnpm db neon delete --name "$NEON_BRANCH"
+
+      - name: Mark the PR comment as torn down
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const marker = process.env.COMMENT_MARKER;
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+            const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number, per_page: 100 });
+            const mine = comments.find((c) => c.user?.type === 'Bot' && c.body?.startsWith(marker));
+            if (mine) {
+              await github.rest.issues.updateComment({
+                owner, repo, comment_id: mine.id,
+                body: `${marker}\n~~Preview~~ torn down: Worker \`${process.env.WORKER_NAME}\` and Neon branch \`${process.env.NEON_BRANCH}\` deleted.`,
+              });
+            }

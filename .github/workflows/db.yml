@@ -1,6 +1,6 @@
 # Database checks: schema and migrations agree, migrations apply cleanly to an
-# empty database, and the harness + DB-backed tests (including migration tests)
-# pass against real Postgres.
+# empty database and to a copy of production, and the harness + DB-backed
+# tests (including migration tests) pass against real Postgres.
 name: db
 
 on:
@@ -51,3 +51,39 @@ jobs:
 
       - name: DB-backed tests
         run: pnpm vitest run packages/db packages/fixtures packages/pipeline/src/seed packages/pipeline/src/om packages/web
+
+  # Applies this PR's migrations to a throwaway copy-on-write fork of
+  # production, in deploy mode, exactly as `pnpm deploy:prod` will. Catches
+  # migrations that work on test data but fail on real rows (a NOT NULL with
+  # existing nulls, a unique index over duplicates), and PRs missing main's
+  # migrations. Opt-in: needs the NEON_API_KEY secret and NEON_PROJECT_ID
+  # variable; skipped for forks, which get no secrets.
+  migrate-prod-copy:
+    if: >-
+      vars.NEON_PROJECT_ID != ''
+      && (github.event_name != 'pull_request'
+          || github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    env:
+      NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+      NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+      NEON_BRANCH: ci/run-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Fork production and migrate the fork
+        run: |
+          # Expires on its own in case the delete below never runs.
+          url=$(pnpm -s db neon branch --name "$NEON_BRANCH" --ttl-hours 2)
+          echo "::add-mask::$url"
+          pnpm db status --db "$url"
+          pnpm db migrate --db "$url"
+          pnpm db status --db "$url" --check
+      - name: Delete the fork
+        if: always()
+        run: pnpm db neon delete --name "$NEON_BRANCH"

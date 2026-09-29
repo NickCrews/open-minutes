@@ -4,6 +4,7 @@
 // repository's dbranch.config.ts (see ./config.ts), so this package imports no
 // data itself.
 import { execFileSync } from "node:child_process";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import process from "node:process";
 import { defineCommand, runMain } from "citty";
@@ -19,12 +20,15 @@ import {
   wipeDatabase,
 } from "./ensure";
 import { describeStatus, isDiverged } from "./migration-status";
+import { NeonClient, neonConfigFromEnv, workspaceBranchName } from "./neon";
 import {
+  currentGitBranch,
   LOCAL_DATABASE_PREFIX,
   localDatabaseName,
   resolveDatabaseUrl,
 } from "./resolve";
 import { TEMPLATE_PREFIX, TEST_DB_PREFIX, templateName } from "./testing";
+import { loadRootDotEnv, rootDotEnvPath } from "@open-minutes/core/dotenv";
 
 // Loaded on first use, so commands that don't need datasets (migrate,
 // generate, ...) don't import them.
@@ -222,6 +226,12 @@ const status = defineCommand({
         "Exit non-zero unless every migration in this checkout is applied and history hasn't diverged (for deploy gates)",
       default: false,
     },
+    "check-diverged": {
+      type: "boolean",
+      description:
+        "Exit non-zero only if history has diverged (migrations applied that this checkout lacks, or that were edited since). Pending migrations are fine: `pnpm db migrate` applies those.",
+      default: false,
+    },
   },
   async run({ args }) {
     const url = resolveDatabaseUrl(args.db);
@@ -250,12 +260,11 @@ const status = defineCommand({
       );
     }
     console.log(describeStatus(s.migrations));
-    if (
-      args.check &&
-      (s.migrations.pending.length > 0 || isDiverged(s.migrations))
-    ) {
+    const diverged = isDiverged(s.migrations);
+    if (args.check && (s.migrations.pending.length > 0 || diverged)) {
       process.exitCode = 1;
     }
+    if (args["check-diverged"] && diverged) process.exitCode = 1;
   },
 });
 
@@ -352,6 +361,145 @@ function pruneReason(name: string): string {
   return "its git branch is gone";
 }
 
+/** Sets KEY=value in the root .env.local, replacing any existing KEY line. */
+function saveToDotEnv(key: string, value: string): void {
+  const path = rootDotEnvPath();
+  const lines = existsSync(path) ? readFileSync(path, "utf8").split("\n") : [];
+  const kept = lines.filter((line) => !line.startsWith(`${key}=`));
+  while (kept.length && kept[kept.length - 1] === "") kept.pop();
+  kept.push(`${key}=${value}`, "");
+  writeFileSync(path, kept.join("\n"));
+  console.error(`Saved ${key} to ${path}`);
+}
+
+function neonClient(): NeonClient {
+  loadRootDotEnv();
+  return new NeonClient(neonConfigFromEnv());
+}
+
+function defaultNeonBranchName(): string {
+  const git = currentGitBranch();
+  if (!git) {
+    throw new Error("Not on a git branch; pass --name.");
+  }
+  return workspaceBranchName(git);
+}
+
+const neonBranch = defineCommand({
+  meta: {
+    name: "branch",
+    description:
+      "Get or create a Neon branch (forked from production) for this workspace, and print its connection URL",
+  },
+  args: {
+    name: {
+      type: "string",
+      description:
+        'Neon branch name. Default: "dev/<current git branch>", so each git branch gets one',
+    },
+    "ttl-hours": {
+      type: "string",
+      description:
+        "When creating, have Neon delete the branch after this many hours (0 = never)",
+      default: "168",
+    },
+    save: {
+      type: "string",
+      description:
+        "Also save the URL to .env.local as DATABASE_URL_<SAVE>, so `DB=<save>` targets it (e.g. --save mybranch → DB=mybranch)",
+    },
+    pooled: {
+      type: "boolean",
+      description: "Print the pooled URL instead of the direct one",
+      default: false,
+    },
+  },
+  async run({ args }) {
+    const name = args.name ?? defaultNeonBranchName();
+    const ttlHours = Number(args["ttl-hours"]);
+    const neon = neonClient();
+    const result = await neon.ensureBranch(name, { ttlHours });
+    console.error(
+      `${result.created ? "Created" : "Reusing"} Neon branch ${name} (${result.branch.id})` +
+        (result.branch.expires_at
+          ? `, expires ${result.branch.expires_at}`
+          : ""),
+    );
+    const url = args.pooled ? result.pooledUrl : result.url;
+    if (args.save) {
+      saveToDotEnv(
+        `DATABASE_URL_${args.save.toUpperCase().replaceAll("-", "_")}`,
+        url,
+      );
+    }
+    // The only stdout output, so `url=$(pnpm -s db neon branch)` works.
+    console.log(url);
+  },
+});
+
+const neonDelete = defineCommand({
+  meta: { name: "delete", description: "Delete a workspace's Neon branch" },
+  args: {
+    name: {
+      type: "string",
+      description: 'Neon branch name. Default: "dev/<current git branch>"',
+    },
+  },
+  async run({ args }) {
+    const name = args.name ?? defaultNeonBranchName();
+    const deleted = await neonClient().deleteBranch(name);
+    console.error(
+      deleted ? `Deleted Neon branch ${name}.` : `No Neon branch ${name}.`,
+    );
+  },
+});
+
+const neonReset = defineCommand({
+  meta: {
+    name: "reset",
+    description:
+      "Reset a workspace's Neon branch to production's current state, discarding everything written to it. Its connection URLs don't change.",
+  },
+  args: {
+    name: {
+      type: "string",
+      description: 'Neon branch name. Default: "dev/<current git branch>"',
+    },
+  },
+  async run({ args }) {
+    const name = args.name ?? defaultNeonBranchName();
+    await neonClient().resetBranch(name);
+    console.error(`Reset Neon branch ${name} from its parent.`);
+  },
+});
+
+const neonList = defineCommand({
+  meta: { name: "list", description: "List the project's Neon branches" },
+  async run() {
+    for (const b of await neonClient().listBranches()) {
+      const flags = [
+        b.default && "default",
+        b.protected && "protected",
+        b.expires_at && `expires ${b.expires_at}`,
+      ].filter(Boolean);
+      console.log(`${b.name}${flags.length ? `  (${flags.join(", ")})` : ""}`);
+    }
+  },
+});
+
+const neon = defineCommand({
+  meta: {
+    name: "neon",
+    description: "Manage per-workspace Neon branches (needs NEON_API_KEY)",
+  },
+  subCommands: {
+    branch: neonBranch,
+    reset: neonReset,
+    delete: neonDelete,
+    list: neonList,
+  },
+});
+
 const main = defineCommand({
   meta: {
     name: "db",
@@ -366,6 +514,7 @@ const main = defineCommand({
     generate,
     check,
     studio,
+    neon,
   },
 });
 
