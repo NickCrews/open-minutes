@@ -1,8 +1,8 @@
 # The database
 
 How Open Minutes' databases work in development, tests and production, and the
-`pnpm db` CLI that manages them. The design and its rationale are in
-[ADR 0003](../../adrs/0003-declarative-database-harness.md).
+`pnpm db` CLI that manages them. [How it works](#how-it-works) at the end
+explains the design and why it's built this way.
 
 You usually don't need any of this: `pnpm dev` sets up your database for you.
 Read on when you want to reset it, switch datasets, change the schema, or
@@ -103,7 +103,15 @@ The datasets are:
   evals and tests see them.
 
 [`dbranch.config.ts`](../../dbranch.config.ts) at the repository root lists the
-datasets `--data` can name and picks the default.
+datasets `--data` can name and picks the default. It's the only place that
+connects the `pnpm db` CLI to the data: `@open-minutes/db` imports no datasets
+itself, so packages depend pipeline → fixtures → db → core and never back. The
+CLI uses the nearest `dbranch.config.ts` at or above the directory it's run
+from (`DBRANCH_CONFIG` overrides that).
+
+The datasets live in `packages/fixtures/src/seed/`. Seeders assign ids
+explicitly, so a fixture always gets the same ids (and URLs), then advance the
+id sequences past them so the app's own inserts don't collide.
 
 ## The other commands
 
@@ -146,10 +154,139 @@ add first, deploy, and remove in a later change.
 
 If the migration transforms existing data, rather than only changing tables,
 give it a test in
-[`packages/db/src/migration-tests/`](../../packages/db/src/migration-tests/): seed
-rows at the schema version before it, migrate, and check the result. The
-existing tests there show how.
+[`packages/db/src/migration-tests/`](../../packages/db/src/migration-tests/).
+Start a database at the schema version just before your migration, seed it with
+rows shaped like production's, migrate, and check the result:
+
+```ts
+const test = dbTest({
+  schemaVersion: "panoramic_dagger", // the migration just before yours
+  data: sqlData("legacy", `INSERT INTO municipalities ...`),
+});
+
+test("splits municipalities", async ({ testDb }) => {
+  await testDb.migrateTo("split-munis-into-jurisdictions-and-bodies");
+  // ...check the data was translated correctly, with raw SQL on testDb.client
+});
+```
+
+Use raw SQL, not drizzle's table objects, which only describe the latest
+schema. Because both ends are pinned to named versions, the test stays valid as
+later migrations pile up.
 
 Once a migration is on `main`, don't edit it; add a new one. On your own
 branch, editing an unmerged migration is fine: `pnpm db up` notices and
 resets your branch's database.
+
+## Databases in tests
+
+Tests never use your branch's database. Each test that needs one gets its own
+throwaway copy of a template database, which takes tens of milliseconds:
+
+```ts
+import { dbTest } from "@open-minutes/db/testing/vitest";
+import { goldenData } from "@open-minutes/fixtures/golden-data";
+
+const test = dbTest({ data: goldenData });
+
+test("…", async ({ testDb }) => {
+  // testDb starts at the latest schema with the golden rows
+});
+```
+
+`dbTest` takes the same `schemaVersion` and `data` as `pnpm db up`. Each
+(schema version, dataset) pair gets its own template, built once and rebuilt
+only when the migrations or the dataset change. The pipeline's tests use
+`goldenTest`, which is `dbTest({ data: goldenData })` plus helpers. The e2e
+recognition test uses `goldenMeetingsData(slugs)` (in
+`packages/pipeline/src/seed/`), which adds golden meetings with real
+voiceprints. Computing those embeds hundreds of MB of audio, so it happens once
+per change to the fixtures or the embedding model, and later runs reuse the
+template. Pass `setupTimeoutMs` to `dbTest` for slow datasets like that one.
+
+## How it works
+
+### Why
+
+Before this setup, you brought the database up to date by hand, and every
+branch shared one local database. Migrating on a feature branch and switching
+back to `main` left `main`'s code on a schema it didn't know. drizzle records
+applied migrations only by name, so it didn't notice, and things broke later in
+confusing ways. Worktrees, agent sessions and CI each also need a database that
+doesn't disturb the others.
+
+So every database, local or remote, dev or test, is brought to a **declared
+state** by one function, `ensureDatabase` in
+[`packages/db/src/ensure.ts`](../../packages/db/src/ensure.ts), and local
+databases are per branch.
+
+### Declared state
+
+A declared state is a schema version plus an optional dataset. `schema.ts` is
+the source of truth for the schema, `pnpm db generate` turns changes into
+reviewed SQL migrations, and the harness applies those. It never diffs
+`schema.ts` against a live database. Migrations are append-only, so a schema
+version names the same schema forever.
+
+A dataset has a name, a fingerprint, and a function that writes its rows. The
+harness records the fingerprint it last applied in the database, which is how
+`status` and `--data-reset if-needed` know whether the data is current.
+
+### Detecting drift
+
+The harness compares drizzle's journal with the migration files on disk by
+name **and** hash, so it can tell:
+
+- **pending**: in this checkout, not yet applied;
+- **unknown**: applied, but not in this checkout, e.g. another branch's;
+- **modified**: applied, then edited.
+
+Pending migrations are applied. Unknown or modified ones mean the history
+diverged: `up` resets a local database, and anything else stops with an error.
+
+A per-database Postgres advisory lock means two processes starting at once
+(two dev servers, parallel CI jobs) migrate only once. Neon `-pooler` URLs are
+switched to the direct host, since the pooler can leave advisory locks stuck.
+
+### Per-branch databases
+
+`local` resolves to `open_minutes__<branch>`, read from `.git/HEAD`, so it works
+in worktrees. `main` and `master` share `open_minutes__main`. In the middle of a
+rebase, the branch being rebased is used. Any other detached HEAD (`git
+bisect`, an old commit, a tag) gets `open_minutes__detached_<commit>`.
+Otherwise old code would see `main`'s newer migrations as divergence and reset
+`main`'s database.
+
+A new branch's database is created as a copy of `open_minutes__main`. If
+`main`'s database is in use, which blocks copying, it's created empty and
+seeded instead. The plain `open_minutes` database is left as docker-compose's
+empty default. If it holds data from before per-branch databases, it's renamed
+to `open_minutes__main` on first use, so that data carries over.
+
+### Where it runs
+
+Everything that uses a database runs the harness first, so they all agree on
+what "ready" means:
+
+- **`pnpm dev`** runs `pnpm db up`.
+- **`pnpm web:dev`**: a Vite plugin
+  ([`packages/web/vite/dev-database.ts`](../../packages/web/vite/dev-database.ts))
+  creates and migrates the database but doesn't seed it, then passes its URL to
+  the Worker. workerd can't read `.env.local` or `.git`, so it can't work out
+  the database itself.
+- **`om`** runs it before every command, so `om ingest` on a new branch just
+  works, and `DB=prod om ingest` fails fast if production is behind.
+- **Tests** build their templates with it.
+- **`pnpm deploy:prod`** runs `pnpm db migrate --db prod` before deploying.
+- **CI** ([`.github/workflows/db.yml`](../../.github/workflows/db.yml)) starts
+  Postgres the way a developer's machine does, then checks the migrations for
+  conflicts, checks that `schema.ts` has no changes without a migration, builds
+  a fresh database with `up` (twice: the second must do nothing), wipes it,
+  rebuilds it with `migrate`, and runs the database tests.
+
+On a local database the harness can create, migrate, reset and seed. On a
+remote one it only checks, except for `migrate`, which only moves forward.
+
+The deployed Worker doesn't check its schema at runtime: that would add a
+query to every cold start. Migrating before deploying, plus `pnpm db status
+--check`, covers it instead.
