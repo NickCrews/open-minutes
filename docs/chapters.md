@@ -340,8 +340,8 @@ Behavior:
 - Default to **Chapters** when the meeting has chapters, otherwise
   **Summary**. With no chapters, the Chapters tab is hidden, not shown empty.
   This satisfies the #33 requirement of "no empty state that looks broken".
-- Store the selected tab in the URL search params (`?tab=chapters`) so it is
-  shareable and survives reload.
+- The selected tab is **not** stored in the URL. A `?tab=` param would make
+  shared links too busy. A `?chapter=` link opens the Chapters tab on its own.
 - On mobile the columns already stack, and tabs stay under the video.
 
 This answers the placement question in #33 (rail vs header vs third column).
@@ -385,7 +385,7 @@ question.
 ### 5. Permalinks
 
 - `?t=<secs>` on the meeting URL: seek on load.
-- `?chapter=<id>` (or a slug): seek to the chapter start and open the
+- `?chapter=<id>`: seek to the chapter start and open the
   Chapters tab. A dedicated chapter page, as on citymeetings, can come later.
   The query param gets most of the value.
 - Chapter links must survive small edits (see [Share](#what-chapters-are-for)),
