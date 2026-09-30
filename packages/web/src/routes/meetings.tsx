@@ -16,7 +16,7 @@ import {
 } from "~/components/hover-card";
 import { getAllMeetings } from "~/features/meetings";
 import { Duration } from "~/features/meetings/duration";
-import { StartTime } from "~/features/meetings/start-time";
+import { MeetingDateTime } from "~/features/meetings/meeting-date-time";
 import { db } from "~/server/db";
 
 const fetchMeetings = createServerFn({ method: "GET" }).handler(() =>
@@ -52,9 +52,10 @@ function MeetingsPage() {
                   </Link>
                 </CardTitle>
                 <CardDescription class="flex flex-wrap items-center gap-x-3 gap-y-1">
-                  <StartTime
+                  <MeetingDateTime
                     meetingId={meeting.id}
-                    startTime={meeting.start_time}
+                    date={meeting.date}
+                    time={meeting.time}
                     timezone={meeting.body.timezone}
                     onSaved={() => void router.invalidate()}
                   />

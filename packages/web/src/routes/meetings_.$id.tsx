@@ -5,7 +5,7 @@ import { VideoPlayer } from "~/components/video-player";
 import { getMeetingById } from "~/features/meetings";
 import { Duration } from "~/features/meetings/duration";
 import { Speakers } from "~/features/meetings/speakers";
-import { StartTime } from "~/features/meetings/start-time";
+import { MeetingDateTime } from "~/features/meetings/meeting-date-time";
 import { Transcript } from "~/features/meetings/transcript";
 import { type YTPlayer } from "~/lib/youtube";
 import { db } from "~/server/db";
@@ -55,7 +55,7 @@ function MeetingPage() {
     <div class="flex h-[calc(100dvh-5.5rem)] flex-col gap-3">
       <header class="shrink-0">
         <h1 class="text-xl font-bold">{meeting().title || "(untitled)"}</h1>
-        {/* A div, not a p: the dev-only start-time editor puts a form in here,
+        {/* A div, not a p: the dev-only date editor puts a form in here,
             and a browser closes an open <p> the moment it meets flow content,
             which would split this line in two during hydration. */}
         <div class="text-muted-foreground text-sm">
@@ -66,9 +66,10 @@ function MeetingPage() {
           >
             {meeting().body.name}
           </Link>
-          <StartTime
+          <MeetingDateTime
             meetingId={meeting().id}
-            startTime={meeting().start_time}
+            date={meeting().date}
+            time={meeting().time}
             timezone={meeting().body.timezone}
             prefix=" — "
             onSaved={() => void router.invalidate()}

@@ -4,7 +4,7 @@ import { formatDuration } from "~/lib/format";
 /**
  * How long a meeting ran, at minute precision — a meeting is long enough that
  * seconds are noise. Collapses away when the duration is unknown: unlike a
- * start time, nobody enters this by hand, so an absent one is nothing to fix.
+ * meeting date, nobody enters this by hand, so an absent one is nothing to fix.
  *
  * Takes the interval rather than a meeting row, so the list and detail pages
  * can share it despite selecting different columns.

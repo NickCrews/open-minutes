@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/solid-router";
 import { createServerFn } from "@tanstack/solid-start";
 import { For, Show } from "solid-js";
 import { getBodyById } from "~/features/bodies";
-import { formatMeetingTime } from "~/lib/format";
+import { formatMeetingDate } from "@open-minutes/core/meeting-date";
 import { db } from "~/server/db";
 
 const fetchBody = createServerFn({ method: "GET" })
@@ -56,12 +56,9 @@ function BodyPage() {
               >
                 {meeting.title || "(untitled)"}
               </Link>
-              <Show when={meeting.start_time}>
-                {(start) => (
-                  <span class="text-muted-foreground text-sm">
-                    {" "}
-                    — {formatMeetingTime(start(), body().timezone)}
-                  </span>
+              <Show when={formatMeetingDate(meeting)}>
+                {(when) => (
+                  <span class="text-muted-foreground text-sm"> — {when()}</span>
                 )}
               </Show>
             </li>

@@ -60,6 +60,8 @@ export async function seedGoldenMeeting(
       body_id: bodyId,
       youtube_id: meeting.youtube_id,
       title: meeting.title,
+      date: meeting.date,
+      time: meeting.time,
     })
     .returning({ id: meetingsTable.id });
   const meetingId = meetingRow!.id;

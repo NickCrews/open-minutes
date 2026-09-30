@@ -10,12 +10,13 @@ import { countDistinct, desc, eq, isNotNull, max, min } from "drizzle-orm";
 /** One body a person has spoken before, and the span over which they did. */
 export type Attendance = {
   body: string;
-  /** The body's timezone, which is what `first`/`last` should be read in. */
-  timezone: string;
   meetings: number;
-  /** Null when none of the meetings has a known start time. */
-  first: Date | null;
-  last: Date | null;
+  /**
+   * Dates ("YYYY-MM-DD", the body's wall clock) of the first and last of those
+   * meetings. Null when none of them has a known date.
+   */
+  first: string | null;
+  last: string | null;
 };
 
 export async function getAllPeople(db: DB) {
@@ -46,11 +47,10 @@ async function getAttendanceByPerson(
     .select({
       person_id: segmentsTable.person_id,
       body: bodiesTable.name_short,
-      timezone: bodiesTable.timezone,
       // Distinct, because one meeting yields many segments per speaker.
       meetings: countDistinct(segmentsTable.meeting_id),
-      first: min(meetingsTable.start_time),
-      last: max(meetingsTable.start_time),
+      first: min(meetingsTable.date),
+      last: max(meetingsTable.date),
     })
     .from(segmentsTable)
     .innerJoin(meetingsTable, eq(segmentsTable.meeting_id, meetingsTable.id))
@@ -68,7 +68,6 @@ async function getAttendanceByPerson(
     const list = byPerson.get(row.person_id!) ?? [];
     list.push({
       body: row.body,
-      timezone: row.timezone,
       meetings: row.meetings,
       first: row.first,
       last: row.last,
@@ -115,10 +114,10 @@ export function getPersonById(db: DB, personId: number) {
               columns: {
                 id: true,
                 title: true,
-                start_time: true,
+                date: true,
+                time: true,
                 youtube_id: true,
               },
-              with: { body: { columns: { timezone: true } } },
             },
           },
           orderBy: { id: "desc" },

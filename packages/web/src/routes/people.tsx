@@ -11,7 +11,7 @@ import {
 import { TextField, TextFieldInput } from "~/components/text-field";
 import { type Attendance, getAllPeople } from "~/features/people";
 import { matchesName } from "~/features/people/search";
-import { formatMonthYear } from "~/lib/format";
+import { formatMonthYear } from "@open-minutes/core/meeting-date";
 import { db } from "~/server/db";
 
 const fetchPeople = createServerFn({ method: "GET" }).handler(() =>
@@ -37,8 +37,8 @@ export const Route = createFileRoute("/people")({
 function formatAttendance(a: Attendance): string {
   const count = `${a.meetings} ${a.body} ${a.meetings === 1 ? "meeting" : "meetings"}`;
   if (!a.first || !a.last) return count;
-  const first = formatMonthYear(a.first, a.timezone);
-  const last = formatMonthYear(a.last, a.timezone);
+  const first = formatMonthYear(a.first);
+  const last = formatMonthYear(a.last);
   return `${count}, ${first === last ? first : `${first}–${last}`}`;
 }
 
