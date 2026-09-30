@@ -52,6 +52,5 @@ of their voice. Nobody types up these transcripts by hand, so:
 
 - **Spot a mistake, or want a board or council added?**
   [Open an issue](https://github.com/nickcrews/open-minutes/issues).
-- **Developers, data analysts and AI-assistant users:** to run Open Minutes
-  yourself, query its database directly, or install an AI agent skill for
-  working with the data, see [CONTRIBUTING.md](CONTRIBUTING.md).
+- **Developers and data analysts:** to run Open Minutes yourself or query its
+  database directly, see [CONTRIBUTING.md](CONTRIBUTING.md).

@@ -145,7 +145,7 @@ const migrate = defineCommand({
   meta: {
     name: "migrate",
     description:
-      "Apply pending migrations, up to --schema-version. Only moves forward: never wipes, resets, or seeds, and stops with an error if the database's history has diverged or is past that version. What `pnpm deploy` runs against prod.",
+      "Apply pending migrations, up to --schema-version. Only moves forward: never wipes, resets, or seeds, and stops with an error if the database's history has diverged or is past that version. What `pnpm run deploy` runs against prod.",
   },
   args: { ...targetArg, ...schemaVersionArg },
   async run({ args }) {

@@ -12,201 +12,229 @@ code, comments, and commit messages.
 
 ## How it works
 
-A [pnpm](https://pnpm.io) workspace with five packages. Each depends only on
-the ones listed above it:
-
-- **[`packages/core`](packages/core)** (`@open-minutes/core`): shared domain
-  code with no database or I/O: transcript and timeline types, voice-embedding
-  constants, body slugs, and root `.env.local` loading.
-- **[`packages/db`](packages/db)** (`@open-minutes/db`): the
-  [Drizzle](https://orm.drizzle.team) schema and migrations, database
-  connection/resolution, the declarative harness behind the `pnpm db` CLI, and
-  the per-test database helpers (`@open-minutes/db/testing/vitest`).
-- **[`packages/fixtures`](packages/fixtures)** (`@open-minutes/fixtures`): the
-  test data (jurisdictions, bodies, people and golden meetings in `test-data/`,
-  plus fictional extras in `dev-data/`), its loaders and PSV parser, and the
-  `golden` and `dev` datasets that seed databases. Used by tests and by local
-  development; nothing ships with it.
-- **[`packages/pipeline`](packages/pipeline)** (`@open-minutes/pipeline`): the
-  offline ingestion pipeline and the `om` CLI. It downloads audio, transcribes
-  it locally with [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) (NeMo
-  Parakeet ASR + Silero VAD), diarizes it into speaker turns (pyannote
-  segmentation + CAM++ voice embeddings), aligns turns to words, recognizes
-  speakers against known voiceprints, and writes the meeting to the database.
-  No GPU or external API is needed; models are downloaded on first use. Also
-  holds the YouTube boundary (via `yt-dlp`). See the
-  [pipeline README](packages/pipeline/README.md).
-- **[`packages/web`](packages/web)** (`@open-minutes/web`): the public
-  transcript browser, built with [SolidJS](https://www.solidjs.com) +
-  [TanStack Start](https://tanstack.com/start), Kobalte and Tailwind.
-
-**Database:** PostgreSQL with [pgvector](https://github.com/pgvector/pgvector)
-(voiceprints are stored as vectors with an HNSW index). Locally it runs in
-Docker via [`docker-compose.yml`](docker-compose.yml). For a hosted database
-the web app supports [Neon](https://neon.tech), which it reaches over Neon's
-HTTP driver (Workers can't open raw TCP sockets).
-
-**Deploy target:** the web app deploys to
-[Cloudflare Workers](https://workers.cloudflare.com) (worker `open-minutes`,
-configured in [`packages/web/wrangler.jsonc`](packages/web/wrangler.jsonc)) via
-`pnpm --filter @open-minutes/web run deploy`. The pipeline runs offline on a
-developer machine and writes to the target database directly.
-
 ```
 YouTube ──yt-dlp──▶ pipeline (om ingest) ──▶ Postgres + pgvector ◀── web (Cloudflare Workers)
                     transcribe / diarize /       (local Docker or Neon)
                     align / recognize
 ```
 
-The data model: **jurisdictions** contain **bodies**, each with one or more
+A [pnpm](https://pnpm.io) workspace with five packages. Each depends only on
+the ones listed above it:
+
+- **[`packages/core`](packages/core)** (`@open-minutes/core`): shared domain
+  code with no database or I/O: transcript and timeline types, voice-embedding
+  constants, body slugs, and `.env.local` loading.
+- **[`packages/db`](packages/db)** (`@open-minutes/db`): the
+  [Drizzle](https://orm.drizzle.team) schema and migrations, the `pnpm db` CLI,
+  and the per-test database helpers (`@open-minutes/db/testing/vitest`).
+- **[`packages/fixtures`](packages/fixtures)** (`@open-minutes/fixtures`): the
+  data that seeds local and test databases. `test-data/` holds the real,
+  hand-verified jurisdictions, bodies, people and golden meetings; `dev-data/`
+  holds fictional extras. Nothing here ships to production.
+- **[`packages/pipeline`](packages/pipeline)** (`@open-minutes/pipeline`): the
+  offline ingestion pipeline and the `om` CLI. It downloads audio, transcribes
+  it locally with [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) (NeMo
+  Parakeet ASR + Silero VAD), diarizes it into speaker turns (pyannote
+  segmentation + CAM++ voice embeddings), aligns turns to words, recognizes
+  speakers against known voiceprints, and writes the meeting to the database.
+  No GPU or external API is needed; models are downloaded on first use. See the
+  [pipeline README](packages/pipeline/README.md).
+- **[`packages/web`](packages/web)** (`@open-minutes/web`): the public
+  transcript browser, built with [SolidJS](https://www.solidjs.com) +
+  [TanStack Start](https://tanstack.com/start), Kobalte and Tailwind, deployed
+  to [Cloudflare Workers](https://workers.cloudflare.com).
+
+**Database:** PostgreSQL with [pgvector](https://github.com/pgvector/pgvector)
+(voiceprints are stored as vectors with an HNSW index). Locally it runs in
+Docker via [`docker-compose.yml`](docker-compose.yml). Production is on
+[Neon](https://neon.tech), which the Worker reaches over Neon's HTTP driver
+(Workers can't open raw TCP sockets).
+
+**Data model:** **jurisdictions** contain **bodies**, each with one or more
 YouTube **video sources**. **Meetings** belong to a body, and each meeting's
 transcript is a sequence of **segments** (a run of words by one speaker, with
 word-level onsets). Segments are attributed to **people**, who carry a
 voiceprint so they can be recognized in later meetings. See
-[`packages/db/src/schema.ts`](packages/db/src/schema.ts). The
-configured bodies and video sources live in the test data under
+[`packages/db/src/schema.ts`](packages/db/src/schema.ts). The configured
+bodies and video sources live in
 [`packages/fixtures/test-data/`](packages/fixtures/test-data/); adding a body
 means adding rows there.
 
-## Local setup
+Design decisions are recorded in [`adrs/`](adrs/).
 
-### Prerequisites
+## Getting started
 
-- **Node 22** and **pnpm 10.33.0** (pinned via `packageManager` in
-  `package.json`; `corepack enable` picks it up).
-- **Docker** with Compose, for the local Postgres (pgvector) database.
-- **ffmpeg** and **yt-dlp** on your `PATH`. The pipeline and some tests shell
-  out to them.
-- **curl** and network access the first time the pipeline runs: sherpa-onnx
-  models are downloaded on demand into `packages/pipeline/src/models/`
-  (gitignored).
+You need:
 
-### Install
+- **Node 22** and **pnpm 10.33.0** (pinned in `package.json`;
+  `corepack enable` picks it up).
+- **Docker** with Compose, for the local Postgres.
+- **ffmpeg** and **yt-dlp** on your `PATH`, for the pipeline and some tests.
+
+Then:
 
 ```sh
 pnpm install
+pnpm dev       # http://localhost:3000
 ```
 
-### Environment variables
+That's all. `pnpm dev` starts Postgres in Docker if it isn't running, creates
+and migrates a database for your git branch, fills it with sample data, and
+starts the web dev server. Editing affordances (e.g. renaming a person) are
+enabled only in dev. `pnpm web:dev` starts only the dev server: it creates and
+migrates the database too, but doesn't seed it.
 
-No configuration is required for local development. Environment is read from a
-workspace-root `.env.local` (gitignored); see [`.env.example`](.env.example)
-for the available variables:
+No configuration is needed for local development. Optional settings go in a
+gitignored `.env.local` at the repository root; see
+[`.env.example`](.env.example).
 
-- `DB` selects the target database: a name such as `local` or `prod`, resolved
-  via `DATABASE_URL_<NAME>`, or a full `postgres://` URL. It defaults to
-  `local`, which points at the docker-compose Postgres, in a database per git
-  branch: `open_minutes__<branch>`, e.g. `open_minutes__main` on `main`. A
-  detached HEAD (e.g. during `git bisect`) gets its own
-  `open_minutes__detached_<commit>`. It is usually passed per command, e.g.
-  `DB=prod pnpm db migrate`. To use one database on every branch instead of
-  one per branch, point `DB` at it, per command or in `.env.local`:
-  `DB=postgres://postgres:postgres@localhost:5432/open_minutes__main`.
-- `DATABASE_URL_<NAME>` defines a named database, e.g. `DATABASE_URL_PROD`.
-- `ALLOW_REMOTE_WIPE=1` is required before `pnpm db wipe` (or `pnpm db up`
-  resetting or seeding) will touch a non-localhost database.
+## The database
 
-Tests always use `local`, whatever `DB` is set to.
+### Which database you're using
 
-### Database
+Every command that touches the database (`pnpm dev`, `pnpm db …`, `om …`)
+picks its target the same way: the `--db` flag if the command has one, else the
+`DB` environment variable, else `local`. The value is either a name or a full
+`postgres://` URL:
 
-There's nothing to set up. `pnpm dev` (and every other command that uses the
-database) starts Postgres with docker compose if nothing is running, creates
-this branch's database, applies pending migrations, and seeds the `dev`
-dataset into a database that starts out empty. A new branch's database starts
-as a copy of `main`'s, so switching branches never mixes up migrations. See
-[ADR 0003](adrs/0003-declarative-database-harness.md) for the design.
+- **`local`** (the default) is a database on the docker-compose Postgres,
+  **one per git branch**: `open_minutes__<branch>`, e.g. `open_minutes__main`.
+  A new branch's database starts as a copy of `main`'s, so it begins with the
+  data you already had, and switching branches never mixes up migrations.
+- **Any other name**, e.g. `prod`, is read from `DATABASE_URL_<NAME>`, e.g.
+  `DATABASE_URL_PROD` in `.env.local`.
 
-`pnpm db up` is declarative: it brings a database to a schema version plus a
-dataset, and does nothing if it's already there. It's what `pnpm dev` runs, and
-the command you'll use most. Against a local database it takes these steps, in
-order, skipping any that aren't needed:
+Databases on `localhost` are **local** and treated as disposable. Anything else
+is **remote**, and the tooling won't wipe or seed it (see
+[Remote databases](#remote-databases)).
 
-1. **Create** the database if it doesn't exist (as a copy of `main`'s, for a
-   new branch).
-2. **Reset the schema** if its migration history diverged from this
-   checkout's: it has migrations this checkout doesn't (e.g. from another
-   branch), a migration it applied has since been edited, or it's past the
-   target schema version. Resetting wipes the database, tables and data
-   included, and then re-applies every migration from scratch.
-   `--schema-reset never` turns this into an error instead;
-   `--schema-reset always` resets every time.
-3. **Migrate**: apply any pending migrations.
-4. **Seed** the dataset (`dev` by default), but only if the database has no
-   data at this point: it's new, was just reset, or has no rows. A database
-   that already holds data keeps it, even if it's different from the declared
-   dataset; `--data-reset if-needed` replaces it, and `--data-reset always`
-   reseeds even the current dataset (e.g. to undo hand edits).
+To use one database on every branch instead of one per branch, set `DB` to its
+URL in `.env.local`, e.g.
+`DB=postgres://postgres:postgres@localhost:5432/open_minutes__main`.
 
-A remote database is never changed: `up` only checks that it has the
-migrations this checkout needs.
+Tests ignore all of this: they always create their own throwaway databases on
+the local Postgres.
 
-Both `--schema-reset` and `--data-reset` take `never`, `if-needed` or
-`always`. The defaults are `--schema-reset if-needed` and `--data-reset never`.
+### Common tasks
 
-| Command                             | What it does                                                                |
-| ----------------------------------- | --------------------------------------------------------------------------- |
-| `pnpm db up`                        | Steps 1-4 above                                                             |
-| `pnpm db up --schema-reset never`   | The same, but errors instead of wiping when history diverged                |
-| `pnpm db up --schema-reset always`  | Starts over: wipes, migrates from empty, and seeds                          |
-| `pnpm db up --data golden`          | Declares the `golden` dataset instead (`--data none` for no data)           |
-| `pnpm db up --data-reset if-needed` | The same, but replaces existing data that isn't the declared dataset        |
-| `pnpm db up --data-reset always`    | The same, but reseeds even when the data is current                         |
-| `pnpm db up --schema-version <v>`   | Brings it to an older schema version: a migration's name, timestamp, or tag |
+| I want to…                                             | Run                                               |
+| ------------------------------------------------------ | ------------------------------------------------- |
+| Get my branch's database up to date                    | `pnpm db up` (`pnpm dev` does this for you)       |
+| See what state a database is in                        | `pnpm db status`                                  |
+| Start over with a fresh database and fresh sample data | `pnpm db up --schema-reset always`                |
+| Throw away my edits to the sample data                 | `pnpm db up --data-reset always`                  |
+| Use the small `golden` dataset instead of `dev`        | `pnpm db up --data golden --data-reset if-needed` |
+| Get an empty, migrated database with no data           | `pnpm db up --schema-reset always --data none`    |
+| Change the schema                                      | edit `schema.ts`, then `pnpm db generate`         |
+| Deploy the web app (migrates prod first)               | `pnpm run deploy`                                 |
+| Clean up databases of deleted branches                 | `pnpm db prune`, then `pnpm db prune --yes`       |
 
-The imperative commands each do one thing:
+`pnpm db --help` and `pnpm db <command> --help` describe every command and
+flag.
 
-| Command            | What it does                                                                                                                              |
-| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm db generate` | Generates a migration from `packages/db/src/schema.ts` changes                                                                            |
-| `pnpm db migrate`  | Moves forward: applies pending migrations (up to `--schema-version`) and nothing else; stops if history diverged. What `pnpm deploy` runs |
-| `pnpm db wipe`     | Moves back to empty: drops the tables, migration history, and data                                                                        |
+### `pnpm db up`: make it match this checkout
 
-`up` migrates forward when it can and wipes only when it has to, so it keeps
-your data. To start over completely, whatever state the database is in:
+`up` is the command you'll use most, and the one `pnpm dev` runs. You tell it
+the state you want: a schema (latest, by default) and a dataset (`dev`, by
+default). It gets the database there, changing as little as possible, and does
+nothing if the database is already there.
 
-```sh
-pnpm db up --schema-reset always
-```
+On a local database it does these steps in order, skipping any that aren't
+needed:
 
-And the rest:
+1. **Create** the database, as a copy of `main`'s for a new branch.
+2. **Reset the schema** if the database can't be migrated forward: it has
+   migrations this checkout doesn't (usually another branch's), a migration it
+   already applied has since been edited, or it's already past the target
+   version. A reset **deletes everything**, tables and data, then applies every
+   migration from scratch.
+3. **Migrate**: apply pending migrations.
+4. **Seed** the dataset, but only if the database has no data: it's new, was
+   just reset, or its tables are empty. Data already there is kept, even if it
+   isn't the declared dataset.
 
-| Script           | What it does                                                                                    |
-| ---------------- | ----------------------------------------------------------------------------------------------- |
-| `pnpm db status` | Which schema version and dataset a database holds, and any pending migrations                   |
-| `pnpm db prune`  | Lists (with `--yes`, drops) databases of deleted branches, leaked test databases, old templates |
-| `pnpm db check`  | Checks the migrations for conflicts                                                             |
-| `pnpm db studio` | Opens Drizzle Studio                                                                            |
+On a remote database it changes nothing: it only checks that the database has
+every migration this checkout needs, and fails if not.
 
-`pnpm db --help` lists the full CLI. The datasets live in `packages/fixtures`,
-and `dbranch.config.ts` at the repository root tells the CLI which ones
-`--data` can name and which one `pnpm db up` seeds by default.
+Two flags control the destructive steps, 2 and 4. Each takes `never`,
+`if-needed` or `always`:
 
-Migrations live in `packages/db/src/migrations/` and are committed. After
-you edit `schema.ts`, run `pnpm db generate` and commit the generated migration
-with the change. A migration that transforms existing data gets a test in
-`packages/db/src/migration-tests/`.
+| Flag             | `never`                                        | `if-needed`                                                    | `always`                                   |
+| ---------------- | ---------------------------------------------- | -------------------------------------------------------------- | ------------------------------------------ |
+| `--schema-reset` | Error instead of resetting                     | **Default.** Reset only when step 2 says it can't migrate      | Reset every time: start over from empty    |
+| `--data-reset`   | **Default.** Seed only a database with no data | Also replace data that isn't the declared dataset, or is stale | Reseed every time, e.g. to undo hand edits |
 
-## Repo layout
+And two choose the target state:
 
-```
-packages/
-  core/       @open-minutes/core: transcription, timeline and voice-embedding types,
-              body slugs, .env.local loading
-  db/         @open-minutes/db: DB schema, migrations, connection resolution, the
-              declarative harness and `pnpm db` CLI, test databases
-  fixtures/   @open-minutes/fixtures: test data and golden meetings in test-data/,
-              fictional extras in dev-data/, the PSV parser, and the datasets
-  pipeline/   @open-minutes/pipeline: offline audio → transcript pipeline
-              (transcribe, diarize, align, recognize), YouTube (yt-dlp), and the
-              `om` CLI. See packages/pipeline/README.md.
-  web/        @open-minutes/web: transcript browser (SolidStart + TanStack Router,
-              Kobalte, Tailwind), deployed to Cloudflare Workers
-adrs/         Architecture Decision Records
-```
+| Flag               | Values                                                                                                 | Default  |
+| ------------------ | ------------------------------------------------------------------------------------------------------ | -------- |
+| `--data`           | `dev`, `golden`, or `none`                                                                             | `dev`    |
+| `--schema-version` | `latest`, or a migration by folder name, timestamp or tag, e.g. `20260719061307` or `panoramic_dagger` | `latest` |
 
-Root-level `vitest.config.ts`, `vitest.shared.ts`, and `test-setup.ts` hold the
-shared test configuration for every package.
+`--data` other than `none` needs `--schema-version latest`, since the seeders
+write the current schema. An older `--schema-version` therefore defaults to
+`--data none`.
+
+The datasets are:
+
+- **`dev`**: what `pnpm dev` runs on. The golden rows, the golden meetings'
+  full transcripts and people, and fictional extras from
+  `packages/fixtures/dev-data/` ("Demo County"). Voiceprints are placeholders.
+- **`golden`**: only the hand-verified rows from
+  `packages/fixtures/test-data/` (jurisdictions, bodies, video sources), as
+  evals and tests see them.
+
+[`dbranch.config.ts`](dbranch.config.ts) at the repository root lists the
+datasets `--data` can name and picks the default.
+
+### The other commands
+
+Unlike `up`, these each do exactly one thing:
+
+| Command            | What it does                                                                                                                                                                                   |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm db migrate`  | Applies pending migrations (up to `--schema-version`) and nothing else. Never resets or seeds; if the database can't be migrated forward, it fails. Safe on production: it's what deploys run. |
+| `pnpm db wipe`     | Empties a database: drops its tables, migration history and data. The next `up` rebuilds it.                                                                                                   |
+| `pnpm db status`   | Shows the database's schema version, which dataset it holds and whether that's current, and any pending or unexpected migrations. `--check` exits non-zero if it needs migrating.              |
+| `pnpm db generate` | Writes a new migration from your `schema.ts` changes.                                                                                                                                          |
+| `pnpm db check`    | Checks the migrations for conflicts.                                                                                                                                                           |
+| `pnpm db studio`   | Opens Drizzle Studio on the database.                                                                                                                                                          |
+| `pnpm db prune`    | Lists local databases nothing needs: those of deleted branches, leftovers from interrupted test runs, and outdated test templates. `--yes` drops them.                                         |
+
+`migrate`, `wipe`, `status`, `studio` and `up` all take `--db`.
+
+### Remote databases
+
+Nothing wipes or seeds a remote database by accident:
+
+- `pnpm db up`, `pnpm dev` and `om` only check a remote database's schema.
+  They fail if it's missing migrations, rather than migrating it.
+- `pnpm db migrate --db prod` is the only command that changes production, and
+  it only applies new migrations.
+- `pnpm db wipe` refuses a remote database unless `ALLOW_REMOTE_WIPE=1`.
+
+`pnpm run deploy` runs `pnpm db migrate --db prod`, then deploys the Worker, so
+production code never runs on a schema older than it expects. The old code
+does briefly run on the new schema, so migrations must be backward-compatible:
+add first, deploy, and remove in a later change.
+
+### Changing the schema
+
+1. Edit [`packages/db/src/schema.ts`](packages/db/src/schema.ts).
+2. Run `pnpm db generate`, which writes a migration to
+   `packages/db/src/migrations/`. Commit it with your change. CI fails if
+   `schema.ts` has changes with no migration.
+3. Run `pnpm db up` (or restart `pnpm dev`) to apply it.
+
+If the migration transforms existing data, rather than only changing tables,
+give it a test in
+[`packages/db/src/migration-tests/`](packages/db/src/migration-tests/): seed
+rows at the schema version before it, migrate, and check the result. The
+existing tests there show how.
+
+Once a migration is on `main`, don't edit it; add a new one. On your own
+branch, editing an unmerged migration is fine: `pnpm db up` notices and
+resets your branch's database.
 
 ## Running checks
 
@@ -218,23 +246,14 @@ pnpm test:all    # everything, including slow tests
 pnpm format      # prettier --write over the repo
 ```
 
-Tests that need a database create their own disposable databases on the local
-Postgres, starting the docker-compose service themselves if nothing is
-listening. Tests tagged `slow` run full-meeting transcription and diarization
-and take roughly 10–20 minutes each on CPU. They are skipped unless `SLOW=1`,
-which `test:slow` and `test:all` set for you.
+Tests that need a database clone a cached, pre-seeded template on the local
+Postgres, starting the docker-compose service if nothing is listening. Tests
+tagged `slow` run full-meeting transcription and diarization and take roughly
+10–20 minutes each on CPU. They're skipped unless `SLOW=1`, which `test:slow`
+and `test:all` set for you.
 
-## Web dev server
-
-```sh
-pnpm dev       # runs `pnpm db up`, then starts the web dev server
-pnpm web:dev   # just the web dev server: migrates the schema but doesn't seed data
-```
-
-This serves the app at http://localhost:3000 against the `local` database by
-default. `DB=<name> pnpm dev` points it elsewhere; a remote database is only
-checked, never migrated or seeded. Editing affordances (e.g. renaming a person)
-are enabled only in dev.
+Shared test configuration is in `vitest.config.ts`, `vitest.shared.ts` and
+`test-setup.ts` at the repository root.
 
 ## Running the pipeline
 
@@ -244,7 +263,9 @@ pnpm om available       # videos not yet ingested
 pnpm om ingest <id>     # run the full pipeline for a video
 ```
 
-See [`packages/pipeline/README.md`](packages/pipeline/README.md) for details.
+`om` writes to the same database as everything else (`DB=prod om ingest <id>`
+to ingest into production). See
+[`packages/pipeline/README.md`](packages/pipeline/README.md) for details.
 
 ## Working with the data directly
 
@@ -261,9 +282,9 @@ WHERE s.text ILIKE '%snow removal%'
 ORDER BY m.start_time, s.start_secs;
 ```
 
-The pipeline's API (`listIngested`, `listAvailable`, `ingestVideo` from
-`@open-minutes/pipeline/om`) and `om`'s JSON output (`om status --json`) are
-designed to be composed.
+`pnpm db studio` opens a browser UI on it. The pipeline's API (`listIngested`,
+`listAvailable`, `ingestVideo` from `@open-minutes/pipeline/om`) and `om`'s
+JSON output (`om status --json`) are designed to be composed.
 
 ## Architecture Decision Records
 
@@ -271,8 +292,8 @@ Significant design decisions are recorded in [`adrs/`](adrs/) as numbered
 Markdown files: `NNNN-short-kebab-title.md`. Follow the format of the existing
 ADRs:
 
-- A `# ADR NNNN: Title` heading, followed by `Date:` and
-  `Status:` (`Proposed` or `Accepted`) lines.
+- A `# ADR NNNN: Title` heading, followed by `Date:` and `Status:`
+  (`Proposed` or `Accepted`) lines.
 - `## Context`, then `## Decision`, plus any supporting sections (for example
   a comparison of the alternatives considered).
 
