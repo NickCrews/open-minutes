@@ -49,6 +49,16 @@ with counts, for example "REMARKS (51)", and lets you filter by type. In at
 least one hearing, `PROCEDURE` chapters appear in the counts, "PROCEDURE (3)",
 but were not in the default list.
 
+**Identity.** Each chapter has a numeric database ID (`data-chapter-id="34742"`
+in the page), but the public URL uses a slug made from the title, for example
+`/meetings/new-york-city-council/2026-01-07-1200-pm-stated-meeting/chapter/council-member-linda-lee-nominates-julie-menin-for-speaker/`.
+The slug is scoped to the meeting, which is itself a slug of body, date and
+time. Near-duplicate titles still get distinct slugs because the titles differ
+slightly ("…althea-stevens-explains-her-vote-for-julie-menin" and
+"…althea-v-stevens-explains-her-vote-for-speaker-menin"). Neither the ID nor
+the slug is based on time, so a link breaks if a chapter is retitled or
+regenerated.
+
 **Granularity is per speaker turn, not per topic.** A chapter begins where a
 council member's question begins, where an individual's testimony begins, where
 standalone remarks begin, or where a procedural section begins. Oberoi reports
@@ -352,6 +362,11 @@ question.
 - `?chapter=<id>` (or a slug): seek to the chapter start and open the
   Chapters tab. A dedicated chapter page, as on citymeetings, can come later.
   The query param gets most of the value.
+- Chapter IDs are not stable across regenerations (#28 replaces rows), and a
+  title slug breaks when a title changes. A cheap way to make chapter links
+  survive both is to have "Copy link" on a chapter emit `?t=<start secs>`.
+  That link then opens whichever chapter contains that moment, even after
+  regeneration. See open question 9.
 - A "Copy link" action on each chapter row.
 
 ### 6. Speakers tab, scoped
