@@ -206,7 +206,7 @@ but a deploy mutates a real database.
 - **Tests:** templates are built by the same harness and keyed by
   `hash(migrations) + hash(data)`. `dbTest({ data: goldenData })` gives each test
   a clone of a pre-seeded database in tens of milliseconds.
-- **Deploy:** `pnpm run deploy` runs `pnpm db migrate --db prod` _before_
+- **Deploy:** `pnpm deploy:prod` runs `pnpm db migrate --db prod` _before_
   `wrangler deploy`. Code therefore never runs against a schema it's ahead of.
   Old code briefly runs against the new schema, so migrations must be
   backward-compatible (expand, deploy, then contract in a later change).
@@ -223,7 +223,7 @@ but a deploy mutates a real database.
 
 - Switching git branches no longer corrupts anything: each branch has its own
   local database, and divergence is detected and repaired.
-- `migrate`'s refusals stop `pnpm run deploy` before `wrangler deploy` when
+- `migrate`'s refusals stop `pnpm deploy:prod` before `wrangler deploy` when
   production's history has diverged from the code being deployed (e.g. a branch
   missing main's migrations), instead of corrupting production.
 - Editing an already-applied migration is detected (as "modified") instead of

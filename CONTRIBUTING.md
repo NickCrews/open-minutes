@@ -92,7 +92,7 @@ gitignored `.env.local` at the repository root; see
 
 ### Which database you're using
 
-Every command that touches the database (`pnpm dev`, `pnpm db …`, `om …`)
+Every command that touches the database (`pnpm dev`, `pnpm db …`, `pnpm om …`)
 picks its target the same way: the `--db` flag if the command has one, else the
 `DB` environment variable, else `local`. The value is either a name or a full
 `postgres://` URL:
@@ -126,7 +126,7 @@ the local Postgres.
 | Use the small `golden` dataset instead of `dev`        | `pnpm db up --data golden --data-reset if-needed` |
 | Get an empty, migrated database with no data           | `pnpm db up --schema-reset always --data none`    |
 | Change the schema                                      | edit `schema.ts`, then `pnpm db generate`         |
-| Deploy the web app (migrates prod first)               | `pnpm run deploy`                                 |
+| Deploy the web app (migrates prod first)               | `pnpm deploy:prod`                                |
 | Clean up databases of deleted branches                 | `pnpm db prune`, then `pnpm db prune --yes`       |
 
 `pnpm db --help` and `pnpm db <command> --help` describe every command and
@@ -213,7 +213,7 @@ Nothing wipes or seeds a remote database by accident:
   it only applies new migrations.
 - `pnpm db wipe` refuses a remote database unless `ALLOW_REMOTE_WIPE=1`.
 
-`pnpm run deploy` runs `pnpm db migrate --db prod`, then deploys the Worker, so
+`pnpm deploy:prod` runs `pnpm db migrate --db prod`, then deploys the Worker, so
 production code never runs on a schema older than it expects. The old code
 does briefly run on the new schema, so migrations must be backward-compatible:
 add first, deploy, and remove in a later change.
@@ -263,7 +263,7 @@ pnpm om available       # videos not yet ingested
 pnpm om ingest <id>     # run the full pipeline for a video
 ```
 
-`om` writes to the same database as everything else (`DB=prod om ingest <id>`
+`om` writes to the same database as everything else (`DB=prod pnpm om ingest <id>`
 to ingest into production). See
 [`packages/pipeline/README.md`](packages/pipeline/README.md) for details.
 
@@ -284,7 +284,7 @@ ORDER BY m.start_time, s.start_secs;
 
 `pnpm db studio` opens a browser UI on it. The pipeline's API (`listIngested`,
 `listAvailable`, `ingestVideo` from `@open-minutes/pipeline/om`) and `om`'s
-JSON output (`om status --json`) are designed to be composed.
+JSON output (`pnpm -s om status --json`) are designed to be composed.
 
 ## Architecture Decision Records
 
