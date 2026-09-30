@@ -435,22 +435,32 @@ This is a sketch to feed #28, not a final schema. Time columns follow the
 existing `secondsInterval()` convention.
 
 ```ts
-chaptersTable = pgTable("chapters", {
-  id: serial().primaryKey(),
-  meeting_id: integer()
-    .notNull()
-    .references(() => meetingsTable.id),
-  start_secs: secondsInterval().notNull(),
-  end_secs: secondsInterval().notNull(), // explicit: gaps are legal (#25)
-  kind: chapterKind().notNull(), // enum, see below
-  title: varchar().notNull(), // a few words, TOC-scannable
-  summary: varchar(), // optional one sentence: tooltip, collapsed row, agent outline
-  bullets: jsonb().$type<string[]>().notNull(), // 3–7 for topic, 0–1 otherwise
-  agenda_ref: varchar(), // optional, eg "7.b"; future hook for nesting
-  // provenance (#28): which run produced this row
-  generation_id: integer().references(() => chapterGenerationsTable.id),
-});
-// check: start_secs < end_secs; exclusion constraint or app check for no overlap per meeting
+chaptersTable = pgTable(
+  "chapters",
+  {
+    id: serial().primaryKey(),
+    meeting_id: integer()
+      .notNull()
+      .references(() => meetingsTable.id),
+    start_secs: secondsInterval().notNull(),
+    end_secs: secondsInterval().notNull(), // explicit: gaps are legal (#25); must be > start_secs
+    kind: chapterKind().notNull(), // enum, see below
+    title: varchar().notNull(), // a few words, TOC-scannable
+    summary: varchar(), // optional one sentence: tooltip, collapsed row, agent outline
+    bullets: jsonb().$type<string[]>().notNull(), // 3–7 for topic, 0–1 otherwise
+    agenda_ref: varchar(), // optional, eg "7.b"; future hook for nesting
+    // provenance (#28): which run produced this row
+    generation_id: integer().references(() => chapterGenerationsTable.id),
+  },
+  (table) => [
+    // A chapter has positive length: end_secs is strictly after start_secs.
+    check(
+      "chapters_end_after_start",
+      sql`${table.end_secs} > ${table.start_secs}`,
+    ),
+    // No overlap per meeting: an exclusion constraint or an app check (#29).
+  ],
+);
 
 chapterGenerationsTable = pgTable("chapter_generations", {
   id: serial().primaryKey(),
