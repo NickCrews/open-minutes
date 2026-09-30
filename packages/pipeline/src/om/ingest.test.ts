@@ -152,7 +152,8 @@ describe("ingestVideo", () => {
       youtube_id: VIDEO_ID,
       title: METADATA.title,
       description: METADATA.description,
-      start_time: null,
+      date: null,
+      time: null,
     });
     expect(meeting!.duration_secs).toBe("01:00:00");
 
@@ -265,7 +266,7 @@ describe("listIngested", () => {
       db,
       await goldenGbosId(db),
       "older-video",
-      new Date("2020-01-01"),
+      "2020-01-01",
     );
 
     const all = await listIngested(db);

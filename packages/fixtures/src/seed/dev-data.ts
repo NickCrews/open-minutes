@@ -135,7 +135,8 @@ export async function seedDevDatabase(db: DB): Promise<DevSeedSummary> {
       body_id: bodyId,
       youtube_id: m.youtube_id,
       title: m.title,
-      start_time: m.start_time ? new Date(m.start_time) : null,
+      date: m.date,
+      time: m.time,
       duration_secs: lastWord
         ? sql`make_interval(secs => ${lastWord.start + LAST_WORD_DURATION_SEC})`
         : null,
