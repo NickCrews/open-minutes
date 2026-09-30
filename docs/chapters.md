@@ -213,9 +213,8 @@ out. When nesting comes, the second level is the **agenda item**. Girdwood
 meetings follow a published agenda, and citymeetings uses a human-marked top
 level ("agency testimony", "public comment"). Agenda items come from the
 published agenda where one exists, not from the model, in a separate
-`agenda_items` table or as chapters with a `parent_id`. The v0 hedge is an
-optional agenda reference string on each chapter, such as `"7.b"`, which can
-later become a foreign key. See open questions.
+`agenda_items` table or as chapters with a `parent_id`. v0 stores no agenda
+link at all. The schema sketch only marks where one would go.
 
 **No overlap.** Chapters never overlap (#29 validates this). Real meetings do
 interleave, for example returning to an item after public comment. That is two
@@ -448,7 +447,8 @@ chaptersTable = pgTable(
     title: varchar().notNull(), // a few words, TOC-scannable
     summary: varchar(), // optional one sentence: tooltip, collapsed row, agent outline
     bullets: jsonb().$type<string[]>().notNull(), // 3–7 for topic, 0–1 otherwise
-    agenda_ref: varchar(), // optional, eg "7.b"; future hook for nesting
+    // Not in v0: an agenda link (eg "7.b", later a foreign key to agenda_items)
+    // would go here when nesting arrives.
     // provenance (#28): which run produced this row
     generation_id: integer().references(() => chapterGenerationsTable.id),
   },
@@ -528,11 +528,9 @@ Notes on reconciling with existing tickets:
 3. **Per-bullet time anchors** (`{text, at_secs}`) so every claim links to its
    evidence, for citation and hallucination checks. They cost more to generate
    and validate.
-4. **Agenda linkage.** Is `agenda_ref` worth adding in v0, or should it wait
-   for a real agenda ingest?
-5. **Human review.** citymeetings relies heavily on human correction. Do we
+4. **Human review.** citymeetings relies heavily on human correction. Do we
    need an edit UI (boundaries, titles) before chapters count as trustworthy,
    and how is `reviewed_by_human` set?
-6. **Export.** Emit Podcasting 2.0 JSON chapters or YouTube description
+5. **Export.** Emit Podcasting 2.0 JSON chapters or YouTube description
    timestamps? This would be cheap, and YouTube-format chapters could be
    offered back to the bodies that publish the videos.
