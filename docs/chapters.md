@@ -164,50 +164,58 @@ is a standard way to express "this span is covered but not worth listing",
 which fits procedural material. The format is also a possible export format
 later.
 
-## Should every meeting be totally partitioned?
+## Coverage: chapters cover the whole meeting
 
-#25 settled that **chapters may have gaps** and store explicit `start_secs` and
-`end_secs`. It also noted the resulting problem: the judge has to tell a missed
-topic from a deliberate gap. The options:
+Every stretch of real content in a meeting belongs to a chapter. Low-value
+stretches are not left out. They get chapters of their own, with an explicit
+kind:
 
-| Option                                                                     | For                                                                                                                                                                                                                                      | Against                                                                                                                                                                                                                |
-| -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **A. Total partition** (YouTube style, start-only)                         | Simple model: an end is the next start. The scrubber is always fully segmented. "What chapter is 1:23:00 in?" always has an answer. Silence can't hide a missed topic.                                                                   | Forces the model to title dead air, recesses, and roll call. Boundaries inside long pre-meeting silence are arbitrary. A missed topic gets absorbed silently into its neighbour's time range, which is arguably worse. |
-| **B. Sparse, gaps allowed** (citymeetings style; the current #25 decision) | Only substantive material is chaptered. No filler titles.                                                                                                                                                                                | A gap is ambiguous: is it procedural, a recess, or a miss? The scrubber has holes that need their own design. The active chapter is often "none". The judge must reason about gaps (#25).                              |
-| **C. Near-total coverage with typed chapters** (recommended)               | Every stretch of real content belongs to a chapter, and low-value stretches are explicit: `kind = procedural` or `break`. A remaining gap then clearly means no content, or a miss. The TOC can hide low-value kinds, like `toc: false`. | Slightly more output per meeting. We have to define the kinds.                                                                                                                                                         |
+- `procedural`: call to order, roll call, approving the agenda and minutes,
+  adjournment.
+- `break`: recess, technical difficulties, dead air before the gavel.
 
-**Recommendation: C, which amends #25 but does not reverse it.** Keep the schema
-as #25 and #28 decided: ordered, non-overlapping chapters with explicit
-`start_secs` and `end_secs`, and gaps legal. But ask the generator to _cover_
-the meeting, and to label procedural stretches (call to order, roll call,
-approving the agenda and minutes, adjournment) and breaks (recess, technical
-difficulties, dead air before the gavel) as chapters of those kinds, instead of
-leaving them out. Legal gaps then mean:
+The TOC can hide these kinds by default, the way Podcasting 2.0 uses
+`toc: false`, but they are still in the data.
+
+The schema stays as #25 and #28 decided: ordered, non-overlapping chapters with
+explicit `start_secs` and `end_secs`, and gaps are legal. This amends #25's
+"chapters may have gaps" decision but does not reverse it. The generator's job
+is to _cover_ the meeting, so the only legitimate gaps are:
 
 - a short gap (under about 30 seconds) between adjacent chapters, which is
   boundary slop, or
 - a stretch with no speech at all, for example before the stream starts.
 
-This makes the #25 eval problem tractable. Any uncovered stretch of speech
-longer than N seconds is flagged as a candidate miss, mechanically. The judge
-council then only needs to decide whether a `procedural` label hides
-substance, which is a much narrower question. It also means the gold
-chaptering (#27) should use the same kinds, so the human's "deliberate gap"
-decisions are written down instead of implied.
+Any other gap is a missed topic. That is the point of this rule: it makes the
+#25 eval problem mechanical. Any uncovered stretch of speech longer than N
+seconds is flagged as a candidate miss, and the judge council only has to
+decide whether a `procedural` label is hiding substance. The gold chaptering
+(#27) uses the same kinds, so the human's "deliberate gap" decisions are
+written down instead of implied.
 
-**Nesting.** #25 put hierarchical chapters out of scope for v0, and that should
-stay. The natural second level is the **agenda item**. Girdwood meetings follow
-a published agenda, and citymeetings uses a human-marked top level ("agency
-testimony", "public comment"). When nesting arrives it should probably be a
-separate `agenda_items` table (or chapters with `parent_id`) that is sourced
-from the published agenda where one exists, not invented by the model. For v0,
-the one cheap hedge is to let a chapter optionally carry an agenda reference
-string such as `"7.b"`, which can later be promoted into a foreign key. This is
-listed under open questions.
+Why not the alternatives:
 
-**Overlap.** Keep chapters non-overlapping (#29 validates this). Real meetings
-do interleave, for example returning to an item after public comment. Model
-that as two chapters with similar titles. Do not overlap them.
+- **Total partition** (YouTube style, start times only, each chapter ends where
+  the next begins). It forces titles onto arbitrary spans of pre-meeting
+  silence. Worse, a missed topic gets silently absorbed into its neighbour's
+  time range, where nothing can flag it.
+- **Sparse chapters with free gaps** (citymeetings style, and #25's original
+  reading). A gap is ambiguous: it could be procedural, a recess, or a miss.
+  The scrubber has holes, the active chapter is often "none", and the judge
+  has to reason about every gap.
+
+**No nesting in v0.** #25 put hierarchical chapters out of scope, and they stay
+out. When nesting comes, the second level is the **agenda item**. Girdwood
+meetings follow a published agenda, and citymeetings uses a human-marked top
+level ("agency testimony", "public comment"). Agenda items come from the
+published agenda where one exists, not from the model, in a separate
+`agenda_items` table or as chapters with a `parent_id`. The v0 hedge is an
+optional agenda reference string on each chapter, such as `"7.b"`, which can
+later become a foreign key. See open questions.
+
+**No overlap.** Chapters never overlap (#29 validates this). Real meetings do
+interleave, for example returning to an item after public comment. That is two
+chapters with similar titles.
 
 ## Granularity
 
@@ -370,7 +378,7 @@ question.
   breaks when the title is tweaked, or the start time, which breaks when a
   boundary is nudged. Editing a chapter's title or times updates its row in
   place and keeps its ID. Whether IDs also survive a full regeneration is open
-  question 9.
+  question 8.
 - A "Copy link" action on each chapter row.
 
 ### 6. Speakers tab, scoped
@@ -462,8 +470,9 @@ scrubber but are hidden from the list by default.
 
 Notes on reconciling with existing tickets:
 
-- **#25 / #28, gaps:** kept legal. The generator is asked to cover
-  (recommendation C), and the schema doesn't enforce it.
+- **#25 / #28, gaps:** kept legal. The generator covers the meeting (see
+  [Coverage](#coverage-chapters-cover-the-whole-meeting)), and the schema
+  doesn't enforce it.
 - **#28, bullets:** `jsonb string[]`, following the `segments.words`
   precedent. Individual addressability can come later through per-bullet
   anchors, and that is when a separate table would pay off.
@@ -485,33 +494,29 @@ Notes on reconciling with existing tickets:
 
 ## Open questions
 
-1. **Adopt recommendation C?** This means asking the generator for near-total
-   coverage with `procedural` and `break` kinds, instead of the sparse
-   chaptering #25 and #27 currently describe. It changes the gold-writing
-   instructions in #27.
-2. **Kind set.** Are five kinds right? Is `vote` worth separating, or is it
+1. **Kind set.** Are five kinds right? Is `vote` worth separating, or is it
    always part of a `topic`? Does Anchorage Assembly need more, such as
    `presentation` or `executive_session`?
-3. **Public comment granularity.** One chapter per commenter, grouped, or a
+2. **Public comment granularity.** One chapter per commenter, grouped, or a
    threshold?
-4. **`summary` field.** Is one sentence alongside 3 to 7 bullets redundant? It
+3. **`summary` field.** Is one sentence alongside 3 to 7 bullets redundant? It
    helps tooltips, collapsed rows, and agent outlines. The first bullet could
    do the same job.
-5. **Per-bullet time anchors** (`{text, at_secs}`) so every claim links to its
+4. **Per-bullet time anchors** (`{text, at_secs}`) so every claim links to its
    evidence, for citation and hallucination checks. They cost more to generate
    and validate.
-6. **Agenda linkage.** Is `agenda_ref` worth adding in v0, or should it wait
+5. **Agenda linkage.** Is `agenda_ref` worth adding in v0, or should it wait
    for a real agenda ingest?
-7. **Our scrubber vs YouTube's.** Hide native controls (`controls: 0`), or live
+6. **Our scrubber vs YouTube's.** Hide native controls (`controls: 0`), or live
    with two bars?
-8. **Human review.** citymeetings relies heavily on human correction. Do we
+7. **Human review.** citymeetings relies heavily on human correction. Do we
    need an edit UI (boundaries, titles) before chapters count as trustworthy,
    and how is `reviewed_by_human` set?
-9. **Chapter identity across regenerations.** Chapter IDs must survive edits
+8. **Chapter identity across regenerations.** Chapter IDs must survive edits
    to a chapter's title and times. Regeneration (#28) creates new rows, though.
    Should a regenerated chapter inherit the ID of the old chapter it most
    overlaps, so shared links keep working? Or should old IDs redirect to the
    chapter covering their start time?
-10. **Export.** Emit Podcasting 2.0 JSON chapters or YouTube description
-    timestamps? This would be cheap, and YouTube-format chapters could be
-    offered back to the bodies that publish the videos.
+9. **Export.** Emit Podcasting 2.0 JSON chapters or YouTube description
+   timestamps? This would be cheap, and YouTube-format chapters could be
+   offered back to the bodies that publish the videos.
