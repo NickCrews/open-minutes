@@ -225,6 +225,9 @@ chapters with similar titles.
 - #25 specifies 1 to 15 minutes and 3 to 7 bullets. Keep that for `topic`
   chapters. Procedural and break chapters can be any length (a 20-second roll
   call, a 40-minute recess) and get 0 to 1 bullets.
+- **Every chapter has a one-sentence summary**, whatever its kind. The
+  summary is what tooltips, collapsed list rows and the agent outline show.
+  Bullets add detail beneath it.
 - **Bullets have no timestamps.** A bullet summarizes the chapter as a whole.
   The points it makes often build up across the whole chapter rather than
   happening at one moment, so bullets are not tied to a time. The chapter's
@@ -449,7 +452,7 @@ chaptersTable = pgTable(
     end_secs: secondsInterval().notNull(), // explicit: gaps are legal (#25); must be > start_secs
     kind: chapterKind().notNull(), // enum, see below
     title: varchar().notNull(), // a few words, TOC-scannable
-    summary: varchar(), // optional one sentence: tooltip, collapsed row, agent outline
+    summary: varchar().notNull(), // one sentence: tooltip, collapsed row, agent outline
     bullets: varchar().array().notNull(), // text[]; 3–7 for topic, 0–1 otherwise; no timestamps
     // Not in v0: an agenda link (eg "7.b", later a foreign key to agenda_items)
     // would go here when nesting arrives.
@@ -542,6 +545,3 @@ These are deliberately out of scope for the first version:
 1. **Kind set.** Are five kinds right? Is `vote` worth separating, or is it
    always part of a `topic`? Does Anchorage Assembly need more, such as
    `presentation` or `executive_session`?
-2. **`summary` field.** Is one sentence alongside 3 to 7 bullets redundant? It
-   helps tooltips, collapsed rows, and agent outlines. The first bullet could
-   do the same job.
