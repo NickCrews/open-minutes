@@ -396,11 +396,6 @@ question.
   question 6.
 - A "Copy link" action on each chapter row.
 
-### 6. Speakers tab, scoped
-
-Optional: a toggle on the Speakers tab between "Whole meeting" and "This
-chapter". This comes almost free from the derived per-chapter tally.
-
 ## Agent UX
 
 Assume an agent explores the data through SQL, an `om` CLI, or a future MCP or
