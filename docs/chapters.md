@@ -341,7 +341,7 @@ Behavior:
   **Summary**. With no chapters, the Chapters tab is hidden, not shown empty.
   This satisfies the #33 requirement of "no empty state that looks broken".
 - The selected tab is **not** stored in the URL. A `?tab=` param would make
-  shared links too busy. A `?chapter=` link opens the Chapters tab on its own.
+  shared links too busy.
 - On mobile the columns already stack, and tabs stay under the video.
 
 This answers the placement question in #33 (rail vs header vs third column).
@@ -384,17 +384,21 @@ question.
 
 ### 5. Permalinks
 
-- `?t=<secs>` on the meeting URL: seek on load.
-- `?chapter=<id>`: seek to the chapter start and open the
-  Chapters tab. A dedicated chapter page, as on citymeetings, can come later.
-  The query param gets most of the value.
-- Chapter links must survive small edits (see [Share](#what-chapters-are-for)),
-  so they use an opaque chapter ID. They must not use a title slug, which
-  breaks when the title is tweaked, or the start time, which breaks when a
-  boundary is nudged. Editing a chapter's title or times updates its row in
-  place and keeps its ID. Whether IDs also survive a full regeneration is open
-  question 6.
-- A "Copy link" action on each chapter row.
+There is one link form: `?t=<secs>` on the meeting URL. On load the page
+seeks to `t` and highlights the chapter that contains it. There is no
+`?chapter=<id>` param and no per-chapter slug.
+
+- A **"Copy link"** action on each chapter row emits `?t=<chapter start>`.
+- **Snap rule.** If `t` falls within about 10 seconds before a chapter start,
+  resolve the link to that chapter and seek to its current start. This keeps
+  chapter links working when a start is nudged a little later.
+- This meets the [Share](#what-chapters-are-for) requirement without stable
+  chapter IDs. A title edit doesn't touch the link. A boundary nudge is covered
+  by the chapter range or the snap rule. Even a full regeneration (#28) lands
+  on whatever chapter now covers that moment.
+- Link previews (page title, unfurl) use the title of the chapter containing
+  `t`.
+- A dedicated chapter page, as on citymeetings, can come later if needed.
 
 ## Agent UX
 
@@ -406,7 +410,7 @@ HTTP API. Typical tasks and what they need from chapters:
 | "What happened at the Feb 3 GBOS meeting?"            | Reads the chapter outline (titles, times, kinds, top speakers), about 2k tokens.                                | A compact outline rendering, one line per chapter. Filter by kind.                                                      |
 | "What did the board decide about X?"                  | Searches chapter titles and bullets across meetings, then reads the transcript slice for the matching chapters. | Full-text search over title, bullets, and summary. Cheap "transcript for chapter" access (segments in `[start, end)`).  |
 | "What has Supervisor Y said about housing this year?" | Joins chapters to derived per-chapter speakers, filters by person, searches by topic, reads the slices.         | A `chapter_speakers` view (chapter_id, person_id / speaker_number, speaking_secs). A stable person identity (ADR 0002). |
-| "Cite it."                                            | Returns a deep link.                                                                                            | A URL form `/meetings/:id?t=secs` or `?chapter=id`.                                                                     |
+| "Cite it."                                            | Returns a deep link.                                                                                            | A URL form `/meetings/:id?t=secs`.                                                                                      |
 | "Is this trustworthy?"                                | Checks provenance.                                                                                              | Model, prompt version, generated-at, and whether a human reviewed the chapters.                                         |
 
 Principles:
@@ -419,9 +423,8 @@ Principles:
   "Top N chapters by speaking time of person P" only makes sense when chapters
   are comparable in size, which is another argument for typed kinds (filter out
   `break`) over sparse gaps.
-- **Stable IDs.** Chapter IDs survive edits to a chapter's title and times, so
-  an agent can cite a chapter by ID. Use `?t=` to cite a moment inside a
-  chapter.
+- **Cite by time.** An agent cites a chapter or a moment with `?t=`, the same
+  link a human shares. Chapter IDs are internal and are not part of any URL.
 - A CLI view such as `om chapters <meeting> --show`, or an outline format in
   the diffable-text style of `psv.ts`, would serve both humans reviewing output
   (#29, "read the output yourself") and agents.
@@ -520,11 +523,6 @@ Notes on reconciling with existing tickets:
 5. **Human review.** citymeetings relies heavily on human correction. Do we
    need an edit UI (boundaries, titles) before chapters count as trustworthy,
    and how is `reviewed_by_human` set?
-6. **Chapter identity across regenerations.** Chapter IDs must survive edits
-   to a chapter's title and times. Regeneration (#28) creates new rows, though.
-   Should a regenerated chapter inherit the ID of the old chapter it most
-   overlaps, so shared links keep working? Or should old IDs redirect to the
-   chapter covering their start time?
-7. **Export.** Emit Podcasting 2.0 JSON chapters or YouTube description
+6. **Export.** Emit Podcasting 2.0 JSON chapters or YouTube description
    timestamps? This would be cheap, and YouTube-format chapters could be
    offered back to the bodies that publish the videos.
