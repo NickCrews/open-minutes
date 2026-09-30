@@ -10,7 +10,7 @@ Where it proposes changing a decision already made on #25, it says so.
 
 ## What chapters are for
 
-A chapter works as a table of contents entry for a meeting. It has three jobs:
+A chapter works as a table of contents entry for a meeting. It has four jobs:
 
 1. **Summarize.** Reading the chapter titles top to bottom should tell you
    what the meeting covered, in about the time it takes to read a paragraph.
@@ -18,8 +18,11 @@ A chapter works as a table of contents entry for a meeting. It has three jobs:
    much.
 3. **Navigate.** You can seek or scrub to the part you care about, in the video
    and the transcript at once.
+4. **Share.** A chapter is a shareable snippet of the meeting. It has a stable
+   URL that keeps working after someone lightly edits its title or nudges its
+   start or end time.
 
-Anything a chapter carries should serve one of those jobs. The same three
+Anything a chapter carries should serve one of those jobs. The same
 jobs apply to an agent reading the data (see [Agent UX](#agent-ux)), where the
 payoff is cost: a chapter outline of a 3-hour meeting is roughly 2k tokens,
 compared with roughly 50k for the transcript.
@@ -362,11 +365,12 @@ question.
 - `?chapter=<id>` (or a slug): seek to the chapter start and open the
   Chapters tab. A dedicated chapter page, as on citymeetings, can come later.
   The query param gets most of the value.
-- Chapter IDs are not stable across regenerations (#28 replaces rows), and a
-  title slug breaks when a title changes. A cheap way to make chapter links
-  survive both is to have "Copy link" on a chapter emit `?t=<start secs>`.
-  That link then opens whichever chapter contains that moment, even after
-  regeneration. See open question 9.
+- Chapter links must survive small edits (see [Share](#what-chapters-are-for)),
+  so they use an opaque chapter ID. They must not use a title slug, which
+  breaks when the title is tweaked, or the start time, which breaks when a
+  boundary is nudged. Editing a chapter's title or times updates its row in
+  place and keeps its ID. Whether IDs also survive a full regeneration is open
+  question 9.
 - A "Copy link" action on each chapter row.
 
 ### 6. Speakers tab, scoped
@@ -397,9 +401,9 @@ Principles:
   "Top N chapters by speaking time of person P" only makes sense when chapters
   are comparable in size, which is another argument for typed kinds (filter out
   `break`) over sparse gaps.
-- **Stable IDs within a generation.** Regeneration replaces rows (#28), so
-  chapter IDs are not permanent. An agent should cite by time (`?t=`), not by
-  chapter ID, unless we add a stable slug.
+- **Stable IDs.** Chapter IDs survive edits to a chapter's title and times, so
+  an agent can cite a chapter by ID. Use `?t=` to cite a moment inside a
+  chapter.
 - A CLI view such as `om chapters <meeting> --show`, or an outline format in
   the diffable-text style of `psv.ts`, would serve both humans reviewing output
   (#29, "read the output yourself") and agents.
@@ -503,8 +507,11 @@ Notes on reconciling with existing tickets:
 8. **Human review.** citymeetings relies heavily on human correction. Do we
    need an edit UI (boundaries, titles) before chapters count as trustworthy,
    and how is `reviewed_by_human` set?
-9. **Stable chapter identity across regenerations**, for permalinks. Is a
-   slug worth it, or are `?t=` links enough?
+9. **Chapter identity across regenerations.** Chapter IDs must survive edits
+   to a chapter's title and times. Regeneration (#28) creates new rows, though.
+   Should a regenerated chapter inherit the ID of the old chapter it most
+   overlaps, so shared links keep working? Or should old IDs redirect to the
+   chapter covering their start time?
 10. **Export.** Emit Podcasting 2.0 JSON chapters or YouTube description
     timestamps? This would be cheap, and YouTube-format chapters could be
     offered back to the bodies that publish the videos.
