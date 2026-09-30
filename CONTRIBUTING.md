@@ -90,151 +90,19 @@ gitignored `.env.local` at the repository root; see
 
 ## The database
 
-### Which database you're using
+`pnpm dev` takes care of the database: each git branch gets its own local
+Postgres database, created, migrated and seeded with sample data on first use.
+The commands you'll reach for most:
 
-Every command that touches the database (`pnpm dev`, `pnpm db …`, `pnpm om …`)
-picks its target the same way: the `--db` flag if the command has one, else the
-`DB` environment variable, else `local`. The value is either a name or a full
-`postgres://` URL:
+```sh
+pnpm db status                      # what state is my database in?
+pnpm db up --schema-reset always    # start over with fresh sample data
+pnpm db generate                    # write a migration after editing schema.ts
+```
 
-- **`local`** (the default) is a database on the docker-compose Postgres,
-  **one per git branch**: `open_minutes__<branch>`, e.g. `open_minutes__main`.
-  A new branch's database starts as a copy of `main`'s, so it begins with the
-  data you already had, and switching branches never mixes up migrations.
-- **Any other name**, e.g. `prod`, is read from `DATABASE_URL_<NAME>`, e.g.
-  `DATABASE_URL_PROD` in `.env.local`.
-
-Databases on `localhost` are **local** and treated as disposable. Anything else
-is **remote**, and the tooling won't wipe or seed it (see
-[Remote databases](#remote-databases)).
-
-To use one database on every branch instead of one per branch, set `DB` to its
-URL in `.env.local`, e.g.
-`DB=postgres://postgres:postgres@localhost:5432/open_minutes__main`.
-
-Tests ignore all of this: they always create their own throwaway databases on
-the local Postgres.
-
-### Common tasks
-
-| I want to…                                             | Run                                               |
-| ------------------------------------------------------ | ------------------------------------------------- |
-| Get my branch's database up to date                    | `pnpm db up` (`pnpm dev` does this for you)       |
-| See what state a database is in                        | `pnpm db status`                                  |
-| Start over with a fresh database and fresh sample data | `pnpm db up --schema-reset always`                |
-| Throw away my edits to the sample data                 | `pnpm db up --data-reset always`                  |
-| Use the small `golden` dataset instead of `dev`        | `pnpm db up --data golden --data-reset if-needed` |
-| Get an empty, migrated database with no data           | `pnpm db up --schema-reset always --data none`    |
-| Change the schema                                      | edit `schema.ts`, then `pnpm db generate`         |
-| Deploy the web app (migrates prod first)               | `pnpm deploy:prod`                                |
-| Clean up databases of deleted branches                 | `pnpm db prune`, then `pnpm db prune --yes`       |
-
-`pnpm db --help` and `pnpm db <command> --help` describe every command and
-flag.
-
-### `pnpm db up`: make it match this checkout
-
-`up` is the command you'll use most, and the one `pnpm dev` runs. You tell it
-the state you want: a schema (latest, by default) and a dataset (`dev`, by
-default). It gets the database there, changing as little as possible, and does
-nothing if the database is already there.
-
-On a local database it does these steps in order, skipping any that aren't
-needed:
-
-1. **Create** the database, as a copy of `main`'s for a new branch.
-2. **Reset the schema** if the database can't be migrated forward: it has
-   migrations this checkout doesn't (usually another branch's), a migration it
-   already applied has since been edited, or it's already past the target
-   version. A reset **deletes everything**, tables and data, then applies every
-   migration from scratch.
-3. **Migrate**: apply pending migrations.
-4. **Seed** the dataset, but only if the database has no data: it's new, was
-   just reset, or its tables are empty. Data already there is kept, even if it
-   isn't the declared dataset.
-
-On a remote database it changes nothing: it only checks that the database has
-every migration this checkout needs, and fails if not.
-
-Two flags control the destructive steps, 2 and 4. Each takes `never`,
-`if-needed` or `always`:
-
-| Flag             | `never`                                        | `if-needed`                                                    | `always`                                   |
-| ---------------- | ---------------------------------------------- | -------------------------------------------------------------- | ------------------------------------------ |
-| `--schema-reset` | Error instead of resetting                     | **Default.** Reset only when step 2 says it can't migrate      | Reset every time: start over from empty    |
-| `--data-reset`   | **Default.** Seed only a database with no data | Also replace data that isn't the declared dataset, or is stale | Reseed every time, e.g. to undo hand edits |
-
-And two choose the target state:
-
-| Flag               | Values                                                                                                 | Default  |
-| ------------------ | ------------------------------------------------------------------------------------------------------ | -------- |
-| `--data`           | `dev`, `golden`, or `none`                                                                             | `dev`    |
-| `--schema-version` | `latest`, or a migration by folder name, timestamp or tag, e.g. `20260719061307` or `panoramic_dagger` | `latest` |
-
-`--data` other than `none` needs `--schema-version latest`, since the seeders
-write the current schema. An older `--schema-version` therefore defaults to
-`--data none`.
-
-The datasets are:
-
-- **`dev`**: what `pnpm dev` runs on. The golden rows, the golden meetings'
-  full transcripts and people, and fictional extras from
-  `packages/fixtures/dev-data/` ("Demo County"). Voiceprints are placeholders.
-- **`golden`**: only the hand-verified rows from
-  `packages/fixtures/test-data/` (jurisdictions, bodies, video sources), as
-  evals and tests see them.
-
-[`dbranch.config.ts`](dbranch.config.ts) at the repository root lists the
-datasets `--data` can name and picks the default.
-
-### The other commands
-
-Unlike `up`, these each do exactly one thing:
-
-| Command            | What it does                                                                                                                                                                                   |
-| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm db migrate`  | Applies pending migrations (up to `--schema-version`) and nothing else. Never resets or seeds; if the database can't be migrated forward, it fails. Safe on production: it's what deploys run. |
-| `pnpm db wipe`     | Empties a database: drops its tables, migration history and data. The next `up` rebuilds it.                                                                                                   |
-| `pnpm db status`   | Shows the database's schema version, which dataset it holds and whether that's current, and any pending or unexpected migrations. `--check` exits non-zero if it needs migrating.              |
-| `pnpm db generate` | Writes a new migration from your `schema.ts` changes.                                                                                                                                          |
-| `pnpm db check`    | Checks the migrations for conflicts.                                                                                                                                                           |
-| `pnpm db studio`   | Opens Drizzle Studio on the database.                                                                                                                                                          |
-| `pnpm db prune`    | Lists local databases nothing needs: those of deleted branches, leftovers from interrupted test runs, and outdated test templates. `--yes` drops them.                                         |
-
-`migrate`, `wipe`, `status`, `studio` and `up` all take `--db`.
-
-### Remote databases
-
-Nothing wipes or seeds a remote database by accident:
-
-- `pnpm db up`, `pnpm dev` and `om` only check a remote database's schema.
-  They fail if it's missing migrations, rather than migrating it.
-- `pnpm db migrate --db prod` is the only command that changes production, and
-  it only applies new migrations.
-- `pnpm db wipe` refuses a remote database unless `ALLOW_REMOTE_WIPE=1`.
-
-`pnpm deploy:prod` runs `pnpm db migrate --db prod`, then deploys the Worker, so
-production code never runs on a schema older than it expects. The old code
-does briefly run on the new schema, so migrations must be backward-compatible:
-add first, deploy, and remove in a later change.
-
-### Changing the schema
-
-1. Edit [`packages/db/src/schema.ts`](packages/db/src/schema.ts).
-2. Run `pnpm db generate`, which writes a migration to
-   `packages/db/src/migrations/`. Commit it with your change. CI fails if
-   `schema.ts` has changes with no migration.
-3. Run `pnpm db up` (or restart `pnpm dev`) to apply it.
-
-If the migration transforms existing data, rather than only changing tables,
-give it a test in
-[`packages/db/src/migration-tests/`](packages/db/src/migration-tests/): seed
-rows at the schema version before it, migrate, and check the result. The
-existing tests there show how.
-
-Once a migration is on `main`, don't edit it; add a new one. On your own
-branch, editing an unmerged migration is fine: `pnpm db up` notices and
-resets your branch's database.
+See [docs/contributing/db.md](docs/contributing/db.md) for how the target
+database is chosen, everything `pnpm db` can do, working with remote
+databases, and changing the schema.
 
 ## Running checks
 
