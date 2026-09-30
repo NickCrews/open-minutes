@@ -317,11 +317,12 @@ transcript and the play controls, where YouTube and Spotify put it:
   jump to the previous or next chapter start. Kobalte (already a dependency)
   has a Slider primitive to build on.
 - **With no chapters** it is a single-segment plain scrubber. That is still an
-  improvement, and it removes the need for the iframe's own bar.
+  improvement.
 
-Open: whether to hide YouTube's native controls (`controls: 0`) once our
-scrubber exists, to avoid having two progress bars. Fullscreen and captions
-live in those controls, so this needs a decision.
+**YouTube's native controls stay.** Our scrubber does not replace them.
+Someone can control playback from either place, and the two stay in sync
+through the shared seek plumbing. The native controls also keep fullscreen
+and captions.
 
 ### 2. Tabs in the left column
 
@@ -392,7 +393,7 @@ question.
   breaks when the title is tweaked, or the start time, which breaks when a
   boundary is nudged. Editing a chapter's title or times updates its row in
   place and keeps its ID. Whether IDs also survive a full regeneration is open
-  question 7.
+  question 6.
 - A "Copy link" action on each chapter row.
 
 ### 6. Speakers tab, scoped
@@ -521,16 +522,14 @@ Notes on reconciling with existing tickets:
    and validate.
 4. **Agenda linkage.** Is `agenda_ref` worth adding in v0, or should it wait
    for a real agenda ingest?
-5. **Our scrubber vs YouTube's.** Hide native controls (`controls: 0`), or live
-   with two bars?
-6. **Human review.** citymeetings relies heavily on human correction. Do we
+5. **Human review.** citymeetings relies heavily on human correction. Do we
    need an edit UI (boundaries, titles) before chapters count as trustworthy,
    and how is `reviewed_by_human` set?
-7. **Chapter identity across regenerations.** Chapter IDs must survive edits
+6. **Chapter identity across regenerations.** Chapter IDs must survive edits
    to a chapter's title and times. Regeneration (#28) creates new rows, though.
    Should a regenerated chapter inherit the ID of the old chapter it most
    overlaps, so shared links keep working? Or should old IDs redirect to the
    chapter covering their start time?
-8. **Export.** Emit Podcasting 2.0 JSON chapters or YouTube description
+7. **Export.** Emit Podcasting 2.0 JSON chapters or YouTube description
    timestamps? This would be cheap, and YouTube-format chapters could be
    offered back to the bodies that publish the videos.
