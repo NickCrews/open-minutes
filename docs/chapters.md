@@ -318,9 +318,6 @@ transcript and the play controls, where YouTube and Spotify put it:
   has a Slider primitive to build on.
 - **With no chapters** it is a single-segment plain scrubber. That is still an
   improvement, and it removes the need for the iframe's own bar.
-- Optional later: a thin **speaker lane** under the bar, colored by who is
-  talking, using the existing `speakerColor`. It shows attribution over time at
-  a glance.
 
 Open: whether to hide YouTube's native controls (`controls: 0`) once our
 scrubber exists, to avoid having two progress bars. Fullscreen and captions
