@@ -5,7 +5,8 @@
 // stderr, so pipes like `om available | head -5 | om ingest` stay clean.
 //
 // Database selection follows the named-database convention: defaults to
-// `local`, overridable per-invocation with `DB=prod om <cmd>`.
+// `local`, overridable per-invocation with `DB=prod om <cmd>`. Every command
+// first readies the database via prepareDatabase(), like `pnpm dev` does.
 import { defineCommand, runMain } from "citty";
 
 // A downstream pipe closing early (eg `om available | head -3`) raises EPIPE
@@ -14,13 +15,18 @@ process.stdout.on("error", (error: NodeJS.ErrnoException) => {
   if (error.code === "EPIPE") process.exit(0);
   throw error;
 });
-import { getDb, type DB } from "@open-minutes/db";
+import { getDb, resolveDatabaseUrl, type DB } from "@open-minutes/db";
+import { prepareDatabase } from "@open-minutes/db/ensure";
 import { listIngested, type IngestedMeeting } from "./ingested";
 import { listAvailable } from "./available";
 import { ingestVideos } from "./ingest";
 
 async function withDb<T>(fn: (db: DB) => Promise<T>): Promise<T> {
-  const { db, client } = getDb();
+  // Same readiness rule as `pnpm dev`: local is migrated (and created, on a
+  // new branch) as needed; a remote target must already have the schema.
+  const url = resolveDatabaseUrl();
+  await prepareDatabase(url);
+  const { db, client } = getDb(url);
   try {
     return await fn(db);
   } finally {

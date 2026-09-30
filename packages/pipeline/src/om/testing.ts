@@ -8,8 +8,11 @@ import {
   meetingsTable,
   videoSourcesTable,
 } from "@open-minutes/db";
+import { eq } from "drizzle-orm";
 import type { YouTube } from "../youtube";
-import { test as dbTest } from "@open-minutes/db/testing/vitest";
+import { dbTest } from "@open-minutes/db/testing/vitest";
+import { goldenData } from "@open-minutes/fixtures/golden-data";
+import { loadBodies } from "@open-minutes/fixtures/test-data";
 
 // Test helpers for the om API tests (not collected by vitest — no .test suffix).
 
@@ -38,7 +41,7 @@ export function fakeYouTube(overrides: Partial<YouTube> = {}): YouTube {
 /**
  * Insert a body, with its video sources, under a throwaway jurisdiction of the
  * same name. Returns its id. For tests that need a second body alongside the
- * GBOS one from `getOrCreateGbos`.
+ * golden GBOS one (see {@link goldenTest}).
  */
 export async function insertBody(
   db: DB,
@@ -88,10 +91,9 @@ export async function insertMeeting(
   return row!.id;
 }
 
-/** The db fixture plus a disposable work-directory root for ingest tests. */
-export const test = dbTest.extend<{ workRoot: string }>({
+const workRootFixture = {
   // eslint-disable-next-line no-empty-pattern
-  workRoot: async ({}, use) => {
+  workRoot: async ({}, use: (dir: string) => Promise<void>) => {
     const dir = await mkdtemp(join(tmpdir(), "om-work-"));
     try {
       await use(dir);
@@ -99,4 +101,35 @@ export const test = dbTest.extend<{ workRoot: string }>({
       await rm(dir, { recursive: true, force: true });
     }
   },
-});
+};
+
+/** An empty database, plus a disposable work-directory root for ingest tests. */
+export const test = dbTest().extend<{ workRoot: string }>(workRootFixture);
+
+/**
+ * A database starting from the golden dataset (the MOA jurisdiction and the
+ * GBOS body with its YouTube channel, from test-data/), plus a work root.
+ * Tests layer their own scenario rows on top.
+ */
+export const goldenTest = dbTest({ data: goldenData }).extend<{
+  workRoot: string;
+}>(workRootFixture);
+
+const goldenGbos = loadBodies().find((b) => b.id === "gbos")!;
+
+/** GBOS as test-data/bodies.jsonl declares it: the one source of truth. */
+export const GOLDEN_GBOS = {
+  name_short: goldenGbos.name_short,
+  channelId: goldenGbos.video_sources.find((s) => s.kind === "channel")!
+    .youtube_id,
+};
+
+/** The golden GBOS body's id in a database seeded with {@link goldenData}. */
+export async function goldenGbosId(db: DB): Promise<number> {
+  const [row] = await db
+    .select({ id: bodiesTable.id })
+    .from(bodiesTable)
+    .where(eq(bodiesTable.name_short, GOLDEN_GBOS.name_short));
+  if (!row) throw new Error("No GBOS body: is this a goldenTest database?");
+  return row.id;
+}

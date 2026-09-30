@@ -11,6 +11,9 @@ importers:
       '@eslint/js':
         specifier: ^9.36.0
         version: 9.39.4
+      '@open-minutes/db':
+        specifier: workspace:*
+        version: link:packages/db
       '@open-minutes/fixtures':
         specifier: workspace:*
         version: link:packages/fixtures
@@ -54,6 +57,9 @@ importers:
       '@open-minutes/core':
         specifier: workspace:*
         version: link:../core
+      citty:
+        specifier: ^0.1.6
+        version: 0.1.6
       drizzle-orm:
         specifier: 1.0.0-beta.21
         version: 1.0.0-beta.21(@neondatabase/serverless@1.1.0)(@types/mssql@9.1.11(@azure/core-client@1.10.1))(mssql@11.0.1(@azure/core-client@1.10.1))(postgres@3.4.9)(zod@4.3.6)
@@ -67,6 +73,9 @@ importers:
       drizzle-kit:
         specifier: 1.0.0-beta.22
         version: 1.0.0-beta.22
+      tsx:
+        specifier: ^4.21.0
+        version: 4.21.0
       vitest:
         specifier: ^4.0.18
         version: 4.1.4(@types/node@25.6.0)(vite@7.3.2(@types/node@25.6.0)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.21.0))

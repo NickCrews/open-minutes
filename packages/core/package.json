@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "type": "module",
   "exports": {
-    "./dotenv": "./src/dotenv.mjs",
+    "./dotenv": "./src/dotenv.ts",
     "./bodies": "./src/bodies/index.ts",
     "./timeline": "./src/timeline.ts",
     "./transcription": "./src/transcription/index.ts",

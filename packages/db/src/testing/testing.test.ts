@@ -3,7 +3,7 @@ import { sql } from "drizzle-orm";
 import { getDb } from "../index";
 import { jurisdictionsTable } from "../schema";
 import { createTestDb } from "./index";
-import { test } from "./vitest";
+import { dbTest, test } from "./vitest";
 
 describe("createTestDb", () => {
   test("provides a migrated, empty database", async ({ db }) => {
@@ -44,5 +44,33 @@ describe("createTestDb", () => {
     );
     expect(rows).toHaveLength(0);
     await client.end();
+  });
+});
+
+// A declared data state for the template: every clone starts with this row.
+const seeded = dbTest({
+  data: {
+    name: "one-jurisdiction",
+    fingerprint: "v1",
+    apply: async (db) => {
+      await db
+        .insert(jurisdictionsTable)
+        .values({ name: "Seeded", name_short: "seeded" });
+    },
+  },
+});
+
+describe("dbTest({ data })", () => {
+  seeded("clones start with the declared data", async ({ db }) => {
+    const rows = await db.select().from(jurisdictionsTable);
+    expect(rows.map((r) => r.name_short)).toEqual(["seeded"]);
+  });
+
+  seeded("and stay isolated from each other", async ({ db }) => {
+    await db
+      .insert(jurisdictionsTable)
+      .values({ name: "Extra", name_short: "extra" });
+    const rows = await db.select().from(jurisdictionsTable);
+    expect(rows).toHaveLength(2);
   });
 });
