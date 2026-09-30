@@ -6,11 +6,11 @@
   "exports": {
     "./test-data": "./src/test-data.ts",
     "./psv": "./src/psv.ts",
-    "./seed": "./src/seed/seed.ts",
-    "./gbos": "./src/gbos.ts"
+    "./golden-data": "./src/seed/golden-data.ts",
+    "./dev-data": "./src/seed/dev-data.ts",
+    "./map": "./src/seed/map.ts"
   },
   "scripts": {
-    "db:seed": "tsx src/seed/cli.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },

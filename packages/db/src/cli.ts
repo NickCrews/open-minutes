@@ -1,0 +1,393 @@
+#!/usr/bin/env tsx
+// The database harness CLI, behind the root `pnpm db` script. Brings a
+// database to a declared state (schema + data), inspects it, and manages the
+// per-branch databases that make that safe to do on every git branch.
+//
+// The imperative commands each do exactly one thing:
+//   migrate  Moves forward: applies pending migrations. Never wipes or seeds.
+//   wipe     Moves back to empty: drops tables, migration history, and data.
+//   generate Writes a migration from schema.ts changes.
+// One declarative command brings a database to a declared state (a schema
+// version plus a dataset) by the least destructive path:
+//   up       What `pnpm dev` runs. Migrates forward when it can. When it can't
+//            (history diverged, or the database is past the target), it resets
+//            the schema and migrates from empty, unless --schema-reset never.
+//            Then seeds the dataset into an empty database, or over existing
+//            data with --data-reset. Only checks remote databases.
+// `up --schema-reset always` starts over; plain `up` never wipes what it can
+// keep.
+//
+// Target selection follows the named-database convention (see
+// db/src/resolve.ts): `--db <name|url>`, else $DB, else "local" — which
+// is the current git branch's database on docker-compose's postgres.
+//
+// This package doesn't know what data exists: the datasets `--data` can name
+// come from the repository's dbranch.config.ts (see ./config.ts), which is
+// what imports them, so no package here depends on another's data.
+import { execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
+import process from "node:process";
+import { defineCommand, runMain } from "citty";
+import { assertSafeName, isLocalUrl, withAdmin } from "./cluster";
+import { type DbConfig, loadConfig } from "./config";
+import {
+  databaseStatus,
+  type DatabaseStatus,
+  ensureDatabase,
+  prepareDatabase,
+  RESET_POLICIES,
+  type ResetPolicy,
+  wipeDatabase,
+} from "./ensure";
+import { describeStatus, isDiverged } from "./migration-status";
+import {
+  LOCAL_DATABASE_PREFIX,
+  localDatabaseName,
+  resolveDatabaseUrl,
+} from "./resolve";
+import { TEMPLATE_PREFIX, TEST_DB_PREFIX, templateName } from "./testing";
+
+// Loaded on first use, so commands that don't need datasets (migrate,
+// generate, ...) don't import them.
+let config: Promise<DbConfig> | undefined;
+function dbConfig(): Promise<DbConfig> {
+  return (config ??= loadConfig());
+}
+
+const targetArg = {
+  db: {
+    type: "string",
+    description:
+      'Target database: a name ("local", "prod", ...) or a postgres:// URL. Default: $DB, else "local".',
+  },
+} as const;
+
+const schemaVersionArg = {
+  "schema-version": {
+    type: "string",
+    description:
+      'Schema to bring it to: "latest" (default), or a migration by name, timestamp, or tag.',
+    default: "latest",
+  },
+} as const;
+
+function redact(url: string): string {
+  const u = new URL(url);
+  if (u.password) u.password = "****";
+  return u.toString();
+}
+
+function resetPolicy(flag: string, value: string): ResetPolicy {
+  if (!(RESET_POLICIES as readonly string[]).includes(value)) {
+    throw new Error(
+      `Unknown --${flag} "${value}"; expected one of: ${RESET_POLICIES.join(", ")}`,
+    );
+  }
+  return value as ResetPolicy;
+}
+
+const up = defineCommand({
+  meta: {
+    name: "up",
+    description:
+      "Bring a database to a declared state: a schema version plus a dataset. What `pnpm dev` runs; a no-op when it's already there. On a local database, in order: (1) create it if missing; (2) if its migration history diverged from this checkout's, reset its schema: wipe everything, tables and data, then re-apply every migration (see --schema-reset); (3) apply pending migrations; (4) seed the dataset only if the database holds no data (new, just reset, or no rows); existing data is kept (see --data-reset). Remote databases are only checked against this checkout's schema, never changed.",
+  },
+  args: {
+    ...targetArg,
+    data: {
+      type: "string",
+      description:
+        'Dataset to declare: one of the datasets in dbranch.config.ts, or "none". Default: its defaultDataset, or none with an older --schema-version.',
+    },
+    ...schemaVersionArg,
+    "schema-reset": {
+      type: "string",
+      description:
+        'When to reset the schema: wipe everything, tables and data, then re-apply every migration from scratch. "if-needed" (default): only when the migration history disagrees with this checkout\'s (another branch\'s migrations, an edited migration, or a newer schema). "never": error out instead. "always": every time, starting over from empty.',
+      default: "if-needed",
+    },
+    "data-reset": {
+      type: "string",
+      description:
+        'When to apply the dataset over data already there. "never" (default): only seed a database with no data (new, just reset, or no rows), and keep existing data. "if-needed": also replace data that isn\'t the declared dataset. "always": reseed every time, e.g. to undo hand edits.',
+      default: "never",
+    },
+  },
+  async run({ args }) {
+    const schemaReset = resetPolicy("schema-reset", args["schema-reset"]);
+    const dataReset = resetPolicy("data-reset", args["data-reset"]);
+    const schemaVersion = args["schema-version"];
+    const { datasets, defaultDataset } = await dbConfig();
+    const dataName =
+      args.data ??
+      (schemaVersion === "latest" ? (defaultDataset ?? "none") : "none");
+    if (dataName !== "none" && !(dataName in datasets)) {
+      throw new Error(
+        `Unknown --data "${dataName}"; expected one of: none, ${Object.keys(datasets).join(", ")}`,
+      );
+    }
+    if (dataName !== "none" && schemaVersion !== "latest") {
+      throw new Error(
+        `--data "${dataName}" needs --schema-version latest: seeders write ` +
+          `the latest schema. Use --data none for older versions.`,
+      );
+    }
+    await prepareDatabase(resolveDatabaseUrl(args.db), {
+      schemaVersion,
+      data: dataName === "none" ? undefined : datasets[dataName],
+      schemaReset,
+      dataReset,
+    });
+  },
+});
+
+const migrate = defineCommand({
+  meta: {
+    name: "migrate",
+    description:
+      "Apply pending migrations, up to --schema-version. Only moves forward: never wipes, resets, or seeds, and stops with an error if the database's history has diverged or is past that version. What `pnpm deploy` runs against prod.",
+  },
+  args: { ...targetArg, ...schemaVersionArg },
+  async run({ args }) {
+    await ensureDatabase(resolveDatabaseUrl(args.db), {
+      schemaVersion: args["schema-version"],
+      schemaReset: "never",
+      // A missing local database starts empty rather than as a copy of
+      // main's, which may be ahead of this checkout and so diverged.
+      cloneFrom: null,
+    });
+  },
+});
+
+const wipe = defineCommand({
+  meta: {
+    name: "wipe",
+    description:
+      "Empty a database: drop its tables, migration history, and data. The next `pnpm db up` (or `pnpm dev`) migrates and seeds it from scratch. Refuses non-local databases unless ALLOW_REMOTE_WIPE=1.",
+  },
+  args: { ...targetArg },
+  async run({ args }) {
+    await wipeDatabase(resolveDatabaseUrl(args.db));
+  },
+});
+
+// drizzle-kit reads drizzle.config.ts from the @open-minutes/db package root.
+const DB_PACKAGE_DIR = fileURLToPath(new URL("..", import.meta.url));
+
+function drizzleKit(args: string[]): void {
+  execFileSync("pnpm", ["exec", "drizzle-kit", ...args], {
+    cwd: DB_PACKAGE_DIR,
+    stdio: "inherit",
+  });
+}
+
+const generate = defineCommand({
+  meta: {
+    name: "generate",
+    description:
+      "Generate a migration from packages/db/src/schema.ts changes (drizzle-kit generate)",
+  },
+  run() {
+    drizzleKit(["generate"]);
+  },
+});
+
+const check = defineCommand({
+  meta: {
+    name: "check",
+    description: "Check the migrations for conflicts (drizzle-kit check)",
+  },
+  run() {
+    drizzleKit(["check"]);
+  },
+});
+
+const studio = defineCommand({
+  meta: {
+    name: "studio",
+    description:
+      "Open Drizzle Studio on a database. Never changes it; warns if it doesn't match this checkout.",
+  },
+  args: { ...targetArg },
+  async run({ args }) {
+    const url = resolveDatabaseUrl(args.db);
+    const s = await databaseStatus(url);
+    if (!s.exists || !s.migrations) {
+      throw new Error(
+        `${redact(url)} does not exist; \`pnpm db up\` creates it.`,
+      );
+    }
+    if (s.migrations.pending.length > 0 || isDiverged(s.migrations)) {
+      console.error(
+        `Note: this database doesn't match this checkout's schema ` +
+          `(\`pnpm db status\` for details, \`pnpm db up\` to fix it).`,
+      );
+    }
+    // drizzle.config.ts resolves its target from $DB.
+    process.env.DB = url;
+    drizzleKit(["studio"]);
+  },
+});
+
+const status = defineCommand({
+  meta: {
+    name: "status",
+    description:
+      "Show whether a database matches this checkout: pending, unknown, or modified migrations, and which data it holds",
+  },
+  args: {
+    ...targetArg,
+    check: {
+      type: "boolean",
+      description:
+        "Exit non-zero unless every migration in this checkout is applied and history hasn't diverged (for deploy gates)",
+      default: false,
+    },
+  },
+  async run({ args }) {
+    const url = resolveDatabaseUrl(args.db);
+    const s = await databaseStatus(url);
+    const host = new URL(url).hostname;
+    console.log(`Database:        ${redact(url)}`);
+    console.log(
+      `Location:        ` +
+        (s.local
+          ? `local (${host}): \`pnpm db up\` may reset it, \`pnpm db wipe\` empties it`
+          : `remote (${host}): only \`pnpm db migrate\` changes it`),
+    );
+    if (!s.exists || !s.migrations) {
+      console.log("State:           does not exist (run `pnpm db up`)");
+      if (args.check) process.exitCode = 1;
+      return;
+    }
+    console.log(
+      `Schema:          ${s.schemaVersion ?? "(empty)"} (${s.appliedCount} migration(s) applied)`,
+    );
+    console.log(`Data:            ${describeData(s, await dbConfig())}`);
+    const counts = Object.entries(s.rowCounts);
+    if (counts.length > 0) {
+      console.log(
+        `                 ${counts.map(([t, n]) => `${n} ${t}`).join(", ")}`,
+      );
+    }
+    console.log(describeStatus(s.migrations));
+    if (
+      args.check &&
+      (s.migrations.pending.length > 0 || isDiverged(s.migrations))
+    ) {
+      process.exitCode = 1;
+    }
+  },
+});
+
+/** The `Data:` line of `pnpm db status`: which dataset, when, and whether it's current. */
+function describeData(s: DatabaseStatus, config: DbConfig): string {
+  if (!s.data) {
+    const empty = Object.values(s.rowCounts).every((n) => n === 0);
+    return empty
+      ? config.defaultDataset
+        ? `empty (\`pnpm db up\` seeds the ${config.defaultDataset} dataset)`
+        : "empty"
+      : "untracked: not seeded by `pnpm db`, e.g. production or hand-entered data";
+  }
+  const seeded = `${s.data.name} (${s.data.fingerprint}), seeded ${s.data.appliedAt.toISOString()}`;
+  const declared = config.datasets[s.data.name];
+  if (!declared) return `${seeded}; not a dataset this checkout declares`;
+  if (declared.fingerprint === s.data.fingerprint) return `${seeded}; current`;
+  return (
+    `${seeded}; stale, this checkout declares ${declared.fingerprint} ` +
+    `(\`pnpm db up --data ${s.data.name} --data-reset if-needed\` reseeds it)`
+  );
+}
+
+function localGitBranches(): string[] {
+  const out = execFileSync(
+    "git",
+    ["for-each-ref", "--format=%(refname:short)", "refs/heads"],
+    { encoding: "utf8" },
+  );
+  return out.split("\n").filter(Boolean);
+}
+
+const prune = defineCommand({
+  meta: {
+    name: "prune",
+    description:
+      "List (or with --yes, drop) local databases nothing needs: per-branch databases whose git branch is gone, databases left by interrupted test runs, and test templates for anything but this checkout's latest schema and the datasets in dbranch.config.ts. Databases in use are skipped.",
+  },
+  args: {
+    yes: {
+      type: "boolean",
+      description: "Actually drop them",
+      default: false,
+    },
+  },
+  async run({ args }) {
+    const base = resolveDatabaseUrl("local");
+    if (!isLocalUrl(base)) {
+      throw new Error(`"local" resolves to a non-local server; not pruning.`);
+    }
+    const { datasets } = await dbConfig();
+    const keep = new Set([
+      ...localGitBranches().map((b) => localDatabaseName(b)),
+      localDatabaseName(),
+      templateName("latest", undefined),
+      ...Object.values(datasets).map((d) => templateName("latest", d)),
+    ]);
+    await withAdmin(base, async (admin) => {
+      const rows = await admin<{ datname: string; in_use: boolean }[]>`
+        SELECT d.datname, EXISTS (
+          SELECT 1 FROM pg_stat_activity a WHERE a.datname = d.datname
+        ) AS in_use
+        FROM pg_database d
+        WHERE d.datname LIKE ${`${LOCAL_DATABASE_PREFIX.replaceAll("_", "\\_")}%`}
+           OR d.datname LIKE ${`${TEST_DB_PREFIX.replaceAll("_", "\\_")}%`}
+        ORDER BY d.datname`;
+      const unneeded = rows.filter((r) => !keep.has(r.datname));
+      if (unneeded.length === 0) {
+        console.error("Nothing to prune.");
+        return;
+      }
+      for (const { datname: name, in_use } of unneeded) {
+        const line = `${name}  (${pruneReason(name)})`;
+        if (in_use) {
+          console.log(`${line}: in use, skipped`);
+        } else if (args.yes) {
+          await admin.unsafe(
+            `DROP DATABASE IF EXISTS "${assertSafeName(name)}"`,
+          );
+          console.log(`dropped ${line}`);
+        } else {
+          console.log(line);
+        }
+      }
+      if (!args.yes) console.error("(dry run; pass --yes to drop these)");
+    });
+  },
+});
+
+/** Why `prune` considers a database unneeded, for its listing. */
+function pruneReason(name: string): string {
+  if (name.startsWith(TEMPLATE_PREFIX)) return "old test template";
+  if (name.startsWith(TEST_DB_PREFIX)) return "left by an interrupted test run";
+  return "its git branch is gone";
+}
+
+const main = defineCommand({
+  meta: {
+    name: "db",
+    description: "Declarative database harness for open-minutes",
+  },
+  subCommands: {
+    up,
+    migrate,
+    wipe,
+    status,
+    prune,
+    generate,
+    check,
+    studio,
+  },
+});
+
+await runMain(main);

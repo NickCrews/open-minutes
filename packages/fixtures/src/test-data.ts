@@ -2,7 +2,15 @@ import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { type GoldenSegment, parsePsv } from "./psv";
 
-const TEST_DATA_ROOT = new URL("../test-data/", import.meta.url).pathname;
+/** Hand-verified golden fixtures: evals, benchmarks, tests. */
+export const TEST_DATA_ROOT = new URL("../test-data/", import.meta.url)
+  .pathname;
+/**
+ * Extra fixtures, in the same format, layered on top of the golden ones to
+ * make the dev playground look and behave realistically. Not verified; never
+ * used for evals.
+ */
+export const DEV_DATA_ROOT = new URL("../dev-data/", import.meta.url).pathname;
 
 // DB-shaped row types (mirrors schema.ts columns that are relevant to fixtures).
 // Fields prefixed with _ are test-only and do not exist in the DB.
@@ -33,6 +41,8 @@ export interface GoldenBody {
 export interface GoldenPerson {
   slug: string;
   name: string;
+  /** Free-form background, as in `people.bio`. */
+  bio?: string;
 }
 
 export interface GoldenMeeting {
@@ -40,6 +50,8 @@ export interface GoldenMeeting {
   youtube_id: string;
   title: string;
   duration_secs: number;
+  /** ISO-8601 instant the meeting gavelled in, when known. */
+  start_time?: string;
   segments: GoldenSegment[];
   meetingDir: string; // path to the meeting's fixture directory (used internally for loading audio and PSV)
   /** SHA-256 of the canonical WAV file — used to validate the audio cache. Not a DB column. */
@@ -63,30 +75,29 @@ function parseJson<T>(path: string): T {
   return JSON.parse(readFileSync(path, "utf8")) as T;
 }
 
-export function loadAllTestData(): TestData {
-  if (!existsSync(TEST_DATA_ROOT))
-    throw new Error(`Fixtures root not found: ${TEST_DATA_ROOT}`);
+export function loadAllTestData(root: string = TEST_DATA_ROOT): TestData {
+  if (!existsSync(root)) throw new Error(`Fixtures root not found: ${root}`);
 
-  const jurisdictionsPath = join(TEST_DATA_ROOT, "jurisdictions.jsonl");
+  const jurisdictionsPath = join(root, "jurisdictions.jsonl");
   if (!existsSync(jurisdictionsPath))
     throw new Error(`Jurisdictions file not found: ${jurisdictionsPath}`);
   const jurisdictions = parseJsonl<GoldenJurisdiction>(jurisdictionsPath);
 
-  const bodiesPath = join(TEST_DATA_ROOT, "bodies.jsonl");
+  const bodiesPath = join(root, "bodies.jsonl");
   if (!existsSync(bodiesPath))
     throw new Error(`Bodies file not found: ${bodiesPath}`);
   const bodies = parseJsonl<GoldenBody>(bodiesPath);
 
-  const peoplePath = join(TEST_DATA_ROOT, "people.jsonl");
+  const peoplePath = join(root, "people.jsonl");
   if (!existsSync(peoplePath))
     throw new Error(`People file not found: ${peoplePath}`);
   const people = parseJsonl<GoldenPerson>(peoplePath);
 
-  const meetingsDir = join(TEST_DATA_ROOT, "meetings");
+  const meetingsDir = join(root, "meetings");
   if (!existsSync(meetingsDir))
     throw new Error(`Meetings directory not found: ${meetingsDir}`);
   const meetingSlugs = listDirs(meetingsDir);
-  const meetings = meetingSlugs.map((slug) => getMeetingData(slug));
+  const meetings = meetingSlugs.map((slug) => getMeetingData(slug, root));
 
   return {
     jurisdictions,
@@ -109,8 +120,22 @@ export function loadPeople(): GoldenPerson[] {
   return parseJsonl<GoldenPerson>(peoplePath);
 }
 
-export function getMeetingData(meetingSlug: string): GoldenMeeting {
-  const meetingDir = join(TEST_DATA_ROOT, "meetings", meetingSlug);
+/**
+ * Load just the bodies (bodies.jsonl), without parsing any transcripts. For
+ * tests that need a golden body's identifiers but not the whole snapshot.
+ */
+export function loadBodies(): GoldenBody[] {
+  const bodiesPath = join(TEST_DATA_ROOT, "bodies.jsonl");
+  if (!existsSync(bodiesPath))
+    throw new Error(`Bodies file not found: ${bodiesPath}`);
+  return parseJsonl<GoldenBody>(bodiesPath);
+}
+
+export function getMeetingData(
+  meetingSlug: string,
+  root: string = TEST_DATA_ROOT,
+): GoldenMeeting {
+  const meetingDir = join(root, "meetings", meetingSlug);
   if (!existsSync(meetingDir))
     throw new Error(`Meeting directory not found: ${meetingDir}`);
   const meetingPath = join(meetingDir, "meeting.json");
@@ -118,7 +143,13 @@ export function getMeetingData(meetingSlug: string): GoldenMeeting {
     throw new Error(`Meeting file not found: ${meetingPath}`);
   const meeting = parseJson<GoldenMeeting>(meetingPath);
 
-  const segments = parsePsv({ path: join(meetingDir, "golden.psv") });
+  // Golden fixtures are verified (golden.psv); dev fixtures aren't (transcript.psv).
+  const psvPath = ["golden.psv", "transcript.psv"]
+    .map((file) => join(meetingDir, file))
+    .find((path) => existsSync(path));
+  if (!psvPath)
+    throw new Error(`No golden.psv or transcript.psv in ${meetingDir}`);
+  const segments = parsePsv({ path: psvPath });
 
   return {
     ...meeting,

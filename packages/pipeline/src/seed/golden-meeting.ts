@@ -22,8 +22,8 @@ import { getMeetingAudio } from "../test-utils/audio-cache";
 // later, unseen meeting against — the same person (by slug) learned here must be
 // re-identified there purely from their voice.
 //
-// Not collected by vitest (no .test suffix); imported by e2e.test.ts and usable
-// from a seeding CLI.
+// Not collected by vitest (no .test suffix). Reached only through the
+// goldenMeetingsData dataset (golden-meetings-data.ts), never called directly.
 
 /**
  * Seed one golden meeting. Returns the seeded `slug → person_id` map so callers

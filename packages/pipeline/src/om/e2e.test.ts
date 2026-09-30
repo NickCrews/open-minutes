@@ -1,18 +1,15 @@
 import { copyFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { describe, expect } from "vitest";
-import { eq } from "drizzle-orm";
+import { eq, isNotNull } from "drizzle-orm";
 import { peopleTable, segmentsTable } from "@open-minutes/db";
-import {
-  GBOS_YOUTUBE_CHANNEL_ID,
-  getOrCreateGbos,
-} from "@open-minutes/fixtures/gbos";
+import { dbTest } from "@open-minutes/db/testing/vitest";
 import type { TranscriptWord } from "@open-minutes/core/transcription";
-import { getMeetingData, loadPeople } from "@open-minutes/fixtures/test-data";
+import { getMeetingData } from "@open-minutes/fixtures/test-data";
 import type { GoldenSegment } from "@open-minutes/fixtures/psv";
 import { compareTranscripts } from "../test-utils/wer";
-import { fakeYouTube, test } from "./testing";
-import { seedGoldenMeeting } from "../seed/golden-meeting";
+import { goldenMeetingsData } from "../seed/golden-meetings-data";
+import { GOLDEN_GBOS, fakeYouTube } from "./testing";
 import { ingestVideo } from "./ingest";
 import { getMeetingAudio } from "../test-utils/audio-cache";
 
@@ -24,8 +21,8 @@ import { getMeetingAudio } from "../test-utils/audio-cache";
 // in a meeting we never trained on.
 //
 // The test:
-//   1. Blank DB → seed two goldens (transcripts + a voiceprint per identified
-//      person).
+//   1. Start from a database already holding two goldens (transcripts + a
+//      voiceprint per identified person): the goldenMeetingsData dataset.
 //   2. Ingest a THIRD golden's audio through the real pipeline (transcribe →
 //      diarize → align → identify). Ingestion sees only audio, never the third
 //      golden's labels; its diarizer invents anonymous clusters, and identify.ts
@@ -50,25 +47,27 @@ const E2E_WORK_ROOT = fileURLToPath(
   new URL("../../test-runs/e2e-work/", import.meta.url),
 );
 
+// Step 1 as a declared dataset. Seeding computes real voiceprints from the two
+// meetings' audio, which is slow, so the harness does it once per change to
+// the fixtures (or the embedding model) and caches the result as a template;
+// every later run clones it in milliseconds.
+const test = dbTest({
+  data: goldenMeetingsData(SEED_SLUGS),
+  setupTimeoutMs: 60 * 60_000,
+});
+
 describe("e2e cross-meeting speaker recognition", () => {
   test(
     "recognizes seeded people in an unseen meeting",
     { tags: ["slow"], timeout: 120 * 60_000 },
     async ({ db }) => {
-      const bodyId = (await getOrCreateGbos(db)).id;
-      const peopleBySlug = new Map(loadPeople().map((p) => [p.slug, p]));
-
-      // 1. Seed the two known meetings: transcripts + voiceprints.
-      const seededSlugs = new Set<string>();
-      for (const slug of SEED_SLUGS) {
-        const seeded = await seedGoldenMeeting(
-          db,
-          bodyId,
-          getMeetingData(slug),
-          peopleBySlug,
-        );
-        for (const s of seeded.keys()) seededSlugs.add(s);
-      }
+      // 1. The two known meetings are already seeded (see `test` above); the
+      //    people they taught us are everyone with a slug.
+      const seeded = await db
+        .select({ slug: peopleTable.slug })
+        .from(peopleTable)
+        .where(isNotNull(peopleTable.slug));
+      const seededSlugs = new Set(seeded.map((p) => p.slug!));
       console.log(
         `[e2e] seeded ${seededSlugs.size} people with voiceprints: ` +
           `${[...seededSlugs].sort().join(", ")}`,
@@ -83,7 +82,7 @@ describe("e2e cross-meeting speaker recognition", () => {
       const yt = fakeYouTube({
         fetchVideoMetadata: async (id: string) => ({
           id,
-          channelId: GBOS_YOUTUBE_CHANNEL_ID,
+          channelId: GOLDEN_GBOS.channelId,
           title: held.title,
           description: "",
           durationSecs: null,

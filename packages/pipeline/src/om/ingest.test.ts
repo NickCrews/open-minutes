@@ -3,24 +3,26 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect } from "vitest";
 import { meetingsTable, segmentsTable } from "@open-minutes/db";
-import {
-  GBOS_YOUTUBE_CHANNEL_ID,
-  getOrCreateGbos,
-} from "@open-minutes/fixtures/gbos";
 import type { VideoMetadata } from "../youtube";
 import type { SpeechSegment } from "@open-minutes/core/transcription";
 import { N_DIMENSIONS } from "@open-minutes/core/voice_embeddings";
 import { getMeetingData } from "@open-minutes/fixtures/test-data";
 import { ingestVideo, ingestVideos } from "./ingest";
 import { listIngested } from "./ingested";
-import { fakeYouTube, insertMeeting, test } from "./testing";
+import {
+  GOLDEN_GBOS,
+  fakeYouTube,
+  goldenGbosId,
+  goldenTest as test,
+  insertMeeting,
+} from "./testing";
 import { getMeetingAudio } from "../test-utils/audio-cache";
 
 const VIDEO_ID = "test-video-1";
 
 const METADATA: VideoMetadata = {
   id: VIDEO_ID,
-  channelId: GBOS_YOUTUBE_CHANNEL_ID,
+  channelId: GOLDEN_GBOS.channelId,
   title: "Regular Meeting",
   description: "Agenda: everything",
   durationSecs: 3600,
@@ -81,8 +83,7 @@ describe("ingestVideo", () => {
     db,
     workRoot,
   }) => {
-    const gbos = await getOrCreateGbos(db);
-    await insertMeeting(db, gbos.id, VIDEO_ID);
+    await insertMeeting(db, await goldenGbosId(db), VIDEO_ID);
 
     // Every fake YouTube call throws, so success proves nothing was fetched.
     const result = await ingestVideo(db, VIDEO_ID, {
@@ -98,7 +99,6 @@ describe("ingestVideo", () => {
     db,
     workRoot,
   }) => {
-    await getOrCreateGbos(db);
     const yt = fakeYouTube({
       fetchVideoMetadata: async () => ({
         ...METADATA,
@@ -116,7 +116,6 @@ describe("ingestVideo", () => {
     db,
     workRoot,
   }) => {
-    await getOrCreateGbos(db);
     const yt = fakeYouTube({
       fetchVideoMetadata: async () => METADATA,
       downloadVideoAudio: async () => {
@@ -135,7 +134,6 @@ describe("ingestVideo", () => {
     db,
     workRoot,
   }) => {
-    await getOrCreateGbos(db);
     await seedWorkDir(workRoot, VIDEO_ID);
 
     // Only metadata is fetched; download/transcribe/diarize must all be
@@ -187,7 +185,6 @@ describe("ingestVideo", () => {
     "full pipeline on a real fixture meeting",
     { tags: ["slow"] },
     async ({ db, workRoot }) => {
-      await getOrCreateGbos(db);
       const meeting = getMeetingData("gbos_9HoIM5INxpI");
       const audio = await getMeetingAudio(meeting);
 
@@ -229,7 +226,6 @@ describe("ingestVideos", () => {
     db,
     workRoot,
   }) => {
-    await getOrCreateGbos(db);
     const goodId = "good-video";
     const badId = "bad-video";
     await seedWorkDir(workRoot, goodId);
@@ -261,12 +257,16 @@ describe("listIngested", () => {
     db,
     workRoot,
   }) => {
-    const gbos = await getOrCreateGbos(db);
     await seedWorkDir(workRoot, VIDEO_ID);
     const yt = fakeYouTube({ fetchVideoMetadata: async () => METADATA });
     await ingestVideo(db, VIDEO_ID, { yt, workRoot });
     // An older meeting with no segments.
-    await insertMeeting(db, gbos.id, "older-video", new Date("2020-01-01"));
+    await insertMeeting(
+      db,
+      await goldenGbosId(db),
+      "older-video",
+      new Date("2020-01-01"),
+    );
 
     const all = await listIngested(db);
     expect(all.map((m) => m.youtubeId)).toEqual([VIDEO_ID, "older-video"]);

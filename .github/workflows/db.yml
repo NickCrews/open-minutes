@@ -1,0 +1,53 @@
+# Database checks: schema and migrations agree, migrations apply cleanly to an
+# empty database, and the harness + DB-backed tests (including migration tests)
+# pass against real Postgres.
+name: db
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  db:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # Postgres comes up exactly the way it does for a developer: nothing
+      # starts it explicitly. The first `pnpm db` command finds nothing listening on
+      # localhost:5432 and runs `docker compose up` from docker-compose.yml.
+
+      - name: Typecheck and lint
+        run: pnpm typecheck && pnpm lint
+
+      - name: Migrations have no conflicts
+        run: pnpm db check
+
+      - name: schema.ts and migrations are in sync
+        run: |
+          pnpm db generate < /dev/null
+          if [ -n "$(git status --porcelain packages/db/src/migrations)" ]; then
+            echo "::error::schema.ts has changes with no migration. Run \`pnpm db generate\` and commit the result."
+            git status --porcelain packages/db/src/migrations
+            exit 1
+          fi
+
+      - name: Build a fresh database the way `pnpm dev` does
+        run: |
+          pnpm db up
+          pnpm db up        # the second run must be a no-op
+          pnpm db status --check
+          pnpm db wipe
+          pnpm db migrate   # applies every migration to the wiped database
+          pnpm db up --data golden --data-reset if-needed
+          pnpm db status --check
+
+      - name: DB-backed tests
+        run: pnpm vitest run packages/db packages/fixtures packages/pipeline/src/seed packages/pipeline/src/om packages/web

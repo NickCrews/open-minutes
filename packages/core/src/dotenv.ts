@@ -2,28 +2,28 @@
 // Everything that wants values from it — database resolution, CLIs needing
 // bucket credentials, test setup — calls loadRootEnv() explicitly rather than
 // relying on some other module having loaded it first as a side effect.
-//
-// Plain JavaScript so bare `node` scripts can import it without a TS runner.
 import { config } from "dotenv";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 let loaded = false;
 
+/** Absolute path of the workspace-root .env.local (which may not exist). */
+export function rootDotEnvPath(): string {
+  return join(dirname(fileURLToPath(import.meta.url)), "../../../.env.local");
+}
+
 /**
  * Loads the workspace-root .env.local into process.env (once per process).
  * Real environment variables win over file values, and a missing file is a
  * no-op — deployed environments inject env vars directly.
  */
-export function loadRootDotEnv() {
+export function loadRootDotEnv(): void {
   if (loaded) return;
   loaded = true;
   try {
     config({
-      path: join(
-        dirname(fileURLToPath(import.meta.url)),
-        "../../../.env.local",
-      ),
+      path: rootDotEnvPath(),
       quiet: true,
     });
   } catch {

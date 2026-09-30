@@ -5,28 +5,30 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./resolve": "./src/resolve.mjs",
+    "./resolve": "./src/resolve.ts",
     "./testing": "./src/testing/index.ts",
-    "./testing/vitest": "./src/testing/vitest.ts"
+    "./testing/vitest": "./src/testing/vitest.ts",
+    "./ensure": "./src/ensure.ts",
+    "./config": "./src/config.ts"
+  },
+  "bin": {
+    "dbranch": "./src/cli.ts"
   },
   "scripts": {
+    "db": "tsx src/cli.ts",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
-    "db:up": "docker compose -f ../../docker-compose.yml up -d --wait",
-    "db:setup": "pnpm db:up && pnpm db:migrate",
-    "db:studio": "drizzle-kit studio",
-    "db:nuke": "pnpm db:up && node src/nuke.mjs && pnpm db:migrate"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@open-minutes/core": "workspace:*",
+    "citty": "^0.1.6",
     "drizzle-orm": "1.0.0-beta.21",
     "postgres": "^3"
   },
   "devDependencies": {
     "@types/node": "^25.6.0",
     "drizzle-kit": "1.0.0-beta.22",
+    "tsx": "^4.21.0",
     "vitest": "^4.0.18"
   }
 }

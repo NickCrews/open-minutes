@@ -1,4 +1,4 @@
-import { loadRootDotEnv } from "./packages/core/src/dotenv.mjs";
+import { loadRootDotEnv } from "./packages/core/src/dotenv";
 
 loadRootDotEnv();
 

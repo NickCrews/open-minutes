@@ -1,7 +1,7 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { relations } from "./schema";
-import { resolveDatabaseUrl } from "./resolve.mjs";
+import { resolveDatabaseUrl } from "./resolve";
 
 /**
  * Connects to a database. `target` is a name like "local" or "prod" (resolved
@@ -17,5 +17,5 @@ export function getDb(target?: string) {
 
 export type DB = ReturnType<typeof getDb>["db"];
 
-export { resolveDatabaseUrl } from "./resolve.mjs";
+export { resolveDatabaseUrl } from "./resolve";
 export * from "./schema";

@@ -1,33 +1,36 @@
 import { describe, expect } from "vitest";
-import {
-  GBOS_YOUTUBE_CHANNEL_ID,
-  getOrCreateGbos,
-} from "@open-minutes/fixtures/gbos";
 import { listAvailable } from "./available";
-import { fakeYouTube, insertBody, insertMeeting, test } from "./testing";
+import {
+  GOLDEN_GBOS,
+  fakeYouTube,
+  goldenGbosId,
+  goldenTest,
+  insertBody,
+  insertMeeting,
+  test,
+} from "./testing";
 
 describe("listAvailable", () => {
-  test("returns scraped IDs minus ingested ones, newest first", async ({
-    db,
-  }) => {
-    const gbos = await getOrCreateGbos(db);
-    await insertMeeting(db, gbos.id, "already-in-db");
+  goldenTest(
+    "returns scraped IDs minus ingested ones, newest first",
+    async ({ db }) => {
+      await insertMeeting(db, await goldenGbosId(db), "already-in-db");
 
-    const yt = fakeYouTube({
-      // Channel order is newest-first; listAvailable must preserve it.
-      videosInChannel: async () => [
-        { id: "newest" },
-        { id: "already-in-db" },
-        { id: "oldest" },
-      ],
-    });
+      const yt = fakeYouTube({
+        // Channel order is newest-first; listAvailable must preserve it.
+        videosInChannel: async () => [
+          { id: "newest" },
+          { id: "already-in-db" },
+          { id: "oldest" },
+        ],
+      });
 
-    const ids = await listAvailable(db, { yt });
-    expect(ids).toEqual(["newest", "oldest"]);
-  });
+      const ids = await listAvailable(db, { yt });
+      expect(ids).toEqual(["newest", "oldest"]);
+    },
+  );
 
-  test("scrapes only bodies that have a video source", async ({ db }) => {
-    await getOrCreateGbos(db);
+  goldenTest("scrapes only bodies that have a video source", async ({ db }) => {
     await insertBody(db, { name: "No Channel Town", name_short: "NCT" });
 
     const scraped: string[] = [];
@@ -40,9 +43,10 @@ describe("listAvailable", () => {
 
     const ids = await listAvailable(db, { yt });
     expect(ids).toEqual(["v1"]);
-    expect(scraped).toEqual([GBOS_YOUTUBE_CHANNEL_ID]);
+    expect(scraped).toEqual([GOLDEN_GBOS.channelId]);
   });
 
+  // An empty database: the only body is the one with a playlist source.
   test("scrapes a playlist source via the playlist API", async ({ db }) => {
     // Bodies that share a channel with their siblings are separated by
     // playlist, so a playlist source must not be scraped as a channel.
@@ -59,8 +63,7 @@ describe("listAvailable", () => {
     expect(await listAvailable(db, { yt })).toEqual(["video-PL_ASSEMBLY"]);
   });
 
-  test("--body restricts the scrape to that body", async ({ db }) => {
-    await getOrCreateGbos(db);
+  goldenTest("--body restricts the scrape to that body", async ({ db }) => {
     await insertBody(db, {
       name: "Other Town Council",
       name_short: "OT",
@@ -76,12 +79,11 @@ describe("listAvailable", () => {
     });
 
     const ids = await listAvailable(db, { body: "gbos", yt });
-    expect(scraped).toEqual([GBOS_YOUTUBE_CHANNEL_ID]);
-    expect(ids).toEqual([`video-from-${GBOS_YOUTUBE_CHANNEL_ID}`]);
+    expect(scraped).toEqual([GOLDEN_GBOS.channelId]);
+    expect(ids).toEqual([`video-from-${GOLDEN_GBOS.channelId}`]);
   });
 
-  test("rejects an unknown body slug", async ({ db }) => {
-    await getOrCreateGbos(db);
+  goldenTest("rejects an unknown body slug", async ({ db }) => {
     await expect(
       listAvailable(db, { body: "atlantis", yt: fakeYouTube() }),
     ).rejects.toThrow(/atlantis/);
