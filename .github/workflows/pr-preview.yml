@@ -31,8 +31,6 @@ permissions:
   pull-requests: write
 
 env:
-  NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
-  NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
   NEON_BRANCH: preview/pr-${{ github.event.number }}
   CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
   CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
@@ -56,31 +54,63 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
 
-      - name: Create (or reuse) the PR's Neon branch and migrate it
-        id: neon
+      - name: Compute the Neon branch's expiry
+        id: expiry
+        run: echo "at=$(date -u -d '+14 days' +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+
+      # Returns the existing branch on later pushes (its expiry is set only at
+      # creation).
+      - name: Create (or reuse) the PR's Neon branch
+        id: branch
+        uses: neondatabase/create-branch-action@v6
+        with:
+          project_id: ${{ vars.NEON_PROJECT_ID }}
+          api_key: ${{ secrets.NEON_API_KEY }}
+          branch_name: ${{ env.NEON_BRANCH }}
+          expires_at: ${{ steps.expiry.outputs.at }}
+
+      # The branch persists across pushes, so data reviewers enter survives and
+      # each push only applies its new migrations. But editing or regenerating
+      # a migration the branch already has leaves its history diverged, which
+      # deploy mode rightly refuses to touch. The branch is disposable, so start
+      # it over from production (same URLs, so the Worker's secret stays
+      # valid). If production itself has migrations this PR lacks, it still
+      # diverges after the reset, and the migrate below fails with "merge the
+      # base branch into yours".
+      - name: Check whether the branch diverged from this PR's migrations
+        id: diverged
+        env:
+          DB_URL: ${{ steps.branch.outputs.db_url }}
         run: |
-          # Idempotent: the second call reuses the branch the first created.
-          url=$(pnpm -s db neon branch --name "$NEON_BRANCH" --ttl-hours 336)
-          echo "::add-mask::$url"
-          pooled=$(pnpm -s db neon branch --name "$NEON_BRANCH" --ttl-hours 336 --pooled)
-          echo "::add-mask::$pooled"
-          # The branch persists across pushes, so data reviewers enter survives
-          # and each push only applies its new migrations. But editing or
-          # regenerating a migration the branch already has leaves its history
-          # diverged, which deploy mode rightly refuses to touch. The branch is
-          # disposable, so start it over from production (same URLs, so the
-          # Worker's secret stays valid). If production itself has migrations
-          # this PR lacks, it still diverges after the reset, and the migrate
-          # below fails with "merge the base branch into yours".
-          if ! pnpm -s db status --db "$url" --check-diverged; then
+          echo "::add-mask::$DB_URL"
+          if pnpm -s db status --db "$DB_URL" --check-diverged; then
+            echo "diverged=false" >> "$GITHUB_OUTPUT"
+          else
             echo "Preview branch diverged from this PR's migrations; resetting it from production."
-            pnpm -s db neon reset --name "$NEON_BRANCH"
+            echo "diverged=true" >> "$GITHUB_OUTPUT"
           fi
-          pnpm db migrate --db "$url"
-          pnpm db status --db "$url" --check
+
+      - name: Reset the branch from production
+        if: steps.diverged.outputs.diverged == 'true'
+        uses: neondatabase/reset-branch-action@v1
+        with:
+          project_id: ${{ vars.NEON_PROJECT_ID }}
+          api_key: ${{ secrets.NEON_API_KEY }}
+          branch: ${{ env.NEON_BRANCH }}
+          parent: true
+
+      - name: Migrate the branch
+        env:
+          DB_URL: ${{ steps.branch.outputs.db_url }}
+          DB_URL_POOLED: ${{ steps.branch.outputs.db_url_pooled }}
+        run: |
+          echo "::add-mask::$DB_URL"
+          echo "::add-mask::$DB_URL_POOLED"
+          pnpm db migrate --db "$DB_URL"
+          pnpm db status --db "$DB_URL" --check
           # Hand the pooled URL (what the Worker uses) to the deploy step as a
-          # file, not a step output, so it never lands in the job's outputs.
-          jq -n --arg url "$pooled" '{DATABASE_URL: $url}' > "$RUNNER_TEMP/worker-secrets.json"
+          # file, so it isn't repeated in another step's environment.
+          jq -n --arg url "$DB_URL_POOLED" '{DATABASE_URL: $url}' > "$RUNNER_TEMP/worker-secrets.json"
 
       # The build never touches a database: vite.config.ts only resolves one
       # for the dev server, so dist/server/wrangler.json has no vars.
@@ -155,15 +185,15 @@ jobs:
             *) cat "$RUNNER_TEMP/resp.json"; echo "::error::Deleting $WORKER_NAME failed (HTTP $status)"; exit 1 ;;
           esac
 
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - name: Delete the Neon branch
+        uses: neondatabase/delete-branch-action@v3
+        # Fails if the branch is already gone (e.g. it expired, or no deploy
+        # ever created it), which is fine.
+        continue-on-error: true
         with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      # Prints "No Neon branch ..." and succeeds when it's already gone.
-      - run: pnpm db neon delete --name "$NEON_BRANCH"
+          project_id: ${{ vars.NEON_PROJECT_ID }}
+          api_key: ${{ secrets.NEON_API_KEY }}
+          branch: ${{ env.NEON_BRANCH }}
 
       - name: Mark the PR comment as torn down
         uses: actions/github-script@v7

@@ -125,27 +125,31 @@ migrations must be backward-compatible: add first, deploy, remove later.
 
 ## Neon branches
 
-`pnpm db neon branch` gets or creates a Neon branch (a copy-on-write fork of
-production) for this workspace and prints its URL. The default name is
-`dev/<git branch>` and it expires after 7 days (`--ttl-hours`). `--save mybranch`
-writes `DATABASE_URL_MYBRANCH`, so `DB=mybranch` targets it. `neon reset`
-re-forks a branch from production without changing its URLs, and `neon delete`
-and `neon list` do what they say. None of them will hand out or delete the
-default or a protected branch.
+A workspace that needs production data (e.g. a remote agent session) can use
+its own Neon branch, a copy-on-write fork of production, via
+[`neonctl`](https://neon.tech/docs/reference/neon-cli). With `NEON_API_KEY`
+(project-scoped) set:
 
-They need `NEON_API_KEY` (project-scoped) and `NEON_PROJECT_ID`; mark the
-production branch protected in Neon. A remote agent session that needs
-production data can run `pnpm db neon branch --save mybranch` in its setup
-script; the TTL cleans up after abandoned sessions.
+```sh
+npx neonctl branches create --project-id <id> --name dev/my-branch \
+  --expires-at "$(date -u -d '+7 days' +%Y-%m-%dT%H:%M:%SZ)"
+echo "DATABASE_URL_MYBRANCH=$(npx neonctl connection-string dev/my-branch --project-id <id>)" >> .env.local
+DB=mybranch pnpm db migrate
+```
+
+`npx neonctl branches reset dev/my-branch --parent` re-forks it from
+production without changing its URL. Mark the production branch protected in
+Neon so none of this can touch it.
 
 ### PR previews
 
 [`.github/workflows/pr-preview.yml`](../../.github/workflows/pr-preview.yml)
-gives each PR a Neon branch (`preview/pr-N`), migrates it in deploy mode, and
-deploys a separate Worker, `open-minutes-pr-N`, at
-`https://open-minutes-pr-N.<account>.workers.dev`, with the branch's pooled URL
-uploaded as a secret in the same request (`wrangler deploy --secrets-file`). It
-comments the URL on the PR and deletes both when the PR closes.
+uses Neon's GitHub Actions to give each PR a Neon branch (`preview/pr-N`),
+migrates it in deploy mode, and deploys a separate Worker, `open-minutes-pr-N`,
+at `https://open-minutes-pr-N.<account>.workers.dev`, with the branch's pooled
+URL uploaded as a secret in the same request (`wrangler deploy
+--secrets-file`). It comments the URL on the PR and deletes both when the PR
+closes.
 
 The branch persists across pushes, so data reviewers enter survives. If a push
 edits a migration the branch already has (`pnpm db status --check-diverged`),
