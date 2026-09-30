@@ -10,7 +10,7 @@ Where it proposes changing a decision already made on #25, it says so.
 
 ## What chapters are for
 
-A chapter works as a table of contents entry for a meeting. It has four jobs:
+A chapter works as a table of contents entry for a meeting. It has five jobs:
 
 1. **Summarize.** Reading the chapter titles top to bottom should tell you
    what the meeting covered, in about the time it takes to read a paragraph.
@@ -21,6 +21,10 @@ A chapter works as a table of contents entry for a meeting. It has four jobs:
 4. **Share.** A chapter is a shareable snippet of the meeting. It has a stable
    URL that keeps working after someone lightly edits its title or nudges its
    start or end time.
+5. **Find across meetings.** Chapters are queryable units across the whole
+   database, not just within one meeting: for example, all public comment
+   ever given, or every discussion of housing. This is why kinds like
+   `public_comment` are strict (see [Granularity](#granularity)).
 
 Anything a chapter carries should serve one of those jobs. The same
 jobs apply to an agent reading the data (see [Agent UX](#agent-ux)), where the
