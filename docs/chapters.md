@@ -226,9 +226,22 @@ chapters with similar titles.
   citymeetings' roughly 44 is the per-speaker end of the range.
 - Long public comment periods are the hard case. One chapter per commenter is
   what citymeetings does, and it suits the "find the 3-minute testimony" use
-  case. One chapter for the whole period loses the attribution job. Suggestion:
+  case. One chapter for the whole period loses the attribution job. The rule:
   one chapter per commenter when a commenter speaks for more than about a
-  minute, otherwise group them. Validate this against #27.
+  minute, otherwise group them.
+- **Public comment is always its own kind.** Every chapter of public comment,
+  per-commenter or grouped, has `kind = public_comment` and never `topic`,
+  even when the comment is about a topic being discussed. That makes "all
+  public comment across the database" a single query on `chapters.kind`,
+  joined to `segments` for the words and speakers.
+- **Test the assumptions once we have data.** The rules above assume, for
+  example, that in practice nearly every commenter speaks for at least a
+  minute, so per-commenter chapters stay inside the 1 to 15 minute range and
+  grouping is rare. That is plausible but unverified. When chapters are built,
+  add test cases against the gold set (#27) and real output that check it:
+  topic chapters fall within 1 to 15 minutes, the distribution of commenter
+  speaking times, and that every public comment stretch is covered by a
+  `public_comment` chapter. If an assumption fails, revisit the rule.
 - Scrubber legibility sets a lower bound. On a roughly 700px bar, a 1-minute
   chapter in a 3-hour meeting is about 4px wide, which is still visible. Below
   about 2px, segments merge visually, so the scrubber needs a minimum rendered
@@ -378,7 +391,7 @@ question.
   breaks when the title is tweaked, or the start time, which breaks when a
   boundary is nudged. Editing a chapter's title or times updates its row in
   place and keeps its ID. Whether IDs also survive a full regeneration is open
-  question 8.
+  question 7.
 - A "Copy link" action on each chapter row.
 
 ### 6. Speakers tab, scoped
@@ -458,7 +471,9 @@ chapterGenerationsTable = pgTable("chapter_generations", {
 
 - `topic`: substantive discussion, presentation, or deliberation on one
   subject. The default.
-- `public_comment`: members of the public speaking.
+- `public_comment`: members of the public speaking. Always this kind, never
+  `topic`, so all public comment can be found across the database (see
+  [Granularity](#granularity)).
 - `vote`: a motion and its outcome, when it stands apart from the discussion.
   Otherwise the vote goes in the topic's bullets.
 - `procedural`: call to order, roll call, pledge, agenda and minutes approval,
@@ -497,26 +512,24 @@ Notes on reconciling with existing tickets:
 1. **Kind set.** Are five kinds right? Is `vote` worth separating, or is it
    always part of a `topic`? Does Anchorage Assembly need more, such as
    `presentation` or `executive_session`?
-2. **Public comment granularity.** One chapter per commenter, grouped, or a
-   threshold?
-3. **`summary` field.** Is one sentence alongside 3 to 7 bullets redundant? It
+2. **`summary` field.** Is one sentence alongside 3 to 7 bullets redundant? It
    helps tooltips, collapsed rows, and agent outlines. The first bullet could
    do the same job.
-4. **Per-bullet time anchors** (`{text, at_secs}`) so every claim links to its
+3. **Per-bullet time anchors** (`{text, at_secs}`) so every claim links to its
    evidence, for citation and hallucination checks. They cost more to generate
    and validate.
-5. **Agenda linkage.** Is `agenda_ref` worth adding in v0, or should it wait
+4. **Agenda linkage.** Is `agenda_ref` worth adding in v0, or should it wait
    for a real agenda ingest?
-6. **Our scrubber vs YouTube's.** Hide native controls (`controls: 0`), or live
+5. **Our scrubber vs YouTube's.** Hide native controls (`controls: 0`), or live
    with two bars?
-7. **Human review.** citymeetings relies heavily on human correction. Do we
+6. **Human review.** citymeetings relies heavily on human correction. Do we
    need an edit UI (boundaries, titles) before chapters count as trustworthy,
    and how is `reviewed_by_human` set?
-8. **Chapter identity across regenerations.** Chapter IDs must survive edits
+7. **Chapter identity across regenerations.** Chapter IDs must survive edits
    to a chapter's title and times. Regeneration (#28) creates new rows, though.
    Should a regenerated chapter inherit the ID of the old chapter it most
    overlaps, so shared links keep working? Or should old IDs redirect to the
    chapter covering their start time?
-9. **Export.** Emit Podcasting 2.0 JSON chapters or YouTube description
+8. **Export.** Emit Podcasting 2.0 JSON chapters or YouTube description
    timestamps? This would be cheap, and YouTube-format chapters could be
    offered back to the bodies that publish the videos.
