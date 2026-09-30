@@ -77,24 +77,13 @@ of a meeting in about 5 minutes per meeting: opening remarks, agency testimony,
 council questioning, public testimony. AI then finds the chapters inside each
 part. The public UI shows a flat list.
 
-**Pipeline details worth copying:**
-
-- **Speaker identification comes first.** "Correctly-identified speakers lead
-  to better chapters." That matches our `unlabeled → segmented → identified`
-  taxonomy. Chapter quality will track identification quality.
-- **Time markers instead of raw timestamps.** The transcript is rendered with
-  opaque sentence markers (`T459`, `T460`). The model returns markers, and code
-  maps them back to seconds. This stops the model from inventing timestamps,
-  which is the risk #29 warns about. This bears directly on #26.
-- **Multiple steps.** (1) Find _beginnings_ only, and avoid the word
-  "chapter" in the prompt, because he got worse results with it. (2) Find the
-  ending, with one prompt per chapter type. (3) Write the title and
-  description, with one prompt per type.
-- **Human review tools** for speakers (name, role, organization), for chapter
-  boundaries (with a "Generate Chapter Details" button), and for evaluation
-  (format, names, roles, organizations checklists).
-- Cost: about $5 to $10 per meeting with GPT-4 Turbo in 2024, without
-  optimization.
+**Take the UX, not the pipeline.** Oberoi's write-ups describe how he
+generates chapters with 2024-era models: prompt steps, time markers, human
+review tooling. We deliberately don't record that here. Models and agentic
+workflows in late 2026 are much stronger, and our generation should be designed
+from scratch for them. What we want from citymeetings.nyc is its user experience
+and chapter semantics, described in the rest of this section. Don't copy its
+implementation.
 
 **Navigation UX.** Chapters, video, and transcript sit side by side. Each
 chapter has its own page and permalink, which shows the summary and that
@@ -468,9 +457,6 @@ Notes on reconciling with existing tickets:
 - **#29, validation:** ordered, non-overlapping, in-bounds, and 1 to 15 minutes
   for `topic` only. Also check coverage: flag uncovered speech longer than about
   30 seconds.
-- **#26, rendering:** consider citymeetings' **opaque markers** instead of raw
-  timestamps. The model returns marker IDs and code maps them to seconds. This
-  removes invented timestamps entirely and may also save tokens.
 - **#27, gold:** write the gold chaptering with the same `kind`s, so deliberate
   gaps become explicit `procedural` or `break` entries.
 - **#33, UI:** the placement, active-chapter, and bullets questions are
