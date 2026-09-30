@@ -8,13 +8,10 @@
 //   DB=prod pnpm db migrate
 //   DB=postgres://... pnpm db status
 //
-// "local" is per git branch: on branch `feat/x` it is the database
-// `open_minutes__feat_x` on docker-compose's postgres, so a branch's migrations
-// never leak into another branch's database; main and master share
-// `open_minutes__main`. A rebase in progress uses the branch being rebased; any other
-// detached HEAD (bisect, an old commit, a tag) gets a database of its own,
+// "local" is per git branch: `feat/x` gets `open_minutes__feat_x` on
+// docker-compose's postgres; main and master share `open_minutes__main`. A
+// rebase uses the branch being rebased; any other detached HEAD gets
 // `open_minutes__detached_<commit>`, so old code never resets main's.
-// To use one database on every branch, point DB at its URL.
 import console from "node:console";
 import { readFileSync, statSync } from "node:fs";
 import { dirname, join, resolve as resolvePath } from "node:path";
@@ -22,10 +19,8 @@ import process from "node:process";
 import { URL, fileURLToPath } from "node:url";
 import { loadRootDotEnv } from "@open-minutes/core/dotenv";
 
-// The zero-config default for "local", minus the database name. The single
-// source of truth for this server; it must match the postgres service in
-// docker-compose.yml. Setting DATABASE_URL_LOCAL overrides it (including the
-// per-branch naming) like any other named database.
+// The default "local" server, minus the database name. Must match
+// docker-compose.yml. DATABASE_URL_LOCAL overrides it, per-branch naming included.
 const DEFAULT_LOCAL_SERVER = "postgres://postgres:postgres@localhost:5432";
 
 /** The stem of every local per-branch database, main's included. */

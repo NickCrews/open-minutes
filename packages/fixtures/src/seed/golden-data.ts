@@ -11,11 +11,9 @@ import { loadAllTestData } from "../test-data";
 import { mapSnapshot } from "./map";
 import { advanceIdSequences } from "./sequences";
 
-// The `test-data/` snapshot as a declarative data state: the harness
-// (`ensureDatabase`, test templates) records this fingerprint when it seeds,
-// and knows the data is stale when the fingerprint changes. Seed through the
-// harness (`pnpm db up --data golden --data-reset if-needed`), never by calling `apply` out of band, or
-// the recorded fingerprint no longer describes the database.
+// The `test-data/` snapshot as a DataState. Seed it through the harness
+// (`pnpm db up --data golden`), not by calling `apply` directly, or the
+// recorded fingerprint no longer describes the database.
 
 // Bump when seedGolden's behavior changes in a way the rows below don't
 // capture (e.g. it starts seeding another table from the same snapshot).

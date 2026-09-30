@@ -23,17 +23,13 @@ import {
 import { mapSnapshot } from "./map";
 import { advanceIdSequences } from "./sequences";
 
-// The "dev" dataset: what `pnpm dev` puts in the playground so the web app
-// looks and behaves realistically. It is the golden fixtures — including the
-// golden meetings' full transcripts, speakers, and people, which the "golden"
-// dataset (evals, benchmarks) leaves out — plus the extra, fictional fixtures
-// in dev-data/, in the same format.
+// The "dev" dataset `pnpm dev` seeds: the golden fixtures, plus the golden
+// meetings' transcripts and people (which "golden" leaves out), plus the
+// fictional fixtures in dev-data/.
 //
-// Voiceprints are deterministic placeholders, not computed from audio: that
-// would mean downloading ~600 MB of audio per meeting and running the
-// embedding model on every seed. Every person gets a distinct vector, so
-// nearest-neighbor queries work, but voice recognition against dev data is
-// meaningless. Ingest real meetings (`om ingest`) for real voiceprints.
+// Voiceprints are distinct deterministic placeholders, since real ones need
+// ~600 MB of audio per meeting. Nearest-neighbor queries work, but recognition
+// against dev data is meaningless.
 
 // Bump when the seeder's behavior changes in a way the fixture files don't
 // capture.
