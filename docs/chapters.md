@@ -118,7 +118,7 @@ Sharing a 3-minute moment out of a 12-hour hearing is the core use case.
   specifies, are the better default. Speaker-turn detail can come from the
   derived speaker list instead.
 - Chapter types (kinds) are useful, cheap, and filterable. We should have
-  them. See the [data model](#proposed-data-model).
+  them. See [Chapter kinds](#chapter-kinds).
 - A per-chapter permalink with a transcript slice is valuable for both humans
   and agents.
 
@@ -220,11 +220,173 @@ link at all. The schema sketch only marks where one would go.
 interleave, for example returning to an item after public comment. That is two
 chapters with similar titles.
 
+## Chapter kinds
+
+Every chapter has exactly one `kind`. Kinds matter more than anything else on
+a chapter except its time range. They are what the
+[Find across meetings](#what-chapters-are-for) job queries ("all public
+comment", "every vote on the budget"). They decide what the TOC hides, which
+length rules apply, and how the gold set (#27) is labelled. Changing the set
+later means relabelling every chapter in the database, so it is worth getting
+right now.
+
+### How others classify parts of a meeting
+
+**citymeetings.nyc.** Chapter type chips from a sample of 48 NYC Council and
+Charter Revision Commission meetings, fetched 2026-09-30. Each chip label maps
+to one of seven CSS classes, shown in brackets:
+
+| Label            | Count | Class          |
+| ---------------- | ----: | -------------- |
+| Q&A              |  1133 | `question`     |
+| REMARKS          |   493 | `remarks`      |
+| TESTIMONY        |   476 | `testimony`    |
+| PUBLIC TESTIMONY |   374 | `testimony`    |
+| AGENCY TESTIMONY |   215 | `testimony`    |
+| QUESTION         |   210 | `question`     |
+| PRESENTATION     |    54 | `presentation` |
+| VOTE OUTCOME     |    19 | `unlabeled`    |
+| PROCEDURE        |     7 | `procedure`    |
+| INVOCATION       |     4 | `invocation`   |
+| VOICE VOTE       |     2 | `unlabeled`    |
+
+What this shows:
+
+- The types describe **activity**: who is talking and in what role. They do
+  not describe where in the agenda the talk happens.
+- The main split is **by speaker role**: council members (questions,
+  remarks), agency officials (agency testimony, presentations), and the
+  public (public testimony).
+- Q&A dominates because NYC oversight hearings are mostly members questioning
+  agency officials, one chapter per questioner.
+- Procedure barely appears. It is mostly left out, which is the sparse
+  approach [Coverage](#coverage-chapters-cover-the-whole-meeting) rejects.
+- Votes are rare, and their chips have no styling class (`unlabeled`).
+- A separate chip on each _meeting_ (HEARING, VOTE) classifies the whole
+  meeting. That is a property of the meeting, not of a chapter.
+
+**Agendas: the order of business.** Real agendas are organized by
+_section_, and each section mixes several activities.
+
+- The **Girdwood Board of Supervisors**
+  [regular meeting of 2026-02-23](https://www.muni.org/Departments/operations/streets/Service/GBOS/GBOS%20February%2023%20%202026%20agenda%20draft.pdf): Call to
+  Order, Land Acknowledgement, Roll Call & Disclosures, Agenda Revisions and
+  Approval, Minutes Approval, Consent Agenda, Presentations, Reports
+  (legislative, supervisor, committee, standing, and service provider
+  reports), Public Comment, Old Business, New Business, Reports, Request for
+  Executive Session, Adjourn. GBOS public comment "must be on subjects not
+  listed on the agenda"
+  ([GBOS Rules & Procedures](https://communitycouncils.org/girdwood/gbos-rules-procedures/)). Public input on agenda
+  items happens during Old and New Business instead.
+- The **Anchorage Assembly**
+  [regular meeting of 2025-12-02](https://meetings.muni.org/AgendaOnline/Documents/ViewAgenda?meetingId=6186&type=agenda&doctype=1): Call to Order,
+  Roll Call, Pledge and Land Acknowledgment, Minutes, Mayor's Report, Chair's
+  Report, Committee and Liaison Reports, Addendum, Appearance Requests,
+  Consent Agenda, Unfinished Business, Continued Public Hearings, New Public
+  Hearings, Quasi-Judicial Matters and Special Orders, Audience Participation,
+  Assembly Comments, Executive Sessions, Adjournment. A single public hearing
+  item typically runs as a staff presentation, then public testimony, then
+  Assembly debate and amendments, then a vote.
+- **Legistar** ([Web API](https://webapi.legistar.com/Help)), which Seattle and many other cities use, stores agenda items
+  with a matter type (Ordinance, Council Bill, Resolution, and so on), an
+  action name ("pass", "discussed"), a passed flag, a mover and seconder, a
+  tally, and a **video index**. Section headers such as "Call To Order",
+  "Public Comment" and "Adjournment" are items with no matter attached.
+- **MeetingBank** ([Hu et al., ACL 2023](https://arxiv.org/abs/2305.17529): 1,366 meetings in 6 US cities)
+  segments meetings by agenda item, with start and end times taken from the
+  city's own video index.
+
+**Data standards.**
+
+- **[Akoma Ntoso](https://docs.oasis-open.org/legaldocml/akn-core/v1.0/akn-core-v1.0-part1-vocabulary.html)**, the OASIS standard for parliamentary records, types
+  debate sections: `administrationOfOath`, `rollCall`, `prayers`,
+  `oralStatements`, `writtenStatements`, `personalStatements`,
+  `ministerialStatements`, `resolutions`, `nationalInterest`,
+  `declarationOfVote`, `communication`, `petitions`, `papers`,
+  `noticesOfMotion`, `questions`, `address`, `proceduralMotions`,
+  `pointOfOrder`, `adjournment`, and a generic `debateSection`. Inside a
+  section, each utterance is a `speech`, `question`, or `answer`.
+- **[Open Civic Data](https://github.com/opencivicdata/python-opencivicdata)** gives an event agenda item a free-form `classification`
+  array with no fixed vocabulary. It does fix the vocabulary for bill
+  _actions_ (introduction, reading-1, passage, failure, deferral,
+  committee-referral, and so on) and for vote _options_ (yes, no, absent,
+  abstain, not voting).
+- **[Council Data Project](https://github.com/CouncilDataProject/cdp-backend)** links each meeting to its minutes items, in
+  order, and records a `decision` (Passed or Failed) on each item, plus each
+  member's individual vote.
+
+### What we take from this
+
+1. **A kind describes activity, not agenda position.** Agenda sections mix
+   activities. GBOS Old Business holds presentations, public questions,
+   deliberation and votes, and an Anchorage public hearing holds all four in
+   one item. A kind that meant "agenda section" couldn't answer "all public
+   comment", because a lot of public comment happens inside business items
+   and public hearings. Agenda position is a separate axis. It belongs to the
+   future agenda link (see [No nesting in v0](#coverage-chapters-cover-the-whole-meeting)),
+   not to `kind`.
+2. **Speaker role is the main thing that separates kinds.** Every source
+   separates the public, invited or official speakers (staff, agencies,
+   service providers, legislators), and the body's own members. Our kinds
+   follow the same lines. This also makes kinds easy to check against the
+   derived speakers.
+3. **Votes are first-class everywhere except citymeetings.** Legistar, OCD,
+   CDP and Akoma Ntoso all record motions, outcomes and tallies. "Every vote
+   on X" is a core cross-meeting question, so a formal vote is always its own
+   chapter.
+4. **Meeting-level type is separate.** Regular meeting, special meeting, work
+   session, hearing and quarterly meeting describe the meeting, not a
+   chapter, and belong on `meetings`.
+5. **Keep the set small and closed.** Akoma Ntoso's 20 section types are
+   built for national parliaments. Small bodies need a handful of kinds that
+   a labeller can apply without hesitating. Finer detail (a question versus
+   an answer, agency versus invited speaker) comes from the derived speakers
+   and the text, not from more kinds.
+
+### The kinds
+
+| `kind`           | What it is                                                                                                                          | Examples                                                                                                                                                                | Closest citymeetings type                  | In the TOC by default |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ | --------------------- |
+| `procedural`     | Running the meeting, not its substance.                                                                                             | Call to order, roll call and disclosures, pledge, land acknowledgement, invocation, agenda and minutes approval, consent agenda passed without discussion, adjournment. | PROCEDURE, INVOCATION                      | no                    |
+| `report`         | A scheduled or invited speaker informs the body: a presentation or a report, plus the body's clarifying questions to that speaker.  | Staff presentation on an ordinance, fire chief's report, legislator's report, committee update, supervisor reports, Mayor's report.                                     | PRESENTATION, AGENCY TESTIMONY, Q&A (part) | yes                   |
+| `public_comment` | Members of the public speaking, wherever it happens on the agenda.                                                                  | Open public comment, Anchorage appearance requests and audience participation, testimony in a public hearing, a resident speaking during Old Business.                  | PUBLIC TESTIMONY                           | yes                   |
+| `discussion`     | The body deliberating among itself: debate, questions to each other, motions, amendments, and member comments not tied to a report. | GBOS debating a letter on solid waste fees, Assembly debate on an amendment, "Assembly Comments".                                                                       | REMARKS, QUESTION                          | yes                   |
+| `vote`           | A formal vote on a motion and its announced result. Always its own chapter, however short.                                          | Roll-call vote on an ordinance, voice vote on a resolution of support.                                                                                                  | VOICE VOTE, VOTE OUTCOME                   | yes                   |
+| `break`          | No business is being done.                                                                                                          | Recess, executive session (the public stream is paused or the room is empty), technical difficulties, dead air before the gavel.                                        | none (left as gaps)                        | no                    |
+
+`discussion` replaces the earlier `topic`. "Topic" suggested _any_
+substantive chapter, which overlapped with `report` and `public_comment`.
+Every kind is on some topic. The kinds say what kind of talk it is.
+
+Labelling rules:
+
+- **One kind per chapter.** When the activity changes for longer than about a
+  minute, start a new chapter. So an Anchorage public hearing on an ordinance
+  becomes a `report` (staff presents), then `public_comment` chapters, then
+  `discussion`, then a `vote`, and all of them share the item in their
+  titles.
+- **Public speakers are always `public_comment`,** even inside a business
+  item or a hearing (see [Granularity](#granularity)).
+- **Questions to a presenter stay in the `report`** while they clarify what
+  was presented. When they turn into debate among the members, start a
+  `discussion` chapter.
+- **Every formal vote is a `vote` chapter,** including a 10-second voice vote.
+  Motions and amendments debated before the vote are `discussion`. A consent
+  agenda passed without discussion is `procedural`.
+- **Executive session is `break`.** No business is visible to the public. The
+  motion to enter it is `procedural`.
+
+Checking the set: when the gold set (#27) is labelled, count how often the
+labeller hesitates between two kinds, or two labellers disagree. A pair that
+is often confused should be merged. A kind that never occurs in Girdwood or
+Anchorage meetings should be dropped.
+
 ## Granularity
 
-- #25 specifies 1 to 15 minutes and 3 to 7 bullets. Keep that for `topic`
-  chapters. Procedural and break chapters can be any length (a 20-second roll
-  call, a 40-minute recess) and get 0 to 1 bullets.
+- #25 specifies 1 to 15 minutes and 3 to 7 bullets. Keep that for
+  `discussion` and `report` chapters. `procedural`, `vote` and `break`
+  chapters can be any length (a 20-second roll call, a 10-second voice vote, a
+  40-minute recess) and get 0 to 1 bullets.
 - **Every chapter has a one-sentence summary**, whatever its kind. The
   summary is what tooltips, collapsed list rows and the agent outline show.
   Bullets add detail beneath it.
@@ -240,7 +402,7 @@ chapters with similar titles.
   one chapter per commenter when a commenter speaks for more than about a
   minute, otherwise group them.
 - **Public comment is always its own kind.** Every chapter of public comment,
-  per-commenter or grouped, has `kind = public_comment` and never `topic`,
+  per-commenter or grouped, has `kind = public_comment` and never `discussion`,
   even when the comment is about a topic being discussed. That makes "all
   public comment across the database" a single query on `chapters.kind`,
   joined to `segments` for the words and speakers.
@@ -249,7 +411,7 @@ chapters with similar titles.
   minute, so per-commenter chapters stay inside the 1 to 15 minute range and
   grouping is rare. That is plausible but unverified. When chapters are built,
   add test cases against the gold set (#27) and real output that check it:
-  topic chapters fall within 1 to 15 minutes, the distribution of commenter
+  `discussion` and `report` chapters fall within 1 to 15 minutes, the distribution of commenter
   speaking times, and that every public comment stretch is covered by a
   `public_comment` chapter. If an assumption fails, revisit the rule.
 - Scrubber legibility sets a lower bound. On a roughly 700px bar, a 1-minute
@@ -359,8 +521,8 @@ space the Speakers list and description already occupy.
 
 Each row shows:
 
-- start time (a link that seeks), title, duration, and a kind badge for
-  non-topic kinds;
+- start time (a link that seeks), title, duration, and a kind badge (none for
+  `discussion`, the most common kind);
 - **speaker swatches** for the top 2 or 3 speakers by speaking time in that
   chapter, with "+N" for the rest and a hover card listing all of them. This is
   the attribution job;
@@ -450,10 +612,10 @@ chaptersTable = pgTable(
       .references(() => meetingsTable.id),
     start_secs: secondsInterval().notNull(),
     end_secs: secondsInterval().notNull(), // explicit: gaps are legal (#25); must be > start_secs
-    kind: chapterKind().notNull(), // enum, see below
+    kind: chapterKind().notNull(), // enum, see Chapter kinds
     title: varchar().notNull(), // a few words, TOC-scannable
     summary: varchar().notNull(), // one sentence: tooltip, collapsed row, agent outline
-    bullets: varchar().array().notNull(), // text[]; 3–7 for topic, 0–1 otherwise; no timestamps
+    bullets: varchar().array().notNull(), // text[]; 3–7 for discussion and report, 0–1 otherwise; no timestamps
     // Not in v0: an agenda link (eg "7.b", later a foreign key to agenda_items)
     // would go here when nesting arrives.
     // provenance (#28): which run produced this row
@@ -484,21 +646,8 @@ chapterGenerationsTable = pgTable("chapter_generations", {
 //   = segments overlapping [start_secs, end_secs), clipped to the chapter, summed per speaker
 ```
 
-**`kind` values** (proposed, small on purpose):
-
-- `topic`: substantive discussion, presentation, or deliberation on one
-  subject. The default.
-- `public_comment`: members of the public speaking. Always this kind, never
-  `topic`, so all public comment can be found across the database (see
-  [Granularity](#granularity)).
-- `vote`: a motion and its outcome, when it stands apart from the discussion.
-  Otherwise the vote goes in the topic's bullets.
-- `procedural`: call to order, roll call, pledge, agenda and minutes approval,
-  adjournment.
-- `break`: recess, technical difficulties, dead air.
-
-The first three are listed in the TOC by default. The last two appear on the
-scrubber but are hidden from the list by default.
+`chapterKind` is the enum of the six kinds in
+[Chapter kinds](#chapter-kinds).
 
 Notes on reconciling with existing tickets:
 
@@ -517,7 +666,7 @@ Notes on reconciling with existing tickets:
   #25. A new speaker _label_ doesn't stale a chapter because speakers are
   derived, but a changed transcript does.
 - **#29, validation:** ordered, non-overlapping, in-bounds, and 1 to 15 minutes
-  for `topic` only. Also check coverage: flag uncovered speech longer than about
+  for `discussion` and `report` only. Also check coverage: flag uncovered speech longer than about
   30 seconds.
 - **#27, gold:** write the gold chaptering with the same `kind`s, so deliberate
   gaps become explicit `procedural` or `break` entries.
@@ -542,6 +691,9 @@ These are deliberately out of scope for the first version:
 
 ## Open questions
 
-1. **Kind set.** Are five kinds right? Is `vote` worth separating, or is it
-   always part of a `topic`? Does Anchorage Assembly need more, such as
-   `presentation` or `executive_session`?
+1. **Kind set details.** Should `executive_session` be its own kind rather
+   than a `break`, so closed sessions can be counted across meetings? Should
+   Q&A get its own kind, as on citymeetings, if Anchorage committee meetings
+   turn out to be question-heavy? Should `vote` chapters carry an outcome
+   (passed, failed, withdrawn) and a tally, as Legistar and CDP do? For now
+   that would be a placeholder comment in the schema, like the agenda link.
