@@ -21,12 +21,9 @@ import {
 // createTestDb() is fully self-sufficient: it starts docker-compose's postgres
 // if nothing is listening, builds a template, and clones it.
 //
-// Strategy: the declared state (schema version + optional data) is built once, by the
-// same ensureDatabase() harness `pnpm dev` uses, into a template database named
-// after a fingerprint of that state. Each createTestDb() call then clones it
-// with `CREATE DATABASE ... TEMPLATE ...` (~tens of ms) instead of re-migrating
-// and re-seeding. Changing a migration or the data produces a new fingerprint,
-// so stale templates are never reused.
+// The declared state is built once by ensureDatabase() into a template named
+// after its fingerprint; each createTestDb() clones it (~tens of ms). Changing a
+// migration or the data changes the fingerprint, so stale templates aren't reused.
 
 /** Every test database and template name starts with this. */
 export const TEST_DB_PREFIX = "om_test_";

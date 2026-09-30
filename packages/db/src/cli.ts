@@ -1,29 +1,8 @@
 #!/usr/bin/env tsx
-// The database harness CLI, behind the root `pnpm db` script. Brings a
-// database to a declared state (schema + data), inspects it, and manages the
-// per-branch databases that make that safe to do on every git branch.
-//
-// The imperative commands each do exactly one thing:
-//   migrate  Moves forward: applies pending migrations. Never wipes or seeds.
-//   wipe     Moves back to empty: drops tables, migration history, and data.
-//   generate Writes a migration from schema.ts changes.
-// One declarative command brings a database to a declared state (a schema
-// version plus a dataset) by the least destructive path:
-//   up       What `pnpm dev` runs. Migrates forward when it can. When it can't
-//            (history diverged, or the database is past the target), it resets
-//            the schema and migrates from empty, unless --schema-reset never.
-//            Then seeds the dataset into an empty database, or over existing
-//            data with --data-reset. Only checks remote databases.
-// `up --schema-reset always` starts over; plain `up` never wipes what it can
-// keep.
-//
-// Target selection follows the named-database convention (see
-// db/src/resolve.ts): `--db <name|url>`, else $DB, else "local" — which
-// is the current git branch's database on docker-compose's postgres.
-//
-// This package doesn't know what data exists: the datasets `--data` can name
-// come from the repository's dbranch.config.ts (see ./config.ts), which is
-// what imports them, so no package here depends on another's data.
+// The database harness CLI, behind the root `pnpm db` script. See
+// docs/contributing/db.md. The datasets `--data` can name come from the
+// repository's dbranch.config.ts (see ./config.ts), so this package imports no
+// data itself.
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import process from "node:process";
@@ -90,7 +69,7 @@ const up = defineCommand({
   meta: {
     name: "up",
     description:
-      "Bring a database to a declared state: a schema version plus a dataset. What `pnpm dev` runs; a no-op when it's already there. On a local database, in order: (1) create it if missing; (2) if its migration history diverged from this checkout's, reset its schema: wipe everything, tables and data, then re-apply every migration (see --schema-reset); (3) apply pending migrations; (4) seed the dataset only if the database holds no data (new, just reset, or no rows); existing data is kept (see --data-reset). Remote databases are only checked against this checkout's schema, never changed.",
+      "Bring a database to a declared schema version and dataset, changing as little as possible. What `pnpm dev` runs. On a local database: (1) create it if missing; (2) reset the schema if its history diverged (see --schema-reset); (3) apply pending migrations; (4) seed the dataset if the database has no data (see --data-reset). Remote databases are only checked, never changed.",
   },
   args: {
     ...targetArg,
@@ -103,13 +82,13 @@ const up = defineCommand({
     "schema-reset": {
       type: "string",
       description:
-        'When to reset the schema: wipe everything, tables and data, then re-apply every migration from scratch. "if-needed" (default): only when the migration history disagrees with this checkout\'s (another branch\'s migrations, an edited migration, or a newer schema). "never": error out instead. "always": every time, starting over from empty.',
+        'When to wipe tables and data and re-apply every migration. "if-needed" (default): only when the history diverged (another branch\'s migrations, an edited migration, or a newer schema). "never": error instead. "always": every time.',
       default: "if-needed",
     },
     "data-reset": {
       type: "string",
       description:
-        'When to apply the dataset over data already there. "never" (default): only seed a database with no data (new, just reset, or no rows), and keep existing data. "if-needed": also replace data that isn\'t the declared dataset. "always": reseed every time, e.g. to undo hand edits.',
+        'When to apply the dataset over existing data. "never" (default): only seed a database with no data. "if-needed": also replace data that isn\'t the declared dataset. "always": every time, e.g. to undo hand edits.',
       default: "never",
     },
   },
@@ -145,7 +124,7 @@ const migrate = defineCommand({
   meta: {
     name: "migrate",
     description:
-      "Apply pending migrations, up to --schema-version. Only moves forward: never wipes, resets, or seeds, and stops with an error if the database's history has diverged or is past that version. What `pnpm deploy:prod` runs against prod.",
+      "Apply pending migrations, up to --schema-version. Never resets or seeds; errors if the history diverged. What `pnpm deploy:prod` runs.",
   },
   args: { ...targetArg, ...schemaVersionArg },
   async run({ args }) {
@@ -163,7 +142,7 @@ const wipe = defineCommand({
   meta: {
     name: "wipe",
     description:
-      "Empty a database: drop its tables, migration history, and data. The next `pnpm db up` (or `pnpm dev`) migrates and seeds it from scratch. Refuses non-local databases unless ALLOW_REMOTE_WIPE=1.",
+      "Drop a database's tables, data and migration history. Refuses non-local databases unless ALLOW_REMOTE_WIPE=1.",
   },
   args: { ...targetArg },
   async run({ args }) {
@@ -313,7 +292,7 @@ const prune = defineCommand({
   meta: {
     name: "prune",
     description:
-      "List (or with --yes, drop) local databases nothing needs: per-branch databases whose git branch is gone, databases left by interrupted test runs, and test templates for anything but this checkout's latest schema and the datasets in dbranch.config.ts. Databases in use are skipped.",
+      "List (or with --yes, drop) local databases of deleted branches, leftover test databases, and outdated test templates. Databases in use are skipped.",
   },
   args: {
     yes: {

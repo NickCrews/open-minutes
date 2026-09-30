@@ -78,9 +78,8 @@ pnpm install
 pnpm dev       # http://localhost:3000
 ```
 
-That's all. `pnpm dev` starts Postgres in Docker if it isn't running, creates
-and migrates a database for your git branch, fills it with sample data, and
-starts the web dev server. Editing affordances (e.g. renaming a person) are
+`pnpm dev` starts Postgres in Docker, creates, migrates and seeds a database for
+your git branch, and starts the web dev server. Editing affordances (e.g. renaming a person) are
 enabled only in dev. `pnpm web:dev` starts only the dev server: it creates and
 migrates the database too, but doesn't seed it.
 
@@ -90,9 +89,8 @@ gitignored `.env.local` at the repository root; see
 
 ## The database
 
-`pnpm dev` takes care of the database: each git branch gets its own local
-Postgres database, created, migrated and seeded with sample data on first use.
-The commands you'll reach for most:
+Each git branch gets its own local database, which `pnpm dev` manages. The
+commands you'll reach for most:
 
 ```sh
 pnpm db status                      # what state is my database in?
@@ -100,9 +98,7 @@ pnpm db up --schema-reset always    # start over with fresh sample data
 pnpm db generate                    # write a migration after editing schema.ts
 ```
 
-See [docs/contributing/db.md](docs/contributing/db.md) for how the target
-database is chosen, everything `pnpm db` can do, working with remote
-databases, and changing the schema.
+See [docs/contributing/db.md](docs/contributing/db.md) for everything else.
 
 ## Running checks
 
@@ -114,8 +110,7 @@ pnpm test:all    # everything, including slow tests
 pnpm format      # prettier --write over the repo
 ```
 
-Tests that need a database clone a cached, pre-seeded template on the local
-Postgres, starting the docker-compose service if nothing is listening. Tests
+Tests that need a database clone a cached, pre-seeded template. Tests
 tagged `slow` run full-meeting transcription and diarization and take roughly
 10–20 minutes each on CPU. They're skipped unless `SLOW=1`, which `test:slow`
 and `test:all` set for you.

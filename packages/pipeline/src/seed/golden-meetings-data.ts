@@ -15,10 +15,8 @@ import { mapSnapshot } from "@open-minutes/fixtures/map";
 
 // The golden dataset plus some golden meetings seeded as established history:
 // transcripts, speaker-attributed segments, and a *real* voiceprint per
-// identified person, computed from the meeting audio. That computation is
-// expensive (hundreds of MB of audio per meeting through the embedding model),
-// so as a DataState it runs once per change to its inputs; the test harness
-// caches the result as a template and clones it in milliseconds after that.
+// identified person, computed from the meeting audio. That's expensive, so the
+// test harness caches the result as a template until the inputs change.
 
 // Bump when seedGoldenMeeting's behavior changes in a way the inputs hashed
 // below don't capture.

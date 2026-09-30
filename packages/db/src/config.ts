@@ -5,10 +5,8 @@ import { pathToFileURL } from "node:url";
 import type { DataState } from "./ensure";
 
 // The `pnpm db` CLI's project configuration: which datasets `--data` can name.
-// It lives in a dbranch.config.ts at the repository root, like
-// drizzle.config.ts or vitest.config.ts, so the app wires its datasets into the
-// harness there. This package never imports them, and nothing depends on the
-// repository root, so the config can import from any package.
+// It lives in dbranch.config.ts at the repository root, which nothing depends
+// on, so it can import datasets from any package.
 
 export const CONFIG_FILE = "dbranch.config.ts";
 

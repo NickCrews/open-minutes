@@ -16,8 +16,7 @@ pnpm om ingest [ids...] # run the full pipeline per video (reads stdin if no arg
 pnpm -s om available | head -5 | pnpm -s om ingest   # ingest the 5 newest available meetings
 ```
 
-When piping, pass pnpm's `-s` (`--silent`): without it, pnpm prints the script
-it's running to stdout, ahead of `om`'s output.
+When piping, pass `-s` so pnpm doesn't echo the script to stdout.
 
 Commands default to the `local` database; target any named database with
 `DB=<name> pnpm om <cmd>` (eg `DB=prod`). Ingestion is all-or-nothing per meeting:

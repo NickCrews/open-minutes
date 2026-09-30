@@ -33,27 +33,13 @@ import {
 } from "./migrations";
 
 // The declarative database harness: "make the database at this URL be in this
-// state", where state = (a schema version from this checkout's migrations,
-// plus optionally some declared data). Every entrypoint that needs a database
-// in a known state goes through here: `pnpm dev`, `pnpm db up`, `pnpm db
-// migrate`, CI, deploys, and the test harness's templates.
+// state", where state = a schema version plus optional declared data. `pnpm
+// dev`, `pnpm db`, CI, deploys and test templates all go through here.
 //
-// Getting there is always allowed to create a missing local database and to
-// apply pending migrations. Two things can destroy data, and each is a
-// {@link ResetPolicy} (never, if-needed, always):
-//
-//   schemaReset  When to wipe the schema and re-apply every migration.
-//                "if-needed": only when going forward isn't possible (another
-//                branch's migrations, an edited migration, or a database past
-//                the target version). Default: "if-needed" for local
-//                databases, which are disposable; "never" otherwise.
-//   dataReset    When to apply the declared data over data already there.
-//                "if-needed": when the database holds different data.
-//                Default: "never", so data is seeded only into an empty
-//                database.
-//
-// Non-local databases (Neon prod, or a branch of it) never get either, nor any
-// declared data, unless ALLOW_REMOTE_WIPE=1 says the database is disposable.
+// Creating a local database and applying pending migrations are always
+// allowed. Resetting the schema or data is governed by a ResetPolicy (see
+// EnsureOptions), and never happens to a non-local database unless
+// ALLOW_REMOTE_WIPE=1.
 
 /**
  * A named, versioned set of rows the database should contain. The harness
@@ -69,13 +55,7 @@ export interface DataState {
   apply(db: DB): Promise<void>;
 }
 
-/**
- * When the harness may reset something (the schema, or the data):
- *
- * - `"never"`: never; if that's the only way forward, it's an error.
- * - `"if-needed"`: only when the declared state can't be reached otherwise.
- * - `"always"`: every time, even when it's already in the declared state.
- */
+/** When the harness may reset the schema or the data. See EnsureOptions. */
 export type ResetPolicy = "never" | "if-needed" | "always";
 
 export const RESET_POLICIES: readonly ResetPolicy[] = [
@@ -85,11 +65,7 @@ export const RESET_POLICIES: readonly ResetPolicy[] = [
 ];
 
 export interface EnsureOptions {
-  /**
-   * The schema to bring the database to. Default "latest". An older version
-   * gives you the database as it was at that point in history — e.g. to test
-   * a migration: seed at the version before it, then migrate to it.
-   */
+  /** Default "latest". An older version is useful for testing a migration. */
   schemaVersion?: SchemaVersion;
   data?: DataState;
   /**
@@ -108,21 +84,16 @@ export interface EnsureOptions {
   /**
    * When to apply `data` over data already in the database:
    *
-   * - `"never"`: `data` is seeded only into a database that holds no data
-   *   (new, just reset, or migrated with no rows and no recorded data), so
-   *   data you've built up is never overwritten.
+   * - `"never"`: seed only a database that holds no data.
    * - `"if-needed"`: also whenever the database holds anything but `data`.
-   * - `"always"`: every time, even when it already holds `data`, e.g. to undo
-   *   hand edits.
+   * - `"always"`: every time, e.g. to undo hand edits.
    *
    * Default: `"never"`.
    */
   dataReset?: ResetPolicy;
   /**
-   * When the database doesn't exist yet (local only), try to clone it from
-   * this database instead of starting empty — e.g. a feature branch's db
-   * starting as a copy of main's. Falls back to empty if the clone fails.
-   * Defaults to {@link defaultCloneSource}; pass `null` to always start empty.
+   * A local database to clone a new one from, falling back to empty if the
+   * clone fails. Defaults to {@link defaultCloneSource}; `null` starts empty.
    */
   cloneFrom?: string | null;
   /** Progress output. Defaults to stderr. */
@@ -145,9 +116,8 @@ export interface EnsureResult {
 /** Where the harness records which DataState a database holds. */
 const DATA_STATE_TABLE = "__om_data_state";
 
-// Arbitrary constant identifying "ensure" in pg_advisory_lock. Advisory locks
-// are per-database, so this serializes concurrent ensures of the same db (two
-// dev servers, parallel CI jobs) without blocking other databases.
+// Arbitrary pg_advisory_lock key. Advisory locks are per-database, so this
+// serializes concurrent ensures of one database without blocking others.
 const ENSURE_LOCK_KEY = 727150422;
 
 /** Whether a non-local database may be wiped, rebuilt, or seeded. */
@@ -155,11 +125,7 @@ function remoteWipeAllowed(): boolean {
   return process.env.ALLOW_REMOTE_WIPE === "1";
 }
 
-/**
- * What a new database at `url` should be cloned from: a local per-branch
- * database starts as a copy of main's, so a feature branch begins with the
- * data you already had rather than an empty database.
- */
+/** A new local per-branch database starts as a copy of main's. */
 export function defaultCloneSource(url: string): string | undefined {
   if (!isLocalUrl(url)) return undefined;
   return databaseName(url).startsWith(LOCAL_DATABASE_PREFIX)
@@ -259,10 +225,8 @@ export async function ensureDatabase(
 }
 
 /**
- * Empties the database at `url`: drops every table, the migration journal, and
- * the record of which data it holds, leaving what a newly created database
- * has. The next {@link ensureDatabase} (e.g. `pnpm dev`) migrates and seeds it
- * from scratch. Does nothing if a local database doesn't exist.
+ * Drops every table, the migration journal and the data record, leaving what a
+ * new database has. Does nothing if a local database doesn't exist.
  */
 export async function wipeDatabase(
   url: string,
@@ -314,11 +278,7 @@ async function withEnsureLock(
   }
 }
 
-/**
- * Why a database whose history diverged can't be brought forward without a
- * schema reset, and what to do about it. The fix depends on how it diverged and
- * where the database lives, so each case gets its own advice.
- */
+/** Why a diverged database needs a schema reset, and what to do about it. */
 export function divergenceMessage(
   label: string,
   local: boolean,
@@ -408,12 +368,10 @@ async function createDatabaseIfMissing(
 const LEGACY_MAIN_DATABASE = "open_minutes";
 
 /**
- * One-time upgrade: main's local database used to be plain `open_minutes`,
- * which is also docker-compose's POSTGRES_DB. If that holds a migrated app
- * database and main's current one doesn't exist yet, rename it into place so
- * its data carries over, and leave a fresh empty `open_minutes` behind for
- * docker-compose. Best-effort: if it can't be renamed (usually because
- * something is connected to it), main's database starts fresh instead.
+ * One-time upgrade: if the legacy `open_minutes` (also docker-compose's
+ * POSTGRES_DB) holds a migrated app database and main's doesn't exist yet,
+ * rename it into place and leave a fresh empty `open_minutes` behind.
+ * Best-effort: if it can't be renamed, main's database starts fresh.
  */
 async function adoptLegacyMainDatabase(
   admin: postgres.Sql,
@@ -469,10 +427,9 @@ function isAlreadyExists(error: unknown): boolean {
 
 /**
  * Drops everything the app and drizzle manage, leaving an empty `public`.
- * Dropping schemas (rather than the database) works on any server, including
- * ones where we can't CREATE DATABASE, and keeps the lock connection alive.
- * One simple-protocol query: a single round trip, and Postgres runs its
- * statements as one implicit transaction, so it never leaves `public` missing.
+ * Dropping schemas rather than the database works without CREATE DATABASE and
+ * keeps the lock connection alive. One simple-protocol query runs as one
+ * implicit transaction, so `public` is never left missing.
  */
 async function wipeSchema(sql: postgres.Sql): Promise<void> {
   await sql.unsafe(
@@ -582,10 +539,8 @@ async function ensureData(
 }
 
 /**
- * Read-only check that code from this checkout can run against `url`: every
- * migration it expects is applied. A database *ahead* of the checkout (it has
- * migrations this code doesn't) is normal mid-deploy under expand/contract,
- * so that only warns. For remote targets a dev server must not mutate.
+ * Read-only check that every migration this checkout expects is applied. A
+ * database *ahead* of the checkout is normal mid-deploy, so that only warns.
  */
 export async function assertDatabaseServesCheckout(
   url: string,
@@ -608,14 +563,9 @@ export async function assertDatabaseServesCheckout(
 }
 
 /**
- * Readies `url` for code from this checkout to use: what `pnpm db up` and
- * every app-facing entrypoint (`pnpm dev`, the dev server, the `om` CLI) run
- * before touching the database, so they all agree on what "ready" means.
- *
- * - Local: {@link ensureDatabase} with `options` (by default: created, cloned,
- *   or schema-reset as needed, and `data` seeded only into an empty database).
- * - Remote: never mutated, whatever `options` say; fails if this code needs
- *   migrations the database lacks.
+ * Readies `url` for this checkout's code: what `pnpm db up`, `pnpm dev`, the
+ * dev server and `om` run first. Local: {@link ensureDatabase}. Remote: never
+ * mutated; fails if migrations are missing.
  */
 export async function prepareDatabase(
   url: string,
