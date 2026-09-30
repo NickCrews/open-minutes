@@ -302,8 +302,7 @@ export function divergenceMessage(
       `resets it (what \`pnpm dev\` does); \`pnpm db wipe\` empties it.\n${detail}`
     );
   }
-  const reset =
-    "reset it from production (`pnpm db neon reset`) and migrate again";
+  const reset = "recreate it from production and migrate again";
   if (status.modified.length > 0) {
     return (
       `${label} has migrations that were edited after being applied to it, and ` +

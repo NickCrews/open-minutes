@@ -64,10 +64,6 @@ jobs:
       && (github.event_name != 'pull_request'
           || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
-    env:
-      NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
-      NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
-      NEON_BRANCH: ci/run-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -76,14 +72,30 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Fork production and migrate the fork
+      - name: Compute the fork's expiry
+        id: expiry
+        # Expires on its own in case the delete below never runs.
+        run: echo "at=$(date -u -d '+2 hours' +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+      - name: Fork production
+        id: branch
+        uses: neondatabase/create-branch-action@v6
+        with:
+          project_id: ${{ vars.NEON_PROJECT_ID }}
+          api_key: ${{ secrets.NEON_API_KEY }}
+          branch_name: ci/run-${{ github.run_id }}-${{ github.run_attempt }}
+          expires_at: ${{ steps.expiry.outputs.at }}
+      - name: Migrate the fork
+        env:
+          DB_URL: ${{ steps.branch.outputs.db_url }}
         run: |
-          # Expires on its own in case the delete below never runs.
-          url=$(pnpm -s db neon branch --name "$NEON_BRANCH" --ttl-hours 2)
-          echo "::add-mask::$url"
-          pnpm db status --db "$url"
-          pnpm db migrate --db "$url"
-          pnpm db status --db "$url" --check
+          echo "::add-mask::$DB_URL"
+          pnpm db status --db "$DB_URL"
+          pnpm db migrate --db "$DB_URL"
+          pnpm db status --db "$DB_URL" --check
       - name: Delete the fork
-        if: always()
-        run: pnpm db neon delete --name "$NEON_BRANCH"
+        if: always() && steps.branch.outputs.branch_id != ''
+        uses: neondatabase/delete-branch-action@v3
+        with:
+          project_id: ${{ vars.NEON_PROJECT_ID }}
+          api_key: ${{ secrets.NEON_API_KEY }}
+          branch: ${{ steps.branch.outputs.branch_id }}
