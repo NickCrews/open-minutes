@@ -23,8 +23,10 @@ A chapter works as a table of contents entry for a meeting. It has five jobs:
    start or end time.
 5. **Find across meetings.** Chapters are queryable units across the whole
    database, not just within one meeting: for example, all public comment
-   ever given, or every discussion of housing. This is why kinds like
-   `public_comment` are strict (see [Granularity](#granularity)).
+   ever given, or every discussion of housing. In v0 this is full-text search
+   over titles, summaries and bullets, helped by
+   [title conventions](#titles-carry-the-structure). Structured fields for it
+   are [deferred](#deferred-structure-beyond-chapters).
 
 Anything a chapter carries should serve one of those jobs. The same
 jobs apply to an agent reading the data (see [Agent UX](#agent-ux)), where the
@@ -117,8 +119,9 @@ Sharing a 3-minute moment out of a 12-hour hearing is the core use case.
   topic, not ten remarks. Topic-level chapters of 1 to 15 minutes, as #25
   specifies, are the better default. Speaker-turn detail can come from the
   derived speaker list instead.
-- Chapter types (kinds) are useful, cheap, and filterable. We should have
-  them. See [Chapter kinds](#chapter-kinds).
+- Chapter types are useful and filterable, but they commit us to a
+  vocabulary that is expensive to change later. v0 leaves them out. See
+  [Deferred: structure beyond chapters](#deferred-structure-beyond-chapters).
 - A per-chapter permalink with a transcript slice is valuable for both humans
   and agents.
 
@@ -165,72 +168,98 @@ This is the open standard for podcast chapters. The only required field is
 `startTime`. `endTime` is optional, and **`toc: false`** marks a "silent"
 chapter that exists for timing but is hidden from the table of contents. That
 is a standard way to express "this span is covered but not worth listing",
-which fits procedural material. The format is also a possible export format,
-which is a follow-up and not in v0 (see [Not in v0](#not-in-v0)).
+which would fit procedural material if we later want to hide it. The format
+is also a possible export format, which is a follow-up and not in v0 (see
+[Not in v0](#not-in-v0)).
 
 ## Coverage: chapters cover the whole meeting
 
-Every stretch of real content in a meeting belongs to a chapter. Low-value
-stretches are not left out. They get chapters of their own, with an explicit
-kind:
-
-- `procedural`: call to order, roll call, approving the agenda and minutes,
-  adjournment.
-- `break`: recess, technical difficulties, dead air before the gavel.
-
-The TOC can hide these kinds by default, the way Podcasting 2.0 uses
-`toc: false`, but they are still in the data.
+Every stretch of speech in a meeting belongs to a chapter. Low-value stretches
+are not left out. Call to order, roll call, agenda and minutes approval, and
+adjournment get ordinary chapters with plain titles, such as "Call to order
+and roll call". They are short, and that is fine.
 
 The schema stays as #25 and #28 decided: ordered, non-overlapping chapters with
 explicit `start_secs` and `end_secs`, and gaps are legal. This amends #25's
 "chapters may have gaps" decision but does not reverse it. The generator's job
-is to _cover_ the meeting, so the only legitimate gaps are:
+is to _cover_ the speech in the meeting, so the only legitimate gaps are:
 
 - a short gap (under about 30 seconds) between adjacent chapters, which is
   boundary slop, or
-- a stretch with no speech at all, for example before the stream starts.
+- a stretch with no speech: before the stream starts, a recess, or an
+  executive session with the room empty.
 
 Any other gap is a missed topic. That is the point of this rule: it makes the
 #25 eval problem mechanical. Any uncovered stretch of speech longer than N
-seconds is flagged as a candidate miss, and the judge council only has to
-decide whether a `procedural` label is hiding substance. The gold chaptering
-(#27) uses the same kinds, so the human's "deliberate gap" decisions are
-written down instead of implied.
+seconds is flagged as a candidate miss. The gold chaptering (#27) follows the
+same rule.
 
 Why not the alternatives:
 
 - **Total partition** (YouTube style, start times only, each chapter ends where
-  the next begins). It forces titles onto arbitrary spans of pre-meeting
-  silence. Worse, a missed topic gets silently absorbed into its neighbour's
-  time range, where nothing can flag it.
+  the next begins). It forces titles onto arbitrary spans of silence. Worse, a
+  missed topic gets silently absorbed into its neighbour's time range, where
+  nothing can flag it.
 - **Sparse chapters with free gaps** (citymeetings style, and #25's original
   reading). A gap is ambiguous: it could be procedural, a recess, or a miss.
-  The scrubber has holes, the active chapter is often "none", and the judge
-  has to reason about every gap.
+  The judge has to reason about every gap.
 
 **No nesting in v0.** #25 put hierarchical chapters out of scope, and they stay
-out. When nesting comes, the second level is the **agenda item**. Girdwood
-meetings follow a published agenda, and citymeetings uses a human-marked top
-level ("agency testimony", "public comment"). Agenda items come from the
-published agenda where one exists, not from the model, in a separate
-`agenda_items` table or as chapters with a `parent_id`. v0 stores no agenda
-link at all. The schema sketch only marks where one would go.
+out. When nesting comes, the likely second level is the **agenda item**.
+Girdwood meetings follow a published agenda, and citymeetings uses a
+human-marked top level ("agency testimony", "public comment"). Agenda items
+would come from the published agenda where one exists, not from the model.
 
 **No overlap.** Chapters never overlap (#29 validates this). Real meetings do
 interleave, for example returning to an item after public comment. That is two
 chapters with similar titles.
 
-## Chapter kinds
+## Titles carry the structure
 
-Every chapter has exactly one `kind`. Kinds matter more than anything else on
-a chapter except its time range. They are what the
-[Find across meetings](#what-chapters-are-for) job queries ("all public
-comment", "every vote on the budget"). They decide what the TOC hides, which
-length rules apply, and how the gold set (#27) is labelled. Changing the set
-later means relabelling every chapter in the database, so it is worth getting
-right now.
+A chapter is organized by **topic**, usually one agenda item or one stretch of
+open public comment. It has no `kind` or other label in v0. What a structured
+kind would have said goes in the title and summary instead, with a few
+conventions so text search and agents can find it:
 
-### How others classify parts of a meeting
+- Public comment is titled "Public comment: <topic>", or "Public comment"
+  for an open period on several topics. The summary names the commenters
+  when the transcript does.
+- A chapter that ends in a formal vote says so, with the result, in its
+  summary: "The board voted 4–1 to send the letter."
+- Procedural chapters get plain, predictable titles: "Call to order and roll
+  call", "Approval of agenda and minutes", "Adjournment".
+
+These conventions are prompt guidance, not schema. They can change without a
+migration.
+
+## Deferred: structure beyond chapters
+
+v0 stores chapters and nothing else. We considered three kinds of extra
+structure, and each can be added later without changing the chapter schema:
+
+1. **A `kind` on each chapter** (procedural, presentation, public comment,
+   deliberation, vote, break). Rejected for v0. One label per chapter forces
+   chapters to split wherever the activity changes, so a 10-minute GBOS
+   discussion of one item becomes presentation, public comment, deliberation
+   and vote chapters, which is the fragmentation topic-level chapters were
+   meant to avoid. It also commits us to a vocabulary: changing it later means
+   relabelling every chapter.
+2. **Labels on segments.** Two nullable columns on `segments`: `role`
+   (member, staff, presenter, public) and `activity` (procedural,
+   presentation, public comment, deliberation, vote). This would allow "all
+   public comment" as a query, and expanding a chapter into its activity runs
+   in the UI ("jump to the vote"). It is a pure addition, backfilled by a
+   labelling pass.
+3. **Subjects.** Agenda items, matters (ordinances, resolutions) and recurring
+   issues as their own rows, linked many-to-many to chapters or segments. This
+   would let one public comment be about two agenda items, and trace an
+   ordinance across meetings. It is also a pure addition.
+
+Revisit this once chapters exist and title-based search visibly falls short.
+
+### Background: how others classify parts of a meeting
+
+This research informed the list above and is the starting point for option 2.
 
 **citymeetings.nyc.** Chapter type chips from a sample of 48 NYC Council and
 Charter Revision Commission meetings, fetched 2026-09-30. Each chip label maps
@@ -315,105 +344,45 @@ _section_, and each section mixes several activities.
   order, and records a `decision` (Passed or Failed) on each item, plus each
   member's individual vote.
 
-### What we take from this
+What this suggests for a future activity vocabulary:
 
-1. **A kind describes activity, not agenda position.** Agenda sections mix
-   activities. GBOS Old Business holds presentations, public questions,
-   deliberation and votes, and an Anchorage public hearing holds all four in
-   one item. A kind that meant "agenda section" couldn't answer "all public
-   comment", because a lot of public comment happens inside business items
-   and public hearings. Agenda position is a separate axis. It belongs to the
-   future agenda link (see [No nesting in v0](#coverage-chapters-cover-the-whole-meeting)),
-   not to `kind`.
-2. **Speaker role is the main thing that separates kinds.** Every source
-   separates the public, invited or official speakers (staff, agencies,
-   service providers, legislators), and the body's own members. Our kinds
-   follow the same lines. This also makes kinds easy to check against the
-   derived speakers.
-3. **Votes are first-class everywhere except citymeetings.** Legistar, OCD,
-   CDP and Akoma Ntoso all record motions, outcomes and tallies. "Every vote
-   on X" is a core cross-meeting question, so a formal vote is always its own
-   chapter.
-4. **Meeting-level type is separate.** Regular meeting, special meeting, work
-   session, hearing and quarterly meeting describe the meeting, not a
-   chapter, and belong on `meetings`.
-5. **Keep the set small and closed.** Akoma Ntoso's 20 section types are
-   built for national parliaments. Small bodies need a handful of kinds that
-   a labeller can apply without hesitating. Finer detail (a question versus
-   an answer, agency versus invited speaker) comes from the derived speakers
-   and the text, not from more kinds.
-
-### The kinds
-
-| `kind`           | What it is                                                                                                                          | Examples                                                                                                                                                                | Closest citymeetings type                  | In the TOC by default |
-| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ | --------------------- |
-| `procedural`     | Running the meeting, not its substance.                                                                                             | Call to order, roll call and disclosures, pledge, land acknowledgement, invocation, agenda and minutes approval, consent agenda passed without discussion, adjournment. | PROCEDURE, INVOCATION                      | no                    |
-| `report`         | A scheduled or invited speaker informs the body: a presentation or a report, plus the body's clarifying questions to that speaker.  | Staff presentation on an ordinance, fire chief's report, legislator's report, committee update, supervisor reports, Mayor's report.                                     | PRESENTATION, AGENCY TESTIMONY, Q&A (part) | yes                   |
-| `public_comment` | Members of the public speaking, wherever it happens on the agenda.                                                                  | Open public comment, Anchorage appearance requests and audience participation, testimony in a public hearing, a resident speaking during Old Business.                  | PUBLIC TESTIMONY                           | yes                   |
-| `discussion`     | The body deliberating among itself: debate, questions to each other, motions, amendments, and member comments not tied to a report. | GBOS debating a letter on solid waste fees, Assembly debate on an amendment, "Assembly Comments".                                                                       | REMARKS, QUESTION                          | yes                   |
-| `vote`           | A formal vote on a motion and its announced result. Always its own chapter, however short.                                          | Roll-call vote on an ordinance, voice vote on a resolution of support.                                                                                                  | VOICE VOTE, VOTE OUTCOME                   | yes                   |
-| `break`          | No business is being done.                                                                                                          | Recess, executive session (the public stream is paused or the room is empty), technical difficulties, dead air before the gavel.                                        | none (left as gaps)                        | no                    |
-
-`discussion` replaces the earlier `topic`. "Topic" suggested _any_
-substantive chapter, which overlapped with `report` and `public_comment`.
-Every kind is on some topic. The kinds say what kind of talk it is.
-
-Labelling rules:
-
-- **One kind per chapter.** When the activity changes for longer than about a
-  minute, start a new chapter. So an Anchorage public hearing on an ordinance
-  becomes a `report` (staff presents), then `public_comment` chapters, then
-  `discussion`, then a `vote`, and all of them share the item in their
-  titles.
-- **Public speakers are always `public_comment`,** even inside a business
-  item or a hearing (see [Granularity](#granularity)).
-- **Questions to a presenter stay in the `report`** while they clarify what
-  was presented. When they turn into debate among the members, start a
-  `discussion` chapter.
-- **Every formal vote is a `vote` chapter,** including a 10-second voice vote.
-  Motions and amendments debated before the vote are `discussion`. A consent
-  agenda passed without discussion is `procedural`.
-- **Executive session is `break`.** No business is visible to the public. The
-  motion to enter it is `procedural`.
-
-Checking the set: when the gold set (#27) is labelled, count how often the
-labeller hesitates between two kinds, or two labellers disagree. A pair that
-is often confused should be merged. A kind that never occurs in Girdwood or
-Anchorage meetings should be dropped.
+- **Activity is separate from agenda position.** Agenda sections mix
+  activities. GBOS Old Business holds presentations, public questions,
+  deliberation and votes, and an Anchorage public hearing holds all four in
+  one item.
+- **Speaker role is the main thing that separates activities.** Every source
+  separates the public, invited or official speakers, and the body's own
+  members.
+- **Votes are first-class everywhere except citymeetings.** Legistar, OCD,
+  CDP and Akoma Ntoso all record motions, outcomes and tallies.
+- **Meeting-level type is separate.** Regular meeting, special meeting, work
+  session and hearing describe the meeting and belong on `meetings`.
+- **Keep any vocabulary small and closed.** Akoma Ntoso's 20 section types are
+  built for national parliaments. Small bodies need a handful that a labeller
+  can apply without hesitating.
 
 ## Granularity
 
-- #25 specifies 1 to 15 minutes and 3 to 7 bullets. Keep that for
-  `discussion` and `report` chapters. `procedural`, `vote` and `break`
-  chapters can be any length (a 20-second roll call, a 10-second voice vote, a
-  40-minute recess) and get 0 to 1 bullets.
-- **Every chapter has a one-sentence summary**, whatever its kind. The
-  summary is what tooltips, collapsed list rows and the agent outline show.
-  Bullets add detail beneath it.
+- #25 specifies 1 to 15 minutes and 3 to 7 bullets. Keep that for substantive
+  chapters. Procedural chapters can be shorter (a 20-second roll call) and get
+  0 to 1 bullets.
+- **Every chapter has a one-sentence summary.** The summary is what tooltips,
+  collapsed list rows and the agent outline show. Bullets add detail beneath
+  it.
 - **Bullets have no timestamps.** A bullet summarizes the chapter as a whole.
   The points it makes often build up across the whole chapter rather than
   happening at one moment, so bullets are not tied to a time. The chapter's
   time range is the finest time link a chapter has.
 - Expect roughly 10 to 30 chapters for a 2.5-hour Girdwood meeting.
   citymeetings' roughly 44 is the per-speaker end of the range.
-- Long public comment periods are the hard case. One chapter per commenter is
-  what citymeetings does, and it suits the "find the 3-minute testimony" use
-  case. One chapter for the whole period loses the attribution job. The rule:
-  one chapter per commenter when a commenter speaks for more than about a
-  minute, otherwise group them.
-- **Public comment is always its own kind.** Every chapter of public comment,
-  per-commenter or grouped, has `kind = public_comment` and never `discussion`,
-  even when the comment is about a topic being discussed. That makes "all
-  public comment across the database" a single query on `chapters.kind`,
-  joined to `segments` for the words and speakers.
-- **Test the assumptions once we have data.** The rules above assume, for
-  example, that in practice nearly every commenter speaks for at least a
-  minute, so per-commenter chapters stay inside the 1 to 15 minute range and
-  grouping is rare. That is plausible but unverified. When chapters are built,
-  add test cases against the gold set (#27) and real output that check it:
-  `discussion` and `report` chapters fall within 1 to 15 minutes, the distribution of commenter
-  speaking times, and that every public comment stretch is covered by a
-  `public_comment` chapter. If an assumption fails, revisit the rule.
+- Long public comment periods are the hard case. One chapter for a 40-minute
+  period is too coarse to navigate. Split it by topic, and when a topic has
+  many commenters, split it so each chapter stays under about 15 minutes.
+  Commenters are found through the derived speaker list.
+- **Test the assumptions once we have data.** When chapters are built, add test
+  cases against the gold set (#27) and real output that check that
+  substantive chapters fall within 1 to 15 minutes and that no stretch of
+  speech is left uncovered. If an assumption fails, revisit the rule.
 - Scrubber legibility sets a lower bound. On a roughly 700px bar, a 1-minute
   chapter in a 3-hour meeting is about 4px wide, which is still visible. Below
   about 2px, segments merge visually, so the scrubber needs a minimum rendered
@@ -466,9 +435,8 @@ transcript and the play controls, where YouTube and Spotify put it:
 
 - A full-width bar in which **each chapter is a segment**, with a 2px gap
   between segments. The played portion is filled, and the playhead is a thumb.
-- **Gaps and low-value kinds are drawn differently.** Uncovered time is a
-  muted, hatched segment. `procedural` and `break` are lower contrast. The eye
-  should land on substantive chapters.
+- **Gaps are drawn differently.** Uncovered time is a muted, hatched segment,
+  so the eye lands on chapters.
 - **Hover** shows a tooltip _above_ the bar with the chapter title, the hovered
   timestamp, and the chapter's time range. Per the Spotify complaint, it must
   never cover the bar.
@@ -521,8 +489,7 @@ space the Speakers list and description already occupy.
 
 Each row shows:
 
-- start time (a link that seeks), title, duration, and a kind badge (none for
-  `discussion`, the most common kind);
+- start time (a link that seeks), title, and duration;
 - **speaker swatches** for the top 2 or 3 speakers by speaking time in that
   chapter, with "+N" for the rest and a hover card listing all of them. This is
   the attribution job;
@@ -536,10 +503,6 @@ is in a gap, nothing is highlighted, and an optional thin marker between rows
 shows where the playhead is. The list auto-scrolls to keep the active chapter
 visible, and manual scrolling pauses that, mirroring the transcript's
 follow/return-to-playhead behavior.
-
-A toggle at the top ("Show procedural") hides `procedural` and `break` rows by
-default, following the citymeetings type filter and the `toc: false` idea.
-Hidden chapters still appear on the scrubber.
 
 ### 4. Chapters inside the transcript
 
@@ -575,7 +538,7 @@ HTTP API. Typical tasks and what they need from chapters:
 
 | Task                                                  | What the agent does                                                                                             | Requirement                                                                                                             |
 | ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| "What happened at the Feb 3 GBOS meeting?"            | Reads the chapter outline (titles, times, kinds, top speakers), about 2k tokens.                                | A compact outline rendering, one line per chapter. Filter by kind.                                                      |
+| "What happened at the Feb 3 GBOS meeting?"            | Reads the chapter outline (titles, times, summaries, top speakers), about 2k tokens.                            | A compact outline rendering, one line per chapter.                                                                      |
 | "What did the board decide about X?"                  | Searches chapter titles and bullets across meetings, then reads the transcript slice for the matching chapters. | Full-text search over title, bullets, and summary. Cheap "transcript for chapter" access (segments in `[start, end)`).  |
 | "What has Supervisor Y said about housing this year?" | Joins chapters to derived per-chapter speakers, filters by person, searches by topic, reads the slices.         | A `chapter_speakers` view (chapter_id, person_id / speaker_number, speaking_secs). A stable person identity (ADR 0002). |
 | "Cite it."                                            | Returns a deep link.                                                                                            | A URL form `/meetings/:id?t=secs`.                                                                                      |
@@ -589,8 +552,8 @@ Principles:
   pointer. That argues for making `chapter → segments` trivial to query.
 - **Flat, consistent granularity** is easier for agents than deep nesting.
   "Top N chapters by speaking time of person P" only makes sense when chapters
-  are comparable in size, which is another argument for typed kinds (filter out
-  `break`) over sparse gaps.
+  are comparable in size, which is another argument for covering the meeting
+  over sparse gaps.
 - **Cite by time.** An agent cites a chapter or a moment with `?t=`, the same
   link a human shares. Chapter IDs are internal and are not part of any URL.
 - A CLI view such as `om chapters <meeting> --show`, or an outline format in
@@ -612,12 +575,10 @@ chaptersTable = pgTable(
       .references(() => meetingsTable.id),
     start_secs: secondsInterval().notNull(),
     end_secs: secondsInterval().notNull(), // explicit: gaps are legal (#25); must be > start_secs
-    kind: chapterKind().notNull(), // enum, see Chapter kinds
     title: varchar().notNull(), // a few words, TOC-scannable
     summary: varchar().notNull(), // one sentence: tooltip, collapsed row, agent outline
-    bullets: varchar().array().notNull(), // text[]; 3–7 for discussion and report, 0–1 otherwise; no timestamps
-    // Not in v0: an agenda link (eg "7.b", later a foreign key to agenda_items)
-    // would go here when nesting arrives.
+    bullets: varchar().array().notNull(), // text[]; 3–7, 0–1 for short procedural chapters; no timestamps
+    // No kind, agenda link or other label in v0: see "Deferred: structure beyond chapters".
     // provenance (#28): which run produced this row
     generation_id: integer().references(() => chapterGenerationsTable.id),
   },
@@ -646,9 +607,6 @@ chapterGenerationsTable = pgTable("chapter_generations", {
 //   = segments overlapping [start_secs, end_secs), clipped to the chapter, summed per speaker
 ```
 
-`chapterKind` is the enum of the six kinds in
-[Chapter kinds](#chapter-kinds).
-
 Notes on reconciling with existing tickets:
 
 - **#25 / #28, gaps:** kept legal. The generator covers the meeting (see
@@ -665,11 +623,12 @@ Notes on reconciling with existing tickets:
   staleness detectable. That covers "invalidation on re-transcription" from
   #25. A new speaker _label_ doesn't stale a chapter because speakers are
   derived, but a changed transcript does.
-- **#29, validation:** ordered, non-overlapping, in-bounds, and 1 to 15 minutes
-  for `discussion` and `report` only. Also check coverage: flag uncovered speech longer than about
-  30 seconds.
-- **#27, gold:** write the gold chaptering with the same `kind`s, so deliberate
-  gaps become explicit `procedural` or `break` entries.
+- **#29, validation:** ordered, non-overlapping, in-bounds. Warn on
+  substantive chapters outside 1 to 15 minutes. Also check coverage: flag
+  uncovered speech longer than about 30 seconds.
+- **#27, gold:** follows the same coverage rule and
+  [title conventions](#titles-carry-the-structure), so procedural stretches
+  are chapters and the only gaps are silence.
 - **#33, UI:** the placement, active-chapter, and bullets questions are
   answered above (tabs, binary search with a gap state, bullets expanded on the
   active chapter). The scrubber and transcript dividers go beyond #33's scope
@@ -688,12 +647,14 @@ These are deliberately out of scope for the first version:
   back to the bodies that publish the videos, so it is a possible follow-up.
 - **Nesting and an agenda link.** See
   [No nesting in v0](#coverage-chapters-cover-the-whole-meeting).
+- **Chapter kinds, segment labels and subjects.** See
+  [Deferred: structure beyond chapters](#deferred-structure-beyond-chapters).
 
 ## Open questions
 
-1. **Kind set details.** Should `executive_session` be its own kind rather
-   than a `break`, so closed sessions can be counted across meetings? Should
-   Q&A get its own kind, as on citymeetings, if Anchorage committee meetings
-   turn out to be question-heavy? Should `vote` chapters carry an outcome
-   (passed, failed, withdrawn) and a tally, as Legistar and CDP do? For now
-   that would be a placeholder comment in the schema, like the agenda link.
+1. **When is text search not enough?** "All public comment" and "every vote
+   on X" rely on [title conventions](#titles-carry-the-structure) in v0. Once
+   the gold set (#27) and real output exist, check how well search over titles
+   and summaries answers them. That decides whether and when to add the
+   [deferred structure](#deferred-structure-beyond-chapters), starting with
+   segment labels.
