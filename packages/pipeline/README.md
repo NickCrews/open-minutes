@@ -4,20 +4,23 @@ The offline processing pipeline that turns raw meeting audio into speaker-attrib
 
 ## The `om` CLI
 
-The pipeline ships an `om` bin (run `pnpm om ...` here or at the repo root)
-with three composable commands. Machine-readable results go to stdout and all
-human progress/logs go to stderr, so results can be piped:
+The pipeline ships an `om` CLI with three composable commands. Run it as
+`pnpm om <command>` from anywhere in the repository. Machine-readable results
+go to stdout and all human progress/logs go to stderr, so results can be piped:
 
 ```sh
-om status              # list ingested meetings (--json for JSON-lines, ids to filter)
-om available           # video IDs on bodies' video sources not yet ingested, newest first (--body <slug> to filter)
-om ingest [ids...]     # run the full pipeline per video (reads stdin if no args)
+pnpm om status          # list ingested meetings (--json for JSON-lines, ids to filter)
+pnpm om available       # video IDs on bodies' video sources not yet ingested, newest first (--body <slug> to filter)
+pnpm om ingest [ids...] # run the full pipeline per video (reads stdin if no args)
 
-om available | head -5 | om ingest   # ingest the 5 newest available meetings
+pnpm -s om available | head -5 | pnpm -s om ingest   # ingest the 5 newest available meetings
 ```
 
+When piping, pass pnpm's `-s` (`--silent`): without it, pnpm prints the script
+it's running to stdout, ahead of `om`'s output.
+
 Commands default to the `local` database; target any named database with
-`DB=<name> om <cmd>` (eg `DB=prod`). Ingestion is all-or-nothing per meeting:
+`DB=<name> pnpm om <cmd>` (eg `DB=prod`). Ingestion is all-or-nothing per meeting:
 the meeting row and its segments are committed in one transaction only after
 every stage succeeds. Each stage's artifact (audio, transcription JSON,
 diarization JSON) is cached in a gitignored per-meeting work directory under

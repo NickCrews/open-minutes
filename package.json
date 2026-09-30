@@ -15,7 +15,8 @@
     "check": "pnpm typecheck && pnpm run format:check && pnpm run lint && pnpm run test",
     "web:dev": "pnpm --filter @open-minutes/web run dev",
     "db": "pnpm --silent --filter @open-minutes/db run db",
-    "deploy": "pnpm db migrate --db prod && pnpm --filter @open-minutes/web run deploy"
+    "om": "pnpm --silent --filter @open-minutes/pipeline run om",
+    "deploy:prod": "pnpm db migrate --db prod && pnpm --filter @open-minutes/web run deploy"
   },
   "devDependencies": {
     "@open-minutes/db": "workspace:*",
