@@ -165,8 +165,8 @@ This is the open standard for podcast chapters. The only required field is
 `startTime`. `endTime` is optional, and **`toc: false`** marks a "silent"
 chapter that exists for timing but is hidden from the table of contents. That
 is a standard way to express "this span is covered but not worth listing",
-which fits procedural material. The format is also a possible export format
-later.
+which fits procedural material. The format is also a possible export format,
+which is a follow-up and not in v0 (see [Not in v0](#not-in-v0)).
 
 ## Coverage: chapters cover the whole meeting
 
@@ -225,6 +225,10 @@ chapters with similar titles.
 - #25 specifies 1 to 15 minutes and 3 to 7 bullets. Keep that for `topic`
   chapters. Procedural and break chapters can be any length (a 20-second roll
   call, a 40-minute recess) and get 0 to 1 bullets.
+- **Bullets have no timestamps.** A bullet summarizes the chapter as a whole.
+  The points it makes often build up across the whole chapter rather than
+  happening at one moment, so bullets are not tied to a time. The chapter's
+  time range is the finest time link a chapter has.
 - Expect roughly 10 to 30 chapters for a 2.5-hour Girdwood meeting.
   citymeetings' roughly 44 is the per-speaker end of the range.
 - Long public comment periods are the hard case. One chapter per commenter is
@@ -415,9 +419,9 @@ HTTP API. Typical tasks and what they need from chapters:
 Principles:
 
 - **Chapters are an index, not the source.** An agent should treat titles and
-  bullets as pointers and quote the transcript. That argues for making
-  `chapter → segments` trivial to query and for grounding bullets (see the open
-  question on per-bullet anchors).
+  bullets as pointers and quote the transcript. Bullets have no timestamps
+  (see [Granularity](#granularity)), so the chapter's time range is the
+  pointer. That argues for making `chapter → segments` trivial to query.
 - **Flat, consistent granularity** is easier for agents than deep nesting.
   "Top N chapters by speaking time of person P" only makes sense when chapters
   are comparable in size, which is another argument for typed kinds (filter out
@@ -446,7 +450,7 @@ chaptersTable = pgTable(
     kind: chapterKind().notNull(), // enum, see below
     title: varchar().notNull(), // a few words, TOC-scannable
     summary: varchar(), // optional one sentence: tooltip, collapsed row, agent outline
-    bullets: jsonb().$type<string[]>().notNull(), // 3–7 for topic, 0–1 otherwise
+    bullets: varchar().array().notNull(), // text[]; 3–7 for topic, 0–1 otherwise; no timestamps
     // Not in v0: an agenda link (eg "7.b", later a foreign key to agenda_items)
     // would go here when nesting arrives.
     // provenance (#28): which run produced this row
@@ -498,9 +502,11 @@ Notes on reconciling with existing tickets:
 - **#25 / #28, gaps:** kept legal. The generator covers the meeting (see
   [Coverage](#coverage-chapters-cover-the-whole-meeting)), and the schema
   doesn't enforce it.
-- **#28, bullets:** `jsonb string[]`, following the `segments.words`
-  precedent. Individual addressability can come later through per-bullet
-  anchors, and that is when a separate table would pay off.
+- **#28, bullets:** `text[]`, the native Postgres type for a list of strings.
+  The database enforces that every element is a string, and full-text search
+  over it is simple. `jsonb` was considered only to match `segments.words`,
+  which holds objects, not strings. Bullets never get timestamps (see
+  [Granularity](#granularity)), so they never need to become objects.
 - **#28, provenance and regeneration:** a separate generations table lets
   regeneration create a new generation and swap which one is current, rather
   than versioning each row. A fingerprint of the rendered transcript makes
@@ -517,6 +523,20 @@ Notes on reconciling with existing tickets:
   active chapter). The scrubber and transcript dividers go beyond #33's scope
   and may deserve their own ticket.
 
+## Not in v0
+
+These are deliberately out of scope for the first version:
+
+- **Timestamps on bullets.** Bullets summarize a whole chapter and are not
+  tied to a moment. See [Granularity](#granularity).
+- **A human edit UI** for chapter boundaries and titles. Any corrections in v0
+  go through the CLI or the database.
+- **Export** to Podcasting 2.0 JSON chapters or YouTube description
+  timestamps. It would be cheap, and YouTube-format chapters could be offered
+  back to the bodies that publish the videos, so it is a possible follow-up.
+- **Nesting and an agenda link.** See
+  [No nesting in v0](#coverage-chapters-cover-the-whole-meeting).
+
 ## Open questions
 
 1. **Kind set.** Are five kinds right? Is `vote` worth separating, or is it
@@ -525,12 +545,3 @@ Notes on reconciling with existing tickets:
 2. **`summary` field.** Is one sentence alongside 3 to 7 bullets redundant? It
    helps tooltips, collapsed rows, and agent outlines. The first bullet could
    do the same job.
-3. **Per-bullet time anchors** (`{text, at_secs}`) so every claim links to its
-   evidence, for citation and hallucination checks. They cost more to generate
-   and validate.
-4. **Human review.** citymeetings relies heavily on human correction. Do we
-   need an edit UI (boundaries, titles) before chapters count as trustworthy,
-   and how is `reviewed_by_human` set?
-5. **Export.** Emit Podcasting 2.0 JSON chapters or YouTube description
-   timestamps? This would be cheap, and YouTube-format chapters could be
-   offered back to the bodies that publish the videos.
