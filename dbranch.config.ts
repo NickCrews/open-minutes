@@ -1,5 +1,5 @@
 // Configures the `pnpm db` CLI (@open-minutes/db): the datasets `pnpm db up
-// --data <name>` can name. See adrs/0003-declarative-database-harness.md.
+// --data <name>` can name. See docs/contributing/db.md.
 import { defineConfig } from "@open-minutes/db/config";
 import { devData } from "@open-minutes/fixtures/dev-data";
 import { goldenData } from "@open-minutes/fixtures/golden-data";
