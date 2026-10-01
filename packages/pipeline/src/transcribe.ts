@@ -15,7 +15,7 @@ import type {
   TranscriptWord,
 } from "@open-minutes/core/transcription";
 
-const MODEL_SPEC = {
+export const TRANSCRIPTION_MODEL_SPEC = {
   // I chose this model based on how it is the highest accuracy with still a >3000x real-time facto
   // according to https://huggingface.co/spaces/hf-audio/open_asr_leaderboard
   // Keep your eye on that leaderboard. If there's a new model with better accuracy
@@ -37,7 +37,7 @@ const MODEL_SPEC = {
 } as const satisfies ModelSpec;
 
 // Silero VAD — finds speech/silence boundaries so we can chunk at silences.
-const VAD_MODEL_SPEC = {
+export const VAD_MODEL_SPEC = {
   name: "silero_vad",
   url: "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/silero_vad.onnx",
   single_file: true,
@@ -367,8 +367,17 @@ function getVad(): Vad {
   return _vad;
 }
 
+/**
+ * Downloads (if missing) and loads the recognizer and VAD now, rather than on
+ * the first transcribeAudio call. Loading the recognizer alone takes seconds.
+ */
+export function loadTranscriptionModels(): void {
+  getRecognizer();
+  getVad();
+}
+
 export function ensureModelFiles() {
-  const { files } = ensureDownloaded(MODEL_SPEC);
+  const { files } = ensureDownloaded(TRANSCRIPTION_MODEL_SPEC);
   return files;
 }
 

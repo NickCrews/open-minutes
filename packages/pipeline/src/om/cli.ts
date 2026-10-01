@@ -20,6 +20,7 @@ import { prepareDatabase } from "@open-minutes/db/ensure";
 import { listIngested, type IngestedMeeting } from "./ingested";
 import { listAvailable } from "./available";
 import { ingestVideos } from "./ingest";
+import { ALL_MODEL_SPECS, ensureAllModels } from "../all-models";
 
 async function withDb<T>(fn: (db: DB) => Promise<T>): Promise<T> {
   // Same readiness rule as `pnpm dev`: local is migrated (and created, on a
@@ -146,6 +147,33 @@ const ingest = defineCommand({
   },
 });
 
+const models = defineCommand({
+  meta: {
+    name: "models",
+    description:
+      "Download every ML model the pipeline uses (~650MB), skipping any " +
+      "already present. Otherwise each is downloaded on first use.",
+  },
+  args: {
+    list: {
+      type: "boolean",
+      description:
+        "Print each model's spec as one JSON object per line, without " +
+        "downloading (CI hashes this into its model cache key)",
+      default: false,
+    },
+  },
+  run({ args }) {
+    if (args.list) {
+      for (const spec of ALL_MODEL_SPECS) {
+        console.log(JSON.stringify(spec));
+      }
+      return;
+    }
+    ensureAllModels();
+  },
+});
+
 async function readStdin(): Promise<string> {
   let data = "";
   for await (const chunk of process.stdin) {
@@ -159,7 +187,7 @@ const main = defineCommand({
     name: "om",
     description: "Manage the open-minutes meeting database",
   },
-  subCommands: { status, available, ingest },
+  subCommands: { status, available, ingest, models },
 });
 
 await runMain(main);

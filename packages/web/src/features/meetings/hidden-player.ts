@@ -1,9 +1,5 @@
 import { createSignal, onCleanup } from "solid-js";
-import {
-  loadYouTubeIframeApi,
-  PlayerState,
-  type YTPlayer,
-} from "~/lib/youtube";
+import { createYouTubePlayer, PlayerState, type YTPlayer } from "~/lib/youtube";
 
 /** A meeting's video, as the hidden player needs to know it. */
 export type PlayableMeeting = { id: number; youtubeId: string };
@@ -54,39 +50,22 @@ export function createHiddenPlayer() {
     }
   };
 
-  const createPlayer = (videoId: string, startSecs: number) =>
-    loadYouTubeIframeApi().then(
-      (YT) =>
-        new Promise<YTPlayer>((resolve) => {
-          const mount = document.createElement("div");
-          host?.appendChild(mount);
-          const player = new YT.Player(mount, {
-            videoId,
-            playerVars: {
-              autoplay: 1,
-              start: Math.floor(startSecs),
-              playsinline: 1,
-            },
-            events: {
-              onReady: () => {
-                // `start` only takes whole seconds.
-                player.seekTo(startSecs, true);
-                // The IFrame API has no timeupdate event, so poll.
-                poll = setInterval(() => onPoll(player), 250);
-                resolve(player);
-              },
-              onStateChange: ({ data }) => {
-                if (data === PlayerState.playing) setPlaying(true);
-                else if (
-                  data === PlayerState.paused ||
-                  data === PlayerState.ended
-                )
-                  setPlaying(false);
-              },
-            },
-          });
-        }),
-    );
+  const createPlayer = async (videoId: string, startSecs: number) => {
+    const player = await createYouTubePlayer(host!, {
+      videoId,
+      playerVars: { autoplay: 1, start: Math.floor(startSecs), playsinline: 1 },
+      onStateChange: ({ data }) => {
+        if (data === PlayerState.playing) setPlaying(true);
+        else if (data === PlayerState.paused || data === PlayerState.ended)
+          setPlaying(false);
+      },
+    });
+    // `start` only takes whole seconds.
+    player.seekTo(startSecs, true);
+    // The IFrame API has no timeupdate event, so poll.
+    poll = setInterval(() => onPoll(player), 250);
+    return player;
+  };
 
   /** Plays `meeting` from `secs` until `stop` says to stop, or it's paused. */
   const play = async (

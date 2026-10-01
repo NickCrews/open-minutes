@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, readdirSync, symlinkSync } from "node:fs";
 import { execSync } from "node:child_process";
 import { dirname, join } from "node:path";
@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import sherpa_onnx from "sherpa-onnx-node";
 import {
   ensureModelFiles,
+  loadTranscriptionModels,
   MERGE_WINDOW_SEC,
   tokensToWords,
   transcribeAudio,
@@ -71,6 +72,14 @@ describe("tokensToWords", () => {
 });
 
 describe("transcribe", () => {
+  // Downloading the ~460MB model (on a cold cache) and loading it (always,
+  // several seconds) take longer than a test's default 5s timeout, so neither
+  // happens inside a test. Resampling the sample wav is memoized here too.
+  beforeAll(() => {
+    loadTranscriptionModels();
+    sample16kHz();
+  }, 10 * 60_000);
+
   it("transcribes a 4 second audio sample", async () => {
     const segments = await transcribeAudio(sample16kHz());
     const words = segments.flatMap((s) => s.words);

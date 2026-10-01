@@ -125,23 +125,47 @@ export function ensurePostgresRunning(url: string): Promise<void> {
   return ready;
 }
 
+/**
+ * True once the server completes a postgres handshake. An open port alone
+ * isn't enough: docker publishes the port before postgres listens (and the
+ * image restarts postgres once after initdb), and connections in that window
+ * are reset. Any error the server itself sends, other than "starting up",
+ * means it is up (a wrong password, say, is the caller's to report).
+ */
+async function postgresAnswers(base: string): Promise<boolean> {
+  const sql = postgres(urlForDatabase(base, "postgres"), {
+    max: 1,
+    connect_timeout: 2,
+    onnotice: () => {},
+  });
+  try {
+    await sql`SELECT 1`;
+    return true;
+  } catch (err) {
+    return err instanceof postgres.PostgresError && err.code !== "57P03";
+  } finally {
+    await sql.end({ timeout: 0 });
+  }
+}
+
 async function startPostgresIfDown(base: string): Promise<void> {
   const url = new URL(base);
   const host = url.hostname;
   const port = Number(url.port || 5432);
 
-  if (await canConnect(host, port)) return;
-
   if (!isLocalUrl(base)) {
+    if (await canConnect(host, port)) return;
     throw new Error(
       `Database at ${host}:${port} is unreachable, and it isn't local so I won't docker-compose it up.`,
     );
   }
 
+  if (await postgresAnswers(base)) return;
+
   console.error(`No postgres on ${host}:${port} — starting docker compose...`);
   // Capture output and tolerate failure: concurrent processes can race this
   // command, and the loser's spurious "container name already in use" error
-  // doesn't matter as long as the port comes up below.
+  // doesn't matter as long as postgres comes up below.
   const compose = spawnSync(
     "docker",
     ["compose", "up", "-d", "--wait", "postgres"],
@@ -149,7 +173,7 @@ async function startPostgresIfDown(base: string): Promise<void> {
   );
 
   const deadline = Date.now() + 60_000;
-  while (!(await canConnect(host, port))) {
+  while (!(await postgresAnswers(base))) {
     if (Date.now() > deadline) {
       throw new Error(
         `Timed out waiting for postgres on ${host}:${port}. \`docker compose up\` said:\n${compose.error?.message ?? `${compose.stdout}${compose.stderr}`}`,
