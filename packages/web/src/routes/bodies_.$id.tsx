@@ -4,9 +4,10 @@ import { For, Show } from "solid-js";
 import { getBodyById } from "~/features/bodies";
 import { formatMeetingDate } from "@open-minutes/core/meeting-date";
 import { db } from "~/server/db";
+import { z } from "zod";
 
 const fetchBody = createServerFn({ method: "GET" })
-  .inputValidator((id: number) => id)
+  .inputValidator(z.int().positive())
   .handler(({ data }) => getBodyById(db(), data));
 
 export const Route = createFileRoute("/bodies_/$id")({

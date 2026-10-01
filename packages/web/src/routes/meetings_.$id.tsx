@@ -9,9 +9,10 @@ import { MeetingDateTime } from "~/features/meetings/meeting-date-time";
 import { Transcript } from "~/features/meetings/transcript";
 import { type YTPlayer } from "~/lib/youtube";
 import { db } from "~/server/db";
+import { z } from "zod";
 
 const fetchMeeting = createServerFn({ method: "GET" })
-  .inputValidator((id: number) => id)
+  .inputValidator(z.int().positive())
   .handler(({ data }) => getMeetingById(db(), data));
 
 export const Route = createFileRoute("/meetings_/$id")({

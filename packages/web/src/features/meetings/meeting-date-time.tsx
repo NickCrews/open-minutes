@@ -11,6 +11,7 @@ import {
 } from "@open-minutes/core/meeting-date";
 import { assertCanEdit, canEdit } from "~/lib/permissions";
 import { db } from "~/server/db";
+import { z } from "zod";
 
 /**
  * Dates and times are entered by hand as the wall clock read in the body's own
@@ -22,7 +23,9 @@ import { db } from "~/server/db";
  * Guarded on both sides of the wire by the same `canEdit` that hides the button.
  */
 const saveMeetingDate = createServerFn({ method: "POST" })
-  .inputValidator((input: { id: number; date: string; time: string }) => input)
+  .inputValidator(
+    z.object({ id: z.int().positive(), date: z.string(), time: z.string() }),
+  )
   .handler(async ({ data }) => {
     assertCanEdit("meeting dates");
     if (!data.date)
