@@ -1,9 +1,12 @@
 import { describe, expect, test as plainTest } from "vitest";
+import { eq } from "drizzle-orm";
+import { peopleTable } from "@open-minutes/db";
 import { dbTest } from "@open-minutes/db/testing/vitest";
 import { devData } from "@open-minutes/fixtures/dev-data";
 import { callTool, parametersOf, toAgentTool, ToolError } from "./tool";
 import {
   checkMeetingTool,
+  createPerson,
   findPeople,
   getChapters,
   getTranscript,
@@ -167,6 +170,62 @@ describe("people", () => {
     await expect(
       callTool(db, updatePerson, { personId: id, slug: "kyle-kelly" }),
     ).rejects.toThrow(/unique|duplicate/i);
+  });
+
+  test("creates a person from a speaker number's segments", async ({ db }) => {
+    const seg = await bryanSegment(db);
+    await callTool(db, relabelSegments, {
+      segmentIds: [seg.id],
+      speaker: { speakerNumber: 42 },
+    });
+    const out = await callTool(db, createPerson, {
+      slug: "brian-newcomer",
+      name: "Brian Newcomer",
+      segmentIds: [seg.id],
+    });
+    expect(out.applied).toBe(true);
+    expect(out.result).toMatchObject({
+      slug: "brian-newcomer",
+      name: "Brian Newcomer",
+      bio: null,
+      relabelled: 1,
+    });
+    expect((await bryanSegment(db)).speaker).toMatchObject({
+      personId: out.result.id,
+      slug: "brian-newcomer",
+    });
+    const [row] = await db
+      .select({ voice: peopleTable.voice_embedding })
+      .from(peopleTable)
+      .where(eq(peopleTable.id, out.result.id));
+    expect(row!.voice).toBeNull();
+  });
+
+  test("refuses a person with neither slug nor name", async ({ db }) => {
+    await expect(
+      callTool(db, createPerson, { bio: "Somebody." }),
+    ).rejects.toThrow(/slug or a name/);
+  });
+
+  test("merging into a person with no voiceprint takes the other's", async ({
+    db,
+  }) => {
+    const created = await callTool(db, createPerson, { slug: "new-person" });
+    const merge = await personId(db, "brianna-sullivan");
+    const [before] = await db
+      .select({ voice: peopleTable.voice_embedding })
+      .from(peopleTable)
+      .where(eq(peopleTable.id, merge));
+    await callTool(db, mergePeople, {
+      keepId: created.result.id,
+      mergeId: merge,
+    });
+    const [after] = await db
+      .select({ voice: peopleTable.voice_embedding })
+      .from(peopleTable)
+      .where(eq(peopleTable.id, created.result.id));
+    expect(after!.voice).toEqual(before!.voice);
+    expect(after!.voice).not.toBeNull();
   });
 
   test("merges one voice split across two people", async ({ db }) => {

@@ -1,4 +1,4 @@
-import { cosineDistance, sql } from "drizzle-orm";
+import { and, cosineDistance, isNotNull, sql } from "drizzle-orm";
 import { type DB, peopleTable, segmentsTable } from "@open-minutes/db";
 import { TranscriptSegment } from "@open-minutes/core/transcription";
 
@@ -50,7 +50,13 @@ async function findOrCreatePerson(
   const [match] = await db
     .select({ id: peopleTable.id })
     .from(peopleTable)
-    .where(sql`${distance} < ${MAX_DISTANCE}`)
+    // People created by hand have no voiceprint yet, so can't be recognized.
+    .where(
+      and(
+        isNotNull(peopleTable.voice_embedding),
+        sql`${distance} < ${MAX_DISTANCE}`,
+      ),
+    )
     .orderBy(distance)
     .limit(1);
 

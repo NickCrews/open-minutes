@@ -392,6 +392,60 @@ export const mergeSegments = defineTool({
   },
 });
 
+const slug = z
+  .string()
+  .regex(/^[a-z0-9][a-z0-9-]*$/, "kebab-case, eg margaret-tyler");
+const personName = z.string().trim().min(1);
+const bio = z.string().trim().min(1);
+
+const personColumns = {
+  id: peopleTable.id,
+  slug: peopleTable.slug,
+  name: peopleTable.name,
+  bio: peopleTable.bio,
+};
+
+export const createPerson = defineTool({
+  name: "create_person",
+  label: "Create person",
+  description:
+    "Create a person, eg to promote a speaker number to a known person, and optionally attribute segments to them. Give a slug (kebab-case, unique, eg margaret-tyler) or a name. The new person has no voiceprint, so recognition won't find them in other meetings until the pipeline computes one; if the voice is already a person (even an anonymous one), use update_person or merge_people instead.",
+  input: z
+    .object({
+      slug: slug.optional(),
+      name: personName.optional(),
+      bio: bio.optional(),
+      segmentIds: z
+        .array(id)
+        .default([])
+        .describe("Segments to attribute to the new person."),
+      dryRun,
+    })
+    .refine((p) => p.slug !== undefined || p.name !== undefined, {
+      message: "give a slug or a name",
+    }),
+  run: async (db, { segmentIds, dryRun: dry, ...fields }) => {
+    const rows = await segmentsByIds(db, segmentIds);
+    return applyEdit(
+      db,
+      [...new Set(rows.map((r) => r.meeting_id))],
+      dry,
+      async (tx) => {
+        const [person] = await tx
+          .insert(peopleTable)
+          .values(fields)
+          .returning(personColumns);
+        if (segmentIds.length)
+          await tx
+            .update(segmentsTable)
+            .set({ person_id: person!.id, speaker_number: null })
+            .where(inArray(segmentsTable.id, segmentIds));
+        return { ...person!, relabelled: segmentIds.length };
+      },
+    );
+  },
+});
+
 export const updatePerson = defineTool({
   name: "update_person",
   label: "Update person",
@@ -399,13 +453,9 @@ export const updatePerson = defineTool({
     "Set a person's slug, name or bio; null clears one. Giving an anonymous person a slug makes them a known person (slugs are kebab-case and unique, eg margaret-tyler). Names show everywhere the person speaks.",
   input: z.object({
     personId: id,
-    slug: z
-      .string()
-      .regex(/^[a-z0-9][a-z0-9-]*$/, "kebab-case, eg margaret-tyler")
-      .nullable()
-      .optional(),
-    name: z.string().trim().min(1).nullable().optional(),
-    bio: z.string().trim().min(1).nullable().optional(),
+    slug: slug.nullable().optional(),
+    name: personName.nullable().optional(),
+    bio: bio.nullable().optional(),
     dryRun,
   }),
   run: async (db, { personId, dryRun: dry, ...fields }) => {
@@ -421,12 +471,7 @@ export const updatePerson = defineTool({
         .update(peopleTable)
         .set(fields)
         .where(eq(peopleTable.id, personId))
-        .returning({
-          id: peopleTable.id,
-          slug: peopleTable.slug,
-          name: peopleTable.name,
-          bio: peopleTable.bio,
-        });
+        .returning(personColumns);
       return row!;
     });
   },
@@ -436,7 +481,7 @@ export const mergePeople = defineTool({
   name: "merge_people",
   label: "Merge people",
   description:
-    "Two person rows are the same individual (recognition split one voice in two): move every segment of mergeId to keepId and delete mergeId. keepId's slug, name and bio win; empty ones are filled from mergeId. keepId's voiceprint is kept as is.",
+    "Two person rows are the same individual (recognition split one voice in two): move every segment of mergeId to keepId and delete mergeId. keepId's slug, name, bio and voiceprint win; empty ones are filled from mergeId.",
   input: z.object({ keepId: id, mergeId: id, dryRun }),
   run: async (db, input) => {
     if (input.keepId === input.mergeId)
@@ -470,6 +515,7 @@ export const mergePeople = defineTool({
             slug: keep.slug ?? merge.slug,
             name: keep.name ?? merge.name,
             bio: keep.bio ?? merge.bio,
+            voice_embedding: keep.voice_embedding ?? merge.voice_embedding,
           })
           .where(eq(peopleTable.id, keep.id));
         return { personId: keep.id, movedSegments: moved.length };
@@ -577,6 +623,7 @@ export const tools: Tool[] = [
   relabelSegments,
   splitSegment,
   mergeSegments,
+  createPerson,
   updatePerson,
   mergePeople,
   getChapters,

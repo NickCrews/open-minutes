@@ -137,7 +137,9 @@ export const peopleTable = pgTable(
     // across jurisdictions to model, and nothing queries this.
     bio: varchar(),
     created_at: timestamp().notNull().defaultNow(),
-    voice_embedding: vector({ dimensions: VOICE_N_DIMENSIONS }).notNull(),
+    // Null until the pipeline computes one from audio. A person an agent or
+    // human creates by hand has no voiceprint yet; recognition skips them.
+    voice_embedding: vector({ dimensions: VOICE_N_DIMENSIONS }),
   },
   (table) => [
     index("idx_voice_embedding_l2").using(
