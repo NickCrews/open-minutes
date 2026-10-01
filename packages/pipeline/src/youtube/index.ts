@@ -29,6 +29,22 @@ export function videoUrl(videoIdOrUrl: string) {
   return `https://www.youtube.com/watch?v=${videoIdOrUrl}`;
 }
 
+/**
+ * Runs yt-dlp with the options every call shares. YouTube makes datacenter IPs
+ * (CI runners, servers) "sign in to confirm you're not a bot", so set
+ * YOUTUBE_COOKIES to a Netscape-format cookies.txt from a signed-in browser to
+ * get past it. Anything else (a proxy, say) can go in yt-dlp's own config file.
+ */
+function ytDlp(args: string[]) {
+  const cookies = process.env.YOUTUBE_COOKIES;
+  return execFileAsync(
+    "yt-dlp",
+    [...(cookies ? ["--cookies", cookies] : []), ...args],
+    // A busy channel's flat playlist runs to several MB.
+    { maxBuffer: 100 * 1024 * 1024 },
+  );
+}
+
 interface FlatEntry {
   /** "url" for a video, "playlist" for a nested tab/playlist. */
   _type?: "url" | "playlist";
@@ -53,14 +69,7 @@ function flattenVideos(node: FlatEntry, seen = new Set<string>()): FlatEntry[] {
 }
 
 async function flatPlaylist(url: string) {
-  const { stdout } = await execFileAsync(
-    "yt-dlp",
-    ["--flat-playlist", "-J", url],
-    {
-      // A busy channel's flat playlist runs to several MB.
-      maxBuffer: 100 * 1024 * 1024,
-    },
-  );
+  const { stdout } = await ytDlp(["--flat-playlist", "-J", url]);
   return flattenVideos(JSON.parse(stdout) as FlatEntry);
 }
 
@@ -90,13 +99,11 @@ export interface VideoMetadata {
 export async function fetchVideoMetadata(
   videoIdOrUrl: string,
 ): Promise<VideoMetadata> {
-  const { stdout } = await execFileAsync(
-    "yt-dlp",
-    ["--skip-download", "-J", videoUrl(videoIdOrUrl)],
-    {
-      maxBuffer: 100 * 1024 * 1024,
-    },
-  );
+  const { stdout } = await ytDlp([
+    "--skip-download",
+    "-J",
+    videoUrl(videoIdOrUrl),
+  ]);
   const raw = JSON.parse(stdout) as {
     id: string;
     channel_id?: string;
@@ -148,7 +155,7 @@ export async function downloadVideoAudio(
     const url = videoUrl(youtubeIdOrUrl);
     // Progress goes to stderr so callers' stdout stays machine-readable.
     console.error(`Downloading audio for ${url} to ${path}...`);
-    await execFileAsync("yt-dlp", [
+    await ytDlp([
       "-x",
       "--audio-format",
       "wav",

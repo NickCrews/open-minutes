@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import sherpa_onnx from "sherpa-onnx-node";
 import {
   ensureModelFiles,
+  loadTranscriptionModels,
   MERGE_WINDOW_SEC,
   tokensToWords,
   transcribeAudio,
@@ -71,9 +72,11 @@ describe("tokensToWords", () => {
 });
 
 describe("transcribe", () => {
-  // The first run downloads the ~460MB model (and resamples its sample wav),
-  // which takes far longer than a test's default 5s timeout. Do it up front.
+  // Downloading the ~460MB model (on a cold cache) and loading it (always,
+  // several seconds) take longer than a test's default 5s timeout, so neither
+  // happens inside a test. Resampling the sample wav is memoized here too.
   beforeAll(() => {
+    loadTranscriptionModels();
     sample16kHz();
   }, 10 * 60_000);
 

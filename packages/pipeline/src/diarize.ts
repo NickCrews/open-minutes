@@ -28,7 +28,7 @@ import type { DiarizationTurn } from "@open-minutes/core/transcription";
 // in-process, so there's no subprocess and no worker_threads here.
 
 // pyannote segmentation 3.0 — finds speaker boundaries / overlapping speech.
-const SEGMENTATION_MODEL_SPEC = {
+export const SEGMENTATION_MODEL_SPEC = {
   name: "sherpa-onnx-pyannote-segmentation-3-0",
   url: "https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-segmentation-models/sherpa-onnx-pyannote-segmentation-3-0.tar.bz2",
   files: {
