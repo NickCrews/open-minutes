@@ -3,10 +3,11 @@ import { createSignal, onCleanup, Show } from "solid-js";
 import { updatePersonBio } from "~/features/people";
 import { assertCanEdit, canEdit } from "~/lib/permissions";
 import { db } from "~/server/db";
+import { z } from "zod";
 
 /** Guarded on both sides of the wire by the same `canEdit` that hides the editor. */
 const savePersonBio = createServerFn({ method: "POST" })
-  .inputValidator((input: { id: number; bio: string }) => input)
+  .inputValidator(z.object({ id: z.int().positive(), bio: z.string() }))
   .handler(({ data }) => {
     assertCanEdit("bios");
     return updatePersonBio(db(), data.id, data.bio);

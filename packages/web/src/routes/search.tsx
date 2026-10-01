@@ -5,9 +5,10 @@ import { Button } from "~/components/button";
 import { TextField, TextFieldInput } from "~/components/text-field";
 import { searchSegments } from "~/features/search";
 import { db } from "~/server/db";
+import { z } from "zod";
 
 const fetchSearchResults = createServerFn({ method: "GET" })
-  .inputValidator((query: string) => query)
+  .inputValidator(z.string())
   .handler(({ data }) => searchSegments(db(), data));
 
 export const Route = createFileRoute("/search")({

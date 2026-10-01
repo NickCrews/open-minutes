@@ -22,14 +22,15 @@ import {
 } from "~/lib/youtube";
 import { db } from "~/server/db";
 import { compareMeetingsNewestFirst } from "@open-minutes/core/meeting-date";
+import { z } from "zod";
 
 const fetchPerson = createServerFn({ method: "GET" })
-  .inputValidator((id: number) => id)
+  .inputValidator(z.int().positive())
   .handler(({ data }) => getPersonById(db(), data));
 
 /** Guarded on both sides of the wire by the same `canEdit` that hides the button. */
 const savePersonName = createServerFn({ method: "POST" })
-  .inputValidator((input: { id: number; name: string }) => input)
+  .inputValidator(z.object({ id: z.int().positive(), name: z.string() }))
   .handler(({ data }) => {
     assertCanEdit("names");
     return updatePersonName(db(), data.id, data.name);
