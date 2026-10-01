@@ -65,19 +65,34 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
 
-      - name: Install ffmpeg and yt-dlp
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends ffmpeg
-          pipx install yt-dlp
+      - uses: ./.github/actions/setup-yt-dlp
+        with:
+          cookies: ${{ secrets.YOUTUBE_COOKIES }}
 
-      # The pipeline downloads ~650MB of ONNX models on first use. The model
-      # specs (URLs) live in these files, so a change to them busts the cache.
-      - name: Cache ONNX models
-        uses: actions/cache@v4
+      # The pipeline's ONNX models are ~650MB. Fetch them in their own step,
+      # so no test pays for (or times out on) the download. The cache key is
+      # the models' specs (URLs and files), so only a change to a model busts
+      # it. Restore and save are separate so a cache miss is saved even when
+      # the tests then fail.
+      - name: Compute the models' cache key
+        id: models
+        run: |
+          pnpm -s om models --list > "$RUNNER_TEMP/models.jsonl"
+          echo "key=onnx-models-$(sha256sum < "$RUNNER_TEMP/models.jsonl" | cut -c1-16)" >> "$GITHUB_OUTPUT"
+      - name: Restore the models
+        id: models-cache
+        uses: actions/cache/restore@v4
         with:
           path: packages/pipeline/src/models
-          key: onnx-models-${{ hashFiles('packages/pipeline/src/model.ts', 'packages/pipeline/src/transcribe.ts', 'packages/pipeline/src/diarize.ts', 'packages/pipeline/src/embed.ts') }}
+          key: ${{ steps.models.outputs.key }}
+      - name: Download the models
+        run: pnpm om models
+      - name: Save the models
+        if: steps.models-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: packages/pipeline/src/models
+          key: ${{ steps.models.outputs.key }}
 
       # Postgres starts the way it does for a developer: the first test that
       # needs it finds nothing on localhost:5432 and runs `docker compose up`.

@@ -32,8 +32,9 @@ describe("YouTube Module", () => {
   );
 
   // YouTube makes datacenter IPs (like GitHub's runners) "sign in to confirm
-  // you're not a bot", so this only runs on a developer's machine.
-  it.skipIf(process.env.CI)(
+  // you're not a bot", so CI needs cookies (see ytDlp) for this to pass. A run
+  // without them (a fork's PR, which gets no secrets) skips it.
+  it.skipIf(process.env.CI && !process.env.YOUTUBE_COOKIES)(
     "should download video audio",
     async () => {
       // A 5 sec video for testing

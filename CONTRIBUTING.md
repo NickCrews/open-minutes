@@ -37,7 +37,8 @@ the ones listed above it:
   Parakeet ASR + Silero VAD), diarizes it into speaker turns (pyannote
   segmentation + CAM++ voice embeddings), aligns turns to words, recognizes
   speakers against known voiceprints, and writes the meeting to the database.
-  No GPU or external API is needed; models are downloaded on first use. See the
+  No GPU or external API is needed; models are downloaded on first use (or
+  all at once with `pnpm om models`). See the
   [pipeline README](packages/pipeline/README.md).
 - **[`packages/web`](packages/web)** (`@open-minutes/web`): the public
   transcript browser, built with [SolidJS](https://www.solidjs.com) +
@@ -69,7 +70,8 @@ You need:
 - **Node 22** and **pnpm 10.33.0** (pinned in `package.json`;
   `corepack enable` picks it up).
 - **Docker** with Compose, for the local Postgres.
-- **ffmpeg** and **yt-dlp** on your `PATH`, for the pipeline and some tests.
+- **ffmpeg**, **yt-dlp** and **[deno](https://deno.com)** on your `PATH`, for
+  the pipeline and some tests (yt-dlp runs YouTube's player JS with deno).
 
 Then:
 
@@ -124,7 +126,13 @@ Shared test configuration is in `vitest.config.ts`, `vitest.shared.ts` and
 pnpm om status          # meetings already ingested
 pnpm om available       # videos not yet ingested
 pnpm om ingest <id>     # run the full pipeline for a video
+pnpm om models          # download every ML model up front (~650MB)
 ```
+
+From a server or CI runner, YouTube answers yt-dlp with "sign in to confirm
+you're not a bot". Point `YOUTUBE_COOKIES` at a cookies.txt exported from a
+browser signed in to YouTube (see [`.env.example`](.env.example)); CI reads it
+from the `YOUTUBE_COOKIES` secret.
 
 `om` writes to the same database as everything else (`DB=prod pnpm om ingest <id>`
 to ingest into production). See
