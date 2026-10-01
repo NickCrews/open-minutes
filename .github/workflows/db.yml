@@ -1,6 +1,6 @@
-# Database checks: schema and migrations agree, migrations apply cleanly to an
-# empty database and to a copy of production, and the harness + DB-backed
-# tests (including migration tests) pass against real Postgres.
+# Database checks: schema and migrations agree, and migrations apply cleanly to
+# an empty database and to a copy of production. Typecheck, lint and the tests
+# (including the DB-backed ones) run in ci.yml.
 name: db
 
 on:
@@ -24,9 +24,6 @@ jobs:
       # starts it explicitly. The first `pnpm db` command finds nothing listening on
       # localhost:5432 and runs `docker compose up` from docker-compose.yml.
 
-      - name: Typecheck and lint
-        run: pnpm typecheck && pnpm lint
-
       - name: Migrations have no conflicts
         run: pnpm db check
 
@@ -48,9 +45,6 @@ jobs:
           pnpm db migrate   # applies every migration to the wiped database
           pnpm db up --data golden --data-reset if-needed
           pnpm db status --check
-
-      - name: DB-backed tests
-        run: pnpm vitest run packages/db packages/fixtures packages/pipeline/src/seed packages/pipeline/src/om packages/web
 
   # Applies this PR's migrations to a throwaway copy-on-write fork of
   # production, in deploy mode, exactly as `pnpm deploy:prod` will. Catches
