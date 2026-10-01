@@ -8,7 +8,7 @@ and its tickets (#26 rendering, #27 gold chaptering, #28 schema, #29 generation,
 tickets. It collects findings and proposes answers to their open questions.
 Where it proposes changing a decision already made on #25, it says so.
 
-The database half is built; the web UI and generation (#29) are not. See
+The database and web halves are built; generation (#29) is not. See
 [What's built](#whats-built) for how the implementation settled the open
 points in the data model sketch.
 
@@ -665,6 +665,8 @@ Notes on reconciling with existing tickets:
   human, so it is not yet the gold chaptering #27 asks for. The `dev` dataset
   seeds it, and `packages/fixtures/src/chapters.test.ts` holds it to the rules
   above.
+- **Web**: the scrubber, the Chapters tab, chapter headings in the transcript,
+  and `?t=` links, as described in [Web UX](#web-ux).
 
 ## Not in v0
 

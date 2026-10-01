@@ -158,3 +158,13 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Time no chapter covers, on the meeting scrubber: hatched and faint, so the
+   eye lands on the chapters around it. */
+.scrubber-gap {
+  background: repeating-linear-gradient(
+    -45deg,
+    color-mix(in oklch, var(--muted-foreground) 30%, transparent) 0 2px,
+    transparent 2px 4px
+  );
+}

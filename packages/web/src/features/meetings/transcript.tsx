@@ -17,6 +17,13 @@ import { PersonHoverCard } from "~/features/people/person-hover-card";
 import { formatTimestamp } from "~/lib/format";
 import { PLAYBACK_RATES } from "~/lib/youtube";
 import {
+  type Chapter,
+  type ChapterAnchor,
+  chapterAnchors,
+  chapterIndexAt,
+} from "./chapters";
+import { Scrubber } from "./scrubber";
+import {
   assignSpeakers,
   type Segment,
   speakerColor,
@@ -40,12 +47,16 @@ export function segmentStart(segment: Segment): number {
 
 export function Transcript(props: {
   segments: Segment[];
+  chapters: Chapter[];
   currentTime: () => number;
   /** Total video length, or 0 before the player reports one. */
   duration: () => number;
   playing: () => boolean;
   playbackRate: () => number;
-  onSeek: (secs: number) => void;
+  /** `final` is false while scrubbing, so the player needn't fetch ahead. */
+  onSeek: (secs: number, final?: boolean) => void;
+  /** The reader clicked the current chapter's name: show the chapter list. */
+  onShowChapters?: () => void;
   onPlayPause: () => void;
   onPlaybackRate: (rate: number) => void;
 }) {
@@ -63,10 +74,18 @@ export function Transcript(props: {
     return lastIndexAtOrBefore(starts(), t);
   });
 
-  const seek = (secs: number) => {
+  const seek = (secs: number, final = true) => {
     setFollowing(true);
-    props.onSeek(secs);
+    props.onSeek(secs, final);
   };
+
+  const anchors = createMemo(() =>
+    chapterAnchors(props.chapters, props.segments),
+  );
+  const currentChapter = createMemo(() => {
+    const i = chapterIndexAt(props.chapters, props.currentTime());
+    return i === -1 ? undefined : props.chapters[i];
+  });
   // Where a skip lands. Duration is 0 until the player reports one, so only
   // clamp against the end once we know it.
   const jumpTarget = (delta: number) =>
@@ -194,32 +213,73 @@ export function Transcript(props: {
                 <p class="text-muted-foreground">No transcript segments yet.</p>
               }
             >
-              {(segment, i) => (
-                <SegmentBlock
-                  segment={segment}
-                  speaker={() => speakers().get(speakerKey(segment))}
-                  status={() =>
-                    i() < activeIndex()
-                      ? "past"
-                      : i() === activeIndex()
-                        ? "active"
-                        : "future"
-                  }
-                  currentTime={props.currentTime}
-                  onSeek={seek}
-                  matches={() => matchesBySegment().get(i()) ?? []}
-                  currentMatch={currentMatch}
-                />
-              )}
+              {(segment, i) => {
+                const segmentAnchors = () => anchors().get(i()) ?? [];
+                return (
+                  <>
+                    <For each={segmentAnchors().filter((a) => a.word === 0)}>
+                      {(a) => (
+                        <ChapterHeading
+                          chapter={props.chapters[a.chapter]!}
+                          onSeek={seek}
+                        />
+                      )}
+                    </For>
+                    <SegmentBlock
+                      segment={segment}
+                      speaker={() => speakers().get(speakerKey(segment))}
+                      status={() =>
+                        i() < activeIndex()
+                          ? "past"
+                          : i() === activeIndex()
+                            ? "active"
+                            : "future"
+                      }
+                      currentTime={props.currentTime}
+                      onSeek={seek}
+                      matches={() => matchesBySegment().get(i()) ?? []}
+                      currentMatch={currentMatch}
+                      chapterBreaks={() =>
+                        segmentAnchors()
+                          .filter((a) => a.word > 0)
+                          .map((a) => ({
+                            ...a,
+                            chapter: props.chapters[a.chapter]!,
+                          }))
+                      }
+                    />
+                  </>
+                );
+              }}
             </For>
           </div>
         </div>
       </div>
-      <div class="flex shrink-0 items-center gap-1">
-        <span class="text-muted-foreground w-14 text-xs tabular-nums">
-          {formatTimestamp(props.currentTime())}
+      <Scrubber
+        chapters={props.chapters}
+        duration={props.duration}
+        currentTime={props.currentTime}
+        onSeek={seek}
+      />
+      <div class="grid shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-1">
+        <span class="text-muted-foreground flex min-w-0 items-baseline gap-1 text-xs">
+          <span class="shrink-0 tabular-nums">
+            {formatTimestamp(props.currentTime())}
+          </span>
+          <Show when={currentChapter()}>
+            {(chapter) => (
+              <button
+                type="button"
+                class="hover:text-foreground min-w-0 truncate text-left hover:underline"
+                title={chapter().title}
+                onClick={() => props.onShowChapters?.()}
+              >
+                · {chapter().title} ›
+              </button>
+            )}
+          </Show>
         </span>
-        <div class="flex flex-1 items-center justify-center gap-1">
+        <div class="flex items-center justify-center gap-1">
           <ToolbarButton
             label="Change playback speed"
             tooltip={`Playback speed: ${props.playbackRate()}× → ${nextRate()}×`}
@@ -262,7 +322,7 @@ export function Transcript(props: {
             <PlayheadIcon />
           </ToolbarButton>
         </div>
-        <span class="text-muted-foreground w-14 text-right text-xs tabular-nums">
+        <span class="text-muted-foreground text-right text-xs tabular-nums">
           <Show when={props.duration() > 0}>
             −{formatTimestamp(props.duration() - props.currentTime())}
           </Show>
@@ -384,6 +444,10 @@ export function SegmentBlock(props: {
   /** Search hits in this segment; omit where there's no search. */
   matches?: () => Match[];
   currentMatch?: () => Match | undefined;
+  /** Chapters that start partway through this segment, by word index. */
+  chapterBreaks?: () => (Omit<ChapterAnchor, "chapter"> & {
+    chapter: Chapter;
+  })[];
 }) {
   // Word index -> whether it belongs to a hit, and to the focused one.
   const highlights = createMemo(() => {
@@ -399,6 +463,9 @@ export function SegmentBlock(props: {
   });
 
   const wordStarts = createMemo(() => props.segment.words.map((w) => w.start));
+  const breaksByWord = createMemo(
+    () => new Map((props.chapterBreaks?.() ?? []).map((b) => [b.word, b])),
+  );
   // Index of the word at the playhead: -1 before this segment starts,
   // words.length once it's fully spoken. Past/future segments never read
   // currentTime, so only the active segment re-renders during playback.
@@ -448,8 +515,18 @@ export function SegmentBlock(props: {
         <Index each={props.segment.words}>
           {(word, i) => {
             const highlight = () => highlights().get(i);
+            const chapterBreak = () => breaksByWord().get(i);
             return (
               <>
+                <Show when={chapterBreak()}>
+                  {(b) => (
+                    <ChapterHeading
+                      chapter={b().chapter}
+                      onSeek={props.onSeek}
+                      inline
+                    />
+                  )}
+                </Show>
                 <span
                   class="cursor-pointer rounded-sm transition-opacity duration-300 data-playhead:bg-primary/10 hover:bg-primary/10 hover:opacity-100"
                   classList={{
@@ -473,6 +550,41 @@ export function SegmentBlock(props: {
         </Index>
       </p>
     </div>
+  );
+}
+
+/**
+ * A chapter's title as a rule across the transcript, where the chapter starts.
+ * Boundaries are often a little off, and seeing them in the text is how a
+ * reader notices. `inline` renders spans, for use inside a paragraph when a
+ * chapter starts partway through someone's turn.
+ */
+function ChapterHeading(props: {
+  chapter: Chapter;
+  onSeek: (secs: number) => void;
+  inline?: boolean;
+}) {
+  return (
+    <span
+      role="separator"
+      aria-label={`Chapter: ${props.chapter.title}`}
+      class="text-muted-foreground flex items-center gap-2 text-xs"
+      classList={{ "my-3": props.inline }}
+      data-chapter-start={props.chapter.start}
+    >
+      <span class="bg-border h-px w-4 shrink-0" />
+      <button
+        type="button"
+        class="shrink-0 tabular-nums hover:underline"
+        onClick={() => props.onSeek(props.chapter.start)}
+      >
+        {formatTimestamp(props.chapter.start)}
+      </button>
+      <span class="text-foreground min-w-0 font-semibold">
+        {props.chapter.title}
+      </span>
+      <span class="bg-border h-px min-w-4 flex-1" />
+    </span>
   );
 }
 

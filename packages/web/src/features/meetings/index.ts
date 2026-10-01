@@ -1,6 +1,7 @@
 import { type DB, meetingsTable } from "@open-minutes/db";
 import type { MeetingWhen } from "@open-minutes/core/meeting-date";
 import { eq } from "drizzle-orm";
+import { intervalToSecs } from "~/lib/format";
 
 export function getAllMeetings(db: DB) {
   return db.query.meetingsTable.findMany({
@@ -42,11 +43,24 @@ export function getMeetingById(db: DB, meetingId: number) {
           with: { person: { columns: { id: true, name: true, bio: true } } },
           orderBy: { start_secs: "asc" },
         },
+        chapters: {
+          columns: { meeting_id: false, generation_id: false },
+          orderBy: { start_secs: "asc" },
+        },
       },
     })
     .then((meeting) => {
       if (!meeting) throw new Error("Meeting not found");
-      return meeting;
+      return {
+        ...meeting,
+        // Seconds rather than interval strings: chapters are only ever
+        // compared against the playhead.
+        chapters: meeting.chapters.map(({ start_secs, end_secs, ...c }) => ({
+          ...c,
+          start: intervalToSecs(start_secs) ?? 0,
+          end: intervalToSecs(end_secs) ?? 0,
+        })),
+      };
     });
 }
 
