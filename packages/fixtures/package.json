@@ -11,6 +11,7 @@
     "./map": "./src/seed/map.ts"
   },
   "scripts": {
+    "check": "tsx src/check-cli.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },

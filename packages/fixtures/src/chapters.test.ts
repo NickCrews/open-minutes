@@ -1,47 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { LAST_WORD_DURATION_SEC } from "@open-minutes/core/transcription";
-import {
-  chapterErrors,
-  chapterWarnings,
-  uncoveredSpeech,
-} from "@open-minutes/core/chapters";
-import { loadAllTestData, parseGoldenChapters } from "./test-data";
-
-// The chapter rules in docs/chapters.md, checked against every golden meeting
-// that has chapters. If a rule fails on real chapters, revisit the rule.
-const chaptered = loadAllTestData().meetings.filter((m) => m.chapters);
-
-describe("golden chapters", () => {
-  it("exist for at least one golden meeting", () => {
-    expect(chaptered.length).toBeGreaterThan(0);
-  });
-
-  describe.each(chaptered.map((m) => [m.youtube_id, m] as const))(
-    "%s",
-    (_, meeting) => {
-      const chapters = meeting.chapters!.chapters;
-      const speech = meeting.segments
-        .filter((s) => s.words.length > 0)
-        .map((s) => ({
-          start: s.words[0]!.start,
-          end: s.words.at(-1)!.start + LAST_WORD_DURATION_SEC,
-        }));
-      const speechEnd = Math.max(...speech.map((s) => s.end));
-
-      it("are ordered, non-overlapping and within the meeting", () => {
-        expect(chapterErrors(chapters, speechEnd)).toEqual([]);
-      });
-
-      it("cover every stretch of speech", () => {
-        expect(uncoveredSpeech(speech, chapters)).toEqual([]);
-      });
-
-      it("keep substantive chapters to 1–15 minutes and 3–7 bullets", () => {
-        expect(chapterWarnings(chapters)).toEqual([]);
-      });
-    },
-  );
-});
+import { parseGoldenChapters } from "./test-data";
 
 describe("parseGoldenChapters", () => {
   const valid = {

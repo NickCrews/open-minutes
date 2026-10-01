@@ -120,6 +120,20 @@ and `test:all` set for you.
 Shared test configuration is in `vitest.config.ts`, `vitest.shared.ts` and
 `test-setup.ts` at the repository root.
 
+### Checking hand-edited test data
+
+`pnpm fixtures:check` checks the files in `packages/fixtures/test-data/` and
+`dev-data/` and prints each problem as `file:line: severity: message`. Pass
+file paths to check only the meetings they belong to. Errors are data that is
+wrong, such as a speaker marker a line away from its first word, words out of
+time order, or overlapping chapters. Warnings are data that is probably wrong,
+such as a speaker who says "this is Brianna" under another person's label, or
+speech that no chapter covers. The test suite fails on either.
+
+[`.claude/settings.json`](.claude/settings.json) runs the same check as a
+Claude Code hook after every edit to those files, so an agent sees the
+problem on the turn it makes it.
+
 ## Running the pipeline
 
 ```sh

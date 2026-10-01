@@ -10,7 +10,8 @@
     "./transcription": "./src/transcription/index.ts",
     "./voice_embeddings": "./src/voice_embeddings/index.ts",
     "./chapters": "./src/chapters.ts",
-    "./transcript-fingerprint": "./src/transcript-fingerprint.ts"
+    "./transcript-fingerprint": "./src/transcript-fingerprint.ts",
+    "./self-introductions": "./src/self-introductions.ts"
   },
   "scripts": {
     "test": "vitest run",

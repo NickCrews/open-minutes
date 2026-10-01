@@ -663,8 +663,8 @@ Notes on reconciling with existing tickets:
   chapters and their generation. The March 23, 2026 GBOS meeting has a set,
   written by Claude from the golden transcript and not yet reviewed by a
   human, so it is not yet the gold chaptering #27 asks for. The `dev` dataset
-  seeds it, and `packages/fixtures/src/chapters.test.ts` holds it to the rules
-  above.
+  seeds it, and `pnpm fixtures:check` (run by the tests) holds it to the
+  rules above.
 
 ## Not in v0
 
