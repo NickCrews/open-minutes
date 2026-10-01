@@ -222,16 +222,21 @@ const status = defineCommand({
         "Exit non-zero unless every migration in this checkout is applied and history hasn't diverged (for deploy gates)",
       default: false,
     },
-    "check-diverged": {
+    json: {
       type: "boolean",
       description:
-        "Exit non-zero only if history has diverged (migrations applied that this checkout lacks, or that were edited since). Pending migrations are fine: `pnpm db migrate` applies those.",
+        "Print the state as JSON instead (behind/ahead/modified migrations, diverged, data), for scripts",
       default: false,
     },
   },
   async run({ args }) {
     const url = resolveDatabaseUrl(args.db);
     const s = await databaseStatus(url);
+    if (args.check && !isCurrent(s)) process.exitCode = 1;
+    if (args.json) {
+      console.log(JSON.stringify(statusJson(s, await dbConfig()), null, 2));
+      return;
+    }
     const host = new URL(url).hostname;
     console.log(`Database:        ${redact(url)}`);
     console.log(
@@ -242,7 +247,6 @@ const status = defineCommand({
     );
     if (!s.exists || !s.migrations) {
       console.log("State:           does not exist (run `pnpm db up`)");
-      if (args.check) process.exitCode = 1;
       return;
     }
     console.log(
@@ -256,13 +260,47 @@ const status = defineCommand({
       );
     }
     console.log(describeStatus(s.migrations));
-    const diverged = isDiverged(s.migrations);
-    if (args.check && (s.migrations.pending.length > 0 || diverged)) {
-      process.exitCode = 1;
-    }
-    if (args["check-diverged"] && diverged) process.exitCode = 1;
   },
 });
+
+/** Every migration in this checkout is applied, and history hasn't diverged. */
+function isCurrent(s: DatabaseStatus): boolean {
+  return (
+    s.migrations !== null &&
+    s.migrations.pending.length === 0 &&
+    !isDiverged(s.migrations)
+  );
+}
+
+/**
+ * `pnpm db status --json`. Migration lists are named like git's ahead/behind:
+ * `behind` are in this checkout but not applied (`pnpm db migrate` applies
+ * them), `ahead` are applied but not in this checkout, `modified` were edited
+ * after being applied. Either of the last two means history diverged.
+ */
+function statusJson(s: DatabaseStatus, config: DbConfig) {
+  const m = s.migrations;
+  const declared = s.data && config.datasets[s.data.name];
+  return {
+    exists: s.exists,
+    local: s.local,
+    schemaVersion: s.schemaVersion,
+    appliedCount: s.appliedCount,
+    behind: m?.pending ?? [],
+    ahead: m?.unknown ?? [],
+    modified: m?.modified ?? [],
+    diverged: m !== null && isDiverged(m),
+    current: isCurrent(s),
+    data: s.data && {
+      name: s.data.name,
+      fingerprint: s.data.fingerprint,
+      seededAt: s.data.appliedAt.toISOString(),
+      // null when this checkout doesn't declare the dataset.
+      current: declared ? declared.fingerprint === s.data.fingerprint : null,
+    },
+    rowCounts: s.rowCounts,
+  };
+}
 
 /** The `Data:` line of `pnpm db status`: which dataset, when, and whether it's current. */
 function describeData(s: DatabaseStatus, config: DbConfig): string {
