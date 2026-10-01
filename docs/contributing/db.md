@@ -99,15 +99,15 @@ URLs are stable), then advance the id sequences past them.
 
 ## The other commands
 
-| Command            | What it does                                                                                                                                                                                           |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `pnpm db migrate`  | Applies pending migrations (up to `--schema-version`). Never resets or seeds; fails if the database can't be migrated forward. What deploys run.                                                       |
-| `pnpm db wipe`     | Drops all tables, data and migration history.                                                                                                                                                          |
-| `pnpm db status`   | Shows the schema version, the dataset and whether it's current, and any pending or unexpected migrations. `--check` exits non-zero if it needs migrating; `--check-diverged` only if history diverged. |
-| `pnpm db generate` | Writes a new migration from your `schema.ts` changes.                                                                                                                                                  |
-| `pnpm db check`    | Checks the migrations for conflicts.                                                                                                                                                                   |
-| `pnpm db studio`   | Opens Drizzle Studio on the database.                                                                                                                                                                  |
-| `pnpm db prune`    | Lists databases of deleted branches, leftover test databases and outdated test templates. `--yes` drops them.                                                                                          |
+| Command            | What it does                                                                                                                                                                                     |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `pnpm db migrate`  | Applies pending migrations (up to `--schema-version`). Never resets or seeds; fails if the database can't be migrated forward. What deploys run.                                                 |
+| `pnpm db wipe`     | Drops all tables, data and migration history.                                                                                                                                                    |
+| `pnpm db status`   | Shows the schema version, the dataset and whether it's current, and any pending or unexpected migrations. `--check` exits non-zero if it needs migrating; `--json` prints the state for scripts. |
+| `pnpm db generate` | Writes a new migration from your `schema.ts` changes.                                                                                                                                            |
+| `pnpm db check`    | Checks the migrations for conflicts.                                                                                                                                                             |
+| `pnpm db studio`   | Opens Drizzle Studio on the database.                                                                                                                                                            |
+| `pnpm db prune`    | Lists databases of deleted branches, leftover test databases and outdated test templates. `--yes` drops them.                                                                                    |
 
 `migrate`, `wipe`, `status`, `studio` and `up` all take `--db`.
 
@@ -152,7 +152,7 @@ URL uploaded as a secret in the same request (`wrangler deploy
 closes.
 
 The branch persists across pushes, so data reviewers enter survives. If a push
-edits a migration the branch already has (`pnpm db status --check-diverged`),
+edits a migration the branch already has (`.diverged` in `pnpm db status --json`),
 the workflow resets the branch from production before migrating.
 
 It's opt-in: it needs the `NEON_API_KEY` and `CLOUDFLARE_API_TOKEN` secrets,

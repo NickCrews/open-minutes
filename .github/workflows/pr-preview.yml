@@ -83,11 +83,11 @@ jobs:
           DB_URL: ${{ steps.branch.outputs.db_url }}
         run: |
           echo "::add-mask::$DB_URL"
-          if pnpm -s db status --db "$DB_URL" --check-diverged; then
-            echo "diverged=false" >> "$GITHUB_OUTPUT"
-          else
+          if pnpm -s db status --db "$DB_URL" --json | jq -e '.diverged' > /dev/null; then
             echo "Preview branch diverged from this PR's migrations; resetting it from production."
             echo "diverged=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "diverged=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Reset the branch from production
