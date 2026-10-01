@@ -1,12 +1,10 @@
 # Chapters
 
-Status: research notes and proposed requirements, written for
-[#40](https://github.com/NickCrews/open-minutes/issues/40). Chapters work is
-tracked in the map [#25](https://github.com/NickCrews/open-minutes/issues/25)
-and its tickets (#26 rendering, #27 gold chaptering, #28 schema, #29 generation,
-#30 long meetings, #33 meeting-page UI). This doc does not replace those
-tickets. It collects findings and proposes answers to their open questions.
-Where it proposes changing a decision already made on #25, it says so.
+Status: the canonical spec for chapters. It started as research notes for
+[#40](https://github.com/NickCrews/open-minutes/issues/40) and now supersedes
+the map [#25](https://github.com/NickCrews/open-minutes/issues/25) and its
+tickets (#26 to #33), which are closed. Where this doc and those tickets
+disagree, this doc wins.
 
 ## What chapters are for
 
