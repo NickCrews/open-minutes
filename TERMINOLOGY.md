@@ -77,7 +77,7 @@ The per-meeting number diarization gives a cluster. Speaker 3 in one meeting has
 _Avoid_: speaker id, speaker index
 
 **Person**:
-A recurring individual, the same in every meeting they speak in, with exactly one voiceprint.
+A recurring individual, the same in every meeting they speak in, with at most one voiceprint.
 _Avoid_: speaker, user, member, voice, profile
 
 **Known person**:
@@ -119,7 +119,7 @@ _Avoid_: membership, roster, participation
 ### Voice and recognition
 
 **Voiceprint**:
-A vector summarizing one voice. Each person has exactly one.
+A vector summarizing one voice. Each person has at most one: people the pipeline creates always have one, people created by hand have none until the pipeline computes one.
 _Avoid_: voice embedding, speaker embedding, centroid, fingerprint
 
 **Embedding**:

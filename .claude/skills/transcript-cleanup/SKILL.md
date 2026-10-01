@@ -37,8 +37,9 @@ before its first word, with the same onset.
    person is a voice that recognition saw again. A speaker number is a voice
    within one meeting only. Unattributed means unknown. Use `update_person` to
    name a recurring anonymous person. Use `merge_people` only when two person
-   rows are certainly the same voice. Leave a one-off speaker on a speaker
-   number.
+   rows are certainly the same voice. Use `create_person` only for a speaker
+   number you can name who isn't a person yet. Leave a one-off speaker you
+   can't name on a speaker number.
 5. **Don't untangle what needs the audio.** If one label seems to cover two
    voices and the text doesn't show which is which, fix only the segments with
    evidence and report the rest.
@@ -47,7 +48,9 @@ before its first word, with the same onset.
    `docs/chapters.md`. Write them with `replace_chapters`, with
    `reviewedByHuman: false` unless a human checked them.
 7. **Voiceprints aren't recomputed.** Relabelling segments doesn't change
-   anyone's voiceprint, so say so if recognition will depend on your fix.
+   anyone's voiceprint, and a person from `create_person` has none, so
+   recognition won't find them in other meetings. Say so if recognition will
+   depend on your fix.
 
 ## Report
 

@@ -7,12 +7,8 @@ import {
   segmentsTable,
 } from "@open-minutes/db";
 import { test } from "@open-minutes/db/testing/vitest";
-import { N_DIMENSIONS as VOICE_N_DIMENSIONS } from "@open-minutes/core/voice_embeddings";
 import { describe, expect } from "vitest";
 import { getAllPeople } from "./index";
-
-/** These tests never compare voices; the column is just not-null. */
-const NO_VOICE = Array.from({ length: VOICE_N_DIMENSIONS }, () => 0);
 
 async function insertBody(db: DB, name_short: string): Promise<number> {
   const [jurisdiction] = await db
@@ -34,7 +30,7 @@ async function insertBody(db: DB, name_short: string): Promise<number> {
 async function insertPerson(db: DB, name: string): Promise<number> {
   const [person] = await db
     .insert(peopleTable)
-    .values({ name, voice_embedding: NO_VOICE })
+    .values({ name })
     .returning({ id: peopleTable.id });
   return person!.id;
 }

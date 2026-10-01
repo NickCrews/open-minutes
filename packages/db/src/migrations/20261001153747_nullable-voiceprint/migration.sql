@@ -1,0 +1,1 @@
+ALTER TABLE "people" ALTER COLUMN "voice_embedding" DROP NOT NULL;
