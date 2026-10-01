@@ -5,7 +5,7 @@ import { dirname } from "node:path";
 
 const execFileAsync = promisify(execFile);
 
-export function channelUrl(channelIdOrUrl: string) {
+function channelUrl(channelIdOrUrl: string) {
   // if youtube.com already, return as-is
   if (channelIdOrUrl.includes("youtube.com")) {
     return channelIdOrUrl;
@@ -13,7 +13,7 @@ export function channelUrl(channelIdOrUrl: string) {
   return `https://www.youtube.com/channel/${channelIdOrUrl}`;
 }
 
-export function playlistUrl(playlistIdOrUrl: string) {
+function playlistUrl(playlistIdOrUrl: string) {
   // if youtube.com already, return as-is
   if (playlistIdOrUrl.includes("youtube.com")) {
     return playlistIdOrUrl;
@@ -21,7 +21,7 @@ export function playlistUrl(playlistIdOrUrl: string) {
   return `https://www.youtube.com/playlist?list=${playlistIdOrUrl}`;
 }
 
-export function videoUrl(videoIdOrUrl: string) {
+function videoUrl(videoIdOrUrl: string) {
   // if youtube.com already, return as-is
   if (videoIdOrUrl.includes("youtube.com")) {
     return videoIdOrUrl;

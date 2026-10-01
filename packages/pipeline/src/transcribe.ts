@@ -2,6 +2,7 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { availableParallelism } from "node:os";
 import { ensureDownloaded, ModelSpec } from "./model.js";
+import { EXPECTED_SAMPLE_RATE } from "./embed.js";
 
 import sherpa_onnx, {
   type OfflineRecognizer,
@@ -45,9 +46,9 @@ const VAD_MODEL_SPEC = {
   },
 } as const satisfies ModelSpec;
 
-// Both the recognizer and Silero VAD expect 16 kHz mono. The pipeline produces
-// that upstream (see audio_utils.ts / diarize.ts); we assert rather than resample.
-const EXPECTED_SAMPLE_RATE = 16000;
+// Both the recognizer and Silero VAD expect 16 kHz mono (EXPECTED_SAMPLE_RATE).
+// The yt-dlp download in youtube/index.ts produces that; we assert rather than
+// resample.
 
 // Parakeet TDT processes audio in a single pass. Its encoder uses a learned
 // positional embedding (~5000 positions at the encoder's ~12.5 frames/sec output
@@ -324,7 +325,7 @@ function getRecognizer() {
   const modelFiles = ensureModelFiles();
   if (_recognizer) return { recognizer: _recognizer, modelFiles };
   _recognizer = new sherpa_onnx.OfflineRecognizer({
-    featConfig: { sampleRate: 16000, featureDim: 80 },
+    featConfig: { sampleRate: EXPECTED_SAMPLE_RATE, featureDim: 80 },
     modelConfig: {
       transducer: {
         encoder: modelFiles["encoder.int8.onnx"],
