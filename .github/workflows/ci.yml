@@ -1,6 +1,7 @@
 # The checks a contributor runs locally with `pnpm check`, plus a build of the
-# web app. Slow (SLOW=1) tests are not run here. Migration and schema checks
-# live in db.yml.
+# web app (built, not deployed). Each is its own job, so each shows up as its
+# own check on a PR and one failing doesn't hide the others. Slow (SLOW=1)
+# tests are not run here. Migration and schema checks live in db.yml.
 name: ci
 
 on:
@@ -16,8 +17,7 @@ permissions:
   contents: read
 
 jobs:
-  static:
-    name: typecheck, format, lint
+  typecheck:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -27,14 +27,34 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Typecheck
-        run: pnpm typecheck
-      - name: Format
-        run: pnpm format:check
-      - name: Lint
-        run: pnpm lint
+      - run: pnpm typecheck
+
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm format:check
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
 
   test:
+    name: tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -65,7 +85,6 @@ jobs:
         run: pnpm test
 
   build:
-    name: build web
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
