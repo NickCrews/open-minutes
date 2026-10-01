@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, readdirSync, symlinkSync } from "node:fs";
 import { execSync } from "node:child_process";
 import { dirname, join } from "node:path";
@@ -71,6 +71,12 @@ describe("tokensToWords", () => {
 });
 
 describe("transcribe", () => {
+  // The first run downloads the ~460MB model (and resamples its sample wav),
+  // which takes far longer than a test's default 5s timeout. Do it up front.
+  beforeAll(() => {
+    sample16kHz();
+  }, 10 * 60_000);
+
   it("transcribes a 4 second audio sample", async () => {
     const segments = await transcribeAudio(sample16kHz());
     const words = segments.flatMap((s) => s.words);

@@ -31,17 +31,23 @@ describe("YouTube Module", () => {
     },
   );
 
-  it("should download video audio", async () => {
-    // A 5 sec video for testing
-    const sampleVideo = "https://www.youtube.com/watch?v=QUF1uLgzL-s";
-    const path = new URL("./test_audio/short.wav", import.meta.url).pathname;
-    // Clean up any existing file before test
-    rmSync(path, { force: true });
-    expect(existsSync(path)).toBe(false);
-    let result = await downloadVideoAudio(sampleVideo, path, "overwrite");
-    expect(existsSync(path)).toBe(true);
-    expect(result).toHaveProperty("downloaded", true);
-    result = await downloadVideoAudio(sampleVideo, path, "skip");
-    expect(result).toHaveProperty("downloaded", false);
-  }, 10_000);
+  // YouTube makes datacenter IPs (like GitHub's runners) "sign in to confirm
+  // you're not a bot", so this only runs on a developer's machine.
+  it.skipIf(process.env.CI)(
+    "should download video audio",
+    async () => {
+      // A 5 sec video for testing
+      const sampleVideo = "https://www.youtube.com/watch?v=QUF1uLgzL-s";
+      const path = new URL("./test_audio/short.wav", import.meta.url).pathname;
+      // Clean up any existing file before test
+      rmSync(path, { force: true });
+      expect(existsSync(path)).toBe(false);
+      let result = await downloadVideoAudio(sampleVideo, path, "overwrite");
+      expect(existsSync(path)).toBe(true);
+      expect(result).toHaveProperty("downloaded", true);
+      result = await downloadVideoAudio(sampleVideo, path, "skip");
+      expect(result).toHaveProperty("downloaded", false);
+    },
+    10_000,
+  );
 });
