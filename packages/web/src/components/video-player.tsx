@@ -1,9 +1,5 @@
 import { onCleanup, onMount } from "solid-js";
-import {
-  loadYouTubeIframeApi,
-  PlayerState,
-  type YTPlayer,
-} from "~/lib/youtube";
+import { createYouTubePlayer, PlayerState, type YTPlayer } from "~/lib/youtube";
 
 export function VideoPlayer(props: {
   videoId: string;
@@ -16,24 +12,15 @@ export function VideoPlayer(props: {
   onMount(() => {
     let player: YTPlayer | undefined;
     let disposed = false;
-    loadYouTubeIframeApi().then((YT) => {
-      if (disposed) return;
-      // The API replaces the given element with the iframe, so hand it a
-      // throwaway child rather than our own div.
-      const mount = document.createElement("div");
-      host.appendChild(mount);
-      const created: YTPlayer = new YT.Player(mount, {
-        videoId: props.videoId,
-        width: "100%",
-        height: "100%",
-        playerVars: { playsinline: 1 },
-        events: {
-          onReady: () => props.onPlayer(created),
-          onStateChange: ({ data }) =>
-            props.onPlayingChange?.(data === PlayerState.playing),
-        },
-      });
+    void createYouTubePlayer(host, {
+      videoId: props.videoId,
+      playerVars: { playsinline: 1 },
+      onStateChange: ({ data }) =>
+        props.onPlayingChange?.(data === PlayerState.playing),
+    }).then((created) => {
+      if (disposed) return created.destroy();
       player = created;
+      props.onPlayer(created);
     });
     // The IFrame API has no timeupdate event, so poll. This also picks up
     // the user clicking around the player's own timeline.
