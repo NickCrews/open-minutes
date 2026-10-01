@@ -1,0 +1,392 @@
+{
+  "generation": {
+    "model": "claude",
+    "prompt_version": "hand-written",
+    "reviewed_by_human": false
+  },
+  "chapters": [
+    {
+      "start": "0:00:07.81",
+      "end": "0:02:36.00",
+      "title": "Call to order, land acknowledgement and roll call",
+      "summary": "Chair Mike Edgington called the March 23, 2026 regular meeting to order at 7 p.m., Bryan Burnett read the land acknowledgement, and roll call found all five supervisors present.",
+      "bullets": [
+        "The chair read the conduct announcement asking the public to raise hands and direct comments to the board."
+      ]
+    },
+    {
+      "start": "0:02:36.00",
+      "end": "0:08:10.00",
+      "title": "Agenda: motion to strike the conflict-of-interest item",
+      "summary": "Kellie Okonek moved to strike item 6, the municipal attorney's briefing on January's conflict-of-interest votes, and the motion failed 3–2.",
+      "bullets": [
+        "Okonek argued the board had formally closed the topic at its last meeting and should only reopen it through an ethics board review.",
+        "Mike Edgington said ignoring the municipal attorney's advice on the January actions would be a mistake.",
+        "Jennifer Wingard objected that the questions put to the attorney were asked privately by the chair, not through the board.",
+        "Bryan Burnett asked whether the briefing would settle the matter once and for all; the chair said he hoped so."
+      ]
+    },
+    {
+      "start": "0:08:10.00",
+      "end": "0:09:51.00",
+      "title": "Agenda amendment and approval of minutes",
+      "summary": "The board added a letter on the wildfire protection plan's hazard rating to new business, approved the amended agenda, and approved the February 23 and March 5 minutes.",
+      "bullets": [
+        "The added item questions the Community Wildfire Protection Plan's hazard rating for Girdwood, which was based on Anchorage weather data."
+      ]
+    },
+    {
+      "start": "0:09:51.00",
+      "end": "0:18:56.00",
+      "title": "Presentation: Girdwood Parks Master Plan public draft",
+      "summary": "Bray Keefer of Huddle AK presented the public review draft of the Girdwood Parks Master Plan, which is open for comment until April 5.",
+      "bullets": [
+        "The plan updates a 1985 parks plan and covers Moose Meadows, Town Square, Girdwood Park, Lions Club Park and the greenbelt.",
+        "The process included site inventories, a community survey with over 200 responses, two public meetings and an advisory group.",
+        "It proposes future parkland, including a Glacier Creek Park south of Girdwood Park and two areas north of the airport now managed by HLB.",
+        "After revisions it goes to the Planning and Zoning Commission at the end of April, with a public hearing in early June.",
+        "Comments can be submitted through the form at girdwoodparksplan.com."
+      ]
+    },
+    {
+      "start": "0:18:56.00",
+      "end": "0:25:06.18",
+      "title": "Parks Master Plan: questions on commenting and costs",
+      "summary": "Supervisors asked how public comments will be tracked and whether the plan estimates costs; it doesn't, and projects will be prioritized and costed later.",
+      "bullets": [
+        "People can submit several comments at different times; an email address is requested so the consultants can follow up.",
+        "Comments don't need to be formally substantive, and they will be categorized in a spreadsheet and summarized in an appendix.",
+        "The plan only goes to Planning and Zoning and doesn't become part of the comprehensive plan.",
+        "Kyle Kelly said each project would get a feasibility study and cost estimate once the board sets priorities."
+      ]
+    },
+    {
+      "start": "0:25:06.18",
+      "end": "0:31:36.85",
+      "title": "Legislative report: Senator Cathy Giessel",
+      "summary": "Senator Cathy Giessel reported on an elections bill and on the Senate Resources Committee's skeptical review of the governor's gas pipeline property tax bill.",
+      "bullets": [
+        "The elections bill drops the envelope signature requirement for mail ballots, lets voters correct ballot errors, and pays return postage.",
+        "The governor's bill would bar local property taxes on the pipeline from the start of construction until gas flow reaches one billion cubic feet a day.",
+        "It would replace the 20-mill property tax with a volumetric tax of six cents per thousand cubic feet, collected by the state.",
+        "Giessel said the committee won't rush, since projections suggest the gas would cost more than Cook Inlet gas does today.",
+        "Asked about high oil prices, she estimated about $500 million in extra state revenue if prices hold through June."
+      ]
+    },
+    {
+      "start": "0:31:36.85",
+      "end": "0:37:11.00",
+      "title": "Legislative report: Representative Ky Holland",
+      "summary": "Representative Ky Holland reported that the elections bill passed the House and gave updates on the budget and several bills affecting Girdwood.",
+      "bullets": [
+        "The draft budget adds education funding, fully funds expected wildfire and disaster costs, and puts some money in the statutory budget reserve.",
+        "The Whittier railroad land transfer bill reached the House floor, with final passage expected Wednesday.",
+        "House Bill 346 on airport buffers near housing and House Bill 317 on rights-of-way for wildfire safety on single-access roads are both getting hearings.",
+        "Holland and Senator Giessel plan a town hall on April 18 at 11 a.m., and Chugach Electric holds a town hall tomorrow at 6 p.m."
+      ]
+    },
+    {
+      "start": "0:37:11.00",
+      "end": "0:37:55.59",
+      "title": "Assembly, school board and HOBAC reports",
+      "summary": "No Assembly member, school board member or HOBAC representative was present yet, so the board moved on to supervisor reports.",
+      "bullets": []
+    },
+    {
+      "start": "0:37:55.59",
+      "end": "0:43:53.09",
+      "title": "Supervisor reports: highway speed limit and bed tax",
+      "summary": "Kellie Okonek reported that DOT is moving to lower the Alyeska Highway speed limit, and the board added the topic to old business.",
+      "bullets": [
+        "A departing DOT official requested the speed limit change, but it's unclear whether the safety countermeasures the study called for will follow.",
+        "The Public Safety Advisory Committee suggested a public hearing; supervisors debated whether that belongs at the Land Use Committee.",
+        "Kyle Kelly offered to brief the board on the speed study when the item comes up.",
+        "The chair reported the Municipality is directing tourism improvement funds from bed tax revenue to downtown projects and marketing, and wants that on a future agenda."
+      ]
+    },
+    {
+      "start": "0:43:53.09",
+      "end": "0:48:49.43",
+      "title": "Supervisor reports: tsunami signs and wildfire preparedness",
+      "summary": "Brianna Sullivan reported on tsunami evacuation signs, a proposed wildland-urban interface service area, and plans to hand out wildfire sprinkler kits.",
+      "bullets": [
+        "The Office of Emergency Management is ready to install tsunami evacuation signs in Girdwood but needs about $15,000.",
+        "An April 14 Assembly resolution, worked on with Zach Johnson, asks the administration to explore a wildland-urban interface service area.",
+        "Anchorage's wildfire division runs out of funding in a year, so the work needs to start now.",
+        "Residents explained the sprinkler kits: tripod sprinklers plus a hose that connects to firefighters' water tanks, distributed to homes at events like Forest Fair."
+      ]
+    },
+    {
+      "start": "0:48:49.43",
+      "end": "0:51:00.82",
+      "title": "Committee updates and standing reports",
+      "summary": "The chair ran through committee updates and standing reports, highlighting that short-term rental registration starts around May 1.",
+      "bullets": [
+        "GHEC's two agenda items tonight are the housing RFP and its member vacancies.",
+        "Parcel H has no new activity while a legal case continues in the courts.",
+        "Short-term rental operators will have a 90-day window to register under the new municipal regulations."
+      ]
+    },
+    {
+      "start": "0:51:00.82",
+      "end": "0:53:38.13",
+      "title": "Fire department report",
+      "summary": "Kyle Kelly gave the fire department's report: six new firefighters, new equipment and grants, and a weekend avalanche rescue.",
+      "bullets": [
+        "Six new firefighters started March 21, and the department is training for wildfire season.",
+        "A new tracked Polaris Ranger arrived, and a grant will add a skid pump for quick wildland response.",
+        "The department responded with Chugach Powder Guides to an avalanche that caught recreational skiers.",
+        "A new engine for Girdwood passed factory inspection and should arrive by June."
+      ]
+    },
+    {
+      "start": "0:53:38.13",
+      "end": "0:56:31.45",
+      "title": "Police report and police IT levy",
+      "summary": "Kyle Kelly gave the Whittier police report, and the board discussed whether the police IT levy could buy equipment for Girdwood's contracted department.",
+      "bullets": [
+        "The department has two open positions, with one job offer out to a candidate who would attend the academy in Fairbanks.",
+        "It is applying for grants to replace a radio system that will lose support.",
+        "Equipment bought with the levy would have to be municipally owned and loaned to the department, not spent on services."
+      ]
+    },
+    {
+      "start": "0:56:31.45",
+      "end": "1:01:38.60",
+      "title": "Parks and trails report",
+      "summary": "Kyle Kelly reported on icy, soft spring trails, returning seasonal staff, and new bridge and picnic pavilion projects.",
+      "bullets": [
+        "Trails are icy and soft; people should let them dry out and read avalanche advisories.",
+        "Seasonal staff return in mid-April, and the department is looking for a volunteer campground host.",
+        "Lumber has arrived to replace a footbridge near Town Square, paid for with help from a private donor.",
+        "A new picnic pavilion at Lions Club Park, funded by a grant and $5,000 from the Lions Club, will be built in May.",
+        "Staff are applying for a Parks Foundation grant for interpretive signs about the hand tram and the historic mining district."
+      ]
+    },
+    {
+      "start": "1:01:38.60",
+      "end": "1:04:07.62",
+      "title": "Roads report: overflow, steaming and breakup",
+      "summary": "Kyle Kelly described constant steaming and grading to keep overflow off Girdwood's roads, and preparations for spring breakup.",
+      "bullets": [
+        "Crews steamed six of seven days last week to keep creeks in their culverts.",
+        "Last Friday overflow sent a creek down a road toward a home before the steam truck cleared it.",
+        "Crews are pushing back berms and bringing in a blower to widen roads before breakup."
+      ]
+    },
+    {
+      "start": "1:04:07.62",
+      "end": "1:07:45.53",
+      "title": "Roads report: fish passage design and bridge bid",
+      "summary": "Kyle Kelly reported that the fish passage culvert design is waiting on an RFP, and that the bridge bid came in at the engineer's estimate.",
+      "bullets": [
+        "The EPA approved the RFP language, and the culvert design is waiting on municipal purchasing to assign a buyer.",
+        "The winning bridge bid, from Spurnack and Sons, came in at about $2.9 million, close to the six-month-old engineer's estimate.",
+        "A lower bid from an Idaho contractor was disqualified for lacking Alaska qualifications.",
+        "Dirt work may start this summer, depending on when the steel arrives and how the contractor schedules it."
+      ]
+    },
+    {
+      "start": "1:07:45.53",
+      "end": "1:16:59.41",
+      "title": "Roads report: maintenance contract and winter costs",
+      "summary": "Kyle Kelly explained the delayed road maintenance contract bid and a very expensive January, which will likely mean less summer work.",
+      "bullets": [
+        "Purchasing questioned how the contract mixes maintenance with Davis-Bacon construction work; after a meeting it accepted the approach.",
+        "The current contract will be extended two months so a new five-year contract can be bid.",
+        "January's invoice was unusually large because of ice, steaming, excavation and sanding after a mid-winter warm-up.",
+        "Larger bidders came in near $4 million on the bridge, which Kelly said is typical for firms built for state megaprojects.",
+        "Kelly said this winter needed more steaming than his previous 14 years combined, so next year he'll keep a backup steam truck contract on call."
+      ]
+    },
+    {
+      "start": "1:16:59.41",
+      "end": "1:17:49.01",
+      "title": "Library report",
+      "summary": "The board heard about upcoming library events and the April library fundraiser.",
+      "bullets": [
+        "Events include a haiku contest through April, a poetry tea on the 11th, and a recipe swap on the 18th."
+      ]
+    },
+    {
+      "start": "1:17:49.01",
+      "end": "1:26:07.00",
+      "title": "Public comment",
+      "summary": "Candidates for the Board of Supervisors, including Nick Crews, introduced themselves, a Chugach Electric advisory council member invited residents to tomorrow's town hall, and a resident thanked organizers of Saturday's candidate debate.",
+      "bullets": [
+        "One candidate announced a Wednesday meet-and-greet, and another reminded voters to return ballots by April 7.",
+        "Nick Crews, a software engineer who grew up in Girdwood, named housing, land use, and the relationship with the Municipality as his priorities.",
+        "The Chugach Electric town hall will cover natural gas imports, renewables, and pressure to join the gas line project.",
+        "The board asked staff to link the debate recording in the minutes."
+      ]
+    },
+    {
+      "start": "1:26:07.00",
+      "end": "1:28:27.00",
+      "title": "School board report: bond and levy",
+      "summary": "School board member Andy Holleman explained the one-time school levy and the bond package on the municipal ballot.",
+      "bullets": [
+        "Higher property values opened room under the state's equity formula to send more local money to the district, but doing so hits the tax cap and needs voter approval.",
+        "The levy is one-time and won't recur without another vote.",
+        "The bond would upgrade Lake Otis school and renovate Romig Middle School; nothing in it is specific to Girdwood."
+      ]
+    },
+    {
+      "start": "1:28:27.00",
+      "end": "1:36:12.00",
+      "title": "Assembly report: Zach Johnson",
+      "summary": "Assembly member Zach Johnson reported on recent and upcoming Assembly actions, from natural gas supply and animal neglect to data centers and a rewrite of the building code.",
+      "bullets": [
+        "The Assembly adopted a resolution recognizing the need for new natural gas supply, and updated code on animal neglect.",
+        "Upcoming: zoning rules for data centers, the school district budget, and a 250-page rewrite of Title 23, the building code.",
+        "A resolution would reallocate $700,000 in HUD funds to a housing rehabilitation program.",
+        "Johnson expects a vote tomorrow on allowing food production as an accessory use, and offered to help draft a Girdwood version.",
+        "The chair noted that the building code applies in Girdwood but isn't enforced by the Municipality there."
+      ]
+    },
+    {
+      "start": "1:36:12.00",
+      "end": "1:47:38.00",
+      "title": "Municipal attorney on the January conflict-of-interest vote",
+      "summary": "Assistant Municipal Attorney Zach Schwartz said municipal code doesn't treat holding two municipal roles as a conflict of interest, and the board then voted 3–2 to vacate its January vote.",
+      "bullets": [
+        "The board limited the item to 15 minutes.",
+        "Schwartz said code addresses conflicts between private interests and official duties, not between two official roles, and that the Board of Ethics has the final say.",
+        "He compared it to Assembly members, who don't recuse themselves from voting for their own chair.",
+        "Kellie Okonek argued that any challenge should go through the Board of Ethics rather than be decided in 15 minutes.",
+        "Bryan Burnett, absent in January, was reluctant to vote on it."
+      ]
+    },
+    {
+      "start": "1:47:38.00",
+      "end": "1:54:55.00",
+      "title": "Dispute over what the vacate vote meant",
+      "summary": "Supervisors disagreed about which January vote had been vacated, and a motion to reconsider was ruled out of order because it didn't come from the prevailing side.",
+      "bullets": [
+        "Okonek said the chair had been recused in January and that the conflict still stood.",
+        "The chair offered a separate motion to send the question to the Board of Ethics.",
+        "Jennifer Wingard challenged the chair's ruling to ask what exactly had been voted on.",
+        "Staff restated the motion as vacating the January vote that was based on the conflict of interest."
+      ]
+    },
+    {
+      "start": "1:54:55.00",
+      "end": "2:00:07.96",
+      "title": "Food production as an accessory use: postponed to April",
+      "summary": "The board postponed to April whether to support an Assembly ordinance allowing small-scale food production as an accessory use, which can't simply be extended to Girdwood.",
+      "bullets": [
+        "Girdwood's code allows cottage crafts only in commercial zones, so the Anchorage ordinance has no Girdwood equivalent.",
+        "Options include a resolution supporting it in principle, folding it into the Girdwood land use code rewrite, or sending it back to committee.",
+        "Supervisors wanted to see what the Assembly passes tomorrow before acting."
+      ]
+    },
+    {
+      "start": "2:00:07.96",
+      "end": "2:10:36.87",
+      "title": "Housing action plan RFP approved",
+      "summary": "The board voted 5–0 to issue an RFP for a housing action and implementation plan, not to exceed $100,000 from the GHEC budget.",
+      "bullets": [
+        "Brooks Chandler said the RFP follows the comprehensive plan's call for a housing strategy and a housing action plan.",
+        "It asks the consultant to estimate costs and funding for specific strategies, avoiding a plan that only calls for more plans.",
+        "A resident noted it also asks whether dense housing is economically feasible on specific HLB properties.",
+        "Staff will route the RFP through municipal purchasing, using the parks plan RFP as a template.",
+        "A supervisor asked GHEC to find comparison communities closer to Girdwood's situation than Whitefish or Breckenridge."
+      ]
+    },
+    {
+      "start": "2:10:36.87",
+      "end": "2:13:48.42",
+      "title": "Parliamentary procedure training approved",
+      "summary": "The board approved, by consent, up to $275 for a parliamentary procedure training for the incoming board, open to the whole community.",
+      "bullets": [
+        "The trainer, who led the training at the community council summit, quoted $250 for an hour plus Q&A in Girdwood.",
+        "It will be scheduled after the new board is seated.",
+        "Ethics and effective-meeting trainings through the Alaska Municipal League are also being considered."
+      ]
+    },
+    {
+      "start": "2:13:48.42",
+      "end": "2:17:49.00",
+      "title": "Resolution supporting the hand tram interpretive signs grant",
+      "summary": "The board voted 5–0 for a resolution supporting the Girdwood Trails Committee's Anchorage Park Foundation grant application for interpretive signs at the new bridge.",
+      "bullets": [
+        "The plans include an interpretive area, a tram car on display, and signs on the mine side of the bridge.",
+        "The grant would match $15,000 from the Park Foundation with $15,000 in-kind from the Trails Committee.",
+        "It is a two-year grant, so the signs can be built whenever the bridge construction allows."
+      ]
+    },
+    {
+      "start": "2:17:49.00",
+      "end": "2:21:42.98",
+      "title": "GHEC vacancies",
+      "summary": "With no applicants for GHEC's two open seats, the board kept recruiting through its notices and dropped the item from the agenda until GHEC asks for action.",
+      "bullets": [
+        "GHEC is down from seven members to five but has had no trouble making quorum.",
+        "GHEC preferred not to shrink to five members yet.",
+        "Openings will be advertised in the board's regular notices rather than through general outreach."
+      ]
+    },
+    {
+      "start": "2:21:42.98",
+      "end": "2:32:11.77",
+      "title": "Alyeska Highway speed limit: joint meeting with DOT",
+      "summary": "The board agreed by consent to hold a joint GBOS and Land Use Committee community meeting with DOT on the proposed Alyeska Highway speed limit cut.",
+      "bullets": [
+        "Kyle Kelly said the departing DOT official ordered the limit lowered from 45 to 40 mph without the engineering measures the speed study recommended.",
+        "Without those measures, enforcement would fall on Girdwood's small police department.",
+        "Kellie Okonek relayed DOT's view that a limit below the road's natural driving speed can make it less safe.",
+        "Supervisors favored radar feedback signs, possibly a portable one, as a more achievable first step.",
+        "Kelly will ask DOT to send someone to the joint meeting."
+      ]
+    },
+    {
+      "start": "2:32:11.77",
+      "end": "2:33:58.93",
+      "title": "Parks Master Plan resolution: April or May",
+      "summary": "Staff said a resolution supporting the final Parks Master Plan will come to the board in April or May, before it goes to Planning and Zoning.",
+      "bullets": []
+    },
+    {
+      "start": "2:33:58.93",
+      "end": "2:40:35.09",
+      "title": "GBOS rules and procedures: another work session",
+      "summary": "The board reviewed draft revisions to its rules and procedures and agreed to hold another work session in May, after the new board is seated.",
+      "bullets": [
+        "The draft fixes things that are out of date with code, such as references to the cemetery board.",
+        "Open questions include term limits and stricter adherence to Robert's Rules to shorten meetings.",
+        "Supervisors debated fixing known errors now versus finishing one full revision, then chose a single revision.",
+        "The work session's recommendation would start the required 60-day review."
+      ]
+    },
+    {
+      "start": "2:40:35.09",
+      "end": "2:42:23.85",
+      "title": "Topics for the April 27 quarterly meeting with the Municipality",
+      "summary": "Supervisors suggested topics for the April 27 quarterly meeting with the Municipality, including tourism improvement projects and a parks surcharge.",
+      "bullets": [
+        "The Anchorage parks and recreation surcharge, carried over from last time.",
+        "How bed tax revenue is spent on tourism improvement projects.",
+        "Follow-ups on IGC, including keeping a community-started project from being handed to a developer."
+      ]
+    },
+    {
+      "start": "2:42:23.85",
+      "end": "2:45:52.81",
+      "title": "Wildfire protection plan hazard rating letter",
+      "summary": "Mike Edgington and Brianna Sullivan will review the final Community Wildfire Protection Plan and bring a letter or resolution on Girdwood's high hazard rating to the next meeting.",
+      "bullets": [
+        "The board's comment that Girdwood's rating relied on Anchorage weather data got no direct response before the plan passed.",
+        "The high rating is starting to affect insurance rates.",
+        "The project manager said every comment was reviewed and changes went into the final draft, without individual replies.",
+        "The board may invite her to the next meeting."
+      ]
+    },
+    {
+      "start": "2:45:52.81",
+      "end": "2:45:57.87",
+      "title": "Adjournment",
+      "summary": "The meeting adjourned.",
+      "bullets": []
+    }
+  ]
+}

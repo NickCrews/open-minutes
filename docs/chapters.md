@@ -8,6 +8,10 @@ and its tickets (#26 rendering, #27 gold chaptering, #28 schema, #29 generation,
 tickets. It collects findings and proposes answers to their open questions.
 Where it proposes changing a decision already made on #25, it says so.
 
+The database half is built; the web UI and generation (#29) are not. See
+[What's built](#whats-built) for how the implementation settled the open
+points in the data model sketch.
+
 ## What chapters are for
 
 A chapter works as a table of contents entry for a meeting. It has five jobs:
@@ -633,6 +637,34 @@ Notes on reconciling with existing tickets:
   answered above (tabs, binary search with a gap state, bullets expanded on the
   active chapter). The scrubber and transcript dividers go beyond #33's scope
   and may deserve their own ticket.
+
+## What's built
+
+- **Schema** (`packages/db/src/schema.ts`, migration `chapters`): `chapters`,
+  `chapter_generations`, and the `chapter_speakers` view, as sketched above,
+  with these decisions:
+  - Every chapter has a generation (`generation_id` is not null). Hand-written
+    chapters get one too, with `model` saying who wrote them.
+  - A chapter's `meeting_id` must match its generation's: a composite foreign
+    key on `(generation_id, meeting_id)`.
+  - The "current" generation is the one a meeting's chapters point at.
+    Regenerating inserts a new generation and replaces the meeting's chapters
+    in one transaction. Old generations stay as history.
+  - Chapters in a meeting can't overlap: an exclusion constraint (hand-written
+    in the migration, using `btree_gist`). Bullets are `varchar[]`.
+  - The database enforces invariants only: positive length, no overlap, a
+    matching meeting, and non-blank title, summary and bullets. Coverage and
+    the size conventions span rows or are guidance, so they live in code (see
+    below) and are reported as warnings.
+- **Rules** (`packages/core/src/chapters.ts`): validation (ordered,
+  non-overlapping, in bounds), the size conventions as warnings, uncovered
+  speech, the active chapter at a time, and the `?t=` snap rule.
+- **Data**: `chapters.json` next to a golden meeting's transcript holds its
+  chapters and their generation. The March 23, 2026 GBOS meeting has a set,
+  written by Claude from the golden transcript and not yet reviewed by a
+  human, so it is not yet the gold chaptering #27 asks for. The `dev` dataset
+  seeds it, and `packages/fixtures/src/chapters.test.ts` holds it to the rules
+  above.
 
 ## Not in v0
 

@@ -54,7 +54,9 @@ Docker via [`docker-compose.yml`](docker-compose.yml). Production is on
 YouTube **video sources**. **Meetings** belong to a body, and each meeting's
 transcript is a sequence of **segments** (a run of words by one speaker, with
 word-level onsets). Segments are attributed to **people**, who carry a
-voiceprint so they can be recognized in later meetings. See
+voiceprint so they can be recognized in later meetings. A meeting may also have
+**chapters**, a table of contents of titled time ranges (see
+[docs/chapters.md](docs/chapters.md)). See
 [`packages/db/src/schema.ts`](packages/db/src/schema.ts). The configured
 bodies and video sources live in
 [`packages/fixtures/test-data/`](packages/fixtures/test-data/); adding a body

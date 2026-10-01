@@ -5,6 +5,8 @@ import { sql } from "drizzle-orm";
 import {
   type DB,
   bodiesTable,
+  chapterGenerationsTable,
+  chaptersTable,
   jurisdictionsTable,
   meetingsTable,
   peopleTable,
@@ -13,6 +15,7 @@ import {
 } from "@open-minutes/db";
 import type { DataState } from "@open-minutes/db/ensure";
 import { LAST_WORD_DURATION_SEC } from "@open-minutes/core/transcription";
+import { transcriptFingerprint } from "@open-minutes/core/transcript-fingerprint";
 import { N_DIMENSIONS as VOICE_N_DIMENSIONS } from "@open-minutes/core/voice_embeddings";
 import {
   DEV_DATA_ROOT,
@@ -33,11 +36,13 @@ import { advanceIdSequences } from "./sequences";
 
 // Bump when the seeder's behavior changes in a way the fixture files don't
 // capture.
-const DEV_SEED_VERSION = 1;
+const DEV_SEED_VERSION = 2; // 2: seeds chapters
 
 // Every table the dev seeder owns. Truncated together (children would cascade
 // anyway); listing them keeps the footprint visible.
 const DEV_TABLES = [
+  chaptersTable,
+  chapterGenerationsTable,
   segmentsTable,
   meetingsTable,
   peopleTable,
@@ -158,6 +163,33 @@ export async function seedDevDatabase(db: DB): Promise<DevSeedSummary> {
       })),
   );
 
+  // One generation per meeting with a chapters.json, ids in meeting order.
+  const chapterGenerations: (typeof chapterGenerationsTable.$inferInsert)[] =
+    [];
+  const chapters: (typeof chaptersTable.$inferInsert)[] = [];
+  snapshot.meetings.forEach((m, i) => {
+    if (!m.chapters) return;
+    const generationId = chapterGenerations.length + 1;
+    chapterGenerations.push({
+      id: generationId,
+      meeting_id: i + 1,
+      ...m.chapters.generation,
+      transcript_fingerprint: transcriptFingerprint(m.segments),
+    });
+    for (const c of m.chapters.chapters) {
+      chapters.push({
+        meeting_id: i + 1,
+        generation_id: generationId,
+        // Postgres reads a bare number as seconds.
+        start_secs: `${c.start}`,
+        end_secs: `${c.end}`,
+        title: c.title,
+        summary: c.summary,
+        bullets: c.bullets,
+      });
+    }
+  });
+
   return await db.transaction(async (tx) => {
     const tables = sql.join(
       DEV_TABLES.map((t) => sql`${t}`),
@@ -175,6 +207,10 @@ export async function seedDevDatabase(db: DB): Promise<DevSeedSummary> {
         .insert(segmentsTable)
         .values(segments.slice(i, i + INSERT_CHUNK));
     }
+    if (chapterGenerations.length) {
+      await tx.insert(chapterGenerationsTable).values(chapterGenerations);
+      await tx.insert(chaptersTable).values(chapters);
+    }
     await advanceIdSequences(tx, DEV_TABLES);
     return {
       jurisdictions: mapped.jurisdictions.length,
@@ -183,6 +219,8 @@ export async function seedDevDatabase(db: DB): Promise<DevSeedSummary> {
       people: people.length,
       meetings: meetings.length,
       segments: segments.length,
+      chapter_generations: chapterGenerations.length,
+      chapters: chapters.length,
     };
   });
 }
