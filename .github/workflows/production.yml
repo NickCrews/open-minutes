@@ -214,7 +214,9 @@ jobs:
             } else if (MOVED !== "true") {
               body = `Production (${commit(OLD)}) already includes ${commit(SHA)}. Nothing to do.`;
             } else if (DEPLOY_RESULT === "success") {
-              body = `🚀 Deployed to production: ${change()}.`;
+              body =
+                `🚀 Deployed to [production](https://open-minutes.nicholas-b-crews.workers.dev/): ` +
+                `${change()}.`;
             } else {
               body =
                 `❌ Moved \`production\` (${change()}), but the deploy failed. ` +
