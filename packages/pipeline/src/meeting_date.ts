@@ -30,6 +30,13 @@ export interface ParseOptions {
    * eg a chair saying just "June 15th". Without it such dates are rejected.
    */
   fallbackYear?: number;
+  /**
+   * The day the video was published, "YYYY-MM-DD". When there is no year to
+   * read or fall back to, a month and day take the latest year in which they
+   * fall on or before this day, since a meeting can't be published before it
+   * happens: uploaded 2026-01-13, "December 12th" is 2025-12-12.
+   */
+  uploadDate?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -338,10 +345,39 @@ function resolveDate(
   c: DateCandidate,
   options: ParseOptions,
 ): { date: string; year: number } | null {
-  const year = c.year ?? options.fallbackYear ?? null;
+  const year =
+    c.year ??
+    options.fallbackYear ??
+    (options.uploadDate === undefined
+      ? null
+      : latestYearOnOrBefore(c.month, c.day, options.uploadDate));
   if (year === null) return null;
   const date = formatDate(year, c.month, c.day);
   return date === null ? null : { date, year };
+}
+
+// February 29th recurs every 4 years, or 8 across a skipped leap year (2100).
+const MAX_YEARS_BACK = 8;
+
+/**
+ * The latest year in which `month`/`day` falls on or before `notAfter`
+ * ("YYYY-MM-DD"), stepping back a year at a time. Null when `notAfter` is
+ * malformed or the day never occurs (eg April 31st).
+ */
+function latestYearOnOrBefore(
+  month: number,
+  day: number,
+  notAfter: string,
+): number | null {
+  const m = /^(\d{4})-\d{2}-\d{2}$/.exec(notAfter);
+  if (!m) return null;
+  const startYear = Number(m[1]);
+  for (let year = startYear; year >= startYear - MAX_YEARS_BACK; year--) {
+    const date = formatDate(year, month, day);
+    // ISO dates compare correctly as strings.
+    if (date !== null && date <= notAfter) return year;
+  }
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -456,7 +492,7 @@ function nearest<T extends Span>(
  * Only dates and times near an anchor phrase ("to order", "regular meeting",
  * "today is", ...) count, so passing mentions of other dates are ignored.
  * Chairs rarely say the year, so pass `fallbackYear` (typically the title's
- * year) to accept "June 15th". Returns null when no anchored date is found,
+ * year) or `uploadDate` to accept "June 15th". Returns null when no anchored date is found,
  * even if a time is — a time with no date is not a meeting start.
  */
 export function parseDateTimeFromTranscript(
@@ -530,13 +566,18 @@ function minutesOf(time: string): number {
  * Disagreements are kept, not resolved silently: title typos are common
  * ("Regular Meeting June 16, 2026" for a 2025 meeting) and so are
  * misrecognized words, so `warnings` records them for a human to check.
+ *
+ * Pass the video's `uploadDate` so a date with no year anywhere (a title
+ * without a date, a chair saying "March 5th") can still be placed in time.
  */
 export function resolveMeetingDateTime(
   title: string,
   transcriptOpening: string,
+  options: { uploadDate?: string } = {},
 ): MeetingDateTime {
-  const fromTitle = parseDateFromTitle(title);
+  const fromTitle = parseDateFromTitle(title, options);
   const fromTranscript = parseDateTimeFromTranscript(transcriptOpening, {
+    ...options,
     fallbackYear: fromTitle ? Number(fromTitle.date.slice(0, 4)) : undefined,
   });
 

@@ -124,9 +124,11 @@ export async function ingestVideo(
   const speechSegments = cleanSpeechSegments(rawSpeechSegments);
 
   // When the meeting happened: the title's date, the chair's gavel-in time.
+  // The upload date supplies the year when neither states one.
   const when = resolveMeetingDateTime(
     metadata.title,
     openingText(speechSegments),
+    { uploadDate: metadata.uploadDate ?? undefined },
   );
   console.error(
     `[${youtubeId}] meeting date ${when.date ?? "unknown"} (from ${when.dateSource ?? "nothing"}), ` +

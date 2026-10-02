@@ -163,6 +163,27 @@ describe("parseDateFromTitle", () => {
     ).toBe("2026-02-23");
   });
 
+  test("a missing year can come from the upload date", () => {
+    // The latest year in which the date falls on or before the upload.
+    const year = (title: string, uploadDate: string) =>
+      parseDateFromTitle(title, { uploadDate })?.date;
+    expect(year("Regular Meeting Dec. 12", "2026-01-13")).toBe("2025-12-12");
+    expect(year("Regular Meeting Jan. 12", "2026-01-13")).toBe("2026-01-12");
+    expect(year("Regular Meeting Jan. 13", "2026-01-13")).toBe("2026-01-13");
+    expect(year("Regular Meeting Feb. 29", "2026-03-01")).toBe("2024-02-29");
+    // A stated year, or a fallback year, still wins.
+    expect(year("Regular Meeting Dec. 12, 2024", "2026-01-13")).toBe(
+      "2024-12-12",
+    );
+    expect(
+      parseDateFromTitle("Regular Meeting Dec. 12", {
+        fallbackYear: 2026,
+        uploadDate: "2026-01-13",
+      })?.date,
+    ).toBe("2026-12-12");
+    expect(year("Regular Meeting Apr. 31", "2026-05-01")).toBeUndefined();
+  });
+
   test("rejects impossible dates", () => {
     expect(parseDateFromTitle("Meeting February 30, 2026")).toBeNull();
     expect(parseDateFromTitle("Meeting 13/1/26")).toBeNull();
@@ -413,6 +434,17 @@ describe("resolveMeetingDateTime", () => {
       timeSource: "transcript",
       warnings: [],
     });
+  });
+
+  test("the upload date supplies a year neither states", () => {
+    // Uploaded January 13th; the chair's "December 12th" was last year.
+    expect(
+      resolveMeetingDateTime(
+        "Board of Ethics Meeting",
+        "call the regular meeting to order, December 12th at 7:03 p.m.",
+        { uploadDate: "2026-01-13" },
+      ),
+    ).toMatchObject({ date: "2025-12-12", dateSource: "transcript" });
   });
 
   test("nothing to go on", () => {

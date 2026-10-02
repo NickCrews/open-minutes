@@ -94,6 +94,11 @@ export interface VideoMetadata {
   title: string;
   description: string;
   durationSecs: number | null;
+  /**
+   * The day YouTube published the video, "YYYY-MM-DD" (UTC), or null if
+   * unknown. A meeting happens on or before it.
+   */
+  uploadDate: string | null;
 }
 
 export async function fetchVideoMetadata(
@@ -110,6 +115,8 @@ export async function fetchVideoMetadata(
     title?: string;
     description?: string;
     duration?: number | null;
+    /** "YYYYMMDD". */
+    upload_date?: string | null;
   };
   return {
     id: raw.id,
@@ -117,7 +124,14 @@ export async function fetchVideoMetadata(
     title: raw.title ?? "",
     description: raw.description ?? "",
     durationSecs: raw.duration ?? null,
+    uploadDate: isoDate(raw.upload_date),
   };
+}
+
+/** yt-dlp's "YYYYMMDD" as "YYYY-MM-DD"; null if absent or malformed. */
+function isoDate(yyyymmdd: string | null | undefined): string | null {
+  const m = /^(\d{4})(\d{2})(\d{2})$/.exec(yyyymmdd ?? "");
+  return m ? `${m[1]}-${m[2]}-${m[3]}` : null;
 }
 
 /**

@@ -86,6 +86,7 @@ describe("e2e cross-meeting speaker recognition", () => {
           title: held.title,
           description: "",
           durationSecs: null,
+          uploadDate: null,
         }),
         downloadVideoAudio: async (_id: string, dest: string) => {
           await copyFile(heldAudio.path, dest);

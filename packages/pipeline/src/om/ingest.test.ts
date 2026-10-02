@@ -26,6 +26,7 @@ const METADATA: VideoMetadata = {
   title: "Regular Meeting",
   description: "Agenda: everything",
   durationSecs: 3600,
+  uploadDate: null,
 };
 
 // Two speakers: speaker 0 says "Um, hello everyone", speaker 1 says "Thanks".
