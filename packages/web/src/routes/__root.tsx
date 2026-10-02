@@ -52,6 +52,9 @@ function RootComponent() {
         >
           Search
         </Link>
+        <Link to="/about" class="text-muted-foreground hover:underline">
+          About
+        </Link>
       </nav>
       <main class="p-4">
         <Outlet />
