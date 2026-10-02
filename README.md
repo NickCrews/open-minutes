@@ -12,7 +12,8 @@ Open Minutes turns those recordings into searchable transcripts. For each
 meeting you can read everything that was said, see who said it, and jump
 straight to that moment in the video.
 
-Open Minutes is an early work in progress.
+Open Minutes is an early work in progress. See
+[what that means for you](#what-early-work-in-progress-means).
 
 ## What you can do
 
@@ -47,6 +48,39 @@ of their voice. Nobody types up these transcripts by hand, so:
   speaker shows as, say, "Anonymous Beaver".
 - **These are not official minutes.** Your government's approved minutes remain
   the legal record of what was decided.
+
+## What "early work in progress" means
+
+Open Minutes is useful for finding the moment something was said, but it is not
+yet complete or reliable enough to use on its own. In particular:
+
+- **Only some meetings are here.** Few boards and councils are covered so far,
+  and not every meeting of those has been processed. If you can't find a
+  meeting, that doesn't mean it didn't happen.
+- **Most speakers don't have names yet.** Names are added by hand, one voice
+  at a time. A name on a speaker may also be wrong if voice recognition
+  matched the wrong person.
+- **Search only finds the exact words you type.** If the transcript misheard a
+  word, searching for the right spelling won't find it, and only the 50 most
+  recent matches are shown. Try shorter words or other spellings.
+- **Only some meetings have chapters**, and those may not have been checked
+  by a person yet.
+- **You can't fix mistakes on the site yet.** There are no accounts or editing;
+  report problems as described below.
+
+So use Open Minutes to find your way around, then:
+
+- **Watch the video** before you quote someone or rely on what was said.
+- **Don't treat a missing search result as proof** that nobody said something.
+- **Check who is speaking in the video** before attributing a remark to a
+  named person.
+- **Check the official minutes** for what was actually decided.
+
+## Who makes this
+
+Open Minutes is maintained by Nick Crews, a member of the Girdwood Board of
+Supervisors and a software engineer, because he needed a better way of
+browsing old meetings.
 
 ## Get involved
 
