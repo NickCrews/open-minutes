@@ -9,6 +9,7 @@ import {
   segmentsTable,
 } from "@open-minutes/db";
 import { chapterErrors } from "@open-minutes/core/chapters";
+import { hasTypographicDash } from "@open-minutes/core/text";
 import { transcriptFingerprint } from "@open-minutes/core/transcript-fingerprint";
 import { LAST_WORD_DURATION_SEC } from "@open-minutes/core/transcription";
 import { checkMeeting, type Issue } from "./check";
@@ -392,6 +393,16 @@ export const mergeSegments = defineTool({
   },
 });
 
+/** A name or bio: non-blank, with plain hyphens (see core/text.ts). */
+const personText = z
+  .string()
+  .trim()
+  .min(1)
+  .refine(
+    (s) => !hasTypographicDash(s),
+    "write a plain hyphen (-), not an en or em dash",
+  );
+
 export const updatePerson = defineTool({
   name: "update_person",
   label: "Update person",
@@ -404,8 +415,8 @@ export const updatePerson = defineTool({
       .regex(/^[a-z0-9][a-z0-9-]*$/, "kebab-case, eg margaret-tyler")
       .nullable()
       .optional(),
-    name: z.string().trim().min(1).nullable().optional(),
-    bio: z.string().trim().min(1).nullable().optional(),
+    name: personText.nullable().optional(),
+    bio: personText.nullable().optional(),
     dryRun,
   }),
   run: async (db, { personId, dryRun: dry, ...fields }) => {

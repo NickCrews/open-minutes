@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   cleanGroups,
   cleanWords,
+  dashRule,
   falseStartRule,
   fillerRule,
   findUncleanWords,
@@ -37,6 +38,20 @@ describe("isFillerWord", () => {
     for (const w of ["umbrella", "huh", "her", "us", "Uhura", "err"]) {
       expect(isFillerWord(w), w).toBe(false);
     }
+  });
+});
+
+describe("dash rule", () => {
+  const run = (s: string) => text(dashRule.apply(words(s)).words);
+
+  it("turns en and em dashes into plain hyphens", () => {
+    expect(run("from 2019–2022 we")).toBe("from 2019-2022 we");
+    expect(run("the board— and staff")).toBe("the board- and staff");
+    expect(run("AO 2026-23 passed")).toBe("AO 2026-23 passed");
+  });
+
+  it("runs before the false-start rule", () => {
+    expect(clean("six– sixteen items")).toBe("sixteen items");
   });
 });
 

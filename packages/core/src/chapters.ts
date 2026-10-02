@@ -2,11 +2,14 @@
 // later the generator) and whatever reads them (the web page). See
 // docs/chapters.md for why the rules are what they are.
 
+import { hasTypographicDash } from "./text";
+
 /** The part of a chapter these rules look at, with times in seconds. */
 export interface ChapterSpan {
   start: number;
   end: number;
   title: string;
+  summary?: string;
   bullets: readonly string[];
 }
 
@@ -41,7 +44,8 @@ export const SNAP_SECS = 10;
 
 /**
  * Problems that make a set of chapters wrong: out of order, overlapping,
- * empty, or outside the meeting. The database refuses most of these too; this
+ * empty, outside the meeting, or with an en or em dash in the text (stored
+ * text uses a plain hyphen; see text.ts). The database refuses most of these too; this
  * says which chapter is at fault. Empty when the chapters are valid.
  */
 export function chapterErrors(
@@ -53,6 +57,8 @@ export function chapterErrors(
     const error = (message: string) => errors.push({ chapter: i, message });
     if (!c.title.trim()) error("has no title");
     if (c.bullets.some((b) => !b.trim())) error("has a blank bullet");
+    if ([c.title, c.summary ?? "", ...c.bullets].some(hasTypographicDash))
+      error("has an en or em dash; write a plain hyphen (-)");
     if (c.start < 0) error("starts before the meeting");
     if (c.end <= c.start) error("doesn't end after it starts");
     if (durationSecs !== undefined && c.end > durationSecs)

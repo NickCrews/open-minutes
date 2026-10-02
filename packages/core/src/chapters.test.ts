@@ -10,7 +10,7 @@ import {
 const chapter = (start: number, end: number, bullets = 0) => ({
   start,
   end,
-  title: `${start}–${end}`,
+  title: `${start}-${end}`,
   bullets: Array.from({ length: bullets }, (_, i) => `bullet ${i}`),
 });
 
@@ -23,6 +23,22 @@ describe("chapterErrors", () => {
     expect(
       chapterErrors([{ ...chapter(0, 10), bullets: ["ok", " "] }]),
     ).toEqual([{ chapter: 0, message: "has a blank bullet" }]);
+  });
+
+  test("refuses en and em dashes in the title, summary or bullets", () => {
+    const message = "has an en or em dash; write a plain hyphen (-)";
+    expect(
+      chapterErrors([
+        { ...chapter(0, 10), title: "Vote passes 3–2" },
+        { ...chapter(10, 20), summary: "The board — briefly — met." },
+        { ...chapter(20, 30, 3), bullets: ["a", "b", "2019–2022"] },
+        { ...chapter(30, 40), summary: "Passes 3-2." },
+      ]),
+    ).toEqual([
+      { chapter: 0, message },
+      { chapter: 1, message },
+      { chapter: 2, message },
+    ]);
   });
 
   test("names each broken chapter", () => {

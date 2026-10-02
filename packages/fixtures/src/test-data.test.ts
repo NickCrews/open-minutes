@@ -1,5 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { parseGoldenWhen } from "./test-data";
+import { hasTypographicDash } from "@open-minutes/core/text";
+import { loadPeople, parseGoldenWhen } from "./test-data";
+
+describe("people.jsonl", () => {
+  it("uses a plain hyphen, not an en or em dash, in names and bios", () => {
+    const withDash = loadPeople()
+      .filter((p) => hasTypographicDash(`${p.name} ${p.bio ?? ""}`))
+      .map((p) => p.slug);
+    expect(withDash).toEqual([]);
+  });
+});
 
 describe("parseGoldenWhen", () => {
   it("treats absent fields as unknown", () => {
