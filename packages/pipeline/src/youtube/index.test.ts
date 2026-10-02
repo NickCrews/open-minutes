@@ -34,9 +34,9 @@ describe("YouTube Module", () => {
   );
 
   // YouTube makes datacenter IPs (like GitHub's runners) "sign in to confirm
-  // you're not a bot", so CI needs cookies (see YouTubeConfig.cookies) for this to pass. A run
-  // without them (a fork's PR, which gets no secrets) skips it.
-  it.skipIf(process.env.CI && !process.env.YOUTUBE_COOKIES)(
+  // you're not a bot", so in CI this reads from the object store
+  // (OBJECT_STORE_PUBLIC_URL; see fetchStored). A run without it skips.
+  it.skipIf(process.env.CI && !process.env.OBJECT_STORE_PUBLIC_URL)(
     "should download video audio",
     async () => {
       // A 5 sec video for testing
@@ -53,6 +53,7 @@ describe("YouTube Module", () => {
       result = await yt.ensureAudioDownloaded(sampleVideo, path);
       expect(result).toHaveProperty("downloaded", false);
     },
-    10_000,
+    // Long enough for a fetch-youtube-audio run, when the store doesn't have it yet.
+    10 * 60_000,
   );
 });
