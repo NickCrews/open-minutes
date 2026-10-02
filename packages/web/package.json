@@ -7,7 +7,8 @@
     "dev": "vite dev --configLoader runner",
     "build": "vite build --configLoader runner",
     "preview": "vite preview --configLoader runner",
-    "deploy": "vite build --configLoader runner && wrangler deploy",
+    "deploy": "vite build --configLoader runner && ./scripts/deploy-built.sh",
+    "deploy:built": "./scripts/deploy-built.sh",
     "cf-typegen": "wrangler types",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
