@@ -6,7 +6,7 @@ import { goldenData } from "@open-minutes/fixtures/golden-data";
 
 export default defineConfig({
   datasets: {
-    // The playground: golden, plus its meetings, plus fixtures/dev-data/ extras.
+    // The playground: golden, plus its meetings and people.
     dev: devData,
     // Just the verified golden rows, as evals and benchmarks see them.
     golden: goldenData,

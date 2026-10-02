@@ -14,18 +14,12 @@ import {
 import type { DataState } from "@open-minutes/db/ensure";
 import { LAST_WORD_DURATION_SEC } from "@open-minutes/core/transcription";
 import { N_DIMENSIONS as VOICE_N_DIMENSIONS } from "@open-minutes/core/voice_embeddings";
-import {
-  DEV_DATA_ROOT,
-  TEST_DATA_ROOT,
-  loadAllTestData,
-  type TestData,
-} from "../test-data";
+import { TEST_DATA_ROOT, loadAllTestData, type TestData } from "../test-data";
 import { mapSnapshot } from "./map";
 import { advanceIdSequences } from "./sequences";
 
 // The "dev" dataset `pnpm dev` seeds: the golden fixtures, plus the golden
-// meetings' transcripts and people (which "golden" leaves out), plus the
-// fictional fixtures in dev-data/.
+// meetings' transcripts and people (which "golden" leaves out).
 //
 // Voiceprints are distinct deterministic placeholders, since real ones need
 // ~600 MB of audio per meeting. Nearest-neighbor queries work, but recognition
@@ -48,45 +42,9 @@ const DEV_TABLES = [
 
 const INSERT_CHUNK = 500;
 
-/** Golden fixtures plus dev-data/ fixtures, as one snapshot. */
+/** The golden fixtures, meetings and people included. */
 export function loadDevSnapshot(): TestData {
-  const golden = loadAllTestData(TEST_DATA_ROOT);
-  const extra = loadAllTestData(DEV_DATA_ROOT);
-  const merged: TestData = {
-    jurisdictions: [...golden.jurisdictions, ...extra.jurisdictions],
-    bodies: [...golden.bodies, ...extra.bodies],
-    people: [...golden.people, ...extra.people],
-    meetings: [...golden.meetings, ...extra.meetings],
-  };
-  assertUnique(
-    merged.jurisdictions.map((j) => j.id),
-    "jurisdiction id",
-  );
-  assertUnique(
-    merged.bodies.map((b) => b.id),
-    "body id",
-  );
-  assertUnique(
-    merged.people.map((p) => p.slug),
-    "person slug",
-  );
-  assertUnique(
-    merged.meetings.map((m) => m.youtube_id),
-    "meeting youtube_id",
-  );
-  return merged;
-}
-
-function assertUnique(values: string[], what: string): void {
-  const seen = new Set<string>();
-  for (const v of values) {
-    if (seen.has(v)) {
-      throw new Error(
-        `Duplicate ${what} "${v}" across test-data/ and dev-data/.`,
-      );
-    }
-    seen.add(v);
-  }
+  return loadAllTestData(TEST_DATA_ROOT);
 }
 
 /** Per-table count of rows inserted by a dev seed. */
@@ -208,11 +166,9 @@ export function placeholderVoiceprint(slug: string): number[] {
 /** Hash of every fixture file the dev dataset reads. */
 function fixturesHash(): string {
   const hash = createHash("sha256").update(`v${DEV_SEED_VERSION}\n`);
-  for (const root of [TEST_DATA_ROOT, DEV_DATA_ROOT]) {
-    for (const file of fixtureFiles(root)) {
-      hash.update(`${relative(root, file)}\0`);
-      hash.update(readFileSync(file));
-    }
+  for (const file of fixtureFiles(TEST_DATA_ROOT)) {
+    hash.update(`${relative(TEST_DATA_ROOT, file)}\0`);
+    hash.update(readFileSync(file));
   }
   return hash.digest("hex").slice(0, 12);
 }
@@ -232,7 +188,7 @@ function fixtureFiles(dir: string): string[] {
 
 let fingerprint: string | undefined;
 
-/** Golden fixtures (with meetings) + dev-data/ extras: the dev playground. */
+/** Golden fixtures with their meetings and people: the dev playground. */
 export const devData: DataState = {
   name: "dev",
   get fingerprint() {
