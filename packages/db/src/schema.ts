@@ -121,19 +121,16 @@ export const peopleTable = pgTable(
   "people",
   {
     id: serial().primaryKey(),
-    // Stable, globally-unique handle for a KNOWN person (eg "margaret-tyler"), the same
-    // across every meeting. Null for people auto-created during ingestion, who are
-    // a distinct voice we cannot yet put a name to. Seeded/known people carry a
-    // slug so cross-meeting identity is a fact (the "margaret-tyler" recognized in one
-    // meeting is the same row as in another), not a coincidence of matching.
-    //
-    // Why not just `id`? A serial id is an accident of one database's insert
-    // order: it differs between prod, dev and every test database. The slug is
-    // the key that means the same person everywhere, so it's what links the
-    // golden fixtures (people.jsonl, "identified:<slug>" in transcripts) to rows
-    // in any database: seeding upserts by slug, and tests score speaker
-    // identification by comparing slugs. Renaming a slug breaks that link, so
-    // a rename must happen everywhere the slug is used.
+    // Stable handle for a known person (eg "margaret-tyler") that means the same
+    // person in every database: prod, dev and each test database. `id` can't do
+    // this, since a serial id depends on one database's insert order. The slug
+    // links the golden fixtures (people.jsonl, "identified:<slug>" in
+    // transcripts) to rows: seeding upserts people by slug, and tests score
+    // speaker identification by comparing slugs. Within one database, segments
+    // across meetings share a person through `person_id`, slug or no slug. Null
+    // for an anonymous voice that recognition created; giving one a slug makes
+    // them a known person. Renaming a slug breaks the link to the fixtures, so
+    // rename it everywhere it's used.
     slug: varchar().unique(),
     // Null until a human identifies this voice. Nullable rather than "" so the
     // "not yet identified" branch is a type-level obligation everywhere a name
