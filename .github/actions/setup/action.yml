@@ -1,0 +1,16 @@
+# What nearly every job needs after checkout: pnpm, Node, and the workspace's
+# dependencies, installed exactly as the lockfile says.
+name: Set up the workspace
+description: Install pnpm and Node, then the workspace's dependencies
+
+runs:
+  using: composite
+  steps:
+    - uses: pnpm/action-setup@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 22
+        cache: pnpm
+    - name: Install dependencies
+      shell: bash
+      run: pnpm install --frozen-lockfile
