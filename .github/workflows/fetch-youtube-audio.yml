@@ -1,0 +1,155 @@
+# Fetches what the pipeline needs from one YouTube video and stores it in the
+# object store, which is publicly readable at $OBJECT_STORE_PUBLIC_URL:
+#   youtube/<video id>/info.json   yt-dlp's metadata (minus its stream URLs)
+#   youtube/<video id>/speech.webm YouTube's Opus audio, re-encoded to 16 kHz
+#                                  mono Opus at 24 kbps (~11 MB per hour); see
+#                                  .github/scripts/encode-speech-audio.sh
+# Clients (getMetadata and ensureAudioDownloaded in
+# packages/pipeline/src/youtube) trigger this when a file is missing and poll
+# for it; they decode the Opus themselves, so nothing else is stored. YouTube's
+# original audio isn't kept. If every
+# download attempt fails, youtube/<video id>/error.json is written instead, so
+# clients stop waiting.
+#
+# Trigger it by hand with `gh workflow run fetch-youtube-audio.yml -f video_id=<id>`.
+#
+# The object store is any S3-compatible bucket (Cloudflare R2 today) holding
+# all of the project's blobs, one top-level prefix per kind. Configuration
+# (repo settings):
+#   variables  OBJECT_STORE_PUBLIC_URL  public base URL of the bucket
+#              OBJECT_STORE_ENDPOINT    S3 API endpoint: for R2,
+#                                       https://<account id>.r2.cloudflarestorage.com;
+#                                       for S3, https://s3.<region>.amazonaws.com
+#              OBJECT_STORE_BUCKET      bucket name
+#              OBJECT_STORE_REGION      optional; defaults to "auto", which R2 wants
+#   object-store-writer environment secrets, so only runs from main can write:
+#              OBJECT_STORE_ACCESS_KEY_ID, OBJECT_STORE_SECRET_ACCESS_KEY
+#              an access key with read and write on that bucket only
+name: fetch-youtube-audio
+
+on:
+  workflow_dispatch:
+    inputs:
+      video_id:
+        description: YouTube video ID (11 characters)
+        required: true
+
+# Requests for the same video queue behind each other; the later one finds the
+# audio already stored and exits. Different videos run in parallel.
+concurrency:
+  group: fetch-youtube-audio-${{ inputs.video_id }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    environment: object-store-writer
+    timeout-minutes: 30
+    env:
+      VIDEO_ID: ${{ inputs.video_id }}
+      OBJECT_STORE_PUBLIC_URL: ${{ vars.OBJECT_STORE_PUBLIC_URL }}
+      OBJECT_STORE_BUCKET: ${{ vars.OBJECT_STORE_BUCKET }}
+      AWS_ENDPOINT_URL: ${{ vars.OBJECT_STORE_ENDPOINT }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.OBJECT_STORE_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.OBJECT_STORE_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: ${{ vars.OBJECT_STORE_REGION || 'auto' }}
+      # Some S3-compatible stores (R2) reject the checksum headers newer AWS
+      # CLIs send by default; S3 itself accepts either.
+      AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+      AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
+    steps:
+      - name: Check the video ID
+        run: |
+          if ! [[ "$VIDEO_ID" =~ ^[A-Za-z0-9_-]{11}$ ]]; then
+            echo "::error::not a YouTube video ID: $VIDEO_ID"
+            exit 1
+          fi
+          echo "PREFIX=youtube/$VIDEO_ID" >> "$GITHUB_ENV"
+          echo "ERROR_KEY=youtube/$VIDEO_ID/error.json" >> "$GITHUB_ENV"
+
+      - name: Check whether it is already stored
+        id: stored
+        run: |
+          if curl -sfI "$OBJECT_STORE_PUBLIC_URL/$PREFIX/speech.webm" > /dev/null &&
+            curl -sfI "$OBJECT_STORE_PUBLIC_URL/$PREFIX/info.json" > /dev/null; then
+            echo "Already stored: $OBJECT_STORE_PUBLIC_URL/$PREFIX/" | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "hit=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.stored.outputs.hit != 'true'
+
+      - uses: denoland/setup-deno@v2
+        if: steps.stored.outputs.hit != 'true'
+        with:
+          deno-version: v2.x
+
+      # WARP's and Tor's .deb files, so a run can skip `apt-get update`. The
+      # key changes monthly to pick up new releases.
+      - name: Name the .deb cache
+        if: steps.stored.outputs.hit != 'true'
+        id: debs
+        run: echo "key=youtube-egress-debs-v2-${{ runner.os }}-${{ runner.arch }}-$(date +%Y-%m)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache/restore@v4
+        if: steps.stored.outputs.hit != 'true'
+        id: debs-cache
+        with:
+          path: ${{ runner.temp }}/debs
+          key: ${{ steps.debs.outputs.key }}
+      - name: Install yt-dlp, Cloudflare WARP and Tor
+        if: steps.stored.outputs.hit != 'true'
+        run: .github/scripts/install-youtube-egress.sh "$RUNNER_TEMP/debs"
+      # Saved right away rather than at the end of the job, so a failed
+      # download doesn't lose it.
+      - uses: actions/cache/save@v4
+        if: steps.stored.outputs.hit != 'true' && steps.debs-cache.outputs.cache-hit != 'true'
+        with:
+          path: ${{ runner.temp }}/debs
+          key: ${{ steps.debs.outputs.key }}
+
+      - name: Download the audio and metadata
+        if: steps.stored.outputs.hit != 'true'
+        run: .github/scripts/fetch-youtube-audio.sh "$VIDEO_ID" "$RUNNER_TEMP/audio/original.webm"
+      # ffmpeg isn't on the ubuntu-latest image.
+      - name: Install ffmpeg
+        if: steps.stored.outputs.hit != 'true'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends ffmpeg > /dev/null
+      - name: Re-encode the audio for speech
+        if: steps.stored.outputs.hit != 'true'
+        run: .github/scripts/encode-speech-audio.sh "$RUNNER_TEMP/audio/original.webm" "$RUNNER_TEMP/audio/speech.webm"
+      # The stream URLs in yt-dlp's info expire within hours and make up most
+      # of it, so they're dropped.
+      - name: Upload to the object store
+        if: steps.stored.outputs.hit != 'true'
+        run: |
+          jq 'del(.formats, .requested_formats, .requested_downloads, .thumbnails, .automatic_captions, .subtitles, .heatmap)' \
+            "$RUNNER_TEMP/audio/original.info.json" > "$RUNNER_TEMP/audio/info.json"
+          aws s3 cp "$RUNNER_TEMP/audio/info.json" "s3://$OBJECT_STORE_BUCKET/$PREFIX/info.json" --content-type application/json --no-progress
+          aws s3 cp "$RUNNER_TEMP/audio/speech.webm" "s3://$OBJECT_STORE_BUCKET/$PREFIX/speech.webm" --content-type audio/webm --no-progress
+          aws s3 rm "s3://$OBJECT_STORE_BUCKET/$ERROR_KEY" || true
+          for name in info.json speech.webm; do
+            echo "Stored: $OBJECT_STORE_PUBLIC_URL/$PREFIX/$name ($(stat -c %s "$RUNNER_TEMP/audio/$name") bytes)"
+          done | tee -a "$GITHUB_STEP_SUMMARY"
+
+      # Clients compare failed_at with when they triggered the run, so a marker
+      # left by an earlier failure doesn't end a new wait.
+      - name: Record the failure in the object store
+        if: failure() && env.ERROR_KEY != '' && steps.stored.outputs.hit != 'true'
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          error=$(cat "$RUNNER_TEMP/audio/logs/last-error.txt" 2>/dev/null || echo "see $RUN_URL")
+          jq -n --arg id "$VIDEO_ID" --arg error "$error" --arg run "$RUN_URL" \
+            '{video_id: $id, failed_at: (now | todate), error: $error, run_url: $run}' > "$RUNNER_TEMP/error.json"
+          aws s3 cp "$RUNNER_TEMP/error.json" "s3://$OBJECT_STORE_BUCKET/$ERROR_KEY" --content-type application/json
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: yt-dlp-logs
+          path: ${{ runner.temp }}/audio/logs/

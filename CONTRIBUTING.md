@@ -75,8 +75,8 @@ You need:
 - **Node 22** and **pnpm 10.33.0** (pinned in `package.json`;
   `corepack enable` picks it up).
 - **Docker** with Compose, for the local Postgres.
-- **ffmpeg**, **yt-dlp** and **[deno](https://deno.com)** on your `PATH`, for
-  the pipeline and some tests (yt-dlp runs YouTube's player JS with deno).
+- **yt-dlp** and **[deno](https://deno.com)** on your `PATH`, for videos not
+  yet in the object store (below); yt-dlp runs YouTube's player JS with deno.
 
 Then:
 
@@ -188,9 +188,19 @@ pnpm om models          # download every ML model up front (~650MB)
 ```
 
 From a server or CI runner, YouTube answers yt-dlp with "sign in to confirm
-you're not a bot". Point `YOUTUBE_COOKIES` at a cookies.txt exported from a
-browser signed in to YouTube (see [`.env.example`](.env.example)); CI reads it
-from the `YOUTUBE_COOKIES` secret.
+you're not a bot". Metadata and audio come from the object store instead: the
+project's S3-compatible bucket (Cloudflare R2), public at
+`OBJECT_STORE_PUBLIC_URL`, where the
+[`fetch-youtube-audio`](.github/workflows/fetch-youtube-audio.yml) workflow
+stores each video's yt-dlp metadata and audio under `youtube/<video id>/`
+after downloading them through Cloudflare WARP or Tor. The audio is re-encoded
+to 16 kHz mono Opus at 24 kbps (~11 MB per hour) to keep storage small. The pipeline decodes
+the Opus to 16 kHz mono wav itself, with libopus compiled to WebAssembly, so
+reading from the store needs neither yt-dlp nor ffmpeg. With
+`YOUTUBE_AUDIO_DISPATCH_TOKEN` set, a missing video triggers that workflow and
+waits for it; without it, a missing video is downloaded with yt-dlp, which
+works from a home connection. See [`.env.example`](.env.example) and
+[docs/research/youtube-in-ci.md](docs/research/youtube-in-ci.md).
 
 `om` writes to the same database as everything else (`DB=prod pnpm om ingest <id>`
 to ingest into production). See

@@ -63,16 +63,76 @@ a GVS PO token.
 - **Audio download is the hard part.** It needs either an IP YouTube trusts,
   a PO token, or a signed-in session.
 
+## What was tested on GitHub runners (2026-10-02)
+
+yt-dlp 2026.08.19 with deno 2.x, bgutil-ytdlp-pot-provider 2.0.1, no cookies.
+The probe workflows (one short video in many configurations; a 92-minute
+meeting in five parallel trials) were throwaway; what came out of them is
+`.github/workflows/fetch-youtube-audio.yml`.
+
+**Direct from the runner, nothing works.** `ubuntu-latest`,
+`ubuntu-24.04-arm`, `macos-latest` and `windows-latest` all egress from
+Microsoft's AS8075, and every player client (`default`, `mweb`, `web`,
+`web_safari`, `tv`, `web_embedded`) gets `LOGIN_REQUIRED` ("Sign in to confirm
+you're not a bot") on the player request. This includes `mweb`, which passed
+from the cloud container on 2026-10-01.
+
+**bgutil PO tokens don't help on their own.** With `fetch_pot=always`, bgutil
+generates a player PO token and yt-dlp sends it, and YouTube still answers
+`LOGIN_REQUIRED`. bgutil's README says as much: a PO token "does not bypass
+IP-based login restrictions".
+
+**Changing the egress IP works.** Through Cloudflare WARP in proxy mode
+(`warp-cli mode proxy`, SOCKS5 on `127.0.0.1:40000`) the default client
+downloads audio with no cookies and no PO token. Through Tor, the default
+client also works, and `mweb` works with bgutil. In two runs of five parallel
+trials on the 92-minute meeting (71.5 MiB of opus audio):
+
+| Run | WARP, first attempt | WARP after retries | Tor fallback | Failed |
+| --- | ------------------- | ------------------ | ------------ | ------ |
+| 1   | 4                   | 1                  | 0            | 0      |
+| 2   | 4                   | 0                  | 1            | 0      |
+
+WARP downloads ran at about 10 MiB/s (6–12 s for the whole file); the Tor
+download took 52 s. Some WARP exit IPs are flagged by YouTube (or
+rate-limited by other sites), since they are shared with every WARP user.
+Deleting and re-creating the WARP registration often keeps the same exit IP,
+so the Tor fallback is what recovers from a flagged WARP exit. Later the same
+day, after dozens of requests for one short video from these shared exits,
+bot checks on both WARP and Tor became much more common (one trial in four
+failed all its attempts), so expect the success rate to move.
+`ffprobe` is not on the `ubuntu-latest` image; install `ffmpeg` with apt.
+
+**Running WARP and Tor on a runner.** Lessons from making the setup fast:
+
+- `apt-get install cloudflare-warp` takes ~30 s, mostly the desktop app's
+  dependencies (GTK, WebKit, GStreamer). `warp-svc` and `warp-cli` need only
+  `libtss2-esys` and `libtss2-tctildr`, and Tor only `libevent`, so unpacking
+  those five `.deb` files with `dpkg-deb -x` and running the binaries directly
+  takes ~2 s with the `.deb` files cached (13 s without).
+- About 3 s after `warp-svc` starts it finishes scanning the network
+  (`NetworkInfoChanged` in its log) and restarts its tunnel, dropping every
+  connection through it. A download started before then fails partway with
+  "Connection refused"; wait for that log line first.
+- With `socks5h://` (hostnames resolved at the exit), WARP exits over IPv6;
+  with `socks5://` (resolved on the runner, which has no IPv6), over IPv4. The
+  IPv4 exits got through more often in these (small) samples.
+- yt-dlp retries a broken connection 10 times by default, about a minute;
+  `--retries 2` moves on to a fresh exit sooner.
+
+With all that, a run of the workflow on the 92-minute meeting took 20 s once
+the runner started: 1 s to install, 11 s to download.
+
 ## Options for downloads
 
 | Option                                              | Works?                                                                                    | Cost / burden                                                          |
 | --------------------------------------------------- | ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
 | Cookies from a signed-in account                    | Reliable, per yt-dlp's docs                                                               | Throwaway account (YouTube may ban it); cookies expire and rotate      |
 | Another player client                               | Metadata yes; downloads untested on runners                                               | None; breaks when YouTube changes                                      |
-| PO tokens (bgutil-ytdlp-pot-provider + `mweb`)      | yt-dlp's recommended route for flagged IPs; mixed reports from datacenter IPs             | A sidecar server; breaks when YouTube changes                          |
+| PO tokens (bgutil-ytdlp-pot-provider + `mweb`)      | Not on GitHub runners: the IP block comes first (2026-10-02)                              | A sidecar server; breaks when YouTube changes                          |
 | Residential proxy (`--proxy`) for the download only | Reported reliable                                                                         | Roughly $1–7/GB; a 90-minute meeting's audio is ~50–90 MB              |
 | Self-hosted runner or cron on a home machine        | Works (it's a residential IP)                                                             | The machine must be on; self-hosted runners on a public repo need care |
-| Cloudflare WARP as egress                           | One 2025 report of yt-dlp working through it                                              | WireGuard sidecar; terms-of-service grey area                          |
+| Cloudflare WARP as egress                           | Yes on GitHub runners: 9 of 10 trials; Tor got the 10th (2026-10-02)                      | WireGuard sidecar; terms-of-service grey area                          |
 | Cloudflare Workers / Containers                     | Unknown: no reports either way, egress IPs undocumented. A Worker can't run yt-dlp itself | Containers need the Workers Paid plan                                  |
 | GitHub `macos-latest` runners                       | Untested; different IP space from the Azure Linux runners                                 | 10× minute multiplier                                                  |
 | Invidious / Piped                                   | Public instances are mostly blocked themselves                                            | Unreliable                                                             |
@@ -102,6 +162,7 @@ and keep the request count low.
 - [yt-dlp: exporting YouTube cookies](https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies)
 - [yt-dlp EJS (JS runtime) docs](https://github.com/yt-dlp/yt-dlp/wiki/EJS)
 - [Leveraging Cloudflare WARP to bypass YouTube's API restrictions](https://blog.arfevrier.fr/leveraging-cloudflare-warp-to-bypass-youtubes-api-restrictions/)
+- [Cloudflare WARP client on Linux](https://developers.cloudflare.com/warp-client/get-started/linux/)
 - [Cloudflare Containers: outbound traffic](https://developers.cloudflare.com/containers/platform-details/outbound-traffic)
 - [bgutil-ytdlp-pot-provider issue: still asked to sign in](https://github.com/Brainicism/bgutil-ytdlp-pot-provider/issues/37)
 - [YouTube Data API: playlistItems.list](https://developers.google.com/youtube/v3/docs/playlistItems/list)
