@@ -10,7 +10,7 @@ import {
   videoSourcesTable,
 } from "@open-minutes/db";
 import { bodySlug } from "@open-minutes/core/bodies";
-import { realYouTube, type YouTube } from "../youtube";
+import { type YouTube, youtubeFromEnv } from "../youtube";
 import {
   cleanSpeechSegments,
   type DiarizationTurn,
@@ -38,7 +38,7 @@ export const DEFAULT_WORK_ROOT = fileURLToPath(
 );
 
 export interface IngestOptions {
-  /** YouTube boundary, injectable for tests. Defaults to the real yt-dlp one. */
+  /** YouTube boundary, injectable for tests. Defaults to {@link youtubeFromEnv}. */
   yt?: YouTube;
   /** Where per-meeting work directories live. Defaults to {@link DEFAULT_WORK_ROOT}. */
   workRoot?: string;
@@ -86,7 +86,7 @@ export async function ingestVideo(
   youtubeId: string,
   options: IngestOptions = {},
 ): Promise<IngestResult> {
-  const yt = options.yt ?? realYouTube;
+  const yt = options.yt ?? youtubeFromEnv();
   const workRoot = options.workRoot ?? DEFAULT_WORK_ROOT;
 
   const existing = await db
@@ -100,7 +100,7 @@ export async function ingestVideo(
   }
 
   console.error(`[${youtubeId}] fetching video metadata...`);
-  const metadata = await yt.fetchVideoMetadata(youtubeId);
+  const metadata = await yt.getMetadata(youtubeId);
   const body = await resolveBody(db, youtubeId, metadata.channelId);
 
   const workDir = join(workRoot, `${bodySlug(body)}_${youtubeId}`);
@@ -110,7 +110,7 @@ export async function ingestVideo(
   if (existsSync(audioPath)) {
     console.error(`[${youtubeId}] audio.wav exists, skipping download`);
   } else {
-    await yt.downloadVideoAudio(youtubeId, audioPath);
+    await yt.ensureAudioDownloaded(youtubeId, audioPath);
   }
 
   const rawSpeechSegments = await cachedStage<SpeechSegment[]>(
