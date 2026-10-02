@@ -54,6 +54,7 @@ every hand-corrected word.
 
    Topic or tone is not evidence. Without evidence, leave the label alone and
    report it.
+
 2. **Speech recognition misspells names** (Bryan → Brian, Crews → Cruz,
    Giessel → Giesel). Match names loosely. When you name someone, follow the
    `people-records` skill. Officials' surnames often come out as unrelated
@@ -100,7 +101,7 @@ every hand-corrected word.
    `docs/chapters.md`. Write them with `replace_chapters`, with
    `reviewedByHuman: false` unless a human checked them.
 10. **Voiceprints aren't recomputed.** Relabelling segments doesn't change
-   anyone's voiceprint, so say so if recognition will depend on your fix.
+    anyone's voiceprint, so say so if recognition will depend on your fix.
 
 ## Report
 
