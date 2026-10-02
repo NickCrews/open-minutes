@@ -64,7 +64,9 @@ every hand-corrected word.
    word where the speaker changes, then relabel each part. Edges are usually
    off by one to five words, most often with the next segment starting on the
    previous speaker's last words ("Thank | you."), so check the first and last
-   words of every segment.
+   words of every segment. `fixtures:check` warns about a marker inside a
+   sentence near a longer pause; the pause hints which way to move it, but
+   read the words to decide who said them.
 4. **Give every voice change its own segment.** The diarizer often folds
    short turns into the chair's segment: roll-call answers, "So moved." and
    "Second.", one-line questions inside a presentation, and the clerk reading
