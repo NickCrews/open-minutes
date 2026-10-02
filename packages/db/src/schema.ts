@@ -126,6 +126,14 @@ export const peopleTable = pgTable(
     // a distinct voice we cannot yet put a name to. Seeded/known people carry a
     // slug so cross-meeting identity is a fact (the "margaret-tyler" recognized in one
     // meeting is the same row as in another), not a coincidence of matching.
+    //
+    // Why not just `id`? A serial id is an accident of one database's insert
+    // order: it differs between prod, dev and every test database. The slug is
+    // the key that means the same person everywhere, so it's what links the
+    // golden fixtures (people.jsonl, "identified:<slug>" in transcripts) to rows
+    // in any database: seeding upserts by slug, and tests score speaker
+    // identification by comparing slugs. Renaming a slug breaks that link, so
+    // a rename must happen everywhere the slug is used.
     slug: varchar().unique(),
     // Null until a human identifies this voice. Nullable rather than "" so the
     // "not yet identified" branch is a type-level obligation everywhere a name

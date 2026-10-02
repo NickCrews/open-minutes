@@ -35,7 +35,8 @@ never type one back in.
 3. **Turns blur at their edges.** In "Thank you. Brianna | Thank you, Kyle. I
    just…", the chair's handoff words belong to the chair. Split at the exact
    word where the speaker changes, then relabel each part.
-4. **Choose the right kind of label.** A known person has a slug. An anonymous
+4. **Choose the right kind of label.** A known person has a slug, their
+   stable ID across meetings, databases and fixtures. An anonymous
    person is a voice that recognition saw again. A speaker number is a voice
    within one meeting only. Unattributed means unknown. Use `update_person` to
    name a recurring anonymous person. Use `merge_people` only when two person
