@@ -30,8 +30,8 @@ async function personId(db: Parameters<typeof callTool>[0], slug: string) {
   return p!.id;
 }
 
-/** Bryan Burnett's "This is Bryan Burnett chiming in" segment. */
-async function bryanSegment(db: Parameters<typeof callTool>[0]) {
+/** Brian Burnett's "This is Brian Burnett chiming in" segment. */
+async function brianSegment(db: Parameters<typeof callTool>[0]) {
   const segments = await callTool(db, getTranscript, {
     meetingId: await gbosId(db),
   });
@@ -89,7 +89,7 @@ describe("reading", () => {
 
 describe("relabel_segments", () => {
   test("a dry run saves nothing", async ({ db }) => {
-    const seg = await bryanSegment(db);
+    const seg = await brianSegment(db);
     const mike = await personId(db, "mike-edgington");
     const out = await callTool(db, relabelSegments, {
       segmentIds: [seg.id],
@@ -98,26 +98,26 @@ describe("relabel_segments", () => {
     });
     expect(out.applied).toBe(false);
     expect(out.issues).toEqual([]);
-    expect((await bryanSegment(db)).speaker).toMatchObject({
-      slug: "bryan-burnett",
+    expect((await brianSegment(db)).speaker).toMatchObject({
+      slug: "brian-burnett",
     });
   });
 
   test("saves, and can make speech unattributed", async ({ db }) => {
-    const seg = await bryanSegment(db);
+    const seg = await brianSegment(db);
     const out = await callTool(db, relabelSegments, {
       segmentIds: [seg.id],
       speaker: {},
     });
     expect(out.applied).toBe(true);
-    expect((await bryanSegment(db)).speaker).toBeNull();
+    expect((await brianSegment(db)).speaker).toBeNull();
   });
 });
 
 describe("split_segment and merge_segments", () => {
   test("split then merge restores the segment", async ({ db }) => {
     const MEETING = await gbosId(db);
-    const seg = await bryanSegment(db);
+    const seg = await brianSegment(db);
     const split = await callTool(db, splitSegment, {
       segmentId: seg.id,
       atWord: 3,
@@ -136,7 +136,7 @@ describe("split_segment and merge_segments", () => {
       segmentIds: [split.result.newSegmentId, seg.id],
     });
     expect(merged.applied).toBe(true);
-    expect((await bryanSegment(db)).text).toBe(seg.text);
+    expect((await brianSegment(db)).text).toBe(seg.text);
   });
 
   test("refuses segments that aren't next to each other", async ({ db }) => {
@@ -148,7 +148,7 @@ describe("split_segment and merge_segments", () => {
   });
 
   test("refuses a split point outside the segment", async ({ db }) => {
-    const seg = await bryanSegment(db);
+    const seg = await brianSegment(db);
     await expect(
       callTool(db, splitSegment, { segmentId: seg.id, atWord: 999 }),
     ).rejects.toThrow(/atWord must be/);
@@ -169,7 +169,7 @@ describe("people", () => {
       bio: "Landscape architect.",
     });
     await expect(
-      callTool(db, updatePerson, { personId: id, slug: "kyle-kelly" }),
+      callTool(db, updatePerson, { personId: id, slug: "kyle-kelley" }),
     ).rejects.toThrow(/unique|duplicate/i);
   });
 

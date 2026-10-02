@@ -56,7 +56,7 @@ start_sec|event_type|event_data
 0:01:08.87|text|that
 0:01:09.11|text|on
 0:01:09.27|text|this?
-0:01:09.83|meta|{"begin_speaker":"identified:bryan-burnett"}
+0:01:09.83|meta|{"begin_speaker":"identified:brian-burnett"}
 0:01:09.83|text|I've
 0:01:10.15|text|been
 0:01:10.31|text|looking
@@ -69,7 +69,7 @@ start_sec|event_type|event_data
 0:01:12.79|text|to
 0:01:12.87|text|hear
 0:01:13.19|text|that.
-0:01:13.99|meta|{"begin_speaker":"identified:bryan-burnett"}
+0:01:13.99|meta|{"begin_speaker":"identified:brian-burnett"}
 0:01:13.99|text|The
 0:01:14.15|text|Girdwood
 0:01:14.95|text|Board
@@ -149,7 +149,7 @@ start_sec|event_type|event_data
 0:01:40.47|text|peoples.
 0:01:46.63|meta|{"begin_speaker":"segmented:spk-0"}
 0:01:46.63|text|Sure.
-0:01:47.27|text|Bryan
+0:01:47.27|text|Brian
 0:01:47.75|text|Burnett.
 0:01:52.71|text|Kellie
 0:01:53.11|text|Okonek.
@@ -273,7 +273,7 @@ start_sec|event_type|event_data
 0:02:51.65|text|approve
 0:02:52.13|text|the
 0:02:52.37|text|agenda.
-0:02:53.49|meta|{"begin_speaker":"identified:bryan-burnett"}
+0:02:53.49|meta|{"begin_speaker":"identified:brian-burnett"}
 0:02:53.49|text|I'd
 0:02:53.73|text|like
 0:02:53.89|text|to
@@ -354,7 +354,7 @@ start_sec|event_type|event_data
 0:03:28.13|text|or
 0:03:28.37|text|last
 0:03:28.69|text|meeting.
-0:03:31.01|meta|{"begin_speaker":"identified:bryan-burnett"}
+0:03:31.01|meta|{"begin_speaker":"identified:brian-burnett"}
 0:03:31.01|text|I'd
 0:03:31.33|text|like
 0:03:31.49|text|to
@@ -6436,7 +6436,7 @@ start_sec|event_type|event_data
 0:43:39.19|text|Thank
 0:43:39.67|text|you.
 0:43:41.19|text|Right.
-0:43:43.11|meta|{"begin_speaker":"identified:bryan-burnett"}
+0:43:43.11|meta|{"begin_speaker":"identified:brian-burnett"}
 0:43:43.11|text|Let's
 0:43:43.43|text|see
 0:43:43.75|text|for
@@ -8811,11 +8811,11 @@ start_sec|event_type|event_data
 0:59:16.31|meta|{"begin_speaker":"segmented:spk-0"}
 0:59:16.31|text|No
 0:59:16.63|text|problem.
-0:59:22.31|meta|{"begin_speaker":"identified:kyle-kelly"}
+0:59:22.31|meta|{"begin_speaker":"identified:kyle-kelley"}
 0:59:22.31|text|Good
 0:59:22.63|text|evening,
 0:59:23.11|text|Kyle
-0:59:23.59|text|Kelly.
+0:59:23.59|text|Kelley.
 0:59:24.63|text|I'll
 0:59:24.87|text|start
 0:59:25.03|text|with
@@ -9150,7 +9150,7 @@ start_sec|event_type|event_data
 1:01:11.73|text|trail
 1:01:12.13|text|projects.
 1:01:12.69|text|As
-1:01:13.01|text|Bryan
+1:01:13.01|text|Brian
 1:01:13.41|text|mentioned,
 1:01:13.89|text|we
 1:01:13.97|text|had
@@ -12471,7 +12471,7 @@ start_sec|event_type|event_data
 1:20:46.17|text|in
 1:20:46.33|text|on
 1:20:46.57|text|that?
-1:20:47.61|meta|{"begin_speaker":"identified:kyle-kelly"}
+1:20:47.61|meta|{"begin_speaker":"identified:kyle-kelley"}
 1:20:47.61|text|We
 1:20:47.77|text|did
 1:20:48.01|text|discuss
@@ -12593,7 +12593,7 @@ start_sec|event_type|event_data
 1:21:23.75|text|try
 1:21:23.91|text|that
 1:21:23.99|text|track?
-1:21:24.79|meta|{"begin_speaker":"identified:kyle-kelly"}
+1:21:24.79|meta|{"begin_speaker":"identified:kyle-kelley"}
 1:21:24.79|text|Yeah,
 1:21:25.03|text|we're
 1:21:25.27|text|trying
@@ -13827,9 +13827,9 @@ start_sec|event_type|event_data
 1:30:16.25|meta|{"begin_speaker":"identified:nick-crews"}
 1:30:16.25|text|Yes.
 1:30:16.81|meta|{"begin_speaker":"segmented:spk-0"}
-1:30:16.81|text|Bryan
+1:30:16.81|text|Brian
 1:30:17.21|text|Burnett.
-1:30:18.49|meta|{"begin_speaker":"identified:bryan-burnett"}
+1:30:18.49|meta|{"begin_speaker":"identified:brian-burnett"}
 1:30:18.49|text|Yes.
 1:30:20.09|meta|{"begin_speaker":"segmented:spk-0"}
 1:30:20.09|text|Amanda
@@ -14374,7 +14374,7 @@ start_sec|event_type|event_data
 1:34:15.30|text|chief
 1:34:15.78|text|about
 1:34:15.94|text|this?
-1:34:17.57|meta|{"begin_speaker":"identified:bryan-burnett"}
+1:34:17.57|meta|{"begin_speaker":"identified:brian-burnett"}
 1:34:17.57|text|Yeah.
 1:34:21.01|text|Two
 1:34:21.41|text|questions,
@@ -14567,7 +14567,7 @@ start_sec|event_type|event_data
 1:35:42.05|text|owns
 1:35:42.29|text|the
 1:35:42.37|text|vehicle.
-1:35:43.41|meta|{"begin_speaker":"identified:bryan-burnett"}
+1:35:43.41|meta|{"begin_speaker":"identified:brian-burnett"}
 1:35:43.41|text|So
 1:35:43.65|text|we
 1:35:43.89|text|would
@@ -14583,7 +14583,7 @@ start_sec|event_type|event_data
 1:35:48.29|meta|{"begin_speaker":"segmented:spk-0"}
 1:35:48.29|text|Yes,
 1:35:48.85|text|correct.
-1:35:49.41|meta|{"begin_speaker":"identified:bryan-burnett"}
+1:35:49.41|meta|{"begin_speaker":"identified:brian-burnett"}
 1:35:49.41|text|And
 1:35:49.65|text|the
 1:35:49.81|text|one
@@ -14922,9 +14922,9 @@ start_sec|event_type|event_data
 1:37:50.23|meta|{"begin_speaker":"identified:nick-crews"}
 1:37:50.23|text|Yes,
 1:37:50.79|meta|{"begin_speaker":"segmented:spk-0"}
-1:37:50.79|text|Bryan
+1:37:50.79|text|Brian
 1:37:51.27|text|Burnett.
-1:37:52.71|meta|{"begin_speaker":"identified:bryan-burnett"}
+1:37:52.71|meta|{"begin_speaker":"identified:brian-burnett"}
 1:37:52.71|text|Yes.
 1:37:54.95|meta|{"begin_speaker":"segmented:spk-0"}
 1:37:54.95|text|Yes,
@@ -15669,7 +15669,7 @@ start_sec|event_type|event_data
 1:44:27.91|text|as
 1:44:28.07|text|a
 1:44:28.23|text|package.
-1:44:33.35|meta|{"begin_speaker":"identified:bryan-burnett"}
+1:44:33.35|meta|{"begin_speaker":"identified:brian-burnett"}
 1:44:33.35|text|For
 1:44:33.67|text|discussion's
 1:44:34.47|text|sake,
@@ -15716,7 +15716,7 @@ start_sec|event_type|event_data
 1:45:12.39|text|first
 1:45:12.71|text|is
 1:45:13.83|text|motion?
-1:45:14.47|meta|{"begin_speaker":"identified:bryan-burnett"}
+1:45:14.47|meta|{"begin_speaker":"identified:brian-burnett"}
 1:45:14.47|text|You
 1:45:14.63|text|know,
 1:45:15.35|text|I
@@ -16231,7 +16231,7 @@ start_sec|event_type|event_data
 1:49:02.05|text|than
 1:49:03.49|text|mobile
 1:49:03.89|text|home.
-1:49:07.25|meta|{"begin_speaker":"identified:bryan-burnett"}
+1:49:07.25|meta|{"begin_speaker":"identified:brian-burnett"}
 1:49:07.25|text|Yeah,
 1:49:07.65|text|that
 1:49:07.81|text|was
@@ -18813,7 +18813,7 @@ start_sec|event_type|event_data
 2:10:00.13|text|was
 2:10:01.25|text|included
 2:10:01.97|text|intentionally.
-2:10:17.05|meta|{"begin_speaker":"identified:bryan-burnett"}
+2:10:17.05|meta|{"begin_speaker":"identified:brian-burnett"}
 2:10:17.05|text|I'm
 2:10:17.29|text|curious.
 2:10:18.65|text|First
@@ -19830,7 +19830,7 @@ start_sec|event_type|event_data
 2:17:25.30|text|questions
 2:17:25.62|text|or
 2:17:25.78|text|comments?
-2:17:29.30|meta|{"begin_speaker":"identified:bryan-burnett"}
+2:17:29.30|meta|{"begin_speaker":"identified:brian-burnett"}
 2:17:29.30|text|Sorry,
 2:17:29.78|text|right
 2:17:30.90|text|things
@@ -20001,7 +20001,7 @@ start_sec|event_type|event_data
 2:18:42.71|text|kind
 2:18:42.87|text|of
 2:18:42.95|text|what
-2:18:43.11|text|Bryan's
+2:18:43.11|text|Brian's
 2:18:43.51|text|talking
 2:18:43.83|text|about
 2:18:44.07|text|now
@@ -20560,7 +20560,7 @@ start_sec|event_type|event_data
 2:22:02.37|text|was
 2:22:02.53|text|made
 2:22:02.77|text|by
-2:22:02.93|text|Bryan
+2:22:02.93|text|Brian
 2:22:03.33|text|Burnett
 2:22:04.13|text|and
 2:22:04.37|text|seconded
@@ -20932,12 +20932,12 @@ start_sec|event_type|event_data
 2:24:38.18|text|that
 2:24:38.50|text|clarification.
 2:24:39.78|text|And
-2:24:40.10|text|Bryan
+2:24:40.10|text|Brian
 2:24:40.58|text|did
 2:24:40.74|text|you
 2:24:40.90|text|have
 2:24:41.06|text|some.
-2:24:43.30|meta|{"begin_speaker":"identified:bryan-burnett"}
+2:24:43.30|meta|{"begin_speaker":"identified:brian-burnett"}
 2:24:43.30|text|I
 2:24:43.46|text|was
 2:24:43.62|text|just
@@ -21188,9 +21188,9 @@ start_sec|event_type|event_data
 2:26:46.33|meta|{"begin_speaker":"identified:nick-crews"}
 2:26:46.33|text|Yes,
 2:26:46.89|meta|{"begin_speaker":"segmented:spk-0"}
-2:26:46.89|text|Bryan
+2:26:46.89|text|Brian
 2:26:47.29|text|Burnett.
-2:26:48.25|meta|{"begin_speaker":"identified:bryan-burnett"}
+2:26:48.25|meta|{"begin_speaker":"identified:brian-burnett"}
 2:26:48.25|text|No.
 2:26:50.73|meta|{"begin_speaker":"identified:amanda-tuttle"}
 2:26:50.73|text|No.
@@ -21349,7 +21349,7 @@ start_sec|event_type|event_data
 2:28:02.71|text|amended.
 2:28:05.35|meta|{"begin_speaker":"segmented:spk-0"}
 2:28:05.35|text|Yes.
-2:28:06.31|meta|{"begin_speaker":"identified:bryan-burnett"}
+2:28:06.31|meta|{"begin_speaker":"identified:brian-burnett"}
 2:28:06.31|text|So
 2:28:06.55|text|moving
 2:28:06.87|text|this
@@ -21426,9 +21426,9 @@ start_sec|event_type|event_data
 2:28:37.35|meta|{"begin_speaker":"identified:nick-crews"}
 2:28:37.35|text|Yes.
 2:28:38.23|meta|{"begin_speaker":"segmented:spk-0"}
-2:28:38.23|text|Bryan
+2:28:38.23|text|Brian
 2:28:38.71|text|Burnett.
-2:28:39.19|meta|{"begin_speaker":"identified:bryan-burnett"}
+2:28:39.19|meta|{"begin_speaker":"identified:brian-burnett"}
 2:28:39.19|text|Yes.
 2:28:39.99|meta|{"begin_speaker":"segmented:spk-0"}
 2:28:39.99|text|Amanda

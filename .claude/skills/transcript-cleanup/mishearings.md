@@ -40,12 +40,12 @@ take the spelling in `packages/fixtures/test-data/people.jsonl`.
 | covert                                                                                             | culvert                                        |
 | low cloud, a local, all course, well quote                                                         | roll call                                      |
 | All seconds.                                                                                       | I'll second.                                   |
-| Kelly, Kelly Akin, Kelly Aucknick, Kellyak                                                         | Kellie (Okonek), when it isn't Kyle Kelly      |
-| Brian Bert, Ryan Burnett, Remember that                                                            | Bryan Burnett                                  |
+| Kelly, Kelly Akin, Kelly Aucknick, Kellyak                                                         | Kellie (Okonek), when it isn't Kyle Kelley     |
+| Brian Bert, Ryan Burnett, Remember that                                                            | Brian Burnett                                  |
 | Manished all, Manda title, Manitobal, Amanda Tunnel                                                | Amanda Tuttle                                  |
 | Nick Cruz, Cruise                                                                                  | Nick Crews                                     |
 | Jim Wingarner, one guard                                                                           | Jen Wingard                                    |
-| Carl Kelly                                                                                         | Kyle Kelly                                     |
+| Carl Kelly                                                                                         | Kyle Kelley                                    |
 | Rihanna                                                                                            | Brianna                                        |
 | Giesel, Geel, Senator Keith                                                                        | Giessel                                        |
 | Kai                                                                                                | Ky (Holland)                                   |

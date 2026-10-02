@@ -104,7 +104,7 @@ describe("devData chapters", () => {
       JOIN ${peopleTable} p ON p.id = v.person_id
       WHERE c.title = 'Roads report: overflow, steaming and breakup'
       ORDER BY v.speaking_secs DESC LIMIT 1`)) as unknown as { slug: string }[];
-    expect(top!.slug).toBe("kyle-kelly");
+    expect(top!.slug).toBe("kyle-kelley");
   });
 
   test("refuses overlapping chapters in one meeting", async ({ db }) => {

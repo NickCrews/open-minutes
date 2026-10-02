@@ -121,16 +121,16 @@ export const peopleTable = pgTable(
   "people",
   {
     id: serial().primaryKey(),
-    // Stable handle for a known person (eg "kyle-kelly") that means the same
+    // Stable handle for a known person (eg "kyle-kelley") that means the same
     // person in every database: prod, dev and each test database. `id` can't do
-    // this, since a serial id depends on one database's insert order: Kyle Kelly
+    // this, since a serial id depends on one database's insert order: Kyle Kelley
     // might be person 7 in prod and person 2 in a test database.
     //
     // The slug links the golden fixtures to rows. For example:
-    //   - people.jsonl has {"slug":"kyle-kelly","name":"Kyle Kelly",...}
+    //   - people.jsonl has {"slug":"kyle-kelley","name":"Kyle Kelley",...}
     //   - meetings/gbos_9HoIM5INxpI/golden.psv labels his turns
-    //     {"begin_speaker":"identified:kyle-kelly"}
-    //   - seeding that meeting upserts the people row with slug "kyle-kelly",
+    //     {"begin_speaker":"identified:kyle-kelley"}
+    //   - seeding that meeting upserts the people row with slug "kyle-kelley",
     //     so seeding a second meeting he speaks in reuses the same row
     //   - after ingesting a held-out meeting, the e2e test checks that each
     //     segment its fixture labels "identified:<slug>" resolved to the person

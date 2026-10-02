@@ -41,7 +41,7 @@ describe("checkPsv", () => {
     expect(
       lint(
         psv(
-          ["0:00:01.00", "@identified:kyle-kelly"],
+          ["0:00:01.00", "@identified:kyle-kelley"],
           ["0:00:01.00", "Hello."],
           ["0:00:02.00", "@segmented:spk-1"],
           ["0:00:02.00", "Hi."],
@@ -71,7 +71,7 @@ describe("checkPsv", () => {
     expect(
       lint(
         psv(
-          ["0:00:01.00", "@identified:kyle-kelly"],
+          ["0:00:01.00", "@identified:kyle-kelley"],
           ["0:00:01.00", "Thank"],
           ["0:00:01.50", "@segmented:spk-1"],
           ["0:00:01.20", "you."],
