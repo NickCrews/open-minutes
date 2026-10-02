@@ -9,9 +9,9 @@ export const Route = createFileRoute("/about")({
 const ISSUES_URL = "https://github.com/nickcrews/open-minutes/issues";
 const REPO_URL = "https://github.com/nickcrews/open-minutes";
 
-function Section(props: { title: string; children: JSX.Element }) {
+function Section(props: { id?: string; title: string; children: JSX.Element }) {
   return (
-    <section class="mb-8">
+    <section id={props.id} class="mb-8 scroll-mt-4">
       <h2 class="mb-3 text-xl font-semibold">{props.title}</h2>
       <div class="space-y-3">{props.children}</div>
     </section>
@@ -53,7 +53,13 @@ function AboutPage(): JSX.Element {
           each meeting you can read everything that was said, see who said it,
           and jump straight to that moment in the video.
         </p>
-        <p>Open Minutes is an early work in progress.</p>
+        <p>
+          Open Minutes is an early work in progress.{" "}
+          <a href="#work-in-progress" class="underline">
+            See what that means for you
+          </a>
+          .
+        </p>
       </Section>
 
       <Section title="What you can do">
@@ -112,6 +118,71 @@ function AboutPage(): JSX.Element {
             approved minutes remain the legal record of what was decided.
           </li>
         </ul>
+      </Section>
+
+      <Section
+        id="work-in-progress"
+        title="What “early work in progress” means"
+      >
+        <p>
+          Open Minutes is useful for finding the moment something was said, but
+          it is not yet complete or reliable enough to use on its own. In
+          particular:
+        </p>
+        <ul class="list-disc space-y-2 pl-6">
+          <li>
+            <strong>Only some meetings are here.</strong> Few boards and
+            councils are covered so far, and not every meeting of those has been
+            processed. If you can't find a meeting, that doesn't mean it didn't
+            happen.
+          </li>
+          <li>
+            <strong>Most speakers don't have names yet.</strong> Names are added
+            by hand, one voice at a time. A name on a speaker may also be wrong
+            if voice recognition matched the wrong person.
+          </li>
+          <li>
+            <strong>Search only finds the exact words you type.</strong> If the
+            transcript misheard a word, searching for the right spelling won't
+            find it, and only the 50 most recent matches are shown. Try shorter
+            words or other spellings.
+          </li>
+          <li>
+            <strong>Only some meetings have chapters</strong>, and those may not
+            have been checked by a person yet.
+          </li>
+          <li>
+            <strong>You can't fix mistakes on the site yet.</strong> There are
+            no accounts or editing; report problems as described below.
+          </li>
+        </ul>
+        <p>So use Open Minutes to find your way around, then:</p>
+        <ul class="list-disc space-y-2 pl-6">
+          <li>
+            <strong>Watch the video</strong> before you quote someone or rely on
+            what was said.
+          </li>
+          <li>
+            <strong>Don't treat a missing search result as proof</strong> that
+            nobody said something.
+          </li>
+          <li>
+            <strong>Check who is speaking in the video</strong> before
+            attributing a remark to a named person.
+          </li>
+          <li>
+            <strong>Check the official minutes</strong> for what was actually
+            decided.
+          </li>
+        </ul>
+      </Section>
+
+      <Section title="Who makes this">
+        <p>
+          Open Minutes is maintained by Nick Crews, a member of the Girdwood
+          Board of Supervisors and a software engineer, because he needed a
+          better way of browsing old meetings.
+        </p>
       </Section>
 
       <Section title="Get involved">
