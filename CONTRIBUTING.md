@@ -29,8 +29,8 @@ the ones listed above it:
   and the per-test database helpers (`@open-minutes/db/testing/vitest`).
 - **[`packages/fixtures`](packages/fixtures)** (`@open-minutes/fixtures`): the
   data that seeds local and test databases. `test-data/` holds the real,
-  hand-verified jurisdictions, bodies, people and golden meetings; `dev-data/`
-  holds fictional extras. Nothing here ships to production.
+  hand-verified jurisdictions, bodies, people and golden meetings. Nothing here
+  ships to production.
 - **[`packages/pipeline`](packages/pipeline)** (`@open-minutes/pipeline`): the
   offline ingestion pipeline and the `om` CLI. It downloads audio, transcribes
   it locally with [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) (NeMo

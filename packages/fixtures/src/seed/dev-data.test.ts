@@ -8,9 +8,7 @@ const snapshot = loadDevSnapshot();
 const test = dbTest({ data: devData });
 
 describe("devData", () => {
-  test("seeds every golden and dev-data meeting, with transcripts", async ({
-    db,
-  }) => {
+  test("seeds every golden meeting, with transcripts", async ({ db }) => {
     const meetings = await db.select().from(meetingsTable);
     expect(meetings.map((m) => m.youtube_id).sort()).toEqual(
       snapshot.meetings.map((m) => m.youtube_id).sort(),
@@ -27,8 +25,8 @@ describe("devData", () => {
     const people = await db
       .select({ slug: peopleTable.slug, bio: peopleTable.bio })
       .from(peopleTable);
-    const dana = people.find((p) => p.slug === "dana-example");
-    expect(dana?.bio).toMatch(/Chair/);
+    const bray = people.find((p) => p.slug === "bray-keefer");
+    expect(bray?.bio).toMatch(/Landscape architect/);
     const attributed = await db.execute(
       sql`SELECT 1 FROM ${segmentsTable} WHERE person_id IS NOT NULL LIMIT 1`,
     );

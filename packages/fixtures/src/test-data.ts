@@ -10,12 +10,6 @@ import {
 /** Hand-verified golden fixtures: evals, benchmarks, tests. */
 export const TEST_DATA_ROOT = new URL("../test-data/", import.meta.url)
   .pathname;
-/**
- * Extra fixtures, in the same format, layered on top of the golden ones to
- * make the dev playground look and behave realistically. Not verified; never
- * used for evals.
- */
-export const DEV_DATA_ROOT = new URL("../dev-data/", import.meta.url).pathname;
 
 // DB-shaped row types (mirrors schema.ts columns that are relevant to fixtures).
 // Fields prefixed with _ are test-only and do not exist in the DB.
