@@ -1,7 +1,11 @@
-# The checks a contributor runs locally with `pnpm check`, plus a build of the
-# web app (built, not deployed). Each is its own job, so each shows up as its
-# own check on a PR and one failing doesn't hide the others. Slow (SLOW=1)
-# tests are not run here. Migration and schema checks live in db.yml.
+# Is this code correct? The checks a contributor runs locally with
+# `pnpm check`, a build of the web app (built, not deployed), and the database
+# checks: schema and migrations agree, and migrations apply cleanly to an empty
+# database and to a copy of production. Each is its own job, so each shows up
+# as its own check on a PR and one failing doesn't hide the others. Slow
+# (SLOW=1) tests are not run here.
+#
+# Nothing here deploys; pr-preview.yml and production.yml do.
 name: ci
 
 on:
@@ -21,36 +25,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup
       - run: pnpm typecheck
 
   format:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup
       - run: pnpm format:check
 
   lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup
       - run: pnpm lint
 
   test:
@@ -58,12 +47,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup
 
       - uses: ./.github/actions/setup-yt-dlp
         with:
@@ -103,12 +87,84 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup
       # The build never touches a database (see pr-preview.yml).
       - name: Build
         run: pnpm --filter @open-minutes/web build
+
+  db:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+
+      # Postgres comes up exactly the way it does for a developer: nothing
+      # starts it explicitly. The first `pnpm db` command finds nothing listening on
+      # localhost:5432 and runs `docker compose up` from docker-compose.yml.
+
+      - name: Migrations have no conflicts
+        run: pnpm db check
+
+      - name: schema.ts and migrations are in sync
+        run: |
+          pnpm db generate < /dev/null
+          if [ -n "$(git status --porcelain packages/db/src/migrations)" ]; then
+            echo "::error::schema.ts has changes with no migration. Run \`pnpm db generate\` and commit the result."
+            git status --porcelain packages/db/src/migrations
+            exit 1
+          fi
+
+      - name: Build a fresh database the way `pnpm dev` does
+        run: |
+          pnpm db up
+          pnpm db up        # the second run must be a no-op
+          pnpm db status --check
+          pnpm db wipe
+          pnpm db migrate   # applies every migration to the wiped database
+          pnpm db up --data golden --data-reset if-needed
+          pnpm db status --check
+
+  # Applies this PR's migrations to a throwaway copy-on-write fork of
+  # production, in deploy mode, exactly as `pnpm deploy:prod` will. Catches
+  # migrations that work on test data but fail on real rows (a NOT NULL with
+  # existing nulls, a unique index over duplicates), and PRs missing main's
+  # migrations. On a PR, pr-preview.yml does this too when it's configured;
+  # this job also covers pushes to main, so main is known to migrate before it
+  # is deployed. Opt-in: needs the NEON_API_KEY secret and NEON_PROJECT_ID
+  # variable; skipped for forks, which get no secrets.
+  migrate-prod-copy:
+    if: >-
+      vars.NEON_PROJECT_ID != ''
+      && (github.event_name != 'pull_request'
+          || github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - name: Compute the fork's expiry
+        id: expiry
+        # Expires on its own in case the delete below never runs.
+        run: echo "at=$(date -u -d '+2 hours' +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+      - name: Fork production
+        id: branch
+        uses: neondatabase/create-branch-action@v6
+        with:
+          project_id: ${{ vars.NEON_PROJECT_ID }}
+          api_key: ${{ secrets.NEON_API_KEY }}
+          branch_name: ci/run-${{ github.run_id }}-${{ github.run_attempt }}
+          expires_at: ${{ steps.expiry.outputs.at }}
+      - name: Migrate the fork
+        env:
+          DB_URL: ${{ steps.branch.outputs.db_url }}
+        run: |
+          echo "::add-mask::$DB_URL"
+          pnpm db status --db "$DB_URL"
+          pnpm db migrate --db "$DB_URL"
+          pnpm db status --db "$DB_URL" --check
+      - name: Delete the fork
+        if: always() && steps.branch.outputs.branch_id != ''
+        uses: neondatabase/delete-branch-action@v3
+        with:
+          project_id: ${{ vars.NEON_PROJECT_ID }}
+          api_key: ${{ secrets.NEON_API_KEY }}
+          branch: ${{ steps.branch.outputs.branch_id }}

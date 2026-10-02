@@ -279,10 +279,10 @@ data is renamed to `open_minutes__main` on first use.
   production is behind.
 - **Tests** build their templates with it.
 - **Production deploys**, just before switching traffic ([deploy.md](deploy.md)).
-- **CI** ([`.github/workflows/db.yml`](../../.github/workflows/db.yml)) checks
+- **CI** ([`.github/workflows/ci.yml`](../../.github/workflows/ci.yml)) checks
   for migration conflicts and ungenerated schema changes, runs `up` twice (the
-  second must do nothing), wipes, rebuilds with `migrate`, and runs the
-  database tests. With Neon configured, a second job applies the PR's
+  second must do nothing), wipes, and rebuilds with `migrate`; the database
+  tests run in its `tests` job. With Neon configured, another job applies the PR's
   migrations to a throwaway fork of production in deploy mode, catching
   migrations that fail on real rows (a `NOT NULL` over existing nulls, a unique
   index over duplicates) and PRs missing `main`'s migrations.
