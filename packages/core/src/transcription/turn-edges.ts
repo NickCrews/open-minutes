@@ -75,7 +75,11 @@ export function splitSentences(
         break;
       }
     }
-    for (let i = b + 1; i <= Math.min(words.length - 1, b + MAX_WORDS_OFF); i++) {
+    for (
+      let i = b + 1;
+      i <= Math.min(words.length - 1, b + MAX_WORDS_OFF);
+      i++
+    ) {
       const last = words[i - 1]!.text;
       if (SENTENCE_END.test(last)) {
         if (!QUESTION_END.test(last)) edges.push(i);
