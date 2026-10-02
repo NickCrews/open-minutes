@@ -173,6 +173,16 @@ describe("people", () => {
     ).rejects.toThrow(/unique|duplicate/i);
   });
 
+  test("refuses an en or em dash in a name or bio", async ({ db }) => {
+    const id = await personId(db, "bray-keefer");
+    await expect(
+      callTool(db, updatePerson, { personId: id, bio: "Planner 2019–2022." }),
+    ).rejects.toThrow(/plain hyphen/);
+    await expect(
+      callTool(db, updatePerson, { personId: id, name: "Bray — Keefer" }),
+    ).rejects.toThrow(/plain hyphen/);
+  });
+
   test("merges one voice split across two people", async ({ db }) => {
     const MEETING = await gbosId(db);
     const keep = await personId(db, "kellie-okonek");

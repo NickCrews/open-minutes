@@ -14,6 +14,7 @@
 // Rules are deliberately conservative: a missed disfluency costs a little
 // readability, but deleting a word someone actually meant changes the record.
 
+import { plainDashes } from "../text";
 import type { SpeechSegment, TranscriptWord } from "./types";
 
 /** One edit a cleaning rule made, reported against the word it touched. */
@@ -234,11 +235,36 @@ export const stutterRule: CleaningRule = {
     }),
 };
 
+// Stored text uses a plain hyphen for every dash (see core/text.ts). The
+// recognizer occasionally writes an en or em dash, eg in a number range.
+export const dashRule: CleaningRule = {
+  name: "dash",
+  description: 'en and em dashes ("2019–2022" → "2019-2022")',
+  apply: (words) => {
+    const changes: CleanChange[] = [];
+    const out = words.map((word) => {
+      const text = plainDashes(word.text);
+      if (text === word.text) return word;
+      changes.push({
+        rule: "dash",
+        start: word.start,
+        before: word.text,
+        after: text,
+      });
+      return { ...word, text };
+    });
+    return { words: out, changes };
+  },
+};
+
 /**
- * Every cleaning rule, in the order they run. Fillers go first so a stutter
- * broken up by one ("the, um, the") is caught once the filler is gone.
+ * Every cleaning rule, in the order they run. Dashes go first so the other
+ * rules only ever see plain hyphens ("six– sixteen" is a false start). Fillers
+ * go before stutters so a stutter broken up by one ("the, um, the") is caught
+ * once the filler is gone.
  */
 export const CLEANING_RULES: readonly CleaningRule[] = [
+  dashRule,
   fillerRule,
   falseStartRule,
   stutterRule,

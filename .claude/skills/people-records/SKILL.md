@@ -38,6 +38,8 @@ object per line; check with `pnpm fixtures:check`.
    source such as the municipal board roster. Don't guess a title from what
    someone talks about. When a role changes, update the dates; don't delete
    the earlier role.
+7. **Dashes are plain hyphens** ("2019-2022"), never en or em dashes.
+   `update_person` refuses them, and a fixture test checks people.jsonl.
 
 ## Examples
 
