@@ -18,7 +18,7 @@ YouTube ──yt-dlp──▶ pipeline (om ingest) ──▶ Postgres + pgvector
                     align / recognize
 ```
 
-A [pnpm](https://pnpm.io) workspace with five packages. Each depends only on
+A [pnpm](https://pnpm.io) workspace with six packages. Each depends only on
 the ones listed above it:
 
 - **[`packages/core`](packages/core)** (`@open-minutes/core`): shared domain
@@ -40,6 +40,9 @@ the ones listed above it:
   No GPU or external API is needed; models are downloaded on first use (or
   all at once with `pnpm om models`). See the
   [pipeline README](packages/pipeline/README.md).
+- **[`packages/tools`](packages/tools)** (`@open-minutes/tools`): tools
+  for editing the data (speaker labels, people, chapters), as typed tool
+  definitions for agent loops and as the `pnpm tools` JSON CLI.
 - **[`packages/web`](packages/web)** (`@open-minutes/web`): the public
   transcript browser, built with [SolidJS](https://www.solidjs.com) +
   [TanStack Start](https://tanstack.com/start), Kobalte and Tailwind, deployed
@@ -55,7 +58,9 @@ Docker via [`docker-compose.yml`](docker-compose.yml). Production is on
 YouTube **video sources**. **Meetings** belong to a body, and each meeting's
 transcript is a sequence of **segments** (a run of words by one speaker, with
 word-level onsets). Segments are attributed to **people**, who carry a
-voiceprint so they can be recognized in later meetings. See
+voiceprint so they can be recognized in later meetings. A meeting may also have
+**chapters**, a table of contents of titled time ranges (see
+[docs/chapters.md](docs/chapters.md)). See
 [`packages/db/src/schema.ts`](packages/db/src/schema.ts). The configured
 bodies and video sources live in
 [`packages/fixtures/test-data/`](packages/fixtures/test-data/); adding a body
@@ -120,6 +125,20 @@ and `test:all` set for you.
 Shared test configuration is in `vitest.config.ts`, `vitest.shared.ts` and
 `test-setup.ts` at the repository root.
 
+### Checking hand-edited test data
+
+`pnpm fixtures:check` checks the files in `packages/fixtures/test-data/` and
+prints each problem as `file:line: severity: message`. Pass
+file paths to check only the meetings they belong to. Errors are data that is
+wrong, such as a speaker marker a line away from its first word, words out of
+time order, or overlapping chapters. Warnings are data that breaks a
+convention or is probably wrong, such as a chapter outside the size
+conventions or speech that no chapter covers. The test suite fails on either.
+
+[`.claude/settings.json`](.claude/settings.json) runs the same check as a
+Claude Code hook after every edit to those files, so an agent sees the
+problem on the turn it makes it.
+
 ## Running the pipeline
 
 ```sh
@@ -152,6 +171,15 @@ LEFT JOIN people p ON p.id = s.person_id
 WHERE s.text ILIKE '%snow removal%'
 ORDER BY m.start_time, s.start_secs;
 ```
+
+To change the data, agents (and people) use the tools in
+[`packages/tools`](packages/tools/src/tools.ts) rather than raw SQL: `pnpm
+tools` lists them, and `pnpm tools <tool> '<json>'` calls one and prints JSON.
+The same tools are exported from `@open-minutes/tools`, with `toAgentTool` to
+hand them to an agent loop such as pi. Every write re-checks the meetings it
+touched and rolls back if it introduced an error. Guidance for agents doing
+this work is in
+[`.claude/skills/transcript-cleanup`](.claude/skills/transcript-cleanup/SKILL.md).
 
 `pnpm db studio` opens a browser UI on it. The pipeline's API (`listIngested`,
 `listAvailable`, `ingestVideo` from `@open-minutes/pipeline/om`) and `om`'s

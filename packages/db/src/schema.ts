@@ -5,6 +5,7 @@ import {
   interval,
   jsonb,
   timestamp,
+  boolean,
   date,
   time,
   serial,
@@ -12,6 +13,9 @@ import {
   vector,
   index,
   check,
+  foreignKey,
+  pgView,
+  unique,
 } from "drizzle-orm/pg-core";
 import { N_DIMENSIONS as VOICE_N_DIMENSIONS } from "@open-minutes/core/voice_embeddings";
 import { TranscriptWord } from "@open-minutes/core/transcription";
@@ -188,6 +192,110 @@ export const segmentsTable = pgTable(
   ],
 );
 
+/**
+ * One run that produced a meeting's chapters: a model pass, or a person writing
+ * them by hand. Chapters can drift from the transcript they summarize, unlike
+ * the generated columns on `segments`, so every chapter points at the run that
+ * made it. Regenerating a meeting adds a run and replaces the meeting's
+ * chapters with that run's; earlier runs stay as history. See docs/chapters.md.
+ */
+export const chapterGenerationsTable = pgTable(
+  "chapter_generations",
+  {
+    id: serial().primaryKey(),
+    meeting_id: integer()
+      .notNull()
+      .references(() => meetingsTable.id),
+    // What wrote the chapters: a model id, or "human" for hand-written ones.
+    model: varchar().notNull(),
+    prompt_version: varchar().notNull(),
+    // Hash of the transcript the chapters were written from, so a later
+    // re-transcription can be detected as making them stale. Speaker relabels
+    // don't change it: chapter speakers are derived, never stored.
+    transcript_fingerprint: varchar().notNull(),
+    generated_at: timestamp().notNull().defaultNow(),
+    reviewed_by_human: boolean().notNull().default(false),
+  },
+  // The target of chapters' composite foreign key, which keeps a chapter's
+  // meeting and its generation's meeting the same.
+  (table) => [unique().on(table.id, table.meeting_id)],
+);
+
+/**
+ * A table-of-contents entry for a meeting: a titled, summarized time range,
+ * usually one agenda item or one stretch of public comment. A meeting's
+ * chapters are ordered and never overlap (an exclusion constraint, added by
+ * hand in the migration that created this table, enforces it), but gaps are
+ * legal: silence before the stream starts, a recess, or a few seconds of slop
+ * between neighbours. Who spoke in a chapter is derived from `segments`, in the
+ * `chapter_speakers` view. See docs/chapters.md.
+ */
+export const chaptersTable = pgTable(
+  "chapters",
+  {
+    id: serial().primaryKey(),
+    meeting_id: integer().notNull(),
+    generation_id: integer().notNull(),
+    start_secs: secondsInterval().notNull(),
+    end_secs: secondsInterval().notNull(),
+    // A few words, scannable as a table of contents.
+    title: varchar().notNull(),
+    // One sentence: what a tooltip, a collapsed row, or an agent outline shows.
+    summary: varchar().notNull(),
+    // 3–7 for a substantive chapter, 0–1 for a short procedural one. Bullets
+    // summarize the whole chapter, so they carry no timestamps.
+    bullets: varchar()
+      .array()
+      .notNull()
+      .default(sql`'{}'::varchar[]`),
+  },
+  (table) => [
+    foreignKey({
+      name: "chapters_generation_fkey",
+      columns: [table.generation_id, table.meeting_id],
+      foreignColumns: [
+        chapterGenerationsTable.id,
+        chapterGenerationsTable.meeting_id,
+      ],
+    }),
+    check(
+      "chapters_end_after_start",
+      sql`${table.end_secs} > ${table.start_secs}`,
+    ),
+    check("chapters_start_nonnegative", sql`${table.start_secs} >= '0'`),
+    // Invariants only; the size conventions (1–15 minutes, 3–7 bullets) are
+    // prompt guidance checked in code, so they can change without a migration.
+    check("chapters_title_nonblank", sql`btrim(${table.title}) <> ''`),
+    check("chapters_summary_nonblank", sql`btrim(${table.summary}) <> ''`),
+    check("chapters_bullets_nonblank", sql`'' <> ALL (${table.bullets})`),
+    index("idx_chapters_meeting_start").on(table.meeting_id, table.start_secs),
+  ],
+);
+
+/**
+ * How long each speaker talked within each chapter: the segments overlapping
+ * the chapter, clipped to its range, summed per speaker. Keyed like the web's
+ * speaker grouping: by person when there is one, else by speaker number, else
+ * neither (unattributed speech). Derived so relabelling a speaker shows up
+ * here at once.
+ */
+export const chapterSpeakersView = pgView("chapter_speakers", {
+  chapter_id: integer().notNull(),
+  meeting_id: integer().notNull(),
+  person_id: integer(),
+  speaker_number: integer(),
+  speaking_secs: secondsInterval().notNull(),
+}).as(
+  sql`SELECT c.id AS chapter_id, c.meeting_id, s.person_id,
+        CASE WHEN s.person_id IS NULL THEN s.speaker_number END AS speaker_number,
+        sum(LEAST(s.end_secs, c.end_secs) - GREATEST(s.start_secs, c.start_secs)) AS speaking_secs
+      FROM chapters c
+      JOIN segments s ON s.meeting_id = c.meeting_id
+        AND s.start_secs < c.end_secs AND s.end_secs > c.start_secs
+      GROUP BY c.id, c.meeting_id, s.person_id,
+        CASE WHEN s.person_id IS NULL THEN s.speaker_number END`,
+);
+
 export const relations = defineRelations(
   {
     jurisdictionsTable,
@@ -196,6 +304,8 @@ export const relations = defineRelations(
     meetingsTable,
     peopleTable,
     segmentsTable,
+    chapterGenerationsTable,
+    chaptersTable,
   },
   (r) => ({
     jurisdictionsTable: {
@@ -236,6 +346,14 @@ export const relations = defineRelations(
         from: r.meetingsTable.id,
         to: r.segmentsTable.meeting_id,
       }),
+      chapters: r.many.chaptersTable({
+        from: r.meetingsTable.id,
+        to: r.chaptersTable.meeting_id,
+      }),
+      chapterGenerations: r.many.chapterGenerationsTable({
+        from: r.meetingsTable.id,
+        to: r.chapterGenerationsTable.meeting_id,
+      }),
     },
     peopleTable: {
       segments: r.many.segmentsTable({
@@ -252,6 +370,29 @@ export const relations = defineRelations(
       person: r.one.peopleTable({
         from: r.segmentsTable.person_id,
         to: r.peopleTable.id,
+      }),
+    },
+    chapterGenerationsTable: {
+      meeting: r.one.meetingsTable({
+        from: r.chapterGenerationsTable.meeting_id,
+        to: r.meetingsTable.id,
+        optional: false,
+      }),
+      chapters: r.many.chaptersTable({
+        from: r.chapterGenerationsTable.id,
+        to: r.chaptersTable.generation_id,
+      }),
+    },
+    chaptersTable: {
+      meeting: r.one.meetingsTable({
+        from: r.chaptersTable.meeting_id,
+        to: r.meetingsTable.id,
+        optional: false,
+      }),
+      generation: r.one.chapterGenerationsTable({
+        from: r.chaptersTable.generation_id,
+        to: r.chapterGenerationsTable.id,
+        optional: false,
       }),
     },
   }),

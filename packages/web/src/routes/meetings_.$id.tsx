@@ -1,17 +1,20 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/solid-router";
 import { createServerFn } from "@tanstack/solid-start";
-import { createSignal, Show } from "solid-js";
+import { createEffect, createSignal, on, Show } from "solid-js";
 import { Button } from "~/components/button";
 import { Sheet, SheetContent, SheetTrigger } from "~/components/sheet";
 import { VideoPlayer } from "~/components/video-player";
 import { getMeetingById } from "~/features/meetings";
+import { resolveLinkTime } from "~/features/meetings/chapters";
 import { Duration } from "~/features/meetings/duration";
 import {
+  defaultPaneTab,
   MeetingPane,
   type MeetingPaneTab,
 } from "~/features/meetings/meeting-pane";
 import { MeetingDateTime } from "~/features/meetings/meeting-date-time";
 import { Transcript } from "~/features/meetings/transcript";
+import { intervalToSecs } from "~/lib/format";
 import { type YTPlayer } from "~/lib/youtube";
 import { db } from "~/server/db";
 import { z } from "zod";
@@ -20,28 +23,88 @@ const fetchMeeting = createServerFn({ method: "GET" })
   .inputValidator(z.int().positive())
   .handler(({ data }) => getMeetingById(db(), data));
 
+/**
+ * `?t=<secs>` is the one shareable link form: to a moment, and so to the
+ * chapter around it. There are no chapter ids or slugs in URLs, so a link
+ * survives a retitled or regenerated chapter. See docs/chapters.md.
+ */
+export interface MeetingSearch {
+  t?: number;
+}
+
 export const Route = createFileRoute("/meetings_/$id")({
+  validateSearch: (search: Record<string, unknown>): MeetingSearch => {
+    const t = Number(search.t);
+    return Number.isFinite(t) && t >= 0 ? { t } : {};
+  },
   loader: ({ params }) => fetchMeeting({ data: Number(params.id) }),
+  // Link previews name the chapter a `?t=` link points into.
+  head: ({ loaderData, match }) => {
+    if (!loaderData) return {};
+    const title = loaderData.title || "Meeting";
+    const t = (match.search as MeetingSearch).t;
+    const chapter =
+      t === undefined
+        ? undefined
+        : loaderData.chapters[resolveLinkTime(loaderData.chapters, t).chapter];
+    return {
+      meta: [
+        {
+          title: chapter
+            ? `${chapter.title} · ${title} · Open Minutes`
+            : `${title} · Open Minutes`,
+        },
+        ...(chapter ? [{ name: "description", content: chapter.summary }] : []),
+      ],
+    };
+  },
   component: MeetingPage,
 });
 
+/** Desktop shows the side pane beside the transcript; phones use a sheet. */
+const DESKTOP_QUERY = "(min-width: 64rem)";
+
 function MeetingPage() {
   const meeting = Route.useLoaderData();
+  const search = Route.useSearch();
   const router = useRouter();
-  const [currentTime, setCurrentTime] = createSignal(0);
+  // A `?t=` link starts the page there (snapped to a chapter start nudged
+  // just past it), before the player has even loaded.
+  const linked = () => {
+    const t = search().t;
+    return t === undefined
+      ? undefined
+      : resolveLinkTime(meeting().chapters, t).secs;
+  };
+  const [currentTime, setCurrentTime] = createSignal(linked() ?? 0);
   const [duration, setDuration] = createSignal(0);
   const [playing, setPlaying] = createSignal(false);
   const [playbackRate, setPlaybackRate] = createSignal(1);
   const [player, setPlayer] = createSignal<YTPlayer>();
+  // The player's own length once it reports one; until then (or with no video
+  // at all) the stored length, so the scrubber can draw straight away.
+  const videoDuration = () =>
+    duration() ||
+    (meeting().duration_secs ? intervalToSecs(meeting().duration_secs!) : 0) ||
+    0;
   // After a transcript-initiated seek, ignore polled times briefly so the
   // playhead doesn't flash back to the pre-seek position.
   let ignorePollsUntil = 0;
 
-  const seekTo = (secs: number) => {
+  // `final` is false while scrubbing, so the player only fetches ahead once
+  // the reader lets go.
+  const seekTo = (secs: number, final = true) => {
     setCurrentTime(secs);
     ignorePollsUntil = performance.now() + 800;
-    player()?.seekTo(secs, true);
+    player()?.seekTo(secs, final);
   };
+  // Once the player is up, take it to the linked moment.
+  createEffect(
+    on(player, (p) => {
+      const t = linked();
+      if (p && t !== undefined) seekTo(t);
+    }),
+  );
   const onPolledTime = (secs: number) => {
     if (performance.now() < ignorePollsUntil) return;
     setCurrentTime(secs);
@@ -57,13 +120,23 @@ function MeetingPage() {
     setPlaybackRate(rate);
   };
 
-  const [paneTab, setPaneTab] = createSignal<MeetingPaneTab>("info");
+  const [paneTab, setPaneTab] = createSignal<MeetingPaneTab>(
+    defaultPaneTab(meeting().chapters),
+  );
   const [sheetOpen, setSheetOpen] = createSignal(false);
+  const showChapters = () => {
+    setPaneTab("chapters");
+    if (!window.matchMedia(DESKTOP_QUERY).matches) setSheetOpen(true);
+  };
   const pane = (cls: string) => (
     <MeetingPane
+      meetingId={meeting().id}
       title={meeting().title || "(untitled)"}
       description={meeting().description}
       segments={meeting().segments}
+      chapters={meeting().chapters}
+      currentTime={currentTime}
+      onSeek={seekTo}
       tab={paneTab()}
       onTabChange={setPaneTab}
       class={cls}
@@ -146,8 +219,10 @@ function MeetingPage() {
         </div>
         <Transcript
           segments={meeting().segments}
+          chapters={meeting().chapters}
+          onShowChapters={showChapters}
           currentTime={currentTime}
-          duration={duration}
+          duration={videoDuration}
           playing={playing}
           playbackRate={playbackRate}
           onSeek={seekTo}
