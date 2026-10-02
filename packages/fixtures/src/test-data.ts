@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { type GoldenSegment, parsePsv } from "./psv";
+import { type GoldenSegment, parsePsv, parseTimestamp } from "./psv";
 import {
   type MeetingWhen,
   parseMeetingDate,
@@ -57,10 +57,34 @@ export interface GoldenMeeting {
   time: string | null;
   duration_secs: number;
   segments: GoldenSegment[];
+  /** The meeting's chapters, from chapters.json; null if it has none. */
+  chapters: GoldenChapters | null;
   meetingDir: string; // path to the meeting's fixture directory (used internally for loading audio and PSV)
   /** SHA-256 of the canonical WAV file — used to validate the audio cache. Not a DB column. */
   _audio_sha256: string;
 }
+/** Who or what wrote a meeting's chapters, as in `chapter_generations`. */
+export interface GoldenChapterGeneration {
+  model: string;
+  prompt_version: string;
+  reviewed_by_human: boolean;
+}
+
+export interface GoldenChapter {
+  /** Seconds into the meeting. "H:MM:SS.ss" in chapters.json. */
+  start: number;
+  end: number;
+  title: string;
+  summary: string;
+  bullets: string[];
+}
+
+/** A meeting's chapters.json: one generation's chapters, in order. */
+export interface GoldenChapters {
+  generation: GoldenChapterGeneration;
+  chapters: GoldenChapter[];
+}
+
 export interface TestData {
   jurisdictions: GoldenJurisdiction[];
   bodies: GoldenBody[];
@@ -156,11 +180,17 @@ export function getMeetingData(
     throw new Error(`No golden.psv or transcript.psv in ${meetingDir}`);
   const segments = parsePsv({ path: psvPath });
 
+  const chaptersPath = join(meetingDir, "chapters.json");
+  const chapters = existsSync(chaptersPath)
+    ? parseGoldenChapters(parseJson(chaptersPath), chaptersPath)
+    : null;
+
   return {
     ...meeting,
     ...when,
     meetingDir,
     segments,
+    chapters,
   };
 }
 
@@ -189,6 +219,61 @@ export function parseGoldenWhen(
   if (time !== null && date === null)
     throw new Error(`${source}: has a time but no date`);
   return { date, time };
+}
+
+/**
+ * Validate a chapters.json and convert its "H:MM:SS.ss" times to seconds.
+ * Checks shape only; whether the chapters are any good is for the tests.
+ */
+export function parseGoldenChapters(
+  raw: unknown,
+  source: string,
+): GoldenChapters {
+  const fail = (what: string): never => {
+    throw new Error(`${source}: ${what}`);
+  };
+  const obj = (raw ?? {}) as Record<string, unknown>;
+  const gen = (obj.generation ?? fail("missing generation")) as Record<
+    string,
+    unknown
+  >;
+  if (typeof gen.model !== "string") fail("generation.model must be a string");
+  if (typeof gen.prompt_version !== "string")
+    fail("generation.prompt_version must be a string");
+  if (typeof gen.reviewed_by_human !== "boolean")
+    fail("generation.reviewed_by_human must be a boolean");
+  if (!Array.isArray(obj.chapters)) fail("chapters must be an array");
+  const chapters = (obj.chapters as Record<string, unknown>[]).map((c, i) => {
+    const where = `chapters[${i}]`;
+    for (const key of ["start", "end", "title", "summary"] as const) {
+      if (typeof c[key] !== "string") fail(`${where}.${key} must be a string`);
+    }
+    if (
+      !Array.isArray(c.bullets) ||
+      !c.bullets.every((b) => typeof b === "string")
+    )
+      fail(`${where}.bullets must be an array of strings`);
+    const time = (key: "start" | "end") => {
+      const secs = parseTimestamp(c[key] as string);
+      if (!Number.isFinite(secs)) fail(`${where}.${key} is not H:MM:SS.ss`);
+      return secs;
+    };
+    return {
+      start: time("start"),
+      end: time("end"),
+      title: c.title as string,
+      summary: c.summary as string,
+      bullets: c.bullets as string[],
+    };
+  });
+  return {
+    generation: {
+      model: gen.model as string,
+      prompt_version: gen.prompt_version as string,
+      reviewed_by_human: gen.reviewed_by_human as boolean,
+    },
+    chapters,
+  };
 }
 
 function listDirs(parent: string): string[] {

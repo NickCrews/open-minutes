@@ -8,7 +8,9 @@
     "./timeline": "./src/timeline.ts",
     "./meeting-date": "./src/meeting-date.ts",
     "./transcription": "./src/transcription/index.ts",
-    "./voice_embeddings": "./src/voice_embeddings/index.ts"
+    "./voice_embeddings": "./src/voice_embeddings/index.ts",
+    "./chapters": "./src/chapters.ts",
+    "./transcript-fingerprint": "./src/transcript-fingerprint.ts"
   },
   "scripts": {
     "test": "vitest run",

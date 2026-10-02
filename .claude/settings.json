@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"$CLAUDE_PROJECT_DIR\" && pnpm -s fixtures:check --hook",
+            "timeout": 60,
+            "statusMessage": "Checking fixture data"
+          }
+        ]
+      }
+    ]
+  }
+}

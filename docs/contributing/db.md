@@ -84,7 +84,8 @@ Seeders write the current schema, so an older `--schema-version` defaults to
 The datasets are:
 
 - **`dev`**: what `pnpm dev` runs on. The golden rows plus the golden
-  meetings' full transcripts and people. Voiceprints are placeholders.
+  meetings' full transcripts, chapters and people. Voiceprints are
+  placeholders.
 - **`golden`**: only the hand-verified rows from
   `packages/fixtures/test-data/` (jurisdictions, bodies, video sources).
 
