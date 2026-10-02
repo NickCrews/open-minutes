@@ -8,10 +8,12 @@
     "./psv": "./src/psv.ts",
     "./golden-data": "./src/seed/golden-data.ts",
     "./dev-data": "./src/seed/dev-data.ts",
-    "./map": "./src/seed/map.ts"
+    "./map": "./src/seed/map.ts",
+    "./clean": "./src/clean.ts"
   },
   "scripts": {
     "check": "tsx src/check-cli.ts",
+    "clean": "tsx src/clean-cli.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },

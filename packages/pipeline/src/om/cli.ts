@@ -114,8 +114,8 @@ const ingest = defineCommand({
   meta: {
     name: "ingest",
     description:
-      "Run the full pipeline (download → transcribe → diarize → align → " +
-      "identify) for each video ID from args and/or stdin, and commit each " +
+      "Run the full pipeline (download → transcribe → clean → diarize → " +
+      "align → identify) for each video ID from args and/or stdin, and commit each " +
       "meeting to the database",
   },
   args: {},

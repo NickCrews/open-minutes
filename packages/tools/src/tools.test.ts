@@ -30,12 +30,12 @@ async function personId(db: Parameters<typeof callTool>[0], slug: string) {
   return p!.id;
 }
 
-/** Bryan Burnett's "this is uh Brian Burnett chiming in" segment. */
+/** Bryan Burnett's "This is Brian Burnett chiming in" segment. */
 async function bryanSegment(db: Parameters<typeof callTool>[0]) {
   const segments = await callTool(db, getTranscript, {
     meetingId: await gbosId(db),
   });
-  return segments.find((s) => s.text.includes("Brian Burnett um chiming"))!;
+  return segments.find((s) => s.text.includes("Brian Burnett chiming"))!;
 }
 
 describe("reading", () => {
@@ -126,7 +126,7 @@ describe("split_segment and merge_segments", () => {
     expect(split.applied).toBe(true);
     const after = await callTool(db, getTranscript, { meetingId: MEETING });
     const i = after.findIndex((s) => s.id === seg.id);
-    expect(after[i]!.text).toBe("I have uh");
+    expect(after[i]!.text).toBe("I have I");
     expect(after[i + 1]).toMatchObject({
       id: split.result.newSegmentId,
       speaker: { speakerNumber: 42 },

@@ -19,7 +19,9 @@ if the change introduces an error. Read the issues each time. Pass
 
 Golden fixtures (`packages/fixtures/test-data/`) are files. Check them with
 `pnpm fixtures:check`. In a PSV file, a speaker marker goes on the line just
-before its first word, with the same onset.
+before its first word, with the same onset. Transcripts carry no fillers
+("um", "uh") or stutters ("the the"): `pnpm fixtures:clean` removes them, so
+never type one back in.
 
 ## Rules
 

@@ -50,6 +50,23 @@ describe("checkPsv", () => {
     ).toEqual([]);
   });
 
+  it("catches disfluencies the clean stage removes", () => {
+    expect(
+      lint(
+        psv(
+          ["0:00:01.00", "@unlabeled"],
+          ["0:00:01.00", "Um,"],
+          ["0:00:01.20", "the"],
+          ["0:00:01.40", "the"],
+          ["0:00:01.60", "vote."],
+        ),
+      ),
+    ).toEqual([
+      '2: error: filler "Um," should not be in a transcript; run `pnpm fixtures:clean`',
+      '3: error: stutter "The" should not be in a transcript; run `pnpm fixtures:clean`',
+    ]);
+  });
+
   it("catches a speaker marker inserted a line off", () => {
     expect(
       lint(
