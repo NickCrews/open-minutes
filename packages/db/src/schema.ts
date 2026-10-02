@@ -121,16 +121,26 @@ export const peopleTable = pgTable(
   "people",
   {
     id: serial().primaryKey(),
-    // Stable handle for a known person (eg "margaret-tyler") that means the same
+    // Stable handle for a known person (eg "kyle-kelly") that means the same
     // person in every database: prod, dev and each test database. `id` can't do
-    // this, since a serial id depends on one database's insert order. The slug
-    // links the golden fixtures (people.jsonl, "identified:<slug>" in
-    // transcripts) to rows: seeding upserts people by slug, and tests score
-    // speaker identification by comparing slugs. Within one database, segments
-    // across meetings share a person through `person_id`, slug or no slug. Null
-    // for an anonymous voice that recognition created; giving one a slug makes
-    // them a known person. Renaming a slug breaks the link to the fixtures, so
-    // rename it everywhere it's used.
+    // this, since a serial id depends on one database's insert order: Kyle Kelly
+    // might be person 7 in prod and person 2 in a test database.
+    //
+    // The slug links the golden fixtures to rows. For example:
+    //   - people.jsonl has {"slug":"kyle-kelly","name":"Kyle Kelly",...}
+    //   - meetings/gbos_9HoIM5INxpI/golden.psv labels his turns
+    //     {"begin_speaker":"identified:kyle-kelly"}
+    //   - seeding that meeting upserts the people row with slug "kyle-kelly",
+    //     so seeding a second meeting he speaks in reuses the same row
+    //   - after ingesting a held-out meeting, the e2e test checks that each
+    //     segment its fixture labels "identified:<slug>" resolved to the person
+    //     with that slug
+    //
+    // Within one database, segments across meetings share a person through
+    // `person_id`, slug or no slug. Null for an anonymous voice that recognition
+    // created; giving one a slug (eg with the update_person tool) makes them a
+    // known person. Renaming a slug breaks the link to the fixtures, so rename
+    // it everywhere it's used.
     slug: varchar().unique(),
     // Null until a human identifies this voice. Nullable rather than "" so the
     // "not yet identified" branch is a type-level obligation everywhere a name
