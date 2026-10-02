@@ -17,7 +17,13 @@ object per line; check with `pnpm fixtures:check`.
    the person's own spelling and accents ("Mélisa Babb"), even where speech
    recognition hears it differently.
 2. **The slug is the name in kebab-case**, ASCII only (`melisa-babb`). It
-   doesn't change when the person's role does.
+   is the person's stable ID across databases and fixtures: row ids differ
+   between prod, dev and test databases, so golden fixtures
+   (`people.jsonl`, `identified:<slug>` speaker labels) and tests refer to
+   people by slug, and seeding matches existing rows by slug. Use the same
+   slug in the database and the fixtures. It doesn't change when the
+   person's role does; if it must change (a misspelled name), change it
+   everywhere it's used.
 3. **Every known person has a bio.** If all you know is that they spoke at a
    meeting, say that much: "Girdwood Board of Supervisors staff who took the
    roll call in March 2026."
