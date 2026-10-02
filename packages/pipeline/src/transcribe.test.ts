@@ -1,6 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, readdirSync, symlinkSync } from "node:fs";
-import { execSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import sherpa_onnx from "sherpa-onnx-node";
@@ -26,18 +25,49 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const RUNS_DIR = join(HERE, "..", "test-runs");
 
 // transcribeAudio requires 16 kHz mono, but the model's bundled en.wav is 24 kHz.
-// Resample it once (memoized on disk) for the unit tests.
+// Resample it once (memoized on disk) for the unit tests. Done here rather than
+// with ffmpeg so CI's test job needs no system binaries.
 function sample16kHz(): string {
   const src = ensureModelFiles().test_wavs["en.wav"];
   const dest = join(RUNS_DIR, "en-16k.wav");
   if (!existsSync(dest)) {
     mkdirSync(RUNS_DIR, { recursive: true });
-    execSync(
-      `ffmpeg -y -loglevel error -i "${src}" -ar 16000 -ac 1 "${dest}"`,
-      { stdio: "inherit" },
-    );
+    const wave = sherpa_onnx.readWave(src);
+    sherpa_onnx.writeWave(dest, {
+      samples: resample(wave.samples, wave.sampleRate, 16_000),
+      sampleRate: 16_000,
+    });
   }
   return dest;
+}
+
+/**
+ * Windowed-sinc resampling of mono samples, low-passed at the lower Nyquist
+ * frequency so downsampling doesn't alias. Good enough for a test fixture.
+ */
+function resample(samples: Float32Array, from: number, to: number) {
+  const ratio = from / to;
+  const cutoff = Math.min(1, to / from); // as a fraction of the input Nyquist
+  const halfWidth = Math.ceil(16 / cutoff);
+  const out = new Float32Array(Math.floor(samples.length / ratio));
+  for (let i = 0; i < out.length; i++) {
+    const center = i * ratio;
+    let sum = 0;
+    for (
+      let j = Math.ceil(center - halfWidth);
+      j <= Math.floor(center + halfWidth);
+      j++
+    ) {
+      if (j < 0 || j >= samples.length) continue;
+      const x = j - center;
+      const sinc =
+        x === 0 ? 1 : Math.sin(Math.PI * cutoff * x) / (Math.PI * cutoff * x);
+      const window = 0.5 + 0.5 * Math.cos((Math.PI * x) / halfWidth); // Hann
+      sum += samples[j]! * cutoff * sinc * window;
+    }
+    out[i] = sum;
+  }
+  return out;
 }
 
 // Parakeet reports one timestamp per token — the token's onset — and no

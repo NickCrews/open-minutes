@@ -45,13 +45,20 @@ jobs:
   test:
     name: tests
     runs-on: ubuntu-latest
+    # Metadata and audio come from the object store, and the pipeline decodes
+    # the audio itself, so this job needs neither yt-dlp nor ffmpeg.
+    # github.token may trigger the
+    # fetch-youtube-audio workflow for anything missing from it (except on a
+    # fork's PR, whose token is always read-only).
+    permissions:
+      contents: read
+      actions: write
+    env:
+      OBJECT_STORE_PUBLIC_URL: ${{ vars.OBJECT_STORE_PUBLIC_URL }}
+      YOUTUBE_AUDIO_DISPATCH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
-
-      - uses: ./.github/actions/setup-yt-dlp
-        with:
-          cookies: ${{ secrets.YOUTUBE_COOKIES }}
 
       # The pipeline's ONNX models are ~650MB. Fetch them in their own step,
       # so no test pays for (or times out on) the download. The cache key is

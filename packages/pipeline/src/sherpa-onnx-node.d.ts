@@ -5,6 +5,7 @@ declare module "sherpa-onnx-node" {
     samples: Float32Array;
   }
   export function readWave(path: string): WaveForm;
+  export function writeWave(path: string, wave: WaveForm): boolean;
 
   export interface Stream {
     acceptWaveform(options: WaveForm): void;
