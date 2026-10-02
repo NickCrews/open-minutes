@@ -139,6 +139,29 @@ conventions or speech that no chapter covers. The test suite fails on either.
 Claude Code hook after every edit to those files, so an agent sees the
 problem on the turn it makes it.
 
+### Transcript cleaning
+
+The recognizer transcribes verbatim, so `om ingest` runs a **clean** stage
+right after transcription that strips disfluencies: filler words ("um",
+"uh"), stuttered function words ("the the"), and abandoned word fragments
+("six- sixteen"). The rules live in
+[`packages/core/src/transcription/clean.ts`](packages/core/src/transcription/clean.ts);
+the cached `transcription.json` stays verbatim, so a rule change applies on
+the next run without re-transcribing.
+
+Golden transcripts must already be clean, or the pipeline's output would be
+scored against disfluencies it removed on purpose. `pnpm fixtures:check`
+reports any left in a golden as an error, so the tests and the hook above
+catch them in new goldens too. To remove them:
+
+```sh
+pnpm fixtures:clean              # rewrite every golden transcript in place
+pnpm fixtures:clean <file.psv>   # just one file (--verbose lists each word)
+```
+
+To add a cleanup, write a rule in `clean.ts`, add it to `CLEANING_RULES` with
+tests, then run `pnpm fixtures:clean` and review the golden diff.
+
 ## Running the pipeline
 
 ```sh

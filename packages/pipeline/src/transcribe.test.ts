@@ -20,6 +20,7 @@ import {
 } from "@open-minutes/fixtures/psv";
 import { getMeetingData } from "@open-minutes/fixtures/test-data";
 import { getMeetingAudio } from "./test-utils/audio-cache";
+import { cleanSpeechSegments } from "@open-minutes/core/transcription";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const RUNS_DIR = join(HERE, "..", "test-runs");
@@ -174,8 +175,12 @@ describe("transcribe", () => {
         const meeting = getMeetingData(slug);
         const runDir = join(RUNS_DIR, slug);
         cpDirSymlinked(meeting.meetingDir, runDir);
-        const speechSegments = await transcribeAudio(
-          await getMeetingAudio(meeting).then((a) => a.path),
+        // Goldens hold cleaned text (see `pnpm fixtures check`), so compare
+        // against the same transcribe → clean output ingestion uses.
+        const speechSegments = cleanSpeechSegments(
+          await transcribeAudio(
+            await getMeetingAudio(meeting).then((a) => a.path),
+          ),
         );
         const transcribedWords = speechSegments.flatMap((s) => s.words);
         // Debug artifact: interleave VAD run markers so a diff shows where the audio

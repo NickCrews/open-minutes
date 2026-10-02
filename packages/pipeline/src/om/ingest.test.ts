@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect } from "vitest";
@@ -28,14 +28,16 @@ const METADATA: VideoMetadata = {
   durationSecs: 3600,
 };
 
-// Two speakers, three words: speaker 0 says "Hello everyone", speaker 1 says
-// "Thanks". Small enough to hand-verify the aligned segments below.
+// Two speakers: speaker 0 says "Um, hello everyone", speaker 1 says "Thanks".
+// Small enough to hand-verify the aligned segments below. The "Um," is raw
+// recognizer output that the clean stage must strip before anything is stored.
 const TRANSCRIPTION: SpeechSegment[] = [
   {
     start: 0.4,
     end: 1.5,
     words: [
-      { text: "Hello", start: 0.5 },
+      { text: "Um,", start: 0.45 },
+      { text: "hello", start: 0.5 },
       { text: "everyone", start: 1.0 },
     ],
   },
@@ -169,11 +171,25 @@ describe("ingestVideo", () => {
       text: "Hello everyone",
     });
     expect(segments[1]).toMatchObject({ speaker_number: 1, text: "Thanks" });
-    expect(segments[0]!.words).toEqual(TRANSCRIPTION[0]!.words);
+    // Cleaned: the filler is gone and its capital passed on.
+    expect(segments[0]!.words).toEqual([
+      { text: "Hello", start: 0.5 },
+      { text: "everyone", start: 1.0 },
+    ]);
     // Orthogonal voiceprints → two distinct identified people.
     expect(segments[0]!.person_id).not.toBeNull();
     expect(segments[1]!.person_id).not.toBeNull();
     expect(segments[0]!.person_id).not.toBe(segments[1]!.person_id);
+
+    // The cached transcription stays verbatim, so cleaning rules can change
+    // without re-transcribing.
+    const cached = JSON.parse(
+      await readFile(
+        join(workRoot, `gbos_${VIDEO_ID}`, "transcription.json"),
+        "utf8",
+      ),
+    ) as SpeechSegment[];
+    expect(cached).toEqual(TRANSCRIPTION);
 
     // Re-ingesting the same video is a harmless no-op.
     const again = await ingestVideo(db, VIDEO_ID, {

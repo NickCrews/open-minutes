@@ -6,6 +6,7 @@ import {
   uncoveredSpeech,
 } from "@open-minutes/core/chapters";
 import { LAST_WORD_DURATION_SEC } from "@open-minutes/core/transcription";
+import { cleanGoldenSegments } from "./clean";
 import { formatTimestamp, parsePsv, parseTimestamp } from "./psv";
 import {
   getMeetingData,
@@ -96,16 +97,18 @@ export function checkMeetingDir(dir: string): Issue[] {
 /**
  * Lint a PSV transcript. Errors: lines the parser refuses, words out of time
  * order, a speaker marker not on the same onset as the word after it (the
- * usual sign of a marker inserted a line off), and a speaker marker with no
- * words.
+ * usual sign of a marker inserted a line off), a speaker marker with no
+ * words, and disfluencies the pipeline's clean stage would have removed
+ * ("um", "the the"; see clean.ts).
  */
 export function checkPsv(content: string, file: string): Issue[] {
   const issues: Issue[] = [];
   const issue = (line: number, severity: Severity, message: string) =>
     issues.push({ file, line, severity, message });
 
+  let segments: ReturnType<typeof parsePsv>;
   try {
-    parsePsv(content);
+    segments = parsePsv(content);
   } catch (err) {
     const message = (err as Error).message;
     const line = /line (\d+)/.exec(message)?.[1];
@@ -115,6 +118,9 @@ export function checkPsv(content: string, file: string): Issue[] {
 
   let pendingMeta: { line: number; start: number } | undefined;
   let lastOnset = -Infinity;
+  // The line of each word onset, to place the disfluency errors. By onset
+  // alone: a cleaning rule may report a word after an earlier rule recased it.
+  const wordLines = new Map<number, number>();
   content.split("\n").forEach((raw, i) => {
     const line = i + 1;
     const [startField, type] = raw.trim().split("|");
@@ -130,6 +136,7 @@ export function checkPsv(content: string, file: string): Issue[] {
         );
       pendingMeta = { line, start };
     } else if (type === "text") {
+      if (!wordLines.has(start)) wordLines.set(start, line);
       if (start < lastOnset)
         issue(
           line,
@@ -148,6 +155,16 @@ export function checkPsv(content: string, file: string): Issue[] {
   });
   if (pendingMeta)
     issue(pendingMeta.line, "error", "speaker marker with no words after it");
+
+  for (const c of cleanGoldenSegments(segments).changes) {
+    if (c.after !== null) continue; // a knock-on fix, eg a passed-on capital
+    issue(
+      wordLines.get(c.start) ?? 1,
+      "error",
+      `${c.rule} ${JSON.stringify(c.before)} should not be in a transcript; run \`pnpm fixtures:clean\``,
+    );
+  }
+  issues.sort((a, b) => (a.line ?? 0) - (b.line ?? 0));
   return issues;
 }
 

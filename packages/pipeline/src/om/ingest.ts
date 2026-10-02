@@ -11,9 +11,10 @@ import {
 } from "@open-minutes/db";
 import { bodySlug } from "@open-minutes/core/bodies";
 import { realYouTube, type YouTube } from "../youtube";
-import type {
-  DiarizationTurn,
-  SpeechSegment,
+import {
+  cleanSpeechSegments,
+  type DiarizationTurn,
+  type SpeechSegment,
 } from "@open-minutes/core/transcription";
 import { transcribeAudio } from "../transcribe";
 import { computeSpeakerEmbeddings } from "../embed";
@@ -67,8 +68,8 @@ interface DiarizationArtifact {
 type EmbeddingsArtifact = Array<{ speaker: number; centroid: number[] }>;
 
 /**
- * Run the full pipeline for one video — download → transcribe → diarize →
- * align → identify — and commit the meeting to the database.
+ * Run the full pipeline for one video — download → transcribe → clean →
+ * diarize → align → identify — and commit the meeting to the database.
  *
  * Each stage's output is cached as a file in the meeting's work directory; a
  * stage whose artifact already exists is skipped, so an interrupted run
@@ -112,11 +113,15 @@ export async function ingestVideo(
     await yt.downloadVideoAudio(youtubeId, audioPath);
   }
 
-  const speechSegments = await cachedStage<SpeechSegment[]>(
+  const rawSpeechSegments = await cachedStage<SpeechSegment[]>(
     youtubeId,
     join(workDir, "transcription.json"),
     () => transcribeAudio(audioPath),
   );
+  // Strip disfluencies (fillers, stutters, ...). Deliberately not cached:
+  // transcription.json stays the recognizer's verbatim output, so a new or
+  // changed cleaning rule applies on the next run without re-transcribing.
+  const speechSegments = cleanSpeechSegments(rawSpeechSegments);
 
   // When the meeting happened: the title's date, the chair's gavel-in time.
   const when = resolveMeetingDateTime(

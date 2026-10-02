@@ -17,6 +17,7 @@
     "db": "pnpm --silent --filter @open-minutes/db run db",
     "om": "pnpm --silent --filter @open-minutes/pipeline run om",
     "fixtures:check": "pnpm --silent --filter @open-minutes/fixtures run check",
+    "fixtures:clean": "pnpm --silent --filter @open-minutes/fixtures run clean",
     "tools": "pnpm --silent --filter @open-minutes/tools run tools",
     "deploy:prod": "pnpm db migrate --db prod && pnpm --filter @open-minutes/web run deploy"
   },
