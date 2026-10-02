@@ -107,8 +107,8 @@ const workRootFixture = {
 export const test = dbTest().extend<{ workRoot: string }>(workRootFixture);
 
 /**
- * A database starting from the golden dataset (the MOA jurisdiction and the
- * GBOS body with its YouTube channel, from test-data/), plus a work root.
+ * A database starting from the golden dataset (the MOA jurisdiction and its
+ * bodies with their video sources, from test-data/), plus a work root.
  * Tests layer their own scenario rows on top.
  */
 export const goldenTest = dbTest({ data: goldenData }).extend<{

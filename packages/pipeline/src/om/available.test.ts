@@ -1,4 +1,5 @@
 import { describe, expect } from "vitest";
+import { loadBodies } from "@open-minutes/fixtures/test-data";
 import { listAvailable } from "./available";
 import {
   GOLDEN_GBOS,
@@ -23,6 +24,8 @@ describe("listAvailable", () => {
           { id: "already-in-db" },
           { id: "oldest" },
         ],
+        // The other golden bodies' playlists have nothing new.
+        videosInPlaylist: async () => [],
       });
 
       const ids = await listAvailable(db, { yt });
@@ -37,13 +40,20 @@ describe("listAvailable", () => {
     const yt = fakeYouTube({
       videosInChannel: async (channelId) => {
         scraped.push(channelId);
-        return [{ id: "v1" }];
+        return [{ id: `video-${channelId}` }];
+      },
+      videosInPlaylist: async (playlistId) => {
+        scraped.push(playlistId);
+        return [{ id: `video-${playlistId}` }];
       },
     });
 
     const ids = await listAvailable(db, { yt });
-    expect(ids).toEqual(["v1"]);
-    expect(scraped).toEqual([GOLDEN_GBOS.channelId]);
+    const goldenSources = loadBodies().flatMap((b) =>
+      b.video_sources.map((s) => s.youtube_id),
+    );
+    expect(scraped.sort()).toEqual([...goldenSources].sort());
+    expect(ids.sort()).toEqual(goldenSources.map((id) => `video-${id}`).sort());
   });
 
   // An empty database: the only body is the one with a playlist source.

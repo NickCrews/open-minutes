@@ -273,6 +273,15 @@ describe("golden transcripts", () => {
     // mentioned (a hearing "scheduled for July 6th", minutes "from both April
     // 20th and April 27th") are not this meeting's.
     ["gbos_xTDznaSElgY", null],
+    // "We will call the June 8th, 2026 planning and zoning commission meeting
+    // to order." (no time spoken)
+    ["pzc_DwFHRjobjcY", { date: "2026-06-08", time: null }],
+    // "Good evening, and welcome to the February seventeenth, 2026 regular
+    // meeting of the Anchorage Assembly. It is now 503 PM." But that is 19
+    // minutes in, after pre-meeting music, so it falls outside the opening.
+    ["assembly_SGNnYNW26aQ", null],
+    // "It is 504 p.m." comes 20 minutes in, after pre-meeting music.
+    ["assembly_vJURFS21w-w", null],
   ] as const)("%s", (slug, expected) => {
     const meeting = getMeetingData(slug);
     const parsed = parseDateTimeFromTranscript(openingText(meeting.segments), {
@@ -294,6 +303,34 @@ describe("golden transcripts", () => {
     [
       "gbos_xTDznaSElgY",
       { date: "2026-05-18", time: null, dateSource: "title", timeSource: null },
+    ],
+    // MOA titles carry the scheduled start, eg "... - 2026-06-08 18:30:00".
+    [
+      "pzc_DwFHRjobjcY",
+      {
+        date: "2026-06-08",
+        time: "18:30",
+        dateSource: "title",
+        timeSource: "title",
+      },
+    ],
+    [
+      "assembly_SGNnYNW26aQ",
+      {
+        date: "2026-02-17",
+        time: "17:00",
+        dateSource: "title",
+        timeSource: "title",
+      },
+    ],
+    [
+      "assembly_vJURFS21w-w",
+      {
+        date: "2026-03-03",
+        time: "17:00",
+        dateSource: "title",
+        timeSource: "title",
+      },
     ],
   ] as const)("resolve %s", (slug, expected) => {
     const meeting = getMeetingData(slug);

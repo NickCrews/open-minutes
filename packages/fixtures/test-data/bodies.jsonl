@@ -1,1 +1,3 @@
 {"id": "gbos", "jurisdiction_id": "moa", "name":"Girdwood Board of Supervisors","name_short":"GBOS","timezone":"America/Anchorage","video_sources":[{"kind":"channel","youtube_id":"UCOUlNInprZEjhbpVPiJOlEA"}]}
+{"id": "assembly", "jurisdiction_id": "moa", "name":"Anchorage Assembly","name_short":"Assembly","timezone":"America/Anchorage","video_sources":[{"kind":"playlist","youtube_id":"PLylc7U989XcZBYK7ZGZOevaH9XgQcxh9Q"}]}
+{"id": "pzc", "jurisdiction_id": "moa", "name":"Anchorage Planning and Zoning Commission","name_short":"PZC","timezone":"America/Anchorage","video_sources":[{"kind":"playlist","youtube_id":"PLylc7U989Xcaf_jtcVa9aZkLEa2UUhgxO"}]}
