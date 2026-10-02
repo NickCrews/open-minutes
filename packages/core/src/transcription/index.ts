@@ -19,3 +19,4 @@ export {
   isFillerWord,
   stutterRule,
 } from "./clean";
+export { type SplitSentence, splitSentences } from "./turn-edges";

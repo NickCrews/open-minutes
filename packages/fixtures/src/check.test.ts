@@ -83,6 +83,23 @@ describe("checkPsv", () => {
     ]);
   });
 
+  it("warns about a speaker marker a word off a sentence edge", () => {
+    expect(
+      lint(
+        psv(
+          ["0:00:01.00", "@identified:christopher-constant"],
+          ["0:00:01.00", "Allegiance?"],
+          ["0:00:04.68", "I"],
+          ["0:00:04.84", "@identified:jared-goecker"],
+          ["0:00:04.84", "pledge"],
+          ["0:00:05.32", "allegiance."],
+        ),
+      ),
+    ).toEqual([
+      '4: warning: speaker change at 0:00:04.84 splits a sentence; the pause at 0:00:04.68 is longer (3.68s vs 0.16s), so "I" may belong to the other speaker. Move the marker to the sentence edge where the voice changes',
+    ]);
+  });
+
   it("catches words out of order and empty speakers", () => {
     expect(
       lint(

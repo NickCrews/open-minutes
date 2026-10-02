@@ -5,9 +5,17 @@ import {
   chapterWarnings,
   uncoveredSpeech,
 } from "@open-minutes/core/chapters";
-import { LAST_WORD_DURATION_SEC } from "@open-minutes/core/transcription";
+import {
+  LAST_WORD_DURATION_SEC,
+  splitSentences,
+} from "@open-minutes/core/transcription";
 import { cleanGoldenSegments } from "./clean";
-import { formatTimestamp, parsePsv, parseTimestamp } from "./psv";
+import {
+  formatTimestamp,
+  parsePsv,
+  parseTimestamp,
+  sameSpeakerLabel,
+} from "./psv";
 import {
   getMeetingData,
   parseGoldenChapters,
@@ -99,7 +107,8 @@ export function checkMeetingDir(dir: string): Issue[] {
  * order, a speaker marker not on the same onset as the word after it (the
  * usual sign of a marker inserted a line off), a speaker marker with no
  * words, and disfluencies the pipeline's clean stage would have removed
- * ("um", "the the"; see clean.ts).
+ * ("um", "the the"; see clean.ts). Warnings: a speaker change inside a
+ * sentence, a few words from a clearly longer pause (see turn-edges.ts).
  */
 export function checkPsv(content: string, file: string): Issue[] {
   const issues: Issue[] = [];
@@ -121,6 +130,8 @@ export function checkPsv(content: string, file: string): Issue[] {
   // The line of each word onset, to place the disfluency errors. By onset
   // alone: a cleaning rule may report a word after an earlier rule recased it.
   const wordLines = new Map<number, number>();
+  // The line of each speaker marker; the n-th opens the n-th segment.
+  const metaLines: number[] = [];
   content.split("\n").forEach((raw, i) => {
     const line = i + 1;
     const [startField, type] = raw.trim().split("|");
@@ -128,6 +139,7 @@ export function checkPsv(content: string, file: string): Issue[] {
       return;
     const start = parseTimestamp(startField!);
     if (type === "meta") {
+      metaLines.push(line);
       if (pendingMeta)
         issue(
           pendingMeta.line,
@@ -162,6 +174,18 @@ export function checkPsv(content: string, file: string): Issue[] {
       wordLines.get(c.start) ?? 1,
       "error",
       `${c.rule} ${JSON.stringify(c.before)} should not be in a transcript; run \`pnpm fixtures:clean\``,
+    );
+  }
+
+  for (const split of splitSentences(segments)) {
+    const seg = segments[split.segment]!;
+    if (sameSpeakerLabel(segments[split.segment - 1]!.speaker, seg.speaker))
+      continue;
+    const moved = split.misplaced.map((w) => w.text).join(" ");
+    issue(
+      metaLines[split.segment]!,
+      "warning",
+      `speaker change at ${formatTimestamp(split.start)} splits a sentence; the pause at ${formatTimestamp(split.edgeStart)} is longer (${split.edgePause}s vs ${split.pause}s), so ${JSON.stringify(moved)} may belong to the other speaker. Move the marker to the sentence edge where the voice changes`,
     );
   }
   issues.sort((a, b) => (a.line ?? 0) - (b.line ?? 0));
