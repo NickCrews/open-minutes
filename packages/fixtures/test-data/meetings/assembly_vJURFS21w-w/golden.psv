@@ -8118,7 +8118,7 @@ start_sec|event_type|event_data
 1:11:32.18|text|new
 1:11:32.50|text|permitting
 1:11:33.06|text|software.
-1:11:34.89|meta|{"begin_speaker":"segmented:spk-10"}
+1:11:34.89|meta|{"begin_speaker":"identified:greg-soule"}
 1:11:34.89|text|The
 1:11:34.97|text|chair
 1:11:35.21|text|Ms.
@@ -8157,7 +8157,7 @@ start_sec|event_type|event_data
 1:11:46.17|text|for
 1:11:46.33|text|this
 1:11:46.57|text|contract?
-1:11:49.05|meta|{"begin_speaker":"segmented:spk-10"}
+1:11:49.05|meta|{"begin_speaker":"identified:greg-soule"}
 1:11:49.05|text|Ms.
 1:11:49.21|text|Baldwin
 1:11:49.77|text|Day,
@@ -8257,7 +8257,7 @@ start_sec|event_type|event_data
 1:12:34.89|text|the
 1:12:34.97|text|implementation
 1:12:35.53|text|process?
-1:12:40.09|meta|{"begin_speaker":"segmented:spk-10"}
+1:12:40.09|meta|{"begin_speaker":"identified:greg-soule"}
 1:12:40.09|text|Thanks
 1:12:40.25|text|for
 1:12:40.33|text|the
@@ -8413,7 +8413,7 @@ start_sec|event_type|event_data
 1:13:43.65|text|you're
 1:13:43.89|text|moving
 1:13:44.29|text|towards
-1:13:46.61|meta|{"begin_speaker":"segmented:spk-10"}
+1:13:46.61|meta|{"begin_speaker":"identified:greg-soule"}
 1:13:46.61|text|the
 1:13:46.69|text|chair
 1:13:47.01|text|member
@@ -8590,7 +8590,7 @@ start_sec|event_type|event_data
 1:14:58.05|text|an
 1:14:58.13|text|accurate
 1:14:58.53|text|assessment
-1:14:59.81|meta|{"begin_speaker":"segmented:spk-10"}
+1:14:59.81|meta|{"begin_speaker":"identified:greg-soule"}
 1:14:59.81|text|through
 1:15:00.05|text|the
 1:15:00.13|text|chair
@@ -8929,7 +8929,7 @@ start_sec|event_type|event_data
 1:17:12.31|text|sequencing
 1:17:13.03|text|this
 1:17:13.27|text|work.
-1:17:15.57|meta|{"begin_speaker":"segmented:spk-10"}
+1:17:15.57|meta|{"begin_speaker":"identified:greg-soule"}
 1:17:15.57|text|Chair
 1:17:15.73|text|Member
 1:17:15.97|text|Baldwin.
@@ -9760,7 +9760,7 @@ start_sec|event_type|event_data
 1:23:10.37|text|on
 1:23:10.53|text|the
 1:23:10.69|text|phone.
-1:23:14.05|meta|{"begin_speaker":"segmented:spk-7"}
+1:23:14.05|meta|{"begin_speaker":"identified:becky-windt-pearson"}
 1:23:14.05|text|Yes,
 1:23:14.21|text|we
 1:23:14.29|text|can
@@ -9865,7 +9865,7 @@ start_sec|event_type|event_data
 1:23:43.65|text|about.
 1:23:43.97|text|Thank
 1:23:44.21|text|you.
-1:23:45.09|meta|{"begin_speaker":"segmented:spk-7"}
+1:23:45.09|meta|{"begin_speaker":"identified:becky-windt-pearson"}
 1:23:45.09|text|I
 1:23:45.25|text|think
 1:23:45.49|text|well,
@@ -10004,7 +10004,7 @@ start_sec|event_type|event_data
 1:24:35.19|text|that
 1:24:35.43|text|I
 1:24:35.51|text|apologize
-1:24:35.99|meta|{"begin_speaker":"segmented:spk-7"}
+1:24:35.99|meta|{"begin_speaker":"identified:becky-windt-pearson"}
 1:24:35.99|text|for
 1:24:36.15|text|not
 1:24:36.23|text|having
@@ -10169,7 +10169,7 @@ start_sec|event_type|event_data
 1:25:24.63|text|of
 1:25:24.79|text|this
 1:25:25.03|text|body
-1:25:27.83|meta|{"begin_speaker":"segmented:spk-11"}
+1:25:27.83|meta|{"begin_speaker":"identified:sean-case"}
 1:25:27.83|text|Yeah,
 1:25:30.63|text|I
 1:25:30.71|text|heard
@@ -10585,7 +10585,7 @@ start_sec|event_type|event_data
 1:28:04.29|text|guys
 1:28:04.53|text|engage
 1:28:05.01|text|in.
-1:28:09.49|meta|{"begin_speaker":"segmented:spk-11"}
+1:28:09.49|meta|{"begin_speaker":"identified:sean-case"}
 1:28:09.49|text|Yeah,
 1:28:09.81|text|Mr.
 1:28:10.21|text|Chair,
@@ -10987,7 +10987,7 @@ start_sec|event_type|event_data
 1:30:28.42|text|prior
 1:30:28.74|text|year
 1:30:28.98|text|budget?
-1:30:33.78|meta|{"begin_speaker":"segmented:spk-7"}
+1:30:33.78|meta|{"begin_speaker":"identified:becky-windt-pearson"}
 1:30:33.78|text|I
 1:30:33.86|text|think
 1:30:34.02|text|I
@@ -11295,7 +11295,7 @@ start_sec|event_type|event_data
 1:32:25.91|text|more
 1:32:26.15|text|about
 1:32:26.39|text|that.
-1:32:35.43|meta|{"begin_speaker":"segmented:spk-17"}
+1:32:35.43|meta|{"begin_speaker":"identified:kimberly-rash"}
 1:32:35.43|text|Through
 1:32:35.83|text|the
 1:32:35.99|text|chair.
@@ -11421,7 +11421,7 @@ start_sec|event_type|event_data
 1:33:18.07|text|cover
 1:33:18.87|text|that
 1:33:19.19|text|gap?
-1:33:20.31|meta|{"begin_speaker":"segmented:spk-17"}
+1:33:20.31|meta|{"begin_speaker":"identified:kimberly-rash"}
 1:33:20.31|text|Okay,
 1:33:20.63|text|perfect.
 1:33:21.03|text|Thank
@@ -14497,7 +14497,7 @@ start_sec|event_type|event_data
 1:54:08.65|text|question
 1:54:09.13|text|Mr.
 1:54:09.37|text|Johnson
-1:54:11.45|meta|{"begin_speaker":"segmented:spk-7"}
+1:54:11.45|meta|{"begin_speaker":"identified:becky-windt-pearson"}
 1:54:11.45|text|Pierce.
 1:54:13.27|text|Thank
 1:54:13.43|text|you
@@ -15082,7 +15082,7 @@ start_sec|event_type|event_data
 1:57:22.12|text|this
 1:57:22.28|text|through,
 1:57:22.84|text|or
-1:57:25.24|meta|{"begin_speaker":"segmented:spk-7"}
+1:57:25.24|meta|{"begin_speaker":"identified:becky-windt-pearson"}
 1:57:25.24|text|to
 1:57:25.40|text|the
 1:57:25.56|text|chair,
@@ -15760,7 +15760,7 @@ start_sec|event_type|event_data
 2:01:55.49|text|Miss
 2:01:55.81|text|Went
 2:01:56.29|text|Pearson.
-2:01:57.97|meta|{"begin_speaker":"segmented:spk-7"}
+2:01:57.97|meta|{"begin_speaker":"identified:becky-windt-pearson"}
 2:01:57.97|text|I
 2:01:58.13|text|know
 2:01:58.29|text|that

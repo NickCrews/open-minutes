@@ -8007,7 +8007,7 @@ start_sec|event_type|event_data
 1:33:28.95|text|So
 1:33:29.43|text|thank
 1:33:29.59|text|you.
-1:33:35.91|meta|{"begin_speaker":"segmented:spk-25"}
+1:33:35.91|meta|{"begin_speaker":"identified:tiffany-briggs"}
 1:33:35.91|text|So
 1:33:36.15|text|if
 1:33:36.23|text|that's
@@ -8089,7 +8089,7 @@ start_sec|event_type|event_data
 1:33:59.19|text|all
 1:33:59.35|text|squared
 1:33:59.83|text|away.
-1:34:05.83|meta|{"begin_speaker":"segmented:spk-6"}
+1:34:05.83|meta|{"begin_speaker":"identified:becky-windt-pearson"}
 1:34:05.83|text|And
 1:34:06.07|text|this
 1:34:06.39|text|particular
@@ -8131,7 +8131,7 @@ start_sec|event_type|event_data
 1:34:26.25|text|of
 1:34:26.49|text|the
 1:34:26.65|text|levy
-1:34:30.57|meta|{"begin_speaker":"segmented:spk-25"}
+1:34:30.57|meta|{"begin_speaker":"identified:tiffany-briggs"}
 1:34:30.57|text|sure
 1:34:31.13|text|through
 1:34:31.45|text|the
@@ -8489,7 +8489,7 @@ start_sec|event_type|event_data
 1:36:40.23|text|that
 1:36:40.39|text|look
 1:36:40.63|text|like?
-1:36:43.35|meta|{"begin_speaker":"segmented:spk-25"}
+1:36:43.35|meta|{"begin_speaker":"identified:tiffany-briggs"}
 1:36:43.35|text|Through
 1:36:43.59|text|the
 1:36:43.67|text|chair
@@ -11171,7 +11171,7 @@ start_sec|event_type|event_data
 1:54:26.50|text|we're
 1:54:26.74|text|contemplating
 1:54:27.54|text|here.
-1:54:32.98|meta|{"begin_speaker":"segmented:spk-24"}
+1:54:32.98|meta|{"begin_speaker":"identified:melisa-babb"}
 1:54:32.98|text|Through
 1:54:33.30|text|the
 1:54:33.38|text|chair
@@ -11833,7 +11833,7 @@ start_sec|event_type|event_data
 1:58:12.29|text|could
 1:58:12.53|text|be
 1:58:12.61|text|done?
-1:58:14.98|meta|{"begin_speaker":"segmented:spk-24"}
+1:58:14.98|meta|{"begin_speaker":"identified:melisa-babb"}
 1:58:14.98|text|We
 1:58:15.14|text|have
 1:58:15.38|text|done
@@ -13302,7 +13302,7 @@ start_sec|event_type|event_data
 2:07:31.54|text|Ms.
 2:07:31.86|text|Went
 2:07:32.18|text|Pearson.
-2:07:32.82|meta|{"begin_speaker":"segmented:spk-6"}
+2:07:32.82|meta|{"begin_speaker":"identified:becky-windt-pearson"}
 2:07:32.82|text|I
 2:07:33.06|text|thank
 2:07:33.22|text|you,
@@ -14960,7 +14960,7 @@ start_sec|event_type|event_data
 2:17:32.20|text|in
 2:17:32.36|text|the
 2:17:32.44|text|cue.
-2:17:33.32|meta|{"begin_speaker":"segmented:spk-6"}
+2:17:33.32|meta|{"begin_speaker":"identified:becky-windt-pearson"}
 2:17:33.32|text|Thank
 2:17:33.48|text|you,
 2:17:33.64|text|Mr.
@@ -19737,7 +19737,7 @@ start_sec|event_type|event_data
 2:48:26.63|text|really
 2:48:26.79|text|their
 2:48:26.95|text|ordinance.
-2:48:29.75|meta|{"begin_speaker":"segmented:spk-6"}
+2:48:29.75|meta|{"begin_speaker":"identified:becky-windt-pearson"}
 2:48:29.75|text|Thank
 2:48:29.91|text|you.
 2:48:30.07|text|And
@@ -20229,7 +20229,7 @@ start_sec|event_type|event_data
 2:50:53.88|text|back
 2:50:54.04|text|to
 2:50:54.20|text|them.
-2:50:55.24|meta|{"begin_speaker":"segmented:spk-6"}
+2:50:55.24|meta|{"begin_speaker":"identified:becky-windt-pearson"}
 2:50:55.24|text|Chair
 2:50:55.48|text|Member
 2:50:55.80|text|Gerker,
@@ -20430,7 +20430,7 @@ start_sec|event_type|event_data
 2:51:59.96|text|longer
 2:52:00.44|text|up
 2:52:00.68|text|here.
-2:52:02.28|meta|{"begin_speaker":"segmented:spk-6"}
+2:52:02.28|meta|{"begin_speaker":"identified:becky-windt-pearson"}
 2:52:02.28|text|No,
 2:52:03.00|text|we
 2:52:03.16|text|would
