@@ -30,12 +30,12 @@ async function personId(db: Parameters<typeof callTool>[0], slug: string) {
   return p!.id;
 }
 
-/** Bryan Burnett's "This is Brian Burnett chiming in" segment. */
+/** Bryan Burnett's "This is Bryan Burnett chiming in" segment. */
 async function bryanSegment(db: Parameters<typeof callTool>[0]) {
   const segments = await callTool(db, getTranscript, {
     meetingId: await gbosId(db),
   });
-  return segments.find((s) => s.text.includes("Brian Burnett chiming"))!;
+  return segments.find((s) => s.text.includes("Burnett chiming"))!;
 }
 
 describe("reading", () => {
