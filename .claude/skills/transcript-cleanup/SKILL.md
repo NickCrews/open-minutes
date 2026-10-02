@@ -30,8 +30,8 @@ never type one back in.
    just before they speak, or a roll call. Topic or tone is not evidence.
    Without evidence, leave the label alone and report it.
 2. **Speech recognition misspells names** (Bryan → Brian, Crews → Cruz,
-   Giessel → Giesel). Match names loosely. Display names may carry a role,
-   such as "(GBOS co-chair)".
+   Giessel → Giesel). Match names loosely. When you name someone, follow the
+   `people-records` skill.
 3. **Turns blur at their edges.** In "Thank you. Brianna | Thank you, Kyle. I
    just…", the chair's handoff words belong to the chair. Split at the exact
    word where the speaker changes, then relabel each part.
