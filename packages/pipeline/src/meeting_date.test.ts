@@ -303,6 +303,9 @@ describe("golden transcripts", () => {
     ["assembly_SGNnYNW26aQ", null],
     // "It is 504 p.m." comes 20 minutes in, after pre-meeting music.
     ["assembly_vJURFS21w-w", null],
+    // "We'll call this meeting of the community and economic development
+    // committee of the Anchorage Assembly to order Thursday, March 5th, 9 a.m."
+    ["ced_hK1Sq1a7aQM", { date: "2026-03-05", time: "09:00" }],
   ] as const)("%s", (slug, expected) => {
     const meeting = getMeetingData(slug);
     const parsed = parseDateTimeFromTranscript(openingText(meeting.segments), {
@@ -353,10 +356,24 @@ describe("golden transcripts", () => {
         timeSource: "title",
       },
     ],
-  ] as const)("resolve %s", (slug, expected) => {
+    // The title has no date, and the chair's "Thursday, March 5th, 9 a.m."
+    // has no year; the upload on March 9, 2026 places it.
+    [
+      "ced_hK1Sq1a7aQM",
+      {
+        date: "2026-03-05",
+        time: "09:00",
+        dateSource: "transcript",
+        timeSource: "transcript",
+      },
+      "2026-03-09",
+    ],
+  ] as const)("resolve %s", (slug, expected, uploadDate?: string) => {
     const meeting = getMeetingData(slug);
     expect(
-      resolveMeetingDateTime(meeting.title, openingText(meeting.segments)),
+      resolveMeetingDateTime(meeting.title, openingText(meeting.segments), {
+        uploadDate,
+      }),
     ).toEqual({
       timeSource: "transcript",
       warnings: [],
