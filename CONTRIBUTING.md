@@ -107,6 +107,22 @@ pnpm db generate                    # write a migration after editing schema.ts
 
 See [docs/contributing/db.md](docs/contributing/db.md) for everything else.
 
+## Deploying
+
+Production is the `production` branch, and GitHub Actions deploys every push to
+it. To deploy, the repo owner comments `/deploy` on a merged PR (or runs the
+`production` workflow from the Actions tab). That fast-forwards `production` to
+the PR's merge commit, builds, migrates the production database just before
+switching traffic, and replies with the result.
+
+We don't roll back; we only roll forward. `production` only moves forward along
+`main`, so to undo a bad deploy, fix it or revert the PR on `main` and deploy
+that. Migrations must be backward-compatible, since old code briefly runs on
+the new schema.
+
+See [docs/contributing/deploy.md](docs/contributing/deploy.md) for the details
+and one-time setup.
+
 ## Running checks
 
 ```sh

@@ -1,0 +1,232 @@
+# Deploys the `production` branch to the production Worker, and moves that
+# branch on request. See docs/contributing/deploy.md.
+#
+# Three triggers:
+#   - A push to `production` deploys it.
+#   - Running this workflow from the Actions tab with a ref (branch, tag or
+#     SHA; default main) fast-forwards `production` to it, then deploys.
+#   - Commenting `/deploy` on a merged PR does the same for its merge commit,
+#     and replies with the result.
+# The last two are restricted to the repo owner, by user id (which survives a
+# username change). Pushing `production` directly is up to its branch rules.
+#
+# Promoting and deploying are one workflow because a push made with
+# GITHUB_TOKEN doesn't trigger other workflows.
+#
+# Production only moves forward along main: the target must be on main, and a
+# commit production already has is a no-op, not a rollback. We only roll
+# forward: to undo a bad deploy, fix or revert on main and deploy that.
+#
+# issue_comment and workflow_dispatch run the workflow file from the default
+# branch, so a PR can't change what `/deploy` does before it's merged.
+name: production
+
+on:
+  push:
+    branches: [production]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch, tag or SHA to deploy (must be on main)
+        required: true
+        default: main
+  issue_comment:
+    types: [created]
+
+concurrency:
+  group: production
+  # Never cancel: a deploy cancelled between migrating and switching traffic
+  # would leave production migrated but serving the previous version.
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  promote:
+    # 10820686 is NickCrews.
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.actor_id == '10820686')
+      || (github.event_name == 'issue_comment'
+          && github.event.issue.pull_request
+          && github.event.comment.user.id == 10820686
+          && startsWith(github.event.comment.body, '/deploy'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      skip: ${{ steps.target.outputs.skip }}
+      error: ${{ steps.target.outputs.error || steps.promote.outputs.error }}
+      sha: ${{ steps.promote.outputs.sha }}
+      old: ${{ steps.promote.outputs.old }}
+      moved: ${{ steps.promote.outputs.moved }}
+    steps:
+      # For a comment: acknowledge it, and find the PR's merge commit.
+      - name: Resolve what to promote
+        id: target
+        uses: actions/github-script@v7
+        env:
+          INPUT_REF: ${{ inputs.ref }}
+        with:
+          script: |
+            if (context.eventName === "workflow_dispatch") {
+              core.setOutput("ref", process.env.INPUT_REF);
+              return;
+            }
+            // startsWith('/deploy') above also matches "/deployment notes".
+            if (context.payload.comment.body.trim() !== "/deploy") {
+              core.setOutput("skip", "true");
+              return;
+            }
+            await github.rest.reactions.createForIssueComment({
+              ...context.repo,
+              comment_id: context.payload.comment.id,
+              content: "eyes",
+            });
+            const { data: pr } = await github.rest.pulls.get({
+              ...context.repo,
+              pull_number: context.issue.number,
+            });
+            if (!pr.merged) {
+              const error = `#${pr.number} isn't merged. Merge it, then comment \`/deploy\` again.`;
+              core.setOutput("error", error);
+              core.setFailed(error);
+              return;
+            }
+            core.setOutput("ref", pr.merge_commit_sha);
+
+      - uses: actions/checkout@v4
+        if: steps.target.outputs.ref != ''
+        with:
+          # Full history, to check the target is on main and ahead of production.
+          fetch-depth: 0
+
+      - name: Fast-forward production
+        id: promote
+        if: steps.target.outputs.ref != ''
+        env:
+          REF: ${{ steps.target.outputs.ref }}
+        run: |
+          fail() { echo "error=$1" >> "$GITHUB_OUTPUT"; echo "::error::$1"; exit 1; }
+
+          sha=$(git rev-parse --verify --quiet "origin/$REF^{commit}" \
+             || git rev-parse --verify --quiet "$REF^{commit}") \
+            || fail "\`$REF\` isn't a branch, tag or commit in this repo."
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+          git merge-base --is-ancestor "$sha" origin/main \
+            || fail "\`${sha:0:7}\` isn't on main. Only commits on main can be deployed."
+
+          if old=$(git rev-parse --verify --quiet origin/production); then
+            echo "old=$old" >> "$GITHUB_OUTPUT"
+            if git merge-base --is-ancestor "$sha" "$old"; then
+              echo "Production (${old:0:7}) already includes ${sha:0:7}; nothing to do."
+              exit 0
+            fi
+            git merge-base --is-ancestor "$old" "$sha" \
+              || fail "Production (\`${old:0:7}\`) has commits that \`${sha:0:7}\` doesn't, so this isn't a fast-forward."
+          fi
+
+          # No --force: GitHub rejects anything but a fast-forward too.
+          git push origin "$sha:refs/heads/production"
+          echo "moved=true" >> "$GITHUB_OUTPUT"
+
+  # Builds, then runs packages/web/scripts/deploy-built.sh: upload the new
+  # Worker version with no traffic, migrate production, switch traffic.
+  deploy:
+    needs: promote
+    if: >-
+      always()
+      && (github.event_name == 'push' || needs.promote.outputs.moved == 'true')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      WRANGLER_SEND_METRICS: "false"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.promote.outputs.sha || github.sha }}
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm --filter @open-minutes/web build
+
+      # Production is the Neon project's default branch, which neonctl uses
+      # when given no branch. Unpooled (the default), for migrating.
+      - name: Deploy
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+        run: |
+          DATABASE_URL_PROD=$(npx --yes neonctl@2 connection-string \
+            --project-id "$NEON_PROJECT_ID" --no-analytics)
+          echo "::add-mask::$DATABASE_URL_PROD"
+          if [[ "$DATABASE_URL_PROD" != postgres* ]]; then
+            echo "::error::neonctl didn't return a connection string for production."
+            exit 1
+          fi
+          export DATABASE_URL_PROD
+          pnpm --filter @open-minutes/web run deploy:built
+
+  # Answers the `/deploy` comment (and summarizes a manual run).
+  report:
+    needs: [promote, deploy]
+    if: >-
+      always()
+      && needs.promote.result != 'skipped'
+      && needs.promote.outputs.skip != 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/github-script@v7
+        env:
+          PROMOTE_RESULT: ${{ needs.promote.result }}
+          DEPLOY_RESULT: ${{ needs.deploy.result }}
+          ERROR: ${{ needs.promote.outputs.error }}
+          SHA: ${{ needs.promote.outputs.sha }}
+          OLD: ${{ needs.promote.outputs.old }}
+          MOVED: ${{ needs.promote.outputs.moved }}
+        with:
+          script: |
+            const { PROMOTE_RESULT, DEPLOY_RESULT, ERROR, SHA, OLD, MOVED } = process.env;
+            const repoUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}`;
+            const runUrl = `${repoUrl}/actions/runs/${context.runId}`;
+            const commit = (s) => `[\`${s.slice(0, 7)}\`](${repoUrl}/commit/${s})`;
+            const change = () =>
+              OLD
+                ? `${commit(OLD)} → ${commit(SHA)} ([changes](${repoUrl}/compare/${OLD}...${SHA}))`
+                : commit(SHA);
+
+            let body;
+            if (ERROR) {
+              body = `❌ Not deployed: ${ERROR}`;
+            } else if (PROMOTE_RESULT !== "success") {
+              body = `❌ Not deployed: the workflow failed. See [the run](${runUrl}).`;
+            } else if (MOVED !== "true") {
+              body = `Production (${commit(OLD)}) already includes ${commit(SHA)}. Nothing to do.`;
+            } else if (DEPLOY_RESULT === "success") {
+              body = `🚀 Deployed to production: ${change()}.`;
+            } else {
+              body =
+                `❌ Moved \`production\` (${change()}), but the deploy failed. ` +
+                `[The run](${runUrl}) says how far it got; re-run its failed jobs to retry.`;
+            }
+            body += `\n\n<sub>[run](${runUrl})</sub>`;
+
+            await core.summary.addRaw(body).write();
+            if (context.eventName === "issue_comment") {
+              await github.rest.issues.createComment({
+                ...context.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }

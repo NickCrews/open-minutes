@@ -38,7 +38,7 @@ Tests ignore all of this and create their own throwaway databases.
 | Use the small `golden` dataset instead of `dev`        | `pnpm db up --data golden --data-reset if-needed` |
 | Get an empty, migrated database with no data           | `pnpm db up --schema-reset always --data none`    |
 | Change the schema                                      | edit `schema.ts`, then `pnpm db generate`         |
-| Deploy the web app (migrates prod first)               | `pnpm deploy:prod`                                |
+| Deploy the web app (see [deploy.md](deploy.md))        | comment `/deploy` on a merged PR                  |
 | Clean up databases of deleted branches                 | `pnpm db prune`, then `pnpm db prune --yes`       |
 
 `pnpm db --help` and `pnpm db <command> --help` describe every command and
@@ -119,9 +119,10 @@ URLs are stable), then advance the id sequences past them.
   forward.
 - `pnpm db wipe` refuses unless `ALLOW_REMOTE_WIPE=1`.
 
-`pnpm deploy:prod` migrates prod, then deploys the Worker, so new code never
-runs on an old schema. Old code does briefly run on the new schema, so
-migrations must be backward-compatible: add first, deploy, remove later.
+Deploys migrate prod just before switching the Worker to the new code, so new
+code never runs on an old schema. Old code does briefly run on the new schema,
+so migrations must be backward-compatible: add first, deploy, remove later.
+See [deploy.md](deploy.md).
 
 ## Neon branches
 
@@ -277,7 +278,7 @@ data is renamed to `open_minutes__main` on first use.
 - **`om`**, before every command, so `DB=prod om ingest` fails fast if
   production is behind.
 - **Tests** build their templates with it.
-- **`pnpm deploy:prod`**.
+- **Production deploys**, just before switching traffic ([deploy.md](deploy.md)).
 - **CI** ([`.github/workflows/db.yml`](../../.github/workflows/db.yml)) checks
   for migration conflicts and ungenerated schema changes, runs `up` twice (the
   second must do nothing), wipes, rebuilds with `migrate`, and runs the
