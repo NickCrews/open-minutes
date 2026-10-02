@@ -6,12 +6,12 @@ import {
   videoSourcesTable,
 } from "@open-minutes/db";
 import { bodySlug } from "@open-minutes/core/bodies";
-import { realYouTube, type YouTube } from "../youtube";
+import { type YouTube, youtubeFromEnv } from "../youtube";
 
 export interface ListAvailableOptions {
   /** Restrict the scrape to the body with this slug (eg "gbos"). */
   body?: string;
-  /** YouTube boundary, injectable for tests. Defaults to the real yt-dlp one. */
+  /** YouTube boundary, injectable for tests. Defaults to {@link youtubeFromEnv}. */
   yt?: YouTube;
 }
 
@@ -24,7 +24,7 @@ export async function listAvailable(
   db: DB,
   options: ListAvailableOptions = {},
 ): Promise<string[]> {
-  const yt = options.yt ?? realYouTube;
+  const yt = options.yt ?? youtubeFromEnv();
 
   const allBodies = await db.select().from(bodiesTable);
   let bodies = allBodies;

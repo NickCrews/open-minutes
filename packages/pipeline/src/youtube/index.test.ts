@@ -1,8 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { videosInChannel, downloadVideoAudio } from ".";
+import { youtubeFromEnv } from ".";
 import { rmSync, existsSync } from "node:fs";
 
 describe("YouTube Module", () => {
+  const yt = youtubeFromEnv();
+
   // A channel expands into one nested playlist per tab ("Videos", "Live", ...),
   // so these assert we walk down to the videos rather than handing back the
   // tabs. MOA is the regression case: it has both tabs, and returning them
@@ -18,7 +20,7 @@ describe("YouTube Module", () => {
     // scraping it takes about a minute.
     { tags: ["slow"] },
     async ({ id, minVideos }) => {
-      const videos = await videosInChannel(id);
+      const videos = await yt.videosInChannel(id);
       expect(videos).toBeInstanceOf(Array);
       expect(videos.length).toBeGreaterThan(minVideos);
       expect(videos[0]).toHaveProperty("id");
@@ -32,7 +34,7 @@ describe("YouTube Module", () => {
   );
 
   // YouTube makes datacenter IPs (like GitHub's runners) "sign in to confirm
-  // you're not a bot", so CI needs cookies (see ytDlp) for this to pass. A run
+  // you're not a bot", so CI needs cookies (see YouTubeConfig.cookies) for this to pass. A run
   // without them (a fork's PR, which gets no secrets) skips it.
   it.skipIf(process.env.CI && !process.env.YOUTUBE_COOKIES)(
     "should download video audio",
@@ -43,10 +45,12 @@ describe("YouTube Module", () => {
       // Clean up any existing file before test
       rmSync(path, { force: true });
       expect(existsSync(path)).toBe(false);
-      let result = await downloadVideoAudio(sampleVideo, path, "overwrite");
+      let result = await yt.ensureAudioDownloaded(sampleVideo, path, {
+        overwrite: true,
+      });
       expect(existsSync(path)).toBe(true);
       expect(result).toHaveProperty("downloaded", true);
-      result = await downloadVideoAudio(sampleVideo, path, "skip");
+      result = await yt.ensureAudioDownloaded(sampleVideo, path);
       expect(result).toHaveProperty("downloaded", false);
     },
     10_000,

@@ -2,6 +2,9 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { mkdir, access } from "node:fs/promises";
 import { dirname } from "node:path";
+import type { AudioProvider, VideoMetadata } from "../audio-provider";
+
+export type { AudioProvider, VideoMetadata } from "../audio-provider";
 
 const execFileAsync = promisify(execFile);
 
@@ -29,23 +32,28 @@ function videoUrl(videoIdOrUrl: string) {
   return `https://www.youtube.com/watch?v=${videoIdOrUrl}`;
 }
 
-/**
- * Runs yt-dlp with the options every call shares. YouTube makes datacenter IPs
- * (CI runners, servers) "sign in to confirm you're not a bot", so set
- * YOUTUBE_COOKIES to a Netscape-format cookies.txt from a signed-in browser to
- * get past it. Anything else (a proxy, say) can go in yt-dlp's own config file.
- */
-function ytDlp(args: string[]) {
-  const cookies = process.env.YOUTUBE_COOKIES;
+/** How to reach YouTube. See {@link youtubeFromEnv} for where each comes from. */
+export interface YouTubeConfig {
+  /**
+   * A Netscape-format cookies.txt from a browser signed in to YouTube. YouTube
+   * makes datacenter IPs (CI runners, servers) "sign in to confirm you're not a
+   * bot", and these get past it. Anything else (a proxy, say) can go in
+   * yt-dlp's own config file.
+   */
+  cookies?: string;
+}
+
+/** Runs yt-dlp with the options every call shares. */
+function ytDlp(config: YouTubeConfig, args: string[]) {
   return execFileAsync(
     "yt-dlp",
-    [...(cookies ? ["--cookies", cookies] : []), ...args],
+    [...(config.cookies ? ["--cookies", config.cookies] : []), ...args],
     // A busy channel's flat playlist runs to several MB.
     { maxBuffer: 100 * 1024 * 1024 },
   );
 }
 
-interface FlatEntry {
+export interface FlatEntry {
   /** "url" for a video, "playlist" for a nested tab/playlist. */
   _type?: "url" | "playlist";
   id: string;
@@ -68,43 +76,16 @@ function flattenVideos(node: FlatEntry, seen = new Set<string>()): FlatEntry[] {
   return [node];
 }
 
-async function flatPlaylist(url: string) {
-  const { stdout } = await ytDlp(["--flat-playlist", "-J", url]);
+async function flatPlaylist(config: YouTubeConfig, url: string) {
+  const { stdout } = await ytDlp(config, ["--flat-playlist", "-J", url]);
   return flattenVideos(JSON.parse(stdout) as FlatEntry);
 }
 
-export async function videosInChannel(channelIdOrUrl: string) {
-  return await flatPlaylist(channelUrl(channelIdOrUrl));
-}
-
-/**
- * The videos in one playlist. Bodies that share a channel with their siblings
- * (the Assembly, P&Z and the school board all publish to the MOA channel) are
- * usually separated by playlist, so this is how a video gets attributed to the
- * right body.
- */
-export async function videosInPlaylist(playlistIdOrUrl: string) {
-  return await flatPlaylist(playlistUrl(playlistIdOrUrl));
-}
-
-export interface VideoMetadata {
-  id: string;
-  /** The YouTube channel the video was published on (eg "UCOUlNInprZEjhbpVPiJOlEA"). */
-  channelId: string;
-  title: string;
-  description: string;
-  durationSecs: number | null;
-  /**
-   * The day YouTube published the video, "YYYY-MM-DD" (UTC), or null if
-   * unknown. A meeting happens on or before it.
-   */
-  uploadDate: string | null;
-}
-
-export async function fetchVideoMetadata(
+async function getMetadata(
+  config: YouTubeConfig,
   videoIdOrUrl: string,
 ): Promise<VideoMetadata> {
-  const { stdout } = await ytDlp([
+  const { stdout } = await ytDlp(config, [
     "--skip-download",
     "-J",
     videoUrl(videoIdOrUrl),
@@ -134,55 +115,72 @@ function isoDate(yyyymmdd: string | null | undefined): string | null {
   return m ? `${m[1]}-${m[2]}-${m[3]}` : null;
 }
 
-/**
- * Everything that touches YouTube (via yt-dlp), as an injectable boundary so
- * callers like the ingestion pipeline can be tested without network access.
- */
-export interface YouTube {
-  videosInChannel: typeof videosInChannel;
-  videosInPlaylist: typeof videosInPlaylist;
-  fetchVideoMetadata: typeof fetchVideoMetadata;
-  downloadVideoAudio: typeof downloadVideoAudio;
-}
-
-/** The real yt-dlp-backed implementation of the {@link YouTube} boundary. */
-export const realYouTube: YouTube = {
-  videosInChannel,
-  videosInPlaylist,
-  fetchVideoMetadata,
-  downloadVideoAudio,
-};
-
-export async function downloadVideoAudio(
-  youtubeIdOrUrl: string,
+async function ensureAudioDownloaded(
+  config: YouTubeConfig,
+  videoIdOrUrl: string,
   path: string,
-  onExists: "skip" | "overwrite" = "skip",
+  { overwrite = false }: { overwrite?: boolean } = {},
 ) {
-  const folder = dirname(path);
-  await mkdir(folder, { recursive: true });
+  await mkdir(dirname(path), { recursive: true });
   const exists = await access(path).then(
     () => true,
     () => false,
   );
-  const shouldDownload = onExists === "overwrite" || !exists;
-  if (shouldDownload) {
-    const url = videoUrl(youtubeIdOrUrl);
-    // Progress goes to stderr so callers' stdout stays machine-readable.
-    console.error(`Downloading audio for ${url} to ${path}...`);
-    await ytDlp([
-      "-x",
-      "--audio-format",
-      "wav",
-      // the trancription model wants 16kHz audio with one channel
-      "--postprocessor-args",
-      "ffmpeg:-ar 16000 -ac 1",
-      "--audio-quality",
-      "0",
-      "-o",
-      path,
-      url,
-    ]);
-    return { downloaded: true };
-  }
-  return { downloaded: false };
+  if (exists && !overwrite) return { downloaded: false };
+
+  const url = videoUrl(videoIdOrUrl);
+  // Progress goes to stderr so callers' stdout stays machine-readable.
+  console.error(`Downloading audio for ${url} to ${path}...`);
+  await ytDlp(config, [
+    "-x",
+    "--audio-format",
+    "wav",
+    // the trancription model wants 16kHz audio with one channel
+    "--postprocessor-args",
+    "ffmpeg:-ar 16000 -ac 1",
+    "--audio-quality",
+    "0",
+    "-o",
+    path,
+    url,
+  ]);
+  return { downloaded: true };
+}
+
+/**
+ * Everything the pipeline gets from YouTube (via yt-dlp). Create one with
+ * {@link youtube} or {@link youtubeFromEnv} and pass it around; tests pass a
+ * fake instead (see `om/testing.ts`).
+ */
+export interface YouTube extends AudioProvider {
+  /** The videos on a channel, across all its tabs ("Videos", "Live", ...). */
+  videosInChannel(channelIdOrUrl: string): Promise<FlatEntry[]>;
+  /**
+   * The videos in one playlist. Bodies that share a channel with their
+   * siblings (the Assembly, P&Z and the school board all publish to the MOA
+   * channel) are usually separated by playlist, so this is how a video gets
+   * attributed to the right body.
+   */
+  videosInPlaylist(playlistIdOrUrl: string): Promise<FlatEntry[]>;
+}
+
+/** A {@link YouTube} that uses `config`. Does no I/O until a method is called. */
+export function youtube(config: YouTubeConfig = {}): YouTube {
+  return {
+    videosInChannel: (channelIdOrUrl) =>
+      flatPlaylist(config, channelUrl(channelIdOrUrl)),
+    videosInPlaylist: (playlistIdOrUrl) =>
+      flatPlaylist(config, playlistUrl(playlistIdOrUrl)),
+    getMetadata: (videoIdOrUrl) => getMetadata(config, videoIdOrUrl),
+    ensureAudioDownloaded: (videoIdOrUrl, path, options) =>
+      ensureAudioDownloaded(config, videoIdOrUrl, path, options),
+  };
+}
+
+/**
+ * A {@link YouTube} configured from environment variables:
+ * - YOUTUBE_COOKIES: {@link YouTubeConfig.cookies}
+ */
+export function youtubeFromEnv(env = process.env): YouTube {
+  return youtube({ cookies: env.YOUTUBE_COOKIES || undefined });
 }

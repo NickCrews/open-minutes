@@ -28,11 +28,11 @@ export function fakeYouTube(overrides: Partial<YouTube> = {}): YouTube {
     videosInPlaylist: async () => {
       throw new Error("unexpected videosInPlaylist call");
     },
-    fetchVideoMetadata: async () => {
-      throw new Error("unexpected fetchVideoMetadata call");
+    getMetadata: async () => {
+      throw new Error("unexpected getMetadata call");
     },
-    downloadVideoAudio: async () => {
-      throw new Error("unexpected downloadVideoAudio call");
+    ensureAudioDownloaded: async () => {
+      throw new Error("unexpected ensureAudioDownloaded call");
     },
     ...overrides,
   };

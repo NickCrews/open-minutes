@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect } from "vitest";
 import { meetingsTable, segmentsTable } from "@open-minutes/db";
-import type { VideoMetadata } from "../youtube";
+import type { VideoMetadata } from "../audio-provider";
 import type { SpeechSegment } from "@open-minutes/core/transcription";
 import { N_DIMENSIONS } from "@open-minutes/core/voice_embeddings";
 import { getMeetingData } from "@open-minutes/fixtures/test-data";
@@ -103,7 +103,7 @@ describe("ingestVideo", () => {
     workRoot,
   }) => {
     const yt = fakeYouTube({
-      fetchVideoMetadata: async () => ({
+      getMetadata: async () => ({
         ...METADATA,
         channelId: "UC_SOMEONE_ELSES_CHANNEL",
       }),
@@ -120,8 +120,8 @@ describe("ingestVideo", () => {
     workRoot,
   }) => {
     const yt = fakeYouTube({
-      fetchVideoMetadata: async () => METADATA,
-      downloadVideoAudio: async () => {
+      getMetadata: async () => METADATA,
+      ensureAudioDownloaded: async () => {
         throw new Error("network down");
       },
     });
@@ -141,7 +141,7 @@ describe("ingestVideo", () => {
 
     // Only metadata is fetched; download/transcribe/diarize must all be
     // skipped because their artifacts exist (download would throw).
-    const yt = fakeYouTube({ fetchVideoMetadata: async () => METADATA });
+    const yt = fakeYouTube({ getMetadata: async () => METADATA });
 
     const result = await ingestVideo(db, VIDEO_ID, { yt, workRoot });
     expect(result).toMatchObject({
@@ -212,11 +212,11 @@ describe("ingestVideo", () => {
       // symlinks the cached fixture audio. Transcribe/diarize/align/identify
       // run for real.
       const yt = fakeYouTube({
-        fetchVideoMetadata: async () => ({
+        getMetadata: async () => ({
           ...METADATA,
           id: meeting.youtube_id,
         }),
-        downloadVideoAudio: async (_id, path) => {
+        ensureAudioDownloaded: async (_id, path) => {
           const { symlink } = await import("node:fs/promises");
           await mkdir(join(path, ".."), { recursive: true });
           await symlink(audio.path, path);
@@ -251,7 +251,7 @@ describe("ingestVideos", () => {
     await seedWorkDir(workRoot, goodId);
 
     const yt = fakeYouTube({
-      fetchVideoMetadata: async (videoId) => {
+      getMetadata: async (videoId) => {
         if (videoId === badId) throw new Error("video is private");
         return { ...METADATA, id: goodId };
       },
@@ -278,7 +278,7 @@ describe("listIngested", () => {
     workRoot,
   }) => {
     await seedWorkDir(workRoot, VIDEO_ID);
-    const yt = fakeYouTube({ fetchVideoMetadata: async () => METADATA });
+    const yt = fakeYouTube({ getMetadata: async () => METADATA });
     await ingestVideo(db, VIDEO_ID, { yt, workRoot });
     // An older meeting with no segments.
     await insertMeeting(

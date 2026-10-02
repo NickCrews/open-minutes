@@ -80,7 +80,7 @@ describe("e2e cross-meeting speaker recognition", () => {
       const held = getMeetingData(HELD_OUT_SLUG);
       const heldAudio = await getMeetingAudio(held);
       const yt = fakeYouTube({
-        fetchVideoMetadata: async (id: string) => ({
+        getMetadata: async (id: string) => ({
           id,
           channelId: GOLDEN_GBOS.channelId,
           title: held.title,
@@ -88,7 +88,7 @@ describe("e2e cross-meeting speaker recognition", () => {
           durationSecs: null,
           uploadDate: null,
         }),
-        downloadVideoAudio: async (_id: string, dest: string) => {
+        ensureAudioDownloaded: async (_id: string, dest: string) => {
           await copyFile(heldAudio.path, dest);
           return { downloaded: true };
         },

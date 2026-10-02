@@ -11,7 +11,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import sherpa from "sherpa-onnx-node";
 import type { GoldenMeeting } from "@open-minutes/fixtures/test-data";
-import { downloadVideoAudio } from "../youtube";
+import { youtubeFromEnv } from "../youtube";
 
 const CACHE_ROOT = join(homedir(), ".cache", "open-minutes", "meetings");
 
@@ -58,7 +58,7 @@ export async function getCachedAudio(fixture: {
     return { path: audioPath, manifest };
   }
 
-  await downloadVideoAudio(fixture.youtubeId, audioPath, "skip");
+  await youtubeFromEnv().ensureAudioDownloaded(fixture.youtubeId, audioPath);
 
   const sha256 = await sha256File(audioPath);
   if (fixture.sha256 && sha256 !== fixture.sha256) {
