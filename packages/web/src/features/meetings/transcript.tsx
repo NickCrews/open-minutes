@@ -11,6 +11,13 @@ import {
   Show,
 } from "solid-js";
 import { Button } from "~/components/button";
+import {
+  PauseIcon,
+  PlayIcon,
+  PlayheadIcon,
+  SkipBackIcon,
+  SkipForwardIcon,
+} from "~/components/icons";
 import { TextField, TextFieldInput } from "~/components/text-field";
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/tooltip";
 import { PersonHoverCard } from "~/features/people/person-hover-card";
@@ -294,7 +301,7 @@ export function Transcript(props: {
             tooltip={`Jump back to ${formatTimestamp(jumpTarget(-JUMP_SECS))}`}
             onClick={() => jump(-JUMP_SECS)}
           >
-            <SkipIcon back />
+            <SkipBackIcon seconds={JUMP_SECS} />
           </ToolbarButton>
           <ToolbarButton
             label={props.playing() ? "Pause" : "Play"}
@@ -310,7 +317,7 @@ export function Transcript(props: {
             tooltip={`Jump ahead to ${formatTimestamp(jumpTarget(JUMP_SECS))}`}
             onClick={() => jump(JUMP_SECS)}
           >
-            <SkipIcon />
+            <SkipForwardIcon seconds={JUMP_SECS} />
           </ToolbarButton>
           {/* Disabled while following, since there's nowhere to return to. */}
           <ToolbarButton
@@ -360,78 +367,6 @@ function ToolbarButton(props: {
       </TooltipTrigger>
       <TooltipContent>{props.tooltip}</TooltipContent>
     </Tooltip>
-  );
-}
-
-function Icon(props: { children: JSX.Element }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-    >
-      {props.children}
-    </svg>
-  );
-}
-
-function PlayIcon() {
-  return (
-    <Icon>
-      <polygon points="6 3 20 12 6 21" fill="currentColor" />
-    </Icon>
-  );
-}
-
-function PauseIcon() {
-  return (
-    <Icon>
-      <rect x="6" y="4" width="4" height="16" fill="currentColor" />
-      <rect x="14" y="4" width="4" height="16" fill="currentColor" />
-    </Icon>
-  );
-}
-
-/** A circular arrow labelled with the jump size; forward unless `back`. */
-function SkipIcon(props: { back?: boolean }) {
-  return (
-    <Icon>
-      <Show
-        when={props.back}
-        fallback={
-          <>
-            <path d="M21 3v6h-6" />
-            <path d="M20.5 14.5a9 9 0 1 1-2.1-9.4L21 9" />
-          </>
-        }
-      >
-        <path d="M3 3v6h6" />
-        <path d="M3.5 14.5a9 9 0 1 0 2.1-9.4L3 9" />
-      </Show>
-      <text
-        x="12"
-        y="17"
-        text-anchor="middle"
-        font-size="9"
-        stroke="none"
-        fill="currentColor"
-      >
-        {JUMP_SECS}
-      </text>
-    </Icon>
-  );
-}
-
-function PlayheadIcon() {
-  return (
-    <Icon>
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 1v4M12 19v4M1 12h4M19 12h4" />
-    </Icon>
   );
 }
 

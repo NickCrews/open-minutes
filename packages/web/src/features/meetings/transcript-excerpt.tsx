@@ -1,6 +1,7 @@
 import { createMemo, createSignal, For, type JSX, Show } from "solid-js";
 import { LAST_WORD_DURATION_SEC } from "@open-minutes/core/transcription";
 import { Button } from "~/components/button";
+import { PauseIcon, PlayIcon } from "~/components/icons";
 import { assignSpeakers, type Segment, speakerKey } from "./speaker-identity";
 import {
   findMatches,
@@ -271,21 +272,5 @@ function GapButton(props: { onClick: () => void; children: JSX.Element }) {
     >
       {props.children}
     </Button>
-  );
-}
-
-function PlayIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M8 5v14l11-7z" />
-    </svg>
-  );
-}
-
-function PauseIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M6 5h4v14H6zM14 5h4v14h-4z" />
-    </svg>
   );
 }

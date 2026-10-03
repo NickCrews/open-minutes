@@ -23,6 +23,8 @@ import {
 } from "~/components/card";
 import { formatTimestamp, intervalToSecs } from "~/lib/format";
 import { db } from "~/server/db";
+import { ChevronDownIcon } from "~/components/icons";
+import { cx } from "~/lib/cva";
 import { z } from "zod";
 import { getMeetingSegments } from ".";
 import { previewText } from "./excerpt";
@@ -146,7 +148,13 @@ export function MeetingExcerptCard(props: {
       >
         <CardHeader class="py-4">
           <CardTitle class="flex items-center gap-2">
-            <ExpandChevron expanded={expanded()} />
+            {/* Points down when collapsed, flips up when open. */}
+            <ChevronDownIcon
+              class={cx(
+                "text-muted-foreground size-4 shrink-0 transition-transform",
+                expanded() && "-scale-y-100",
+              )}
+            />
             {props.meeting.title || "(untitled)"}
           </CardTitle>
           <CardDescription class="pl-6">
@@ -298,24 +306,5 @@ function Highlighted(props: { text: string; query?: string }) {
         </Show>
       )}
     </For>
-  );
-}
-
-/** Chevron marking a collapsible section: points down when collapsed, flips up when open. */
-function ExpandChevron(props: { expanded: boolean }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-      class="text-muted-foreground size-4 shrink-0 transition-transform"
-      classList={{ "-scale-y-100": props.expanded }}
-    >
-      <path d="m6 9 6 6 6-6" />
-    </svg>
   );
 }

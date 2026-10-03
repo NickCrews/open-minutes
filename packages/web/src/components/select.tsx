@@ -2,6 +2,7 @@ import type { ComponentProps, ValidComponent } from "solid-js";
 import { splitProps } from "solid-js";
 import { Select as SelectPrimitive } from "@kobalte/core/select";
 
+import { CheckIcon } from "~/components/icons";
 import { cx } from "~/lib/cva";
 
 export const Select = SelectPrimitive;
@@ -95,18 +96,7 @@ export const SelectItem = <T extends ValidComponent = "li">(
       <SelectPrimitive.ItemLabel>{local.children}</SelectPrimitive.ItemLabel>
       <span class="absolute right-2 flex size-3.5 items-center justify-center">
         <SelectPrimitive.ItemIndicator>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            class="size-4"
-          >
-            <path d="M20 6 9 17l-5-5" />
-          </svg>
+          <CheckIcon class="size-4" />
         </SelectPrimitive.ItemIndicator>
       </span>
     </SelectPrimitive.Item>

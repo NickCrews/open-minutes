@@ -2,6 +2,7 @@ import type { ComponentProps, JSX } from "solid-js";
 import { splitProps } from "solid-js";
 import { Dialog as DialogPrimitive } from "@kobalte/core/dialog";
 
+import { CloseIcon } from "~/components/icons";
 import { cx } from "~/lib/cva";
 
 /**
@@ -42,17 +43,7 @@ export const SheetContent = (props: {
             class="text-muted-foreground hover:text-foreground hover:bg-accent -mr-1 inline-flex size-8 cursor-pointer items-center justify-center rounded-md"
             aria-label="Close"
           >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              class="size-4"
-              aria-hidden="true"
-            >
-              <path d="M18 6 6 18M6 6l12 12" />
-            </svg>
+            <CloseIcon class="size-4" />
           </DialogPrimitive.CloseButton>
         </div>
         {local.children}

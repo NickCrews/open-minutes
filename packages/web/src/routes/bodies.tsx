@@ -51,7 +51,7 @@ function BodiesPage() {
               <Show when={body.jurisdiction.name}>
                 {(name) => (
                   <p class="text-muted-foreground flex items-center gap-1 text-sm">
-                    <PinIcon />
+                    <PinIcon class="size-3.5 shrink-0" />
                     {name()}
                     {body.jurisdiction.state
                       ? `, ${body.jurisdiction.state}`
