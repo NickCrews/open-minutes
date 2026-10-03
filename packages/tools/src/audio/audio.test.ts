@@ -1,15 +1,18 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import type { TranscriptWord } from "@open-minutes/core/transcription";
-import { loadTranscriptionModels, transcribeRange } from "../transcribe";
+import {
+  detectSpeech,
+  loadTranscriptionModels,
+  transcribeRange,
+} from "@open-minutes/pipeline/audio";
+import { callTool } from "../tool";
 import {
   clip,
-  detectSpeech,
   pauses,
   type Span,
   totalSecs,
   untranscribedSpeech,
 } from "./activity";
-import { callListenTool } from "./tool";
 import {
   findUntranscribedSpeech,
   speechActivity,
@@ -151,7 +154,7 @@ describe("on the GBOS roll call", () => {
     const meeting = rollCall.meeting.ref;
 
     it("speech_activity reports runs, pauses and untranscribed speech", async () => {
-      const out = await callListenTool(ctx, speechActivity, {
+      const out = await callTool(ctx, speechActivity, {
         meeting,
         from: "0:00:10",
         to: "0:00:30",
@@ -166,7 +169,7 @@ describe("on the GBOS roll call", () => {
     it(
       "find_untranscribed_speech finds the roll call between the chair and the clerk",
       async () => {
-        const out = await callListenTool(ctx, findUntranscribedSpeech, {
+        const out = await callTool(ctx, findUntranscribedSpeech, {
           meeting,
         });
         expect(out.found).toBe(1);
@@ -188,7 +191,7 @@ describe("on the GBOS roll call", () => {
     it(
       "transcribe_range shows what it hears beside the transcript",
       async () => {
-        const out = await callListenTool(ctx, transcribeRangeTool, {
+        const out = await callTool(ctx, transcribeRangeTool, {
           meeting,
           from: "0:00:20",
           to: "0:00:28",
@@ -208,7 +211,7 @@ describe("on the GBOS roll call", () => {
 
     it("refuses a range over the limit", async () => {
       await expect(
-        callListenTool(ctx, transcribeRangeTool, {
+        callTool(ctx, transcribeRangeTool, {
           meeting,
           from: 0,
           to: 200,

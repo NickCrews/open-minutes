@@ -33,10 +33,10 @@ re-run. `fixtures:check` doesn't verify that an `identified:` slug exists in
 
 ### Listening to the audio
 
-The text can't show everything. `pnpm audio` has tools that read the
-meeting's audio, for a golden (`"meeting": "gbos_9HoIM5INxpI"`) or a database
-meeting (`"meeting": "12"`). Run `pnpm audio` to list them; times in and out
-are `H:MM:SS.ss`, as psvtool prints them.
+The text can't show everything. Some of the same tools read the meeting's
+audio, for a golden (`"meeting": "gbos_9HoIM5INxpI"`) or a database meeting
+(`"meeting": "12"`). A golden needs no database. Times in and out are
+`H:MM:SS.ss`, as psvtool prints them.
 
 - `find_untranscribed_speech` lists stretches where someone is talking but
   the transcript has no words, with what recognition hears there on its own.

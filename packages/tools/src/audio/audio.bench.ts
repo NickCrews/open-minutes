@@ -1,11 +1,11 @@
 import { bench, describe } from "vitest";
 import {
+  detectSpeech,
   loadTranscriptionModels,
   transcribeAudio,
   transcribeRange,
-} from "../transcribe";
-import { detectSpeech } from "./activity";
-import { callListenTool } from "./tool";
+} from "@open-minutes/pipeline/audio";
+import { callTool } from "../tool";
 import { findUntranscribedSpeech } from "./tools";
 import { clipContext, rollCallClip } from "./testdata/clips";
 
@@ -56,7 +56,7 @@ describe("find_untranscribed_speech on the clip", () => {
     "speech runs + decoding the one stretch it finds",
     async () => {
       const clip = rollCallClip();
-      await callListenTool(clipContext(clip), findUntranscribedSpeech, {
+      await callTool(clipContext(clip), findUntranscribedSpeech, {
         meeting: clip.meeting.ref,
       });
     },

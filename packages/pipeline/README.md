@@ -29,41 +29,11 @@ its work directory. The CLI is a thin wrapper over the exported API
 (`listIngested`, `listAvailable`, `ingestVideo` from
 `@open-minutes/pipeline/om`), so scripts and tests reuse the same logic.
 
-## Audio tools for transcript cleanup
+## Audio for the agent tools
 
-Diarization and recognition make mistakes that the transcript's text alone
-can't reveal: two people folded under one label, or speech the recognizer
-skipped. `pnpm audio` gives an agent (or a person) tools that look at the
-meeting's audio itself. It works like `pnpm tools`: JSON in, JSON out.
-
-```sh
-pnpm audio                                   # list the tools and golden meetings
-pnpm audio <tool> --schema                   # a tool's input, as JSON Schema
-pnpm audio find_untranscribed_speech '{"meeting":"gbos_9HoIM5INxpI"}'
-pnpm audio transcribe_range '{"meeting":"gbos_9HoIM5INxpI","from":"0:01:56","to":"0:02:07"}'
-```
-
-A meeting is a golden fixture name or a database meeting id (`--db` picks the
-database, as for `pnpm tools`). Its audio is downloaded into the per-machine
-cache (`~/.cache/open-minutes/meetings/<youtubeId>/`) on first use, and what's
-slow to compute (speech runs) is cached there too. Times are
-`H:MM:SS.ss` like golden PSV files, so they go straight into a psvtool op.
-
-- `speech_activity`: speech runs and pauses in a stretch, from voice activity
-  detection.
-- `find_untranscribed_speech`: stretches with speech but no transcript words,
-  each with what recognition hears when it decodes just that stretch.
-- `transcribe_range`: recognize one short stretch on its own, next to what the
-  transcript has there.
-
-The tools are in `src/listen/`, typed like `@open-minutes/tools`' (a zod input
-schema and a description for the model), exported as `listenTools`.
-
-`transcribe_range` decodes two seconds of audio either side of the range it's
-given, so the words at its edges are heard in context, and returns only the
-words that start inside it.
-
-`src/listen/audio.test.ts` runs the tools on a checked-in minute of real
-meeting audio (`src/listen/testdata/`), and `src/listen/audio.bench.ts` times
-the models on it. Because the clip is one minute long, `pnpm bench` reports
-each model's time per minute of audio, so a model swap shows what it costs.
+`src/audio.ts`, exported as `@open-minutes/pipeline/audio`, is what the audio
+tools in `@open-minutes/tools` need from the models: a meeting's cached audio,
+speech runs from Silero VAD (`detectSpeech`, with pauses down to 0.2 s where
+the transcriber cuts at 0.5 s), and `transcribeRange`, which decodes one
+stretch with two seconds of audio either side for context and returns only
+the words that start inside it.

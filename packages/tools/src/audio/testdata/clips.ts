@@ -2,10 +2,11 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import sherpa, { type WaveForm } from "sherpa-onnx-node";
+import { readWave, type WaveForm } from "@open-minutes/pipeline/audio";
 import { parsePsv } from "@open-minutes/fixtures/psv";
-import { labelGoldenSegments, type ListenMeeting } from "../meeting";
-import type { ListenContext } from "../tool";
+import { toolContext } from "../../context";
+import type { ToolContext } from "../../tool";
+import { type AudioMeeting, labelGoldenSegments } from "../meeting";
 
 // Short stretches of real meeting audio, checked in so the audio tools can be
 // tested (and timed) without downloading a meeting. Each is a 16 kHz mono
@@ -20,7 +21,7 @@ export interface Clip {
   /** Seconds into the source meeting the clip starts at. */
   offsetSecs: number;
   wave: WaveForm;
-  meeting: ListenMeeting;
+  meeting: AudioMeeting;
 }
 
 /**
@@ -36,7 +37,7 @@ export function rollCallClip(): Clip {
 }
 
 function loadClip(name: string, source: string, offsetSecs: number): Clip {
-  const wave = sherpa.readWave(join(HERE, `${name}.wav`));
+  const wave = readWave(join(HERE, `${name}.wav`));
   const segments = labelGoldenSegments(
     parsePsv({ path: join(HERE, `${name}.psv`) }),
   );
@@ -50,16 +51,17 @@ function loadClip(name: string, source: string, offsetSecs: number): Clip {
       audioPath: join(HERE, `${name}.wav`),
       // Fresh each time, so speech runs cached by one test don't leak into
       // another (or into a benchmark).
-      cacheDir: mkdtempSync(join(tmpdir(), `listen-${name}-`)),
+      cacheDir: mkdtempSync(join(tmpdir(), `audio-clip-${name}-`)),
       segments,
       wave: () => wave,
     },
   };
 }
 
-/** A context whose only meeting is `clip`, under its name. */
-export function clipContext(clip: Clip): ListenContext {
+/** A context whose only meeting is `clip`, under its name, and no database. */
+export function clipContext(clip: Clip): ToolContext {
   return {
+    ...toolContext(() => Promise.reject(new Error("No database for clips"))),
     meeting: async (ref) => {
       if (ref !== clip.meeting.ref) throw new Error(`No clip "${ref}"`);
       return clip.meeting;

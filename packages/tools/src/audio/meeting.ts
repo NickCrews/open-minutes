@@ -1,13 +1,13 @@
 import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { asc, eq } from "drizzle-orm";
-import sherpa, { type WaveForm } from "sherpa-onnx-node";
+import { meetingsTable, peopleTable, segmentsTable } from "@open-minutes/db";
 import {
-  type DB,
-  meetingsTable,
-  peopleTable,
-  segmentsTable,
-} from "@open-minutes/db";
+  getCachedAudio,
+  meetingCacheDir,
+  readWave,
+  type WaveForm,
+} from "@open-minutes/pipeline/audio";
 import {
   LAST_WORD_DURATION_SEC,
   type TranscriptWord,
@@ -17,7 +17,7 @@ import {
   TEST_DATA_ROOT,
 } from "@open-minutes/fixtures/test-data";
 import type { GoldenSegment } from "@open-minutes/fixtures/psv";
-import { getCachedAudio, meetingCacheDir } from "../test-utils/audio-cache";
+import { type Db, ToolError } from "../tool";
 
 /**
  * A run of words by one speaker, as the audio tools see it: the same shape
@@ -44,7 +44,7 @@ export interface LabeledSegment {
 }
 
 /** A meeting's audio and transcript, for the audio tools. */
-export interface ListenMeeting {
+export interface AudioMeeting {
   /** What the caller passed: a golden fixture name, or a database meeting id. */
   ref: string;
   youtubeId: string;
@@ -70,8 +70,8 @@ export function goldenRefs(): string[] {
  */
 export async function openMeeting(
   ref: string,
-  getDb: () => Promise<DB>,
-): Promise<ListenMeeting> {
+  getDb: () => Promise<Db>,
+): Promise<AudioMeeting> {
   const { youtubeId, segments } = /^\d+$/.test(ref)
     ? await loadFromDb(await getDb(), Number(ref))
     : loadFromGolden(ref);
@@ -85,13 +85,13 @@ export async function openMeeting(
     audioPath: audio.path,
     cacheDir: meetingCacheDir(youtubeId),
     segments,
-    wave: () => (wave ??= sherpa.readWave(audio.path)),
+    wave: () => (wave ??= readWave(audio.path)),
   };
 }
 
 function loadFromGolden(ref: string) {
   if (!existsSync(join(TEST_DATA_ROOT, "meetings", ref)))
-    throw new ListenError(
+    throw new ToolError(
       `No golden meeting "${ref}" and not a database meeting id. Golden meetings are the directory names under packages/fixtures/test-data/meetings/.`,
     );
   const meeting = getMeetingData(ref);
@@ -119,14 +119,14 @@ export function labelGoldenSegments(
     });
 }
 
-async function loadFromDb(db: DB, meetingId: number) {
+async function loadFromDb(db: Db, meetingId: number) {
   const [meeting] = await db
     .select({ youtubeId: meetingsTable.youtube_id })
     .from(meetingsTable)
     .where(eq(meetingsTable.id, meetingId));
-  if (!meeting) throw new ListenError(`No meeting ${meetingId}`);
+  if (!meeting) throw new ToolError(`No meeting ${meetingId}`);
   if (!meeting.youtubeId)
-    throw new ListenError(`Meeting ${meetingId} has no YouTube video`);
+    throw new ToolError(`Meeting ${meetingId} has no YouTube video`);
   const rows = await db
     .select({
       id: segmentsTable.id,
@@ -163,9 +163,4 @@ function toLabeled(
     end: words.at(-1)!.start + LAST_WORD_DURATION_SEC,
     words,
   };
-}
-
-/** A refused call: a bad reference or range. Printed as {"error": ...}. */
-export class ListenError extends Error {
-  override name = "ListenError";
 }

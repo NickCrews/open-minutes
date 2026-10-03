@@ -7,13 +7,12 @@
     "om": "./src/om/cli.ts"
   },
   "exports": {
-    "./om": "./src/om/index.ts"
+    "./om": "./src/om/index.ts",
+    "./audio": "./src/audio.ts"
   },
   "scripts": {
     "om": "tsx src/om/cli.ts",
-    "audio": "tsx src/listen/cli.ts",
     "test": "vitest run",
-    "bench": "vitest bench --run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -23,8 +22,7 @@
     "citty": "^0.1.6",
     "drizzle-orm": "1.0.0-beta.21",
     "opus-decoder": "^0.7.12",
-    "sherpa-onnx-node": "^1.12.39",
-    "zod": "^4.3.6"
+    "sherpa-onnx-node": "^1.12.39"
   },
   "devDependencies": {
     "@open-minutes/fixtures": "workspace:*",

@@ -12,12 +12,14 @@ import { chapterErrors } from "@open-minutes/core/chapters";
 import { hasTypographicDash } from "@open-minutes/core/text";
 import { transcriptFingerprint } from "@open-minutes/core/transcript-fingerprint";
 import { LAST_WORD_DURATION_SEC } from "@open-minutes/core/transcription";
+import { audioTools } from "./audio/tools";
 import { checkMeeting, type Issue } from "./check";
 import { loadChapters, loadSegments, round, speakerOf } from "./load";
 import { type Db, defineTool, type Tool, ToolError } from "./tool";
 
 // Tools for an agent cleaning up a meeting's data: reading the transcript,
-// fixing who said what, naming people, and replacing chapters. Every write
+// fixing who said what, naming people, and replacing chapters; and, in
+// ./audio/tools.ts, listening to the audio. Every write
 // runs in a transaction, re-checks the meetings it touched, and rolls back if
 // it introduced an error; `dryRun` always rolls back, to preview a change.
 
@@ -120,7 +122,8 @@ export const listMeetings = defineTool({
   description:
     "List every meeting with its id, body, date, and how many segments and chapters it has. Start here to find a meeting id.",
   input: z.object({}),
-  run: async (db) => {
+  run: async (ctx) => {
+    const db = await ctx.db();
     const meetings = await db
       .select({
         id: meetingsTable.id,
@@ -172,7 +175,8 @@ export const getTranscript = defineTool({
       .describe("Seconds; segments starting after this are left out."),
     words: z.boolean().default(false),
   }),
-  run: async (db, input) => {
+  run: async (ctx, input) => {
+    const db = await ctx.db();
     const segments = await loadSegments(db, input.meetingId);
     return segments
       .map((s) => ({
@@ -199,7 +203,8 @@ export const listSpeakers = defineTool({
   description:
     "List everyone who speaks in a meeting, by person or speaker number, with their segment count, speaking seconds, and first segment. Useful for spotting one voice split across two labels.",
   input: z.object({ meetingId: id }),
-  run: async (db, input) => {
+  run: async (ctx, input) => {
+    const db = await ctx.db();
     const bySpeaker = new Map<
       string,
       {
@@ -245,7 +250,8 @@ export const findPeople = defineTool({
     query: z.string().optional(),
     limit: z.int().positive().max(500).default(50),
   }),
-  run: async (db, input) => {
+  run: async (ctx, input) => {
+    const db = await ctx.db();
     const q = input.query && `%${input.query}%`;
     return db
       .select({
@@ -276,7 +282,7 @@ export const checkMeetingTool = defineTool({
   description:
     "List problems in a meeting's data. Errors: words or segments out of time order, invalid chapters. Warnings: speech no chapter covers, chapters outside the size conventions. Every write tool also returns this after its change.",
   input: z.object({ meetingId: id }),
-  run: (db, input) => checkMeeting(db, input.meetingId),
+  run: async (ctx, input) => checkMeeting(await ctx.db(), input.meetingId),
 });
 
 export const relabelSegments = defineTool({
@@ -289,7 +295,8 @@ export const relabelSegments = defineTool({
     speaker: speakerInput,
     dryRun,
   }),
-  run: async (db, input) => {
+  run: async (ctx, input) => {
+    const db = await ctx.db();
     const rows = await segmentsByIds(db, input.segmentIds);
     return applyEdit(
       db,
@@ -320,7 +327,8 @@ export const splitSegment = defineTool({
     speaker: speakerInput.optional(),
     dryRun,
   }),
-  run: async (db, input) => {
+  run: async (ctx, input) => {
+    const db = await ctx.db();
     const [seg] = await segmentsByIds(db, [input.segmentId]);
     if (input.atWord >= seg!.words.length)
       throw new ToolError(
@@ -359,7 +367,8 @@ export const mergeSegments = defineTool({
     speaker: speakerInput.optional(),
     dryRun,
   }),
-  run: async (db, input) => {
+  run: async (ctx, input) => {
+    const db = await ctx.db();
     const rows = await segmentsByIds(db, input.segmentIds);
     const meetingId = rows[0]!.meeting_id;
     if (rows.some((r) => r.meeting_id !== meetingId))
@@ -419,7 +428,8 @@ export const updatePerson = defineTool({
     bio: personText.nullable().optional(),
     dryRun,
   }),
-  run: async (db, { personId, dryRun: dry, ...fields }) => {
+  run: async (ctx, { personId, dryRun: dry, ...fields }) => {
+    const db = await ctx.db();
     const [person] = await db
       .select({ id: peopleTable.id })
       .from(peopleTable)
@@ -449,7 +459,8 @@ export const mergePeople = defineTool({
   description:
     "Two person rows are the same individual (recognition split one voice in two): move every segment of mergeId to keepId and delete mergeId. keepId's slug, name and bio win; empty ones are filled from mergeId. keepId's voiceprint is kept as is.",
   input: z.object({ keepId: id, mergeId: id, dryRun }),
-  run: async (db, input) => {
+  run: async (ctx, input) => {
+    const db = await ctx.db();
     if (input.keepId === input.mergeId)
       throw new ToolError("keepId and mergeId are the same person");
     const people = await db
@@ -495,8 +506,8 @@ export const getChapters = defineTool({
   description:
     "Read a meeting's chapters in order, with start and end seconds, title, summary and bullets.",
   input: z.object({ meetingId: id }),
-  run: async (db, input) =>
-    (await loadChapters(db, input.meetingId)).map((c) => ({
+  run: async (ctx, input) =>
+    (await loadChapters(await ctx.db(), input.meetingId)).map((c) => ({
       id: c.id,
       start: c.start,
       end: c.end,
@@ -533,7 +544,8 @@ export const replaceChapters = defineTool({
     chapters: z.array(chapterInput).min(1),
     dryRun,
   }),
-  run: async (db, input) => {
+  run: async (ctx, input) => {
+    const db = await ctx.db();
     const invalid = chapterErrors(input.chapters);
     if (invalid.length)
       throw new ToolError(
@@ -592,4 +604,5 @@ export const tools: Tool[] = [
   mergePeople,
   getChapters,
   replaceChapters,
+  ...audioTools,
 ] as Tool[];

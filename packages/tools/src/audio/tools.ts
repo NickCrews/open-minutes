@@ -3,7 +3,7 @@ import {
   cleanWords,
   type TranscriptWord,
 } from "@open-minutes/core/transcription";
-import { transcribeRange } from "../transcribe";
+import { transcribeRange } from "@open-minutes/pipeline/audio";
 import {
   clip,
   pauses,
@@ -13,14 +13,14 @@ import {
   untranscribedSpeech,
 } from "./activity";
 import { formatClock } from "./clock";
-import type { LabeledSegment, ListenMeeting } from "./meeting";
-import {
-  checkRange,
-  defineListenTool,
-  type ListenTool,
-  meetingRef,
-  time,
-} from "./tool";
+import { defineTool } from "../tool";
+import { checkRange, meetingRef, time } from "./inputs";
+import type { AudioMeeting, LabeledSegment } from "./meeting";
+
+// Tools that listen to a meeting's audio, for what the transcript's text can't
+// show: two people folded under one label, or speech the recognizer skipped.
+// They run on a golden fixture or a database meeting, whose audio is
+// downloaded into the per-machine cache on first use.
 
 /** The longest range transcribe_range decodes in one pass. */
 const MAX_TRANSCRIBE_SECS = 120;
@@ -41,7 +41,7 @@ function wordsText(words: readonly TranscriptWord[]): string {
 }
 
 /** The transcript's segments overlapping [from, to], each with its words in range. */
-function transcriptIn(meeting: ListenMeeting, from: number, to: number) {
+function transcriptIn(meeting: AudioMeeting, from: number, to: number) {
   return meeting.segments
     .filter((s) => s.end > from && s.start < to)
     .map((s) => ({
@@ -65,8 +65,9 @@ function neighbours(segments: readonly LabeledSegment[], t: number) {
   return { before, after };
 }
 
-export const speechActivity = defineListenTool({
+export const speechActivity = defineTool({
   name: "speech_activity",
+  label: "Speech activity",
   description:
     "Where someone is talking in a stretch of a meeting, from voice activity detection on the audio (not the transcript): the speech runs, the pauses between them, and how much speech the transcript's words don't account for. Use it to find the silence where one turn ends and the next begins, or to check whether a quiet stretch really is quiet.",
   input: z.object({
@@ -109,8 +110,9 @@ export const speechActivity = defineListenTool({
   },
 });
 
-export const findUntranscribedSpeech = defineListenTool({
+export const findUntranscribedSpeech = defineTool({
   name: "find_untranscribed_speech",
+  label: "Find untranscribed speech",
   description:
     "Find stretches where the audio has speech but the transcript has no words: a turn the recognizer skipped, a roll call answered under the chair's words, or words cut from a golden by mistake. For each stretch, gives the words just before and after it, and (unless transcribe is false) what speech recognition hears when it decodes just that stretch, so you can put the missing words back under the right speaker.",
   input: z.object({
@@ -181,8 +183,9 @@ export const findUntranscribedSpeech = defineListenTool({
   },
 });
 
-export const transcribeRangeTool = defineListenTool({
+export const transcribeRangeTool = defineTool({
   name: "transcribe_range",
+  label: "Transcribe a range",
   description: `Run speech recognition on just one stretch of a meeting's audio (at most ${MAX_TRANSCRIBE_SECS} s), and show it next to what the transcript has there. Decoding a short stretch on its own often recovers words the full-meeting pass dropped, and the onsets tell you where a missing word goes. Fillers and stutters are removed, as in the pipeline, unless raw is true.`,
   input: z.object({
     meeting: meetingRef,
@@ -203,8 +206,9 @@ export const transcribeRangeTool = defineListenTool({
   },
 });
 
-export const listenTools: ListenTool[] = [
+/** The audio tools, in the order an agent would usually reach for them. */
+export const audioTools = [
   speechActivity,
   findUntranscribedSpeech,
   transcribeRangeTool,
-] as ListenTool[];
+];

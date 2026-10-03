@@ -122,9 +122,6 @@ importers:
       sherpa-onnx-node:
         specifier: ^1.12.39
         version: 1.12.39
-      zod:
-        specifier: ^4.3.6
-        version: 4.3.6
     devDependencies:
       '@open-minutes/fixtures':
         specifier: workspace:*
@@ -144,6 +141,12 @@ importers:
       '@open-minutes/db':
         specifier: workspace:*
         version: link:../db
+      '@open-minutes/fixtures':
+        specifier: workspace:*
+        version: link:../fixtures
+      '@open-minutes/pipeline':
+        specifier: workspace:*
+        version: link:../pipeline
       drizzle-orm:
         specifier: 1.0.0-beta.21
         version: 1.0.0-beta.21(@neondatabase/serverless@1.1.0)(@types/mssql@9.1.11(@azure/core-client@1.10.1))(mssql@11.0.1(@azure/core-client@1.10.1))(postgres@3.4.9)(zod@4.3.6)
@@ -151,9 +154,6 @@ importers:
         specifier: ^4.3.6
         version: 4.3.6
     devDependencies:
-      '@open-minutes/fixtures':
-        specifier: workspace:*
-        version: link:../fixtures
       '@types/node':
         specifier: ^25.6.0
         version: 25.6.0

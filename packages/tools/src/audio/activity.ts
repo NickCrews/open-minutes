@@ -1,36 +1,23 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import sherpa, { type WaveForm } from "sherpa-onnx-node";
-import { ensureDownloaded } from "../model";
-import { VAD_MODEL_SPEC } from "../transcribe";
-import { EXPECTED_SAMPLE_RATE } from "../embed";
-import type { LabeledSegment, ListenMeeting } from "./meeting";
+import {
+  detectSpeech,
+  type Span,
+  SPEECH_RUNS_VERSION,
+} from "@open-minutes/pipeline/audio";
+import type { AudioMeeting, LabeledSegment } from "./meeting";
 
-// Where in the audio someone is talking, by Silero VAD, independent of the
-// transcript. The transcriber runs the same model to cut the audio into
-// chunks, but with a 0.5 s minimum silence; here pauses down to 0.2 s count,
-// so a turn boundary between two speakers shows up as a gap.
+// Where in a meeting someone is talking (Silero VAD, run by the pipeline's
+// `detectSpeech`), and arithmetic on those spans against the transcript's
+// words.
 
-/** A span of the audio, in seconds. */
-export interface Span {
-  start: number;
-  end: number;
-}
-
-const VAD_THRESHOLD = 0.5;
-const VAD_MIN_SILENCE_SEC = 0.2;
-const VAD_MIN_SPEECH_SEC = 0.1;
-const VAD_MAX_SPEECH_SEC = 60;
-const VAD_WINDOW_SIZE = 512;
-
-/** Bump to invalidate cached speech runs when the settings above change. */
-const SPEECH_RUNS_VERSION = 1;
+export type { Span };
 
 /**
  * Every speech run in the meeting, in time order. Computed once per meeting
  * (about 35 s for three hours of audio) and cached next to its audio.
  */
-export function speechRuns(meeting: ListenMeeting): Span[] {
+export function speechRuns(meeting: AudioMeeting): Span[] {
   const path = join(meeting.cacheDir, "speech-runs.json");
   if (existsSync(path)) {
     const cached = JSON.parse(readFileSync(path, "utf8")) as {
@@ -43,47 +30,6 @@ export function speechRuns(meeting: ListenMeeting): Span[] {
   const runs = detectSpeech(meeting.wave());
   writeFileSync(path, JSON.stringify({ version: SPEECH_RUNS_VERSION, runs }));
   return runs;
-}
-
-export function detectSpeech(wave: WaveForm): Span[] {
-  const files = ensureDownloaded(VAD_MODEL_SPEC).files;
-  const vad = new sherpa.Vad(
-    {
-      sileroVad: {
-        model: files["silero_vad.onnx"],
-        threshold: VAD_THRESHOLD,
-        minSilenceDuration: VAD_MIN_SILENCE_SEC,
-        minSpeechDuration: VAD_MIN_SPEECH_SEC,
-        maxSpeechDuration: VAD_MAX_SPEECH_SEC,
-        windowSize: VAD_WINDOW_SIZE,
-      },
-      sampleRate: EXPECTED_SAMPLE_RATE,
-      numThreads: 1,
-      provider: "cpu",
-      debug: 0,
-    },
-    VAD_MAX_SPEECH_SEC + 5,
-  );
-  const runs: Span[] = [];
-  const drain = () => {
-    while (!vad.isEmpty()) {
-      const seg = vad.front();
-      runs.push({
-        start: round(seg.start / wave.sampleRate),
-        end: round((seg.start + seg.samples.length) / wave.sampleRate),
-      });
-      vad.pop();
-    }
-  };
-  const { samples } = wave;
-  for (let i = 0; i + VAD_WINDOW_SIZE <= samples.length; i += VAD_WINDOW_SIZE) {
-    vad.acceptWaveform(samples.subarray(i, i + VAD_WINDOW_SIZE));
-    drain();
-  }
-  vad.flush();
-  drain();
-  // Runs force-split at VAD_MAX_SPEECH_SEC abut; join them back up.
-  return mergeSpans(runs, 0.01);
 }
 
 /** The parts of `spans` inside [from, to], clipped to it. */
