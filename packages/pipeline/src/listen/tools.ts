@@ -14,6 +14,7 @@ import {
 } from "./activity";
 import { formatClock } from "./clock";
 import type { LabeledSegment, ListenMeeting } from "./meeting";
+import { voiceTools } from "./voice-tools";
 import {
   checkRange,
   defineListenTool,
@@ -207,4 +208,5 @@ export const listenTools: ListenTool[] = [
   speechActivity,
   findUntranscribedSpeech,
   transcribeRangeTool,
+  ...voiceTools,
 ] as ListenTool[];

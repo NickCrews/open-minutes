@@ -46,7 +46,7 @@ pnpm audio transcribe_range '{"meeting":"gbos_9HoIM5INxpI","from":"0:01:56","to"
 A meeting is a golden fixture name or a database meeting id (`--db` picks the
 database, as for `pnpm tools`). Its audio is downloaded into the per-machine
 cache (`~/.cache/open-minutes/meetings/<youtubeId>/`) on first use, and what's
-slow to compute (speech runs) is cached there too. Times are
+slow to compute (speech runs, voiceprints) is cached there too. Times are
 `H:MM:SS.ss` like golden PSV files, so they go straight into a psvtool op.
 
 - `speech_activity`: speech runs and pauses in a stretch, from voice activity
@@ -55,6 +55,20 @@ slow to compute (speech runs) is cached there too. Times are
   each with what recognition hears when it decodes just that stretch.
 - `transcribe_range`: recognize one short stretch on its own, next to what the
   transcript has there.
+- `voice_timeline`: who it sounds like, moment to moment, next to the
+  transcript's labels, and where the voice changes.
+- `match_voice`: whose voice a stretch or segment sounds like, ranked over the
+  meeting's speaker labels.
+- `audit_speaker`: whether one label is really one voice, and which of its
+  segments sound like someone else.
+- `compare_speakers`: label pairs that sound alike (an anonymous speaker
+  number that's really a named person).
+
+The voice tools compare CAM++ voiceprints, the model diarization uses, of 2 s
+windows every 0.5 s (computed per minute of audio on first use, about a second
+each, and cached). Each speaker label's voiceprint is sampled from its own
+segments. On the golden meetings, one person's voiceprints score about 0.75 or
+more against each other and different people under 0.5.
 
 The tools are in `src/listen/`, typed like `@open-minutes/tools`' (a zod input
 schema and a description for the model), exported as `listenTools`.
