@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/solid-router";
 import { createServerFn } from "@tanstack/solid-start";
 import { For, Show } from "solid-js";
 import { getBodyById } from "~/features/bodies";
+import { meetingSeeds, Thumbnail } from "~/features/thumbnails/thumbnail";
 import { formatMeetingDate } from "@open-minutes/core/meeting-date";
 import { db } from "~/server/db";
 import { z } from "zod";
@@ -49,19 +50,32 @@ function BodyPage() {
           }
         >
           {(meeting) => (
-            <li class="py-2">
+            <li class="flex items-center gap-4 py-2">
               <Link
                 to="/meetings/$id"
                 params={{ id: String(meeting.id) }}
-                class="font-medium hover:underline"
+                tabIndex={-1}
+                class="w-24 shrink-0 sm:w-32"
               >
-                {meeting.title || "(untitled)"}
+                <Thumbnail
+                  youtubeId={meeting.youtube_id}
+                  seeds={meetingSeeds({ id: meeting.id, body: body() })}
+                />
               </Link>
-              <Show when={formatMeetingDate(meeting)}>
-                {(when) => (
-                  <span class="text-muted-foreground text-sm"> — {when()}</span>
-                )}
-              </Show>
+              <div class="min-w-0">
+                <Link
+                  to="/meetings/$id"
+                  params={{ id: String(meeting.id) }}
+                  class="font-medium hover:underline"
+                >
+                  {meeting.title || "(untitled)"}
+                </Link>
+                <Show when={formatMeetingDate(meeting)}>
+                  {(when) => (
+                    <p class="text-muted-foreground text-sm">{when()}</p>
+                  )}
+                </Show>
+              </div>
             </li>
           )}
         </For>
