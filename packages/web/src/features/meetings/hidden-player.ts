@@ -1,3 +1,4 @@
+import { getRouteApi } from "@tanstack/solid-router";
 import { createSignal, onCleanup } from "solid-js";
 import { storedAudioUrl } from "~/lib/audio-store";
 import { createYouTubePlayer, PlayerState, type YTPlayer } from "~/lib/youtube";
@@ -22,6 +23,7 @@ export type PlayableMeeting = { id: number; youtubeId: string };
  * excerpt stops playback where its shown segments run out.
  */
 export function createHiddenPlayer() {
+  const config = getRouteApi("__root__").useLoaderData();
   const [meetingId, setMeetingId] = createSignal<number | null>(null);
   const [currentTime, setCurrentTime] = createSignal(0);
   const [playing, setPlaying] = createSignal(false);
@@ -196,7 +198,9 @@ export function createHiddenPlayer() {
   };
 
   const audioUrl = (meeting: PlayableMeeting) =>
-    notStored.has(meeting.youtubeId) ? null : storedAudioUrl(meeting.youtubeId);
+    notStored.has(meeting.youtubeId)
+      ? null
+      : storedAudioUrl(config().objectStorePublicUrl, meeting.youtubeId);
 
   /** Plays `meeting` from `secs` until `stop` says to stop, or it's paused. */
   const play = async (

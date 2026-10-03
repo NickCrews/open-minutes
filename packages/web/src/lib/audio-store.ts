@@ -1,7 +1,7 @@
 /**
- * Where a meeting's audio lives in the object store, or null when the store
- * isn't configured (OBJECT_STORE_PUBLIC_URL at build time) or this browser
- * can't play it.
+ * Where a meeting's audio lives in the object store (at `base`, the store's
+ * public URL), or null when the store isn't configured or this browser can't
+ * play it.
  *
  * The fetch-youtube-audio workflow stores each video's audio as
  * `youtube/<video id>/speech.webm`: 16 kHz mono Opus at 24 kbps, ~11 MB an
@@ -10,10 +10,12 @@
  * a YouTube embed can load. Not every ingested video is in the store, so a
  * caller falls back to YouTube when this URL fails to load.
  */
-export function storedAudioUrl(youtubeId: string): string | null {
-  const base = import.meta.env.OBJECT_STORE_PUBLIC_URL?.replace(/\/$/, "");
+export function storedAudioUrl(
+  base: string | null,
+  youtubeId: string,
+): string | null {
   if (!base || !canPlayWebmOpus()) return null;
-  return `${base}/youtube/${encodeURIComponent(youtubeId)}/speech.webm`;
+  return `${base.replace(/\/$/, "")}/youtube/${encodeURIComponent(youtubeId)}/speech.webm`;
 }
 
 let webmOpus: boolean | undefined;
