@@ -4,6 +4,7 @@ import { tanstackStart } from "@tanstack/solid-start/plugin/vite";
 import solidPlugin from "vite-plugin-solid";
 import tailwindcss from "@tailwindcss/vite";
 import path from "node:path";
+import { loadRootDotEnv } from "@open-minutes/core/dotenv";
 import { prepareDevDatabase } from "./vite/dev-database";
 
 // Load this config with `--configLoader runner`, as the package.json scripts do.
@@ -16,7 +17,15 @@ export default defineConfig(async ({ command, isPreview }) => {
   // Only the dev server: builds must not touch (or bake in) a database URL.
   const databaseUrl =
     command === "serve" && !isPreview ? await prepareDevDatabase() : undefined;
+  loadRootDotEnv();
   return {
+    define: {
+      // Public, and read by the browser (see src/lib/audio-store.ts), so it's
+      // baked into the build rather than read from the Worker's environment.
+      "import.meta.env.OBJECT_STORE_PUBLIC_URL": JSON.stringify(
+        process.env.OBJECT_STORE_PUBLIC_URL ?? "",
+      ),
+    },
     server: {
       port: 3000,
     },

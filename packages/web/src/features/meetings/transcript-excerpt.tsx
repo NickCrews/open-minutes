@@ -1,4 +1,11 @@
-import { createMemo, createSignal, For, type JSX, Show } from "solid-js";
+import {
+  createMemo,
+  createSignal,
+  For,
+  type JSX,
+  onMount,
+  Show,
+} from "solid-js";
 import { LAST_WORD_DURATION_SEC } from "@open-minutes/core/transcription";
 import { Button } from "~/components/button";
 import { assignSpeakers, type Segment, speakerKey } from "./speaker-identity";
@@ -133,6 +140,12 @@ export function TranscriptExcerpt(props: {
       shouldStop,
     );
   const canPlay = () => props.youtubeId !== "";
+  // Get the audio loading while the reader looks for something to play.
+  onMount(() => {
+    if (canPlay()) {
+      props.player.prepare({ id: props.meetingId, youtubeId: props.youtubeId });
+    }
+  });
 
   const SegmentRow = (row: { index: number }) => {
     const segment = props.segments[row.index]!;

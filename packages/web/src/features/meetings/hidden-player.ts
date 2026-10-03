@@ -1,13 +1,20 @@
 import { createSignal, onCleanup } from "solid-js";
+import { storedAudioUrl } from "~/lib/audio-store";
 import { createYouTubePlayer, PlayerState, type YTPlayer } from "~/lib/youtube";
 
 /** A meeting's video, as the hidden player needs to know it. */
 export type PlayableMeeting = { id: number; youtubeId: string };
 
 /**
- * An invisible YouTube player for audio-only playback of meeting excerpts, one
- * shared by every meeting on the page. Created lazily on the first play;
- * playing another meeting loads its video into the same player.
+ * An invisible player for audio-only playback of meeting excerpts, one shared
+ * by every meeting on the page.
+ *
+ * It plays a meeting's audio from the object store (see `storedAudioUrl`)
+ * where it can: a plain `<audio>` element starts in well under a second.
+ * Meetings missing from the store, and browsers that can't play its WebM
+ * Opus, get an invisible YouTube embed instead, which takes a few seconds to
+ * create; `prepare` gets that (or the store's file) loading before the first
+ * click. Playing another meeting loads it into the same element or embed.
  *
  * It polls the playhead like the meeting page's visible player does, so an
  * excerpt can highlight words as they are spoken. Each play hands over a
@@ -19,25 +26,47 @@ export function createHiddenPlayer() {
   const [currentTime, setCurrentTime] = createSignal(0);
   const [playing, setPlaying] = createSignal(false);
   let host: HTMLDivElement | undefined;
-  let playerPromise: Promise<YTPlayer> | undefined;
-  let loadedVideo: string | null = null;
+  /** The meeting last asked to play, and which of the two is playing it. */
+  let current: PlayableMeeting | null = null;
+  let source: "audio" | "youtube" | null = null;
   let shouldStop: ((secs: number) => boolean) | undefined;
   // The playhead position just asked for. Until the player reports reaching
-  // it, polled times are the old position (or, on a fresh player, a start
-  // rounded down to the second), so they neither move the highlight nor get
-  // checked against `shouldStop`.
+  // it, polled times are the old position (or, on a fresh YouTube player, a
+  // start rounded down to the second), so they neither move the highlight nor
+  // get checked against `shouldStop`.
   let pendingSeek: number | null = null;
   let poll: ReturnType<typeof setInterval> | undefined;
   let disposed = false;
 
+  let audio: HTMLAudioElement | undefined;
+  /** The video whose stored audio `audio` holds. */
+  let audioVideo: string | null = null;
+  /** Videos whose stored audio failed to load, so play from YouTube. */
+  const notStored = new Set<string>();
+
+  let youtube: Promise<YTPlayer> | undefined;
+  let youtubePlayer: YTPlayer | undefined;
+  /** The video loaded into the YouTube player. */
+  let youtubeVideo: string | null = null;
+
   onCleanup(() => {
     disposed = true;
     clearInterval(poll);
-    void playerPromise?.then((player) => player.destroy());
+    if (audio) {
+      audio.pause();
+      audio.removeAttribute("src");
+      audio.load();
+    }
+    void youtube?.then((player) => player.destroy());
   });
 
-  const onPoll = (player: YTPlayer) => {
-    const secs = player.getCurrentTime?.();
+  const onPoll = () => {
+    const secs =
+      source === "audio"
+        ? audio?.currentTime
+        : source === "youtube"
+          ? youtubePlayer?.getCurrentTime?.()
+          : undefined;
     if (typeof secs !== "number" || Number.isNaN(secs)) return;
     if (pendingSeek != null) {
       if (Math.abs(secs - pendingSeek) > 1) return;
@@ -45,27 +74,112 @@ export function createHiddenPlayer() {
     }
     setCurrentTime(secs);
     if (playing() && shouldStop?.(secs)) {
-      player.pauseVideo();
+      if (source === "audio") audio?.pause();
+      else youtubePlayer?.pauseVideo();
       setPlaying(false);
     }
   };
+  // Neither player has an event fine-grained enough to follow words by, so
+  // poll.
+  const startPolling = () => (poll ??= setInterval(onPoll, 250));
 
-  const createPlayer = async (videoId: string, startSecs: number) => {
+  const getAudio = () => {
+    if (audio) return audio;
+    const el = new Audio();
+    el.preload = "metadata";
+    el.addEventListener("playing", () => {
+      if (source === "audio") setPlaying(true);
+    });
+    for (const event of ["pause", "ended"]) {
+      el.addEventListener(event, () => {
+        if (source === "audio") setPlaying(false);
+      });
+    }
+    // Not in the store (or not loadable): carry on from YouTube.
+    el.addEventListener("error", () => {
+      if (disposed || !audioVideo) return;
+      notStored.add(audioVideo);
+      audioVideo = null;
+      if (source === "audio" && current && playing()) {
+        void playYouTube(current, pendingSeek ?? currentTime());
+      }
+    });
+    startPolling();
+    return (audio = el);
+  };
+
+  const loadAudio = (youtubeId: string, url: string) => {
+    const el = getAudio();
+    if (audioVideo !== youtubeId) {
+      audioVideo = youtubeId;
+      el.src = url;
+    }
+    return el;
+  };
+
+  const playAudio = (meeting: PlayableMeeting, url: string, secs: number) => {
+    source = "audio";
+    youtubePlayer?.pauseVideo();
+    const el = loadAudio(meeting.youtubeId, url);
+    // Before the metadata loads, this sets where playback will start.
+    el.currentTime = secs;
+    el.play().catch((error: unknown) => {
+      // A failed load is the error event's to handle. This is the browser
+      // refusing to play without a click, which shouldn't happen from one.
+      if (error instanceof DOMException && error.name === "NotAllowedError") {
+        if (source === "audio") setPlaying(false);
+      }
+    });
+  };
+
+  const createYouTube = async (
+    videoId: string,
+    startSecs: number,
+    autoplay: boolean,
+  ) => {
+    youtubeVideo = videoId;
     const player = await createYouTubePlayer(host!, {
       videoId,
-      playerVars: { autoplay: 1, start: Math.floor(startSecs), playsinline: 1 },
+      playerVars: {
+        autoplay: autoplay ? 1 : 0,
+        start: Math.floor(startSecs),
+        playsinline: 1,
+      },
       onStateChange: ({ data }) => {
+        if (source !== "youtube") return;
         if (data === PlayerState.playing) setPlaying(true);
         else if (data === PlayerState.paused || data === PlayerState.ended)
           setPlaying(false);
       },
     });
     // `start` only takes whole seconds.
-    player.seekTo(startSecs, true);
-    // The IFrame API has no timeupdate event, so poll.
-    poll = setInterval(() => onPoll(player), 250);
+    if (autoplay) player.seekTo(startSecs, true);
+    youtubePlayer = player;
+    startPolling();
     return player;
   };
+
+  const playYouTube = async (meeting: PlayableMeeting, secs: number) => {
+    source = "youtube";
+    audio?.pause();
+    if (!youtube) {
+      youtube = createYouTube(meeting.youtubeId, secs, true);
+      return;
+    }
+    const player = await youtube;
+    // Superseded while the player was still being created.
+    if (disposed || current !== meeting || source !== "youtube") return;
+    if (youtubeVideo === meeting.youtubeId) {
+      player.seekTo(secs, true);
+      player.playVideo();
+    } else {
+      youtubeVideo = meeting.youtubeId;
+      player.loadVideoById({ videoId: meeting.youtubeId, startSeconds: secs });
+    }
+  };
+
+  const audioUrl = (meeting: PlayableMeeting) =>
+    notStored.has(meeting.youtubeId) ? null : storedAudioUrl(meeting.youtubeId);
 
   /** Plays `meeting` from `secs` until `stop` says to stop, or it's paused. */
   const play = async (
@@ -77,29 +191,36 @@ export function createHiddenPlayer() {
     // Move the highlight right away rather than on the next poll.
     setCurrentTime(secs);
     setPlaying(true);
+    current = meeting;
     shouldStop = stop;
     pendingSeek = secs;
-    if (!playerPromise) {
-      loadedVideo = meeting.youtubeId;
-      playerPromise = createPlayer(meeting.youtubeId, secs);
-      return;
-    }
-    const player = await playerPromise;
-    if (disposed) return;
-    if (loadedVideo === meeting.youtubeId) {
-      player.seekTo(secs, true);
-      player.playVideo();
-    } else {
-      loadedVideo = meeting.youtubeId;
-      player.loadVideoById({ videoId: meeting.youtubeId, startSeconds: secs });
+    const url = audioUrl(meeting);
+    if (url) playAudio(meeting, url, secs);
+    else await playYouTube(meeting, secs);
+  };
+
+  /**
+   * Gets `meeting` loading, so a first play starts sooner: an excerpt calls
+   * this when it shows. Does nothing once anything has played, by when the
+   * player is warm anyway.
+   */
+  const prepare = (meeting: PlayableMeeting) => {
+    if (current || disposed) return;
+    const url = audioUrl(meeting);
+    if (url) loadAudio(meeting.youtubeId, url);
+    else if (!youtube && host) {
+      youtube = createYouTube(meeting.youtubeId, 0, false);
     }
   };
 
   const pause = () => {
     setPlaying(false);
-    void playerPromise?.then((player) => {
-      if (!playing()) player.pauseVideo();
-    });
+    if (source === "audio") audio?.pause();
+    else {
+      void youtube?.then((player) => {
+        if (!playing()) player.pauseVideo();
+      });
+    }
   };
 
   return {
@@ -108,6 +229,7 @@ export function createHiddenPlayer() {
     currentTime,
     playing,
     play,
+    prepare,
     pause,
     setHost: (el: HTMLDivElement) => (host = el),
   };

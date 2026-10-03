@@ -152,6 +152,9 @@ jobs:
       - uses: ./.github/actions/setup
 
       - name: Build
+        env:
+          # Baked into the client, which plays excerpts' audio from the store.
+          OBJECT_STORE_PUBLIC_URL: ${{ vars.OBJECT_STORE_PUBLIC_URL }}
         run: pnpm --filter @open-minutes/web build
 
       # Production is the Neon project's default branch, which neonctl uses

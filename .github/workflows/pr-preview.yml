@@ -110,6 +110,9 @@ jobs:
       # The build never touches a database: vite.config.ts only resolves one
       # for the dev server, so dist/server/wrangler.json has no vars.
       - name: Build
+        env:
+          # Baked into the client, which plays excerpts' audio from the store.
+          OBJECT_STORE_PUBLIC_URL: ${{ vars.OBJECT_STORE_PUBLIC_URL }}
         run: pnpm --filter @open-minutes/web build
 
       - name: Deploy the preview Worker
