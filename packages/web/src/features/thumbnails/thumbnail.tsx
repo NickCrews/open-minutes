@@ -118,7 +118,11 @@ export function GeneratedArtwork(props: { seeds: ArtworkSeeds }) {
   );
 }
 
-/** Seeds for a body's artwork: its own palette and layout, its short name. */
+/**
+ * Seeds for a body's artwork: its own palette and layout, its short name.
+ * A body always gets artwork rather than one of its videos' thumbnails, so it
+ * looks the same however its meetings change, and never like one of them.
+ */
 export function bodySeeds(body: {
   id: number;
   name: string;
