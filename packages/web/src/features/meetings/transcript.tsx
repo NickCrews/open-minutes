@@ -37,7 +37,7 @@ type SegmentStatus = "past" | "active" | "future";
 /** A search hit, as the inclusive range of words it covers in one segment. */
 export type Match = { segment: number; from: number; to: number };
 
-const MIN_QUERY_LENGTH = 2;
+export const MIN_QUERY_LENGTH = 2;
 /** How far the skip buttons jump, in seconds. */
 const JUMP_SECS = 15;
 
