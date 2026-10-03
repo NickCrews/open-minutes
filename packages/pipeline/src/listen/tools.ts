@@ -15,6 +15,7 @@ import {
 import { formatClock } from "./clock";
 import type { LabeledSegment, ListenMeeting } from "./meeting";
 import { voiceTools } from "./voice-tools";
+import { renderAudioTool } from "./render";
 import {
   checkRange,
   defineListenTool,
@@ -209,4 +210,5 @@ export const listenTools: ListenTool[] = [
   findUntranscribedSpeech,
   transcribeRangeTool,
   ...voiceTools,
+  renderAudioTool,
 ] as ListenTool[];
