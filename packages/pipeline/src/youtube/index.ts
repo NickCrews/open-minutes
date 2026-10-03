@@ -204,7 +204,7 @@ async function ensureAudioDownloaded(
 /** The repo whose fetch-youtube-audio workflow fills the object store. */
 const FETCH_YOUTUBE_AUDIO_REPO = "NickCrews/open-minutes";
 const FETCH_YOUTUBE_AUDIO_POLL_MS = 5_000;
-/** A fetch-youtube-audio run takes under a minute; this allows for a queue. */
+/** A fetch-youtube-audio run takes 2-6 minutes; this allows for a queue. */
 const FETCH_YOUTUBE_AUDIO_TIMEOUT_MS = 20 * 60_000;
 
 /**

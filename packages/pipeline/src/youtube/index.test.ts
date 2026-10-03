@@ -53,7 +53,8 @@ describe("YouTube Module", () => {
       result = await yt.ensureAudioDownloaded(sampleVideo, path);
       expect(result).toHaveProperty("downloaded", false);
     },
-    // Long enough for a fetch-youtube-audio run, when the store doesn't have it yet.
-    10 * 60_000,
+    // The sample is in the store, so this takes a second or two. A miss waits
+    // on a fetch-youtube-audio run, which takes 2-6 minutes.
+    5 * 60_000,
   );
 });

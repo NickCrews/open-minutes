@@ -15,9 +15,9 @@ const SLUG = "pzc_DwFHRjobjcY";
 
 const test = dbTest({
   data: goldenMeetingsData([SLUG]),
-  // Long enough for a fetch-youtube-audio run, when the store doesn't have
-  // the audio yet.
-  setupTimeoutMs: 30 * 60_000,
+  // ~10 s on CI, cold. Every golden's audio is in the store; a miss waits on
+  // a fetch-youtube-audio run, which can take longer than this.
+  setupTimeoutMs: 5 * 60_000,
 });
 
 describe("goldenMeetingsData", () => {

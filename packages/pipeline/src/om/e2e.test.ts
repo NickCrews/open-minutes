@@ -53,7 +53,7 @@ const E2E_WORK_ROOT = fileURLToPath(
 // template; every later run clones it in milliseconds.
 const test = dbTest({
   data: goldenMeetingsData(SEED_SLUGS),
-  setupTimeoutMs: 60 * 60_000,
+  setupTimeoutMs: 5 * 60_000,
 });
 
 describe("e2e cross-meeting speaker recognition", () => {
