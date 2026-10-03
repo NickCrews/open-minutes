@@ -3,8 +3,13 @@ import type { MeetingWhen } from "@open-minutes/core/meeting-date";
 import { eq } from "drizzle-orm";
 import { intervalToSecs } from "~/lib/format";
 
+/**
+ * Every meeting with a transcript. A meeting is recorded when its video is
+ * discovered, before it's transcribed; until then there's nothing to read.
+ */
 export function getAllMeetings(db: DB) {
   return db.query.meetingsTable.findMany({
+    where: { segments: true },
     with: { body: { with: { jurisdiction: true } } },
     orderBy: { date: "desc", time: "desc" },
   });

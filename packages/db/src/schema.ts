@@ -82,6 +82,12 @@ export const videoSourcesTable = pgTable("video_sources", {
   created_at: timestamp().notNull().defaultNow(),
 });
 
+/**
+ * One meeting of a body, recorded as one video. The row is created when the
+ * video is discovered, before anything is processed; its transcript, chapters
+ * and summary arrive later, each recorded in `processing_runs`. Until the
+ * transcript does, the meeting has no segments and readers aren't shown it.
+ */
 export const meetingsTable = pgTable(
   "meetings",
   {
@@ -288,6 +294,106 @@ export const chaptersTable = pgTable(
 );
 
 /**
+ * The processing steps a meeting goes through after discovery, each named for
+ * what it produces. A step runs after the steps it depends on (chapters and
+ * the summary are written from the transcript). See ADR 0005.
+ */
+export const PROCESSING_STEPS = ["transcript", "chapters", "summary"] as const;
+export type ProcessingStep = (typeof PROCESSING_STEPS)[number];
+
+export const PROCESSING_RUN_STATUSES = [
+  "running",
+  "succeeded",
+  "failed",
+] as const;
+export type ProcessingRunStatus = (typeof PROCESSING_RUN_STATUSES)[number];
+
+/** A run's `version` for output made or verified by a person: never stale. */
+export const HUMAN_VERSION = "human";
+/** A run's `version` for output made before runs were recorded. */
+export const UNTRACKED_VERSION = "untracked";
+
+/**
+ * One attempt at one processing step for one meeting: the audit trail of how
+ * every meeting's transcript (and later its chapters and summary) was made.
+ * Append-only: a run is inserted as `running` and finished exactly once, as
+ * `succeeded` or `failed`; reprocessing adds a run rather than editing one.
+ *
+ * `version` is the step's version in the code that ran it, so when the logic
+ * changes (a new model, a new cleaning rule) and the version is bumped, the
+ * meetings whose latest successful run is at an older version are the ones to
+ * reprocess. Two versions are special: "human" (made or verified by a person,
+ * never superseded by a pipeline run) and "untracked" (made before runs were
+ * recorded). The `meeting_processing` view gives each meeting's latest
+ * successful run per step. See ADR 0005.
+ */
+export const processingRunsTable = pgTable(
+  "processing_runs",
+  {
+    id: serial().primaryKey(),
+    meeting_id: integer()
+      .notNull()
+      .references(() => meetingsTable.id),
+    step: varchar().$type<ProcessingStep>().notNull(),
+    version: varchar().notNull(),
+    status: varchar().$type<ProcessingRunStatus>().notNull().default("running"),
+    started_at: timestamp().notNull().defaultNow(),
+    // Null exactly while the run is `running`. A run whose process died stays
+    // `running`; readers treat one that has run implausibly long as abandoned.
+    finished_at: timestamp(),
+    // Why a failed run failed. Null otherwise.
+    error: varchar(),
+    // Where it ran: a GitHub Actions run, whose log has the details. Null for
+    // a run on someone's machine.
+    run_url: varchar(),
+    // Whatever else an audit needs, per step: the commit, the models, counts.
+    details: jsonb().$type<Record<string, unknown>>().notNull().default({}),
+  },
+  (table) => [
+    check(
+      "processing_runs_step",
+      sql`${table.step} IN ('transcript', 'chapters', 'summary')`,
+    ),
+    check(
+      "processing_runs_status",
+      sql`${table.status} IN ('running', 'succeeded', 'failed')`,
+    ),
+    check(
+      "processing_runs_finished_iff_done",
+      sql`(${table.status} = 'running') = (${table.finished_at} IS NULL)`,
+    ),
+    check(
+      "processing_runs_error_iff_failed",
+      sql`(${table.status} = 'failed') = (${table.error} IS NOT NULL)`,
+    ),
+    index("idx_processing_runs_meeting_step").on(
+      table.meeting_id,
+      table.step,
+      table.started_at,
+    ),
+  ],
+);
+
+/**
+ * When each step last succeeded for each meeting, and at which version: "when
+ * was this meeting last transcribed, and by what". A meeting with no row for a
+ * step has never completed it.
+ */
+export const meetingProcessingView = pgView("meeting_processing", {
+  meeting_id: integer().notNull(),
+  step: varchar().$type<ProcessingStep>().notNull(),
+  run_id: integer().notNull(),
+  version: varchar().notNull(),
+  succeeded_at: timestamp().notNull(),
+}).as(
+  sql`SELECT DISTINCT ON (meeting_id, step)
+        meeting_id, step, id AS run_id, version, finished_at AS succeeded_at
+      FROM processing_runs
+      WHERE status = 'succeeded'
+      ORDER BY meeting_id, step, finished_at DESC, id DESC`,
+);
+
+/**
  * How long each speaker talked within each chapter: the segments overlapping
  * the chapter, clipped to its range, summed per speaker. Keyed like the web's
  * speaker grouping: by person when there is one, else by speaker number, else
@@ -321,6 +427,7 @@ export const relations = defineRelations(
     segmentsTable,
     chapterGenerationsTable,
     chaptersTable,
+    processingRunsTable,
   },
   (r) => ({
     jurisdictionsTable: {
@@ -368,6 +475,17 @@ export const relations = defineRelations(
       chapterGenerations: r.many.chapterGenerationsTable({
         from: r.meetingsTable.id,
         to: r.chapterGenerationsTable.meeting_id,
+      }),
+      processingRuns: r.many.processingRunsTable({
+        from: r.meetingsTable.id,
+        to: r.processingRunsTable.meeting_id,
+      }),
+    },
+    processingRunsTable: {
+      meeting: r.one.meetingsTable({
+        from: r.processingRunsTable.meeting_id,
+        to: r.meetingsTable.id,
+        optional: false,
       }),
     },
     peopleTable: {

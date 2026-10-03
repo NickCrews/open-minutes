@@ -6,10 +6,14 @@ import {
   bodiesTable,
   jurisdictionsTable,
   meetingsTable,
+  processingRunsTable,
+  type ProcessingRunStatus,
+  type ProcessingStep,
   videoSourcesTable,
 } from "@open-minutes/db";
 import { eq } from "drizzle-orm";
 import type { YouTube } from "../youtube";
+import { TRANSCRIPT_VERSION } from "./transcript";
 import { dbTest } from "@open-minutes/db/testing/vitest";
 import { goldenData } from "@open-minutes/fixtures/golden-data";
 import { loadBodies } from "@open-minutes/fixtures/test-data";
@@ -89,6 +93,33 @@ export async function insertMeeting(
     })
     .returning({ id: meetingsTable.id });
   return row!.id;
+}
+
+/**
+ * Record a finished processing run, as if a step had run. Defaults to a
+ * transcript run that succeeded at the current version.
+ */
+export async function insertRun(
+  db: DB,
+  meetingId: number,
+  run: {
+    step?: ProcessingStep;
+    version?: string;
+    status?: Exclude<ProcessingRunStatus, "running">;
+    finishedAt?: Date;
+  } = {},
+): Promise<void> {
+  const status = run.status ?? "succeeded";
+  const finishedAt = run.finishedAt ?? new Date();
+  await db.insert(processingRunsTable).values({
+    meeting_id: meetingId,
+    step: run.step ?? "transcript",
+    version: run.version ?? TRANSCRIPT_VERSION,
+    status,
+    started_at: finishedAt,
+    finished_at: finishedAt,
+    error: status === "failed" ? "it broke" : null,
+  });
 }
 
 const workRootFixture = {

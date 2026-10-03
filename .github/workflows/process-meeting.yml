@@ -1,0 +1,94 @@
+# Processes one discovered meeting: runs each processing step that is due for
+# it (today the transcript: download, transcribe, clean, diarize, align,
+# recognize) and records every run in production's `processing_runs`. See
+# ADR 0005.
+#
+# discover-meetings.yml dispatches one of these per pending meeting. Run one
+# by hand with
+#   gh workflow run process-meeting.yml -f youtube_id=<id>
+# and add `-f stale=true` to redo steps made by an older version of the code.
+# Run by hand, a step that has failed too often is retried too.
+#
+# The audio comes from the object store. If it isn't there yet, the pipeline
+# dispatches fetch-youtube-audio.yml and waits for it (see
+# packages/pipeline/src/youtube), which is what actions: write is for.
+#
+# Runs the `production` branch's code, which matches production's schema; the
+# workflow file itself always comes from main. Opt-in: does nothing until the
+# repo has the NEON_API_KEY secret and NEON_PROJECT_ID variable (as
+# production.yml uses) and the OBJECT_STORE_PUBLIC_URL variable.
+name: process-meeting
+
+on:
+  workflow_dispatch:
+    inputs:
+      youtube_id:
+        description: YouTube video ID of a meeting already in the database
+        required: true
+      stale:
+        description: Also redo steps made by an older version of the code
+        type: boolean
+        default: false
+
+# One run per meeting at a time; a second request queues, then finds nothing
+# due. Different meetings run in parallel.
+concurrency:
+  group: process-meeting-${{ inputs.youtube_id }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  process:
+    if: vars.NEON_PROJECT_ID != ''
+    runs-on: ubuntu-latest
+    # A full meeting takes 10-20 minutes on CPU (see the slow tests); this
+    # leaves room for long ones and a wait for the audio. It must stay under
+    # the 6 hours after which the pipeline takes a run that never finished as
+    # abandoned (ABANDONED_AFTER_MS in packages/pipeline/src/om/runs.ts).
+    timeout-minutes: 300
+    env:
+      YOUTUBE_ID: ${{ inputs.youtube_id }}
+      OBJECT_STORE_PUBLIC_URL: ${{ vars.OBJECT_STORE_PUBLIC_URL }}
+      YOUTUBE_AUDIO_DISPATCH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Check the video ID
+        run: |
+          if ! [[ "$YOUTUBE_ID" =~ ^[A-Za-z0-9_-]{11}$ ]]; then
+            echo "::error::not a YouTube video ID: $YOUTUBE_ID"
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+        with:
+          ref: production
+      - uses: ./.github/actions/setup
+      - uses: ./.github/actions/models
+
+      # Production is the Neon project's default branch, which neonctl uses
+      # when given no branch. Unpooled (the default), since `om` checks the
+      # schema with an advisory lock first.
+      - name: Connect to production
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+        run: |
+          url=$(npx --yes neonctl@2 connection-string \
+            --project-id "$NEON_PROJECT_ID" --no-analytics)
+          echo "::add-mask::$url"
+          if [[ "$url" != postgres* ]]; then
+            echo "::error::neonctl didn't return a connection string for production."
+            exit 1
+          fi
+          echo "DB=$url" >> "$GITHUB_ENV"
+
+      - name: Process the meeting
+        env:
+          STALE: ${{ inputs.stale && '--stale' || '' }}
+        run: |
+          status=0
+          pnpm -s om process "$YOUTUBE_ID" $STALE || status=$?
+          { echo '```'; pnpm -s om status "$YOUTUBE_ID"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          exit "$status"

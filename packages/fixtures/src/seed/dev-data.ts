@@ -4,12 +4,14 @@ import { join, relative } from "node:path";
 import { sql } from "drizzle-orm";
 import {
   type DB,
+  HUMAN_VERSION,
   bodiesTable,
   chapterGenerationsTable,
   chaptersTable,
   jurisdictionsTable,
   meetingsTable,
   peopleTable,
+  processingRunsTable,
   segmentsTable,
   videoSourcesTable,
 } from "@open-minutes/db";
@@ -30,11 +32,12 @@ import { advanceIdSequences } from "./sequences";
 
 // Bump when the seeder's behavior changes in a way the fixture files don't
 // capture.
-const DEV_SEED_VERSION = 2; // 2: seeds chapters
+const DEV_SEED_VERSION = 3; // 2: seeds chapters; 3: seeds processing runs
 
 // Every table the dev seeder owns. Truncated together (children would cascade
 // anyway); listing them keeps the footprint visible.
 const DEV_TABLES = [
+  processingRunsTable,
   chaptersTable,
   chapterGenerationsTable,
   segmentsTable,
@@ -121,6 +124,18 @@ export async function seedDevDatabase(db: DB): Promise<DevSeedSummary> {
       })),
   );
 
+  // Golden transcripts are hand-verified, so each meeting's transcript is
+  // recorded as made by a person: done, and never stale.
+  const processingRuns: (typeof processingRunsTable.$inferInsert)[] =
+    meetings.map((m) => ({
+      meeting_id: m.id,
+      step: "transcript",
+      version: HUMAN_VERSION,
+      status: "succeeded",
+      finished_at: new Date(),
+      details: { source: "golden" },
+    }));
+
   // One generation per meeting with a chapters.json, ids in meeting order.
   const chapterGenerations: (typeof chapterGenerationsTable.$inferInsert)[] =
     [];
@@ -165,6 +180,7 @@ export async function seedDevDatabase(db: DB): Promise<DevSeedSummary> {
         .insert(segmentsTable)
         .values(segments.slice(i, i + INSERT_CHUNK));
     }
+    await tx.insert(processingRunsTable).values(processingRuns);
     if (chapterGenerations.length) {
       await tx.insert(chapterGenerationsTable).values(chapterGenerations);
       await tx.insert(chaptersTable).values(chapters);
@@ -177,6 +193,7 @@ export async function seedDevDatabase(db: DB): Promise<DevSeedSummary> {
       people: people.length,
       meetings: meetings.length,
       segments: segments.length,
+      processing_runs: processingRuns.length,
       chapter_generations: chapterGenerations.length,
       chapters: chapters.length,
     };

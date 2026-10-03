@@ -35,7 +35,8 @@ the same way.
 
 ## How it works, and what to keep in mind
 
-Open Minutes downloads the public meeting videos, and a computer does the rest.
+Twice a day, Open Minutes checks each board's YouTube channel for new meeting
+videos and downloads them, and a computer does the rest.
 It writes down the words, works out where one speaker stops and the next one
 starts, and recognizes people who speak at more than one meeting by the sound
 of their voice. Nobody types up these transcripts by hand, so:

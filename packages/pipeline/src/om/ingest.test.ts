@@ -2,19 +2,25 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect } from "vitest";
-import { meetingsTable, segmentsTable } from "@open-minutes/db";
+import {
+  meetingsTable,
+  processingRunsTable,
+  segmentsTable,
+} from "@open-minutes/db";
 import type { VideoMetadata } from "../audio-provider";
 import type { SpeechSegment } from "@open-minutes/core/transcription";
 import { N_DIMENSIONS } from "@open-minutes/core/voice_embeddings";
 import { getMeetingData } from "@open-minutes/fixtures/test-data";
 import { ingestVideo, ingestVideos } from "./ingest";
-import { listIngested } from "./ingested";
+import { listMeetings } from "./meetings";
+import { TRANSCRIPT_VERSION } from "./transcript";
 import {
   GOLDEN_GBOS,
   fakeYouTube,
   goldenGbosId,
   goldenTest as test,
   insertMeeting,
+  insertRun,
 } from "./testing";
 import { getMeetingAudio } from "../test-utils/audio-cache";
 
@@ -82,11 +88,14 @@ async function seedWorkDir(workRoot: string, youtubeId: string): Promise<void> {
 }
 
 describe("ingestVideo", () => {
-  test("skips an already-ingested video without touching YouTube", async ({
+  test("skips an already-transcribed video without touching YouTube", async ({
     db,
     workRoot,
   }) => {
-    await insertMeeting(db, await goldenGbosId(db), VIDEO_ID);
+    await insertRun(
+      db,
+      await insertMeeting(db, await goldenGbosId(db), VIDEO_ID),
+    );
 
     // Every fake YouTube call throws, so success proves nothing was fetched.
     const result = await ingestVideo(db, VIDEO_ID, {
@@ -115,7 +124,7 @@ describe("ingestVideo", () => {
     expect(await db.select().from(meetingsTable)).toHaveLength(0);
   });
 
-  test("a stage failure leaves no meeting row (all-or-nothing)", async ({
+  test("a stage failure records a failed run and writes no transcript", async ({
     db,
     workRoot,
   }) => {
@@ -129,8 +138,24 @@ describe("ingestVideo", () => {
     await expect(ingestVideo(db, VIDEO_ID, { yt, workRoot })).rejects.toThrow(
       "network down",
     );
-    expect(await db.select().from(meetingsTable)).toHaveLength(0);
+    // The meeting stays recorded, so the sweep retries it.
+    const [meeting] = await db.select().from(meetingsTable);
+    expect(meeting).toMatchObject({
+      youtube_id: VIDEO_ID,
+      title: "Regular Meeting",
+    });
     expect(await db.select().from(segmentsTable)).toHaveLength(0);
+    const runs = await db.select().from(processingRunsTable);
+    expect(runs).toMatchObject([
+      {
+        meeting_id: meeting!.id,
+        step: "transcript",
+        version: TRANSCRIPT_VERSION,
+        status: "failed",
+        error: "network down",
+      },
+    ]);
+    expect(runs[0]!.finished_at).not.toBeNull();
   });
 
   test("resumes from cached artifacts and commits meeting + segments", async ({
@@ -148,8 +173,6 @@ describe("ingestVideo", () => {
       youtubeId: VIDEO_ID,
       status: "ingested",
       segmentCount: 2,
-      // Neither the title nor the transcript says when the meeting was.
-      when: { date: null, time: null },
     });
 
     const [meeting] = await db.select().from(meetingsTable);
@@ -161,6 +184,26 @@ describe("ingestVideo", () => {
       time: null,
     });
     expect(meeting!.duration_secs).toBe("01:00:00");
+
+    // The run that made the transcript, and what it was made with.
+    const [run] = await db.select().from(processingRunsTable);
+    expect(run).toMatchObject({
+      meeting_id: meeting!.id,
+      step: "transcript",
+      version: TRANSCRIPT_VERSION,
+      status: "succeeded",
+      error: null,
+      details: expect.objectContaining({
+        segments: 2,
+        speakers: 2,
+        models: expect.arrayContaining([expect.any(String)]),
+        cleaningRules: expect.arrayContaining(["filler"]),
+        transcriptFingerprint: expect.stringMatching(/^[0-9a-f]{16}$/),
+      }),
+    });
+    expect(run!.finished_at!.getTime()).toBeGreaterThanOrEqual(
+      run!.started_at.getTime(),
+    );
 
     const segments = (await db.select().from(segmentsTable)).sort(
       (a, b) => a.speaker_number! - b.speaker_number!,
@@ -272,15 +315,15 @@ describe("ingestVideos", () => {
   });
 });
 
-describe("listIngested", () => {
-  test("lists meetings newest first with segment counts, filterable by id", async ({
+describe("listMeetings", () => {
+  test("lists meetings newest first with segment counts and step states", async ({
     db,
     workRoot,
   }) => {
     await seedWorkDir(workRoot, VIDEO_ID);
     const yt = fakeYouTube({ getMetadata: async () => METADATA });
     await ingestVideo(db, VIDEO_ID, { yt, workRoot });
-    // An older meeting with no segments.
+    // An older meeting, discovered but not yet transcribed.
     await insertMeeting(
       db,
       await goldenGbosId(db),
@@ -288,17 +331,23 @@ describe("listIngested", () => {
       "2020-01-01",
     );
 
-    const all = await listIngested(db);
+    const all = await listMeetings(db);
     expect(all.map((m) => m.youtubeId)).toEqual([VIDEO_ID, "older-video"]);
     expect(all[0]).toMatchObject({
       body: "gbos",
       title: METADATA.title,
       segmentCount: 2,
       durationSecs: "01:00:00",
+      steps: {
+        transcript: { kind: "done", version: TRANSCRIPT_VERSION },
+      },
     });
-    expect(all[1]!.segmentCount).toBe(0);
+    expect(all[1]).toMatchObject({
+      segmentCount: 0,
+      steps: { transcript: { kind: "pending", failures: 0 } },
+    });
 
-    const filtered = await listIngested(db, ["older-video", "not-ingested"]);
+    const filtered = await listMeetings(db, ["older-video", "not-ingested"]);
     expect(filtered.map((m) => m.youtubeId)).toEqual(["older-video"]);
   });
 });

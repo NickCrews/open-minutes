@@ -1,14 +1,17 @@
 import { count, desc, eq, inArray } from "drizzle-orm";
 import {
   type DB,
+  type ProcessingStep,
   bodiesTable,
   meetingsTable,
   segmentsTable,
 } from "@open-minutes/db";
 import { bodySlug } from "@open-minutes/core/bodies";
+import { type StepState, loadRuns, stepState } from "./runs";
+import { STEPS, type Step } from "./steps";
 
-/** One fully ingested meeting, as listed by `om status`. */
-export interface IngestedMeeting {
+/** One meeting in the database, as listed by `om status`. */
+export interface MeetingStatus {
   youtubeId: string;
   /** Body slug (eg "gbos"). */
   body: string;
@@ -20,19 +23,23 @@ export interface IngestedMeeting {
   /** Postgres interval rendering (eg "01:23:45"), or null if unknown. */
   durationSecs: string | null;
   segmentCount: number;
+  /** Where each processing step stands. */
+  steps: Partial<Record<ProcessingStep, StepState>>;
 }
 
 /**
- * The meetings ingested in the database, newest first. A meeting row existing
- * means fully ingested (there is no partial state — see ingestVideo's
- * all-or-nothing commit). Pass `ids` to filter to specific YouTube video IDs.
+ * The meetings in the database, newest first, with where each processing step
+ * stands: discovered meetings waiting for their transcript as well as
+ * transcribed ones. Pass `ids` to filter to specific YouTube video IDs.
  */
-export async function listIngested(
+export async function listMeetings(
   db: DB,
   ids?: string[],
-): Promise<IngestedMeeting[]> {
+  steps: readonly Step[] = STEPS,
+): Promise<MeetingStatus[]> {
   const rows = await db
     .select({
+      id: meetingsTable.id,
       youtubeId: meetingsTable.youtube_id,
       nameShort: bodiesTable.name_short,
       title: meetingsTable.title,
@@ -56,8 +63,16 @@ export async function listIngested(
       desc(meetingsTable.id),
     );
 
-  return rows.map(({ nameShort, ...row }) => ({
+  const runs = await loadRuns(
+    db,
+    rows.map((r) => r.id),
+  );
+  const now = new Date();
+  return rows.map(({ id, nameShort, ...row }) => ({
     ...row,
     body: bodySlug({ name_short: nameShort }),
+    steps: Object.fromEntries(
+      steps.map((step) => [step.name, stepState(runs.get(id)!, step, now)]),
+    ),
   }));
 }

@@ -1,0 +1,127 @@
+# Twice a day, finds the videos on every body's video sources that aren't
+# meetings yet, records each as a meeting in production, and hands out the
+# work. See ADR 0005.
+#
+#   1. `om discover` scrapes each body's channels and playlists and records
+#      every new video as a meeting with what the listing says (title,
+#      duration, the date in its title). Nothing is processed yet.
+#   2. `om pending` lists the meetings with a processing step due, newest
+#      first: the ones just discovered, and any earlier ones not done yet
+#      (a failed run is retried on later sweeps, up to MAX_ATTEMPTS in
+#      packages/pipeline/src/om/runs.ts).
+#   3. For each of the first `limit` of those, it dispatches
+#      fetch-youtube-audio.yml if the object store doesn't have the audio yet,
+#      and process-meeting.yml, which transcribes it in its own job.
+#
+# The limit keeps a large backlog (a newly added body's whole channel) from
+# flooding the runners and YouTube; the rest wait for later sweeps. Run it by
+# hand from the Actions tab to sweep now, with a different limit, or with
+# `stale` to also reprocess meetings made by an older version of the code.
+#
+# Listing channels and playlists works from GitHub's IPs (unlike downloading;
+# see docs/research/youtube-in-ci.md), so this job needs only yt-dlp.
+#
+# Runs the `production` branch's code, which matches production's schema; the
+# workflow file itself always comes from main. Opt-in: does nothing until the
+# repo has the NEON_API_KEY secret and NEON_PROJECT_ID variable (as
+# production.yml uses) and the OBJECT_STORE_PUBLIC_URL variable.
+name: discover-meetings
+
+on:
+  schedule:
+    # 03:17 and 15:17 UTC: early evening and early morning in Alaska, after
+    # most meetings' videos are posted. Off the hour, when GitHub's scheduler
+    # is less busy.
+    - cron: "17 3,15 * * *"
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: The most meetings to start processing
+        default: "10"
+      stale:
+        description: Also reprocess meetings made by an older version of the code
+        type: boolean
+        default: false
+
+concurrency:
+  group: discover-meetings
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  # To dispatch fetch-youtube-audio.yml and process-meeting.yml. Workflow
+  # dispatches are the one kind of event GITHUB_TOKEN may trigger runs with.
+  actions: write
+
+jobs:
+  discover:
+    if: vars.NEON_PROJECT_ID != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      LIMIT: ${{ inputs.limit || '10' }}
+      STALE: ${{ inputs.stale && 'true' || 'false' }}
+      OBJECT_STORE_PUBLIC_URL: ${{ vars.OBJECT_STORE_PUBLIC_URL }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Check the limit
+        run: |
+          if ! [[ "$LIMIT" =~ ^[0-9]+$ ]]; then
+            echo "::error::limit must be a whole number, not $LIMIT"
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+        with:
+          ref: production
+      - uses: ./.github/actions/setup
+
+      # yt-dlp runs YouTube's player JS with deno; the standalone binary
+      # bundles the rest.
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Install yt-dlp
+        run: |
+          curl -fsSL https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux -o "$RUNNER_TEMP/yt-dlp"
+          sudo install -m 755 "$RUNNER_TEMP/yt-dlp" /usr/local/bin/yt-dlp
+
+      # See process-meeting.yml.
+      - name: Connect to production
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+        run: |
+          url=$(npx --yes neonctl@2 connection-string \
+            --project-id "$NEON_PROJECT_ID" --no-analytics)
+          echo "::add-mask::$url"
+          if [[ "$url" != postgres* ]]; then
+            echo "::error::neonctl didn't return a connection string for production."
+            exit 1
+          fi
+          echo "DB=$url" >> "$GITHUB_ENV"
+
+      - name: Discover new meetings
+        run: |
+          pnpm -s om discover > "$RUNNER_TEMP/discovered.txt"
+          {
+            echo "### Discovered $(wc -l < "$RUNNER_TEMP/discovered.txt") new meeting(s)"
+            sed 's|.*|- [&](https://www.youtube.com/watch?v=&)|' "$RUNNER_TEMP/discovered.txt"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Start processing pending meetings
+        run: |
+          flags=(--limit "$LIMIT")
+          if [ "$STALE" = true ]; then flags+=(--stale); fi
+          pnpm -s om pending "${flags[@]}" > "$RUNNER_TEMP/pending.txt"
+          echo "### Processing $(wc -l < "$RUNNER_TEMP/pending.txt") meeting(s)" >> "$GITHUB_STEP_SUMMARY"
+          while read -r id; do
+            fetch=""
+            if ! curl -sfI "$OBJECT_STORE_PUBLIC_URL/youtube/$id/speech.webm" > /dev/null; then
+              gh workflow run fetch-youtube-audio.yml --repo "$GITHUB_REPOSITORY" -f video_id="$id"
+              fetch=", fetching its audio"
+            fi
+            gh workflow run process-meeting.yml --repo "$GITHUB_REPOSITORY" \
+              -f youtube_id="$id" -f stale="$STALE"
+            echo "- [$id](https://www.youtube.com/watch?v=$id)$fetch" >> "$GITHUB_STEP_SUMMARY"
+          done < "$RUNNER_TEMP/pending.txt"

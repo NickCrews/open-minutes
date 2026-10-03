@@ -82,6 +82,12 @@ export interface FlatEntry {
   _type?: "url" | "playlist";
   id: string;
   title?: string;
+  /** Seconds. Absent for a live or upcoming stream. */
+  duration?: number | null;
+  /** When it was published or streamed, Unix seconds, if the listing says. */
+  timestamp?: number | null;
+  /** "YYYYMMDD", if the listing says. */
+  upload_date?: string | null;
   entries?: FlatEntry[];
 }
 

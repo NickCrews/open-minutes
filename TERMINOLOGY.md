@@ -136,13 +136,37 @@ _Avoid_: identification, matching, labeling
 
 ### Pipeline
 
-**Ingestion**:
-Running one video through transcription, diarization, alignment, and recognition, then storing the meeting and its segments all at once.
-_Avoid_: import, processing, scraping, sync
-
 **Available video**:
-A video on one of a body's video sources that hasn't been ingested yet.
+A video on one of a body's video sources that isn't a meeting in the database yet.
 _Avoid_: new video, pending video, backlog
+
+**Discovery**:
+Recording available videos as meetings, with only what the channel or playlist listing says about them. Nothing is processed yet.
+_Avoid_: scraping, sync, import
+
+**Processing step**:
+One unit of work a meeting goes through after discovery, named for what it makes: `transcript`, then `chapters` and `summary`, which are made from the transcript (see [ADR 0005](adrs/0005-discover-then-process-meetings.md)).
+_Avoid_: job, task, stage (stages are the parts of one step, below)
+
+**Processing run**:
+One attempt at one processing step for one meeting, recorded with the step's version, its outcome and when; the audit trail of how every meeting was made.
+_Avoid_: job, execution, attempt
+
+**Step version**:
+A processing step's version in the code that ran it, bumped by hand when the step's output would change. A run at version `human` was made or verified by a person.
+_Avoid_: revision, model version
+
+**Pending meeting**:
+A meeting with a processing step that has never succeeded, such as one just discovered.
+_Avoid_: available video, new meeting, queued meeting
+
+**Stale**:
+Describes a step whose output was made by an older step version, or before a step it is made from was redone. Its output stands until someone reprocesses it.
+_Avoid_: outdated, expired, dirty
+
+**Ingestion**:
+Making a meeting's transcript from its video: transcription, diarization, alignment, and recognition, then storing the segments all at once. The `transcript` processing step; `om ingest` also records the meeting first if discovery hasn't.
+_Avoid_: import, scraping, sync
 
 **Transcription**:
 The stage that turns audio into words with onsets. The process, not the artifact; that's the transcript.

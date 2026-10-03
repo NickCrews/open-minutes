@@ -181,11 +181,29 @@ tests, then run `pnpm fixtures:clean` and review the golden diff.
 ## Running the pipeline
 
 ```sh
-pnpm om status          # meetings already ingested
-pnpm om available       # videos not yet ingested
-pnpm om ingest <id>     # run the full pipeline for a video
+pnpm om status          # meetings in the database, and where each step stands
+pnpm om available       # videos not yet meetings in the database
+pnpm om discover        # record those as meetings, waiting to be processed
+pnpm om pending         # meetings with a processing step due
+pnpm om process <id>    # run the due steps for a meeting
+pnpm om ingest <id>     # record a video as a meeting if needed, then process it
 pnpm om models          # download every ML model up front (~650MB)
 ```
+
+In production this runs by itself. Twice a day the
+[`discover-meetings`](.github/workflows/discover-meetings.yml) workflow
+discovers new videos on every body's video sources and records each as a
+meeting, then starts a
+[`process-meeting`](.github/workflows/process-meeting.yml) run for each of
+the newest pending meetings, which makes its transcript. Every attempt at a
+processing step (today the transcript; chapters and summaries once they're
+generated) is recorded in the `processing_runs` table with the step's version,
+so when the logic changes and the version is bumped, `pnpm om status` shows
+which meetings are stale and `pnpm om pending --stale` lists them for
+reprocessing. Bump the version (`TRANSCRIPT_VERSION` in
+[`packages/pipeline/src/om/transcript.ts`](packages/pipeline/src/om/transcript.ts))
+whenever a change would make the pipeline write a different transcript. See
+[ADR 0005](adrs/0005-discover-then-process-meetings.md).
 
 From a server or CI runner, YouTube answers yt-dlp with "sign in to confirm
 you're not a bot". Metadata and audio come from the object store instead: the
@@ -230,9 +248,21 @@ touched and rolls back if it introduced an error. Guidance for agents doing
 this work is in
 [`.claude/skills/transcript-cleanup`](.claude/skills/transcript-cleanup/SKILL.md).
 
-`pnpm db studio` opens a browser UI on it. The pipeline's API (`listIngested`,
-`listAvailable`, `ingestVideo` from `@open-minutes/pipeline/om`) and `om`'s
-JSON output (`pnpm -s om status --json`) are designed to be composed.
+How each meeting was processed is in `processing_runs`, and the
+`meeting_processing` view gives the latest successful run of each step per
+meeting, for example to find meetings transcribed before a given version:
+
+```sql
+SELECT m.youtube_id, p.version, p.succeeded_at
+FROM meetings m
+LEFT JOIN meeting_processing p ON p.meeting_id = m.id AND p.step = 'transcript'
+ORDER BY p.succeeded_at NULLS FIRST;
+```
+
+`pnpm db studio` opens a browser UI on it. The pipeline's API (`listMeetings`,
+`discoverMeetings`, `listPending`, `processMeeting`, `ingestVideo` from
+`@open-minutes/pipeline/om`) and `om`'s JSON output (`pnpm -s om status
+--json`) are designed to be composed.
 
 ## Architecture Decision Records
 

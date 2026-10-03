@@ -6,7 +6,7 @@ import {
   videoSourcesTable,
 } from "@open-minutes/db";
 import { bodySlug } from "@open-minutes/core/bodies";
-import { type YouTube, youtubeFromEnv } from "../youtube";
+import { type FlatEntry, type YouTube, youtubeFromEnv } from "../youtube";
 
 export interface ListAvailableOptions {
   /** Restrict the scrape to the body with this slug (eg "gbos"). */
@@ -15,15 +15,27 @@ export interface ListAvailableOptions {
   yt?: YouTube;
 }
 
+/** A video on a body's video source that isn't a meeting in the database. */
+export interface AvailableVideo {
+  youtubeId: string;
+  /** The body whose video source it was found under. */
+  bodyId: number;
+  /** That body's slug (eg "gbos"). */
+  body: string;
+  /** What the channel or playlist listing says about it. */
+  entry: FlatEntry;
+}
+
 /**
- * Scrape every body's YouTube sources and return the video IDs not yet
- * ingested, newest first (the source's natural order). A pure read: no database
- * writes, no persisted discovery state.
+ * Scrape every body's YouTube sources and return the videos not yet in the
+ * database, newest first (the source's natural order). Each is attributed to
+ * the body whose source listed it; a video listed by several sources goes to
+ * the first. A pure read: no database writes.
  */
-export async function listAvailable(
+export async function scrapeAvailable(
   db: DB,
   options: ListAvailableOptions = {},
-): Promise<string[]> {
+): Promise<AvailableVideo[]> {
   const yt = options.yt ?? youtubeFromEnv();
 
   const allBodies = await db.select().from(bodiesTable);
@@ -37,7 +49,7 @@ export async function listAvailable(
     }
   }
 
-  const ingested = new Set(
+  const known = new Set(
     (
       await db
         .select({ youtubeId: meetingsTable.youtube_id })
@@ -45,7 +57,7 @@ export async function listAvailable(
     ).map((r) => r.youtubeId),
   );
 
-  const available: string[] = [];
+  const available: AvailableVideo[] = [];
   for (const body of bodies) {
     const sources = await db
       .select()
@@ -59,10 +71,28 @@ export async function listAvailable(
         source.kind === "playlist"
           ? await yt.videosInPlaylist(source.youtube_id)
           : await yt.videosInChannel(source.youtube_id);
-      for (const video of videos) {
-        if (!ingested.has(video.id)) available.push(video.id);
+      for (const entry of videos) {
+        if (known.has(entry.id)) continue;
+        known.add(entry.id);
+        available.push({
+          youtubeId: entry.id,
+          bodyId: body.id,
+          body: bodySlug(body),
+          entry,
+        });
       }
     }
   }
   return available;
+}
+
+/**
+ * The IDs of the videos on bodies' sources that aren't meetings in the
+ * database yet, newest first. See {@link scrapeAvailable}.
+ */
+export async function listAvailable(
+  db: DB,
+  options: ListAvailableOptions = {},
+): Promise<string[]> {
+  return (await scrapeAvailable(db, options)).map((v) => v.youtubeId);
 }

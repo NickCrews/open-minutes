@@ -77,6 +77,14 @@ the direct (unpooled) URL of the project's default branch. That URL is only for
 migrating; the Worker reads its pooled URL from its own `DATABASE_URL` secret,
 which new versions keep.
 
+The meeting pipeline's workflows,
+[`discover-meetings`](../../.github/workflows/discover-meetings.yml) and
+[`process-meeting`](../../.github/workflows/process-meeting.yml), connect to
+production the same way, and also need the `OBJECT_STORE_PUBLIC_URL`
+variable. They check out `production`, not `main`, so the code writing to the
+production database always matches its schema: a pipeline change takes
+effect with the next deploy.
+
 Protect `production` with a ruleset that blocks force pushes and deletion.
 Don't restrict who can push or require PRs: the workflow pushes with the
 built-in `GITHUB_TOKEN`, which can't bypass branch rules. Anyone who can push

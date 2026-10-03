@@ -1,48 +1,16 @@
-import { existsSync } from "node:fs";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
-import { fileURLToPath } from "node:url";
-import { eq, sql } from "drizzle-orm";
+import { count, eq, sql } from "drizzle-orm";
 import {
   type DB,
   bodiesTable,
   meetingsTable,
+  segmentsTable,
   videoSourcesTable,
 } from "@open-minutes/db";
-import { bodySlug } from "@open-minutes/core/bodies";
-import { type YouTube, youtubeFromEnv } from "../youtube";
-import {
-  cleanSpeechSegments,
-  type DiarizationTurn,
-  type SpeechSegment,
-} from "@open-minutes/core/transcription";
-import { transcribeAudio } from "../transcribe";
-import { computeSpeakerEmbeddings } from "../embed";
-import { diarizeAudio } from "../diarize";
-import { alignSpeakers, segmentsToTurns } from "../align";
-import { identifyAndInsertSegments } from "../identify";
-import {
-  type MeetingDateTime,
-  openingText,
-  resolveMeetingDateTime,
-} from "../meeting_date";
+import { youtubeFromEnv } from "../youtube";
+import { describeError } from "./runs";
+import { type ProcessOptions, processMeeting } from "./process";
 
-/**
- * Root of the per-meeting work directories (one `<body-slug>_<youtubeId>` dir
- * per meeting, holding each stage's artifact for inspection and resume).
- * Lives at packages/pipeline/data/meetings/, gitignored via the root `data/`
- * rule.
- */
-export const DEFAULT_WORK_ROOT = fileURLToPath(
-  new URL("../../data/meetings/", import.meta.url),
-);
-
-export interface IngestOptions {
-  /** YouTube boundary, injectable for tests. Defaults to {@link youtubeFromEnv}. */
-  yt?: YouTube;
-  /** Where per-meeting work directories live. Defaults to {@link DEFAULT_WORK_ROOT}. */
-  workRoot?: string;
-}
+export type IngestOptions = Omit<ProcessOptions, "steps">;
 
 export type IngestResult =
   | {
@@ -50,36 +18,20 @@ export type IngestResult =
       status: "ingested";
       meetingId: number;
       segmentCount: number;
-      /** When the meeting happened, read from its title and opening minutes. */
-      when: MeetingDateTime;
     }
   | { youtubeId: string; status: "skipped" };
 
-/** On-disk shape of a work directory's diarization.json. */
-interface DiarizationArtifact {
-  turns: DiarizationTurn[];
-}
-
 /**
- * On-disk shape of embeddings.json: one voiceprint centroid per local speaker.
- * An array rather than a keyed object so the speaker number stays a number —
- * JSON object keys are always strings.
- */
-type EmbeddingsArtifact = Array<{ speaker: number; centroid: number[] }>;
-
-/**
- * Run the full pipeline for one video — download → transcribe → clean →
- * diarize → align → identify — and commit the meeting to the database.
+ * Ingest one video by hand: record it as a meeting if it isn't one yet, then
+ * process it (see `processMeeting`). The scheduled path splits these: a sweep
+ * discovers meetings, and each is processed in its own job.
  *
- * Each stage's output is cached as a file in the meeting's work directory; a
- * stage whose artifact already exists is skipped, so an interrupted run
- * resumes from the last completed stage. The database commit is all-or-nothing:
- * the meeting row and all its segments are inserted in a single transaction
- * only after every stage has succeeded, so partially processed meetings never
- * appear in queries.
+ * A video that isn't a meeting yet is attributed to a body by its channel,
+ * which must be one of the bodies' video sources; anything else is refused.
+ * Returns `skipped` when there was nothing due (it was already transcribed).
  *
- * An already-ingested video is skipped (returns `status: "skipped"`); a video
- * whose channel matches no known body is an error.
+ * @throws if the video can't be attributed, or a step fails. A failure leaves
+ * the meeting recorded, with the failed run, so the sweep retries it.
  */
 export async function ingestVideo(
   db: DB,
@@ -87,124 +39,49 @@ export async function ingestVideo(
   options: IngestOptions = {},
 ): Promise<IngestResult> {
   const yt = options.yt ?? youtubeFromEnv();
-  const workRoot = options.workRoot ?? DEFAULT_WORK_ROOT;
 
-  const existing = await db
+  const [existing] = await db
     .select({ id: meetingsTable.id })
     .from(meetingsTable)
-    .where(eq(meetingsTable.youtube_id, youtubeId))
-    .limit(1);
-  if (existing.length > 0) {
-    console.error(`[${youtubeId}] already ingested, skipping`);
-    return { youtubeId, status: "skipped" };
-  }
-
-  console.error(`[${youtubeId}] fetching video metadata...`);
-  const metadata = await yt.getMetadata(youtubeId);
-  const body = await resolveBody(db, youtubeId, metadata.channelId);
-
-  const workDir = join(workRoot, `${bodySlug(body)}_${youtubeId}`);
-  await mkdir(workDir, { recursive: true });
-
-  const audioPath = join(workDir, "audio.wav");
-  if (existsSync(audioPath)) {
-    console.error(`[${youtubeId}] audio.wav exists, skipping download`);
-  } else {
-    await yt.ensureAudioDownloaded(youtubeId, audioPath);
-  }
-
-  const rawSpeechSegments = await cachedStage<SpeechSegment[]>(
-    youtubeId,
-    join(workDir, "transcription.json"),
-    () => transcribeAudio(audioPath),
-  );
-  // Strip disfluencies (fillers, stutters, ...). Deliberately not cached:
-  // transcription.json stays the recognizer's verbatim output, so a new or
-  // changed cleaning rule applies on the next run without re-transcribing.
-  const speechSegments = cleanSpeechSegments(rawSpeechSegments);
-
-  // When the meeting happened: the title's date, the chair's gavel-in time.
-  // The upload date supplies the year when neither states one.
-  const when = resolveMeetingDateTime(
-    metadata.title,
-    openingText(speechSegments),
-    { uploadDate: metadata.uploadDate ?? undefined },
-  );
-  console.error(
-    `[${youtubeId}] meeting date ${when.date ?? "unknown"} (from ${when.dateSource ?? "nothing"}), ` +
-      `start ${when.time ?? "unknown"} (from ${when.timeSource ?? "nothing"})`,
-  );
-  for (const warning of when.warnings) {
-    console.error(`[${youtubeId}] WARNING: ${warning}`);
-  }
-
-  const diarization = await cachedStage<DiarizationArtifact>(
-    youtubeId,
-    join(workDir, "diarization.json"),
-    () => ({ turns: diarizeAudio(audioPath) }),
-  );
-
-  // Transcription and diarization are both raw, and both wrong in places: the
-  // recognizer drops audio, and clustering wobbles mid-utterance. Combining
-  // them is what produces our best account of who said what and when, so everything
-  // downstream works from the aligned segments rather than either raw input.
-  const segments = alignSpeakers(speechSegments, diarization.turns).filter(
-    (segment) => segment.words.length > 0,
-  );
-
-  // Voiceprints come from the cleaned segments, not the raw diarization turns.
-  const embeddings = await cachedStage<EmbeddingsArtifact>(
-    youtubeId,
-    join(workDir, "embeddings.json"),
-    () =>
-      [...computeSpeakerEmbeddings(audioPath, segmentsToTurns(segments))].map(
-        ([speaker, centroid]) => ({ speaker, centroid: Array.from(centroid) }),
-      ),
-  );
-  const speakerEmbeddings = new Map(
-    embeddings.map(({ speaker, centroid }) => [
-      speaker,
-      Float32Array.from(centroid),
-    ]),
-  );
-
-  console.error(
-    `[${youtubeId}] committing meeting with ${segments.length} segment(s)...`,
-  );
-  const meetingId = await db.transaction(async (tx) => {
-    const [meeting] = await tx
+    .where(eq(meetingsTable.youtube_id, youtubeId));
+  if (!existing) {
+    console.error(`[${youtubeId}] fetching video metadata...`);
+    const metadata = await yt.getMetadata(youtubeId);
+    const bodyId = await resolveBody(db, youtubeId, metadata.channelId);
+    await db
       .insert(meetingsTable)
       .values({
-        body_id: body.id,
+        body_id: bodyId,
         youtube_id: youtubeId,
         title: metadata.title,
         description: metadata.description,
-        // Parsed from the title and the chair's gavel-in (see meeting_date.ts),
-        // not YouTube publish/stream times, which don't reliably reflect when
-        // the meeting happened. A time without a date is meaningless.
-        date: when.date,
-        time: when.date ? when.time : null,
         duration_secs:
           metadata.durationSecs === null
             ? null
             : sql`make_interval(secs => ${metadata.durationSecs})`,
       })
-      .returning({ id: meetingsTable.id });
-    await identifyAndInsertSegments(
-      tx,
-      meeting!.id,
-      segments,
-      speakerEmbeddings,
-    );
-    return meeting!.id;
-  });
+      .onConflictDoNothing({ target: meetingsTable.youtube_id });
+  }
 
+  // Asked for by name, so a step that failed too often is tried again.
+  const result = await processMeeting(db, youtubeId, {
+    retry: true,
+    ...options,
+    yt,
+  });
+  if (!result.steps.some((s) => s.outcome === "succeeded")) {
+    console.error(`[${youtubeId}] nothing to do, skipping`);
+    return { youtubeId, status: "skipped" };
+  }
+  const [segments] = await db
+    .select({ n: count() })
+    .from(segmentsTable)
+    .where(eq(segmentsTable.meeting_id, result.meetingId));
   return {
     youtubeId,
     status: "ingested",
-    meetingId,
-    segmentCount: segments.length,
-    when,
+    meetingId: result.meetingId,
+    segmentCount: segments!.n,
   };
 }
 
@@ -236,18 +113,14 @@ export async function ingestVideos(
   return { results, failures };
 }
 
-function describeError(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
-async function resolveBody(db: DB, youtubeId: string, channelId: string) {
+async function resolveBody(
+  db: DB,
+  youtubeId: string,
+  channelId: string,
+): Promise<number> {
   if (channelId) {
     const [body] = await db
-      .select({
-        id: bodiesTable.id,
-        name: bodiesTable.name,
-        name_short: bodiesTable.name_short,
-      })
+      .select({ id: bodiesTable.id })
       .from(bodiesTable)
       .innerJoin(
         videoSourcesTable,
@@ -255,29 +128,10 @@ async function resolveBody(db: DB, youtubeId: string, channelId: string) {
       )
       .where(eq(videoSourcesTable.youtube_id, channelId))
       .limit(1);
-    if (body) return body;
+    if (body) return body.id;
   }
   throw new Error(
     `Video ${youtubeId} is on channel "${channelId}", which matches no ` +
       `body's video sources. Refusing to ingest an unrelated video.`,
   );
-}
-
-/**
- * Run a pipeline stage with a JSON file cache: if `artifactPath` exists, load
- * it and skip the computation; otherwise compute and persist it.
- */
-async function cachedStage<T>(
-  youtubeId: string,
-  artifactPath: string,
-  compute: () => Promise<T> | T,
-): Promise<T> {
-  const artifactName = artifactPath.split("/").at(-1)!;
-  if (existsSync(artifactPath)) {
-    console.error(`[${youtubeId}] ${artifactName} exists, skipping stage`);
-    return JSON.parse(await readFile(artifactPath, "utf8")) as T;
-  }
-  const result = await compute();
-  await writeFile(artifactPath, JSON.stringify(result, null, 2));
-  return result;
 }

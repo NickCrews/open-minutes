@@ -20,7 +20,7 @@ import { mapSnapshot } from "@open-minutes/fixtures/map";
 
 // Bump when seedGoldenMeeting's behavior changes in a way the inputs hashed
 // below don't capture.
-const VERSION = 1;
+const VERSION = 2; // 2: records a "human" transcript run per meeting
 
 /** Golden rows + the given golden meetings, with real voiceprints. */
 export function goldenMeetingsData(meetingSlugs: readonly string[]): DataState {

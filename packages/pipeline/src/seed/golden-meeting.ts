@@ -1,8 +1,10 @@
 import { eq } from "drizzle-orm";
 import {
   type DB,
+  HUMAN_VERSION,
   meetingsTable,
   peopleTable,
+  processingRunsTable,
   segmentsTable,
 } from "@open-minutes/db";
 import {
@@ -81,6 +83,16 @@ export async function seedGoldenMeeting(
       words: seg.words,
     });
   }
+
+  // 4. Record the transcript as made by a person, which it was: hand-verified.
+  await db.insert(processingRunsTable).values({
+    meeting_id: meetingId,
+    step: "transcript",
+    version: HUMAN_VERSION,
+    status: "succeeded",
+    finished_at: new Date(),
+    details: { source: "golden" },
+  });
 
   return slugToPersonId;
 }

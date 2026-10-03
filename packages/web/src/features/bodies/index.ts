@@ -1,7 +1,10 @@
-import { type DB, meetingsTable } from "@open-minutes/db";
-import { count, max, min } from "drizzle-orm";
+import { type DB, meetingsTable, segmentsTable } from "@open-minutes/db";
+import { count, eq, exists, max, min } from "drizzle-orm";
 
-/** How much of a body's record we hold: its meetings, and the span they cover. */
+/**
+ * How much of a body's record we hold: its transcribed meetings, and the span
+ * they cover. Meetings discovered but not yet transcribed don't count.
+ */
 export type Coverage = {
   meetings: number;
   /** Null when none of the meetings has a known date. */
@@ -40,6 +43,14 @@ async function getCoverageByBody(db: DB): Promise<Map<number, Coverage>> {
       last: max(meetingsTable.date),
     })
     .from(meetingsTable)
+    .where(
+      exists(
+        db
+          .select()
+          .from(segmentsTable)
+          .where(eq(segmentsTable.meeting_id, meetingsTable.id)),
+      ),
+    )
     .groupBy(meetingsTable.body_id);
   return new Map(rows.map(({ body_id, ...coverage }) => [body_id, coverage]));
 }
@@ -51,7 +62,9 @@ export function getBodyById(db: DB, bodyId: number) {
       with: {
         jurisdiction: true,
         videoSources: true,
+        // Only those with a transcript, as on the meetings page.
         meetings: {
+          where: { segments: true },
           orderBy: { date: "desc", time: "desc" },
         },
       },
