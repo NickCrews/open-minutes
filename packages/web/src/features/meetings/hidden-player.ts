@@ -60,20 +60,41 @@ export function createHiddenPlayer() {
     void youtube?.then((player) => player.destroy());
   });
 
+  /** The playhead, and whether it's moving, or null if there's none yet. */
+  const playhead = () => {
+    if (source === "audio" && audio) {
+      return {
+        secs: audio.currentTime,
+        moving: !audio.paused && !audio.seeking,
+      };
+    }
+    if (source === "youtube" && youtubePlayer) {
+      const state = youtubePlayer.getPlayerState?.();
+      // Unstarted or cued, it reports 0 rather than where it will start.
+      if (state === PlayerState.unstarted || state === PlayerState.cued) {
+        return null;
+      }
+      return {
+        secs: youtubePlayer.getCurrentTime?.(),
+        moving: state === PlayerState.playing,
+      };
+    }
+    return null;
+  };
+
   const onPoll = () => {
-    const secs =
-      source === "audio"
-        ? audio?.currentTime
-        : source === "youtube"
-          ? youtubePlayer?.getCurrentTime?.()
-          : undefined;
+    const head = playhead();
+    if (!head) return;
+    const { secs, moving } = head;
     if (typeof secs !== "number" || Number.isNaN(secs)) return;
     if (pendingSeek != null) {
       if (Math.abs(secs - pendingSeek) > 1) return;
       pendingSeek = null;
     }
     setCurrentTime(secs);
-    if (playing() && shouldStop?.(secs)) {
+    // Only once it's really playing: a player still starting up can report a
+    // stale position, which would stop playback before it begins.
+    if (moving && playing() && shouldStop?.(secs)) {
       if (source === "audio") audio?.pause();
       else youtubePlayer?.pauseVideo();
       setPlaying(false);
@@ -95,13 +116,17 @@ export function createHiddenPlayer() {
         if (source === "audio") setPlaying(false);
       });
     }
-    // Not in the store (or not loadable): carry on from YouTube.
+    // Not in the store (or not loadable): carry on from YouTube, or get it
+    // ready if nothing has played yet.
     el.addEventListener("error", () => {
       if (disposed || !audioVideo) return;
       notStored.add(audioVideo);
+      const failed = audioVideo;
       audioVideo = null;
       if (source === "audio" && current && playing()) {
         void playYouTube(current, pendingSeek ?? currentTime());
+      } else if (!current && !youtube && host) {
+        youtube = createYouTube(failed);
       }
     });
     startPolling();
@@ -132,19 +157,16 @@ export function createHiddenPlayer() {
     });
   };
 
-  const createYouTube = async (
-    videoId: string,
-    startSecs: number,
-    autoplay: boolean,
-  ) => {
+  /**
+   * Creates the YouTube player with `videoId` cued. It's started with
+   * `playVideo` once ready, never `autoplay`: autoplaying a newly made embed
+   * can stall back to unstarted, with nothing played.
+   */
+  const createYouTube = async (videoId: string) => {
     youtubeVideo = videoId;
     const player = await createYouTubePlayer(host!, {
       videoId,
-      playerVars: {
-        autoplay: autoplay ? 1 : 0,
-        start: Math.floor(startSecs),
-        playsinline: 1,
-      },
+      playerVars: { playsinline: 1 },
       onStateChange: ({ data }) => {
         if (source !== "youtube") return;
         if (data === PlayerState.playing) setPlaying(true);
@@ -152,8 +174,6 @@ export function createHiddenPlayer() {
           setPlaying(false);
       },
     });
-    // `start` only takes whole seconds.
-    if (autoplay) player.seekTo(startSecs, true);
     youtubePlayer = player;
     startPolling();
     return player;
@@ -162,10 +182,7 @@ export function createHiddenPlayer() {
   const playYouTube = async (meeting: PlayableMeeting, secs: number) => {
     source = "youtube";
     audio?.pause();
-    if (!youtube) {
-      youtube = createYouTube(meeting.youtubeId, secs, true);
-      return;
-    }
+    youtube ??= createYouTube(meeting.youtubeId);
     const player = await youtube;
     // Superseded while the player was still being created.
     if (disposed || current !== meeting || source !== "youtube") return;
@@ -209,7 +226,7 @@ export function createHiddenPlayer() {
     const url = audioUrl(meeting);
     if (url) loadAudio(meeting.youtubeId, url);
     else if (!youtube && host) {
-      youtube = createYouTube(meeting.youtubeId, 0, false);
+      youtube = createYouTube(meeting.youtubeId);
     }
   };
 

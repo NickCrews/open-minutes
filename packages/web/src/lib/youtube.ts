@@ -4,6 +4,8 @@
  */
 export interface YTPlayer {
   getCurrentTime(): number;
+  /** One of YT.PlayerState: -1 unstarted, 0 ended, 1 playing, 2 paused, 3 buffering, 5 cued. */
+  getPlayerState(): number;
   /** Total length in seconds, or 0 until the video's metadata has loaded. */
   getDuration(): number;
   seekTo(seconds: number, allowSeekAhead: boolean): void;
@@ -18,7 +20,13 @@ export interface YTPlayer {
 export const PLAYBACK_RATES = [0.75, 1, 1.25, 1.5, 1.75, 2] as const;
 
 /** The subset of YT.PlayerState values we care about. */
-export const PlayerState = { ended: 0, playing: 1, paused: 2 } as const;
+export const PlayerState = {
+  unstarted: -1,
+  ended: 0,
+  playing: 1,
+  paused: 2,
+  cued: 5,
+} as const;
 
 interface YTNamespace {
   Player: new (
