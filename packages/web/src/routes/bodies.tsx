@@ -4,6 +4,7 @@ import { For, Show } from "solid-js";
 import { type Coverage, getAllBodies } from "~/features/bodies";
 import { formatMonthYear } from "@open-minutes/core/meeting-date";
 import { db } from "~/server/db";
+import { PinIcon } from "~/components/icons";
 
 const fetchBodies = createServerFn({ method: "GET" }).handler(() =>
   getAllBodies(db()),
@@ -49,13 +50,13 @@ function BodiesPage() {
               </Link>
               <Show when={body.jurisdiction.name}>
                 {(name) => (
-                  <span class="text-muted-foreground text-sm">
-                    {" "}
-                    — {name()}
+                  <p class="text-muted-foreground flex items-center gap-1 text-sm">
+                    <PinIcon />
+                    {name()}
                     {body.jurisdiction.state
                       ? `, ${body.jurisdiction.state}`
                       : ""}
-                  </span>
+                  </p>
                 )}
               </Show>
               <p class="text-muted-foreground text-sm">
