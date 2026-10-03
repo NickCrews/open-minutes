@@ -48,9 +48,9 @@ const E2E_WORK_ROOT = fileURLToPath(
 );
 
 // Step 1 as a declared dataset. Seeding computes real voiceprints from the two
-// meetings' audio, which is slow, so the harness does it once per change to
-// the fixtures (or the embedding model) and caches the result as a template;
-// every later run clones it in milliseconds.
+// meetings' audio (a minute or so, cold), so the harness does it once per
+// change to the fixtures (or the embedding model) and caches the result as a
+// template; every later run clones it in milliseconds.
 const test = dbTest({
   data: goldenMeetingsData(SEED_SLUGS),
   setupTimeoutMs: 60 * 60_000,
