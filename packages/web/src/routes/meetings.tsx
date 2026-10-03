@@ -17,12 +17,6 @@ import {
   CardTitle,
 } from "~/components/card";
 import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardPortal,
-  HoverCardTrigger,
-} from "~/components/hover-card";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -253,34 +247,13 @@ function MeetingCard(props: { meeting: Meeting; onSaved: () => void }) {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <HoverCard>
-          <HoverCardTrigger
-            as="span"
-            class="text-muted-foreground cursor-default text-sm underline decoration-dotted underline-offset-4"
-          >
-            {props.meeting.body.name}
-          </HoverCardTrigger>
-          <HoverCardPortal>
-            <HoverCardContent>
-              <div class="flex flex-col gap-1">
-                <p class="font-semibold">{props.meeting.body.name}</p>
-                <p class="text-muted-foreground text-sm">
-                  {props.meeting.body.jurisdiction.name}
-                  <Show when={props.meeting.body.jurisdiction.state}>
-                    {(state) => <>, {state()}</>}
-                  </Show>
-                </p>
-                <Link
-                  to="/bodies/$id"
-                  params={{ id: String(props.meeting.body.id) }}
-                  class="text-sm font-medium hover:underline"
-                >
-                  View body →
-                </Link>
-              </div>
-            </HoverCardContent>
-          </HoverCardPortal>
-        </HoverCard>
+        <Link
+          to="/bodies/$id"
+          params={{ id: String(props.meeting.body.id) }}
+          class="text-muted-foreground text-sm hover:underline"
+        >
+          {props.meeting.body.name}
+        </Link>
       </CardContent>
     </Card>
   );
