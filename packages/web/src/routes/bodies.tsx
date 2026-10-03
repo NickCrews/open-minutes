@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/solid-router";
 import { createServerFn } from "@tanstack/solid-start";
 import { For, Show } from "solid-js";
 import { type Coverage, getAllBodies } from "~/features/bodies";
-import { bodySeeds, Thumbnail } from "~/features/thumbnails/thumbnail";
+import { BodyThumbnail } from "~/features/bodies/body-thumbnail";
 import { formatMonthYear } from "@open-minutes/core/meeting-date";
 import { db } from "~/server/db";
 import { PinIcon } from "~/components/icons";
@@ -48,7 +48,7 @@ function BodiesPage() {
                 tabIndex={-1}
                 class="w-28 shrink-0 sm:w-36"
               >
-                <Thumbnail seeds={bodySeeds(body)} />
+                <BodyThumbnail body={body} />
               </Link>
               <div class="min-w-0">
                 <Link

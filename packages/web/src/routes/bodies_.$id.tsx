@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/solid-router";
 import { createServerFn } from "@tanstack/solid-start";
 import { For, Show } from "solid-js";
 import { getBodyById } from "~/features/bodies";
-import { meetingSeeds, Thumbnail } from "~/features/thumbnails/thumbnail";
+import { MeetingThumbnail } from "~/features/meetings/meeting-thumbnail";
 import { formatMeetingDate } from "@open-minutes/core/meeting-date";
 import { db } from "~/server/db";
 import { z } from "zod";
@@ -57,10 +57,7 @@ function BodyPage() {
                 tabIndex={-1}
                 class="w-24 shrink-0 sm:w-32"
               >
-                <Thumbnail
-                  youtubeId={meeting.youtube_id}
-                  seeds={meetingSeeds({ id: meeting.id, body: body() })}
-                />
+                <MeetingThumbnail meeting={{ ...meeting, body: body() }} />
               </Link>
               <div class="min-w-0">
                 <Link

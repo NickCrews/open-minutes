@@ -1,6 +1,5 @@
-import { createSignal, createUniqueId, For, onMount, Show } from "solid-js";
+import { createUniqueId, For, type JSX, Show } from "solid-js";
 import { cx } from "~/lib/cva";
-import { YOUTUBE_PLACEHOLDER_WIDTH, youtubeThumbnailUrl } from "~/lib/youtube";
 import { ARTWORK_HEIGHT, ARTWORK_WIDTH, artwork } from "./artwork";
 
 /** What a generated thumbnail is drawn from; see `artwork`. */
@@ -11,27 +10,13 @@ export interface ArtworkSeeds {
 }
 
 /**
- * A 16:9 picture that gives a meeting or body something to recognize at a
- * glance in a list: its YouTube thumbnail when it has a video, and generated
- * artwork otherwise, or when the thumbnail fails to load. Decorative, since
- * a title always sits beside it.
+ * The 16:9 box every thumbnail sits in, so a list's pictures line up whatever
+ * fills them. Decorative, since a title always sits beside a thumbnail.
  */
-export function Thumbnail(props: {
-  youtubeId?: string | null;
-  seeds: ArtworkSeeds;
+export function ThumbnailFrame(props: {
   class?: string;
+  children: JSX.Element;
 }) {
-  const [failed, setFailed] = createSignal(false);
-  const checkLoaded = (img: HTMLImageElement) => {
-    if (img.naturalWidth <= YOUTUBE_PLACEHOLDER_WIDTH) setFailed(true);
-  };
-  let img: HTMLImageElement | undefined;
-  // A server-rendered image may have finished, or failed, before hydration
-  // attached its handlers.
-  onMount(() => {
-    if (img?.complete) checkLoaded(img);
-  });
-
   return (
     <div
       aria-hidden="true"
@@ -40,25 +25,7 @@ export function Thumbnail(props: {
         props.class,
       )}
     >
-      <Show
-        when={props.youtubeId && !failed() ? props.youtubeId : undefined}
-        fallback={<GeneratedArtwork seeds={props.seeds} />}
-      >
-        {(id) => (
-          <img
-            ref={img}
-            src={youtubeThumbnailUrl(id())}
-            alt=""
-            loading="lazy"
-            decoding="async"
-            width={320}
-            height={180}
-            class="size-full object-cover"
-            onLoad={(e) => checkLoaded(e.currentTarget)}
-            onError={() => setFailed(true)}
-          />
-        )}
-      </Show>
+      {props.children}
     </div>
   );
 }
@@ -116,29 +83,4 @@ export function GeneratedArtwork(props: { seeds: ArtworkSeeds }) {
       </Show>
     </svg>
   );
-}
-
-/**
- * Seeds for a body's artwork: its own palette and layout, its short name.
- * A body always gets artwork rather than one of its videos' thumbnails, so it
- * looks the same however its meetings change, and never like one of them.
- */
-export function bodySeeds(body: {
-  id: number;
-  name: string;
-  name_short: string;
-}): ArtworkSeeds {
-  const key = `body:${body.id}`;
-  return { palette: key, layout: key, label: body.name_short || body.name };
-}
-
-/**
- * Seeds for a meeting's artwork: its body's palette and label, so a body's
- * meetings look related, with a layout of its own.
- */
-export function meetingSeeds(meeting: {
-  id: number;
-  body: { id: number; name: string; name_short: string };
-}): ArtworkSeeds {
-  return { ...bodySeeds(meeting.body), layout: `meeting:${meeting.id}` };
 }
