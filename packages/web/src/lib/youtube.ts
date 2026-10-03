@@ -108,3 +108,17 @@ export function createYouTubePlayer(
       }),
   );
 }
+
+/**
+ * A video's 320×180 thumbnail. YouTube serves this size for every video,
+ * unlike the larger ones, which only exist for HD uploads.
+ */
+export function youtubeThumbnailUrl(videoId: string): string {
+  return `https://i.ytimg.com/vi/${encodeURIComponent(videoId)}/mqdefault.jpg`;
+}
+
+/**
+ * The width of the grey placeholder YouTube serves, with a 404, in place of
+ * the thumbnail of a video that's gone or private. Real `mqdefault`s are wider.
+ */
+export const YOUTUBE_PLACEHOLDER_WIDTH = 120;
