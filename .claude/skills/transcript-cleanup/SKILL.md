@@ -26,7 +26,8 @@ never type one back in.
 Edit a golden with [scripts/psvtool.py](scripts/psvtool.py) rather than by
 hand: `render` shows it a segment at a time with the onset of every sentence,
 `words` lists each word's onset, and `apply` takes a file of `split`, `label`,
-`replace` and `replace_all` ops (run it with no arguments for details). Keep
+`replace`, `insert` (for words the transcript is missing) and `replace_all`
+ops (run it with no arguments for details). Keep
 the ops files, or the script that generates them, so a batch can be fixed and
 re-run. `fixtures:check` doesn't verify that an `identified:` slug exists in
 `people.jsonl`, so add every new person yourself.
