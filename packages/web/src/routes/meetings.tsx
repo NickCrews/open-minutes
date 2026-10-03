@@ -40,7 +40,7 @@ import {
 } from "~/features/meetings/list";
 import { MonthBadge } from "~/features/meetings/month-badge";
 import { MeetingDateTime } from "~/features/meetings/meeting-date-time";
-import { meetingSeeds, Thumbnail } from "~/features/thumbnails/thumbnail";
+import { MeetingThumbnail } from "~/features/meetings/meeting-thumbnail";
 import { db } from "~/server/db";
 
 const fetchMeetings = createServerFn({ method: "GET" }).handler(() =>
@@ -238,10 +238,7 @@ function MeetingCard(props: { meeting: Meeting; onSaved: () => void }) {
         tabIndex={-1}
         class="w-32 shrink-0 self-center py-4 pl-4 sm:w-44"
       >
-        <Thumbnail
-          youtubeId={props.meeting.youtube_id}
-          seeds={meetingSeeds(props.meeting)}
-        />
+        <MeetingThumbnail meeting={props.meeting} />
       </Link>
       <div class="flex min-w-0 flex-1 flex-col gap-3 py-4">
         <CardHeader>
