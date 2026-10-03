@@ -3,5 +3,7 @@
   "compilerOptions": {
     "types": ["node"]
   },
-  "include": ["src"]
+  // The pipeline's hand-written types for sherpa-onnx, which the audio tools
+  // reach through @open-minutes/pipeline/audio.
+  "include": ["src", "../pipeline/src/sherpa-onnx-node.d.ts"]
 }
