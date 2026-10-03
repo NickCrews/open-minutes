@@ -139,14 +139,16 @@ export function MeetingExcerptCard(props: {
   });
 
   return (
-    <Card class="gap-0 py-0">
+    <Card class="relative gap-0 py-0">
       <button
         type="button"
         aria-expanded={expanded()}
         onClick={() => setExpanded(!expanded())}
         class="hover:bg-muted/50 cursor-pointer rounded-xl text-left"
       >
-        <CardHeader class="py-4">
+        {/* Room on the right for the meeting link, which sits over the
+            header rather than in it, since a link can't go in a button. */}
+        <CardHeader class="py-4 pr-36">
           <CardTitle class="flex items-center gap-2">
             {/* Points down when collapsed, flips up when open. */}
             <ChevronDownIcon
@@ -179,6 +181,15 @@ export function MeetingExcerptCard(props: {
           </div>
         </Show>
       </button>
+      {/* Up top, so it's in reach without opening the card, or scrolling
+          past a long excerpt once it's open. */}
+      <Link
+        to="/meetings/$id"
+        params={{ id: String(props.meeting.id) }}
+        class="absolute top-4 right-6 text-sm font-medium whitespace-nowrap hover:underline"
+      >
+        View meeting →
+      </Link>
       <Show when={expanded()}>
         <CardContent class="flex flex-col gap-4 border-t py-4">
           <Switch>
@@ -219,13 +230,6 @@ export function MeetingExcerptCard(props: {
               </div>
             </Match>
           </Switch>
-          <Link
-            to="/meetings/$id"
-            params={{ id: String(props.meeting.id) }}
-            class="text-sm font-medium hover:underline"
-          >
-            View meeting →
-          </Link>
         </CardContent>
       </Show>
     </Card>
