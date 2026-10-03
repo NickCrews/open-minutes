@@ -8,7 +8,15 @@ import {
   GeneratedArtwork,
   ThumbnailFrame,
 } from "~/features/thumbnails/thumbnail";
-import { YOUTUBE_PLACEHOLDER_WIDTH, youtubeThumbnailUrl } from "~/lib/youtube";
+import { youtubeThumbnailUrl } from "~/lib/youtube";
+
+/**
+ * For a video that's gone or private, YouTube answers the thumbnail request
+ * with a 120px-wide grey placeholder (and a 404 that browsers may still
+ * render), where a real thumbnail is 320px wide. Anything this narrow counts
+ * as missing.
+ */
+const PLACEHOLDER_MAX_WIDTH = 120;
 
 export type ThumbnailMeeting = {
   id: number;
@@ -35,7 +43,7 @@ export function MeetingThumbnail(props: {
 }) {
   const [failed, setFailed] = createSignal(false);
   const checkLoaded = (img: HTMLImageElement) => {
-    if (img.naturalWidth <= YOUTUBE_PLACEHOLDER_WIDTH) setFailed(true);
+    if (img.naturalWidth <= PLACEHOLDER_MAX_WIDTH) setFailed(true);
   };
   let img: HTMLImageElement | undefined;
   // A server-rendered image may have finished, or failed, before hydration
