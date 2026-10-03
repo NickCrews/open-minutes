@@ -58,7 +58,7 @@ function excerpt(seg: LabeledSegment, words = 14): string {
 }
 
 /** The transcript label covering most of [from, to], if any. */
-function transcriptLabel(
+export function transcriptLabel(
   meeting: ListenMeeting,
   from: number,
   to: number,
@@ -75,6 +75,33 @@ function transcriptLabel(
   return best;
 }
 
+/**
+ * For each voiceprint window starting in [from, to - WINDOW_SEC): the two
+ * labels it sounds most like, and the best label smoothed by majority over 5
+ * windows (2.5 s). Null where nobody's talking.
+ */
+export function windowVoices(meeting: ListenMeeting, from: number, to: number) {
+  const voices = referenceVoices(meeting);
+  const windows = voiceWindows(meeting, from, to - WINDOW_SEC);
+  const best = windows.map((w) =>
+    w.embedding ? rankVoices(w.embedding, voices).slice(0, 2) : null,
+  );
+  const smoothed = best.map((b, i) => {
+    if (!b) return null;
+    const counts = new Map<string, number>();
+    for (let j = i - 2; j <= i + 2; j++) {
+      const label = best[j]?.[0]?.label;
+      if (label) counts.set(label, (counts.get(label) ?? 0) + 1);
+    }
+    return [...counts].sort((a, b) => b[1] - a[1])[0]![0];
+  });
+  return { windows, best, smoothed };
+}
+
+/** Each window speaks for the hop-long slice at its centre; where that starts. */
+export const sliceStart = (window: { start: number }) =>
+  window.start + (WINDOW_SEC - HOP_SEC) / 2;
+
 export const voiceTimeline = defineListenTool({
   name: "voice_timeline",
   description: `Who it sounds like, moment to moment, in a stretch of a meeting (at most 20 minutes), from the audio. Returns runs of time with the speaker label whose voice matches best, next to the label the transcript gives there (flagging where they disagree), and the moments the voice changes, each as "time similarity" across it (lower is a sharper change), noting a segment that starts within 3 s. Use it to find where one person stops and another starts inside a long segment, or to check a stretch the diarizer may have folded into the wrong speaker. ${SIMILARITY_GUIDE}`,
@@ -82,26 +109,11 @@ export const voiceTimeline = defineListenTool({
   run: async (ctx, input) => {
     checkRange(input.from, input.to, 20 * 60);
     const meeting = await ctx.meeting(input.meeting);
-    const voices = referenceVoices(meeting);
-    const windows = voiceWindows(meeting, input.from, input.to - WINDOW_SEC);
-
-    // Best label per window, smoothed by majority over 5 windows (2.5 s).
-    const best = windows.map((w) =>
-      w.embedding ? rankVoices(w.embedding, voices).slice(0, 2) : null,
+    const { windows, best, smoothed } = windowVoices(
+      meeting,
+      input.from,
+      input.to,
     );
-    const smoothed = best.map((b, i) => {
-      if (!b) return null;
-      const counts = new Map<string, number>();
-      for (let j = i - 2; j <= i + 2; j++) {
-        const label = best[j]?.[0]?.label;
-        if (label) counts.set(label, (counts.get(label) ?? 0) + 1);
-      }
-      return [...counts].sort((a, b) => b[1] - a[1])[0]![0];
-    });
-
-    // Each window speaks for the hop-long slice at its centre.
-    const sliceStart = (i: number) =>
-      windows[i]!.start + (WINDOW_SEC - HOP_SEC) / 2;
     type Run = { label: string; first: number; last: number };
     const runs: Run[] = [];
     smoothed.forEach((label, i) => {
@@ -117,8 +129,8 @@ export const voiceTimeline = defineListenTool({
     const voiceRuns = runs
       .filter((r) => r.last - r.first + 1 >= 1 / HOP_SEC)
       .map((r) => {
-        const from = sliceStart(r.first);
-        const to = sliceStart(r.last) + HOP_SEC;
+        const from = sliceStart(windows[r.first]!);
+        const to = sliceStart(windows[r.last]!) + HOP_SEC;
         const sims = new Map<string, number[]>();
         for (let i = r.first; i <= r.last; i++)
           for (const v of best[i] ?? [])

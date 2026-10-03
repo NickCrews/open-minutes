@@ -63,6 +63,10 @@ slow to compute (speech runs, voiceprints) is cached there too. Times are
   segments sound like someone else.
 - `compare_speakers`: label pairs that sound alike (an anonymous speaker
   number that's really a named person).
+- `render_audio`: a PNG of a stretch (up to 10 minutes) for a model or a person
+  to look at: the transcript's segments and words, who the audio sounds like,
+  how much the voice changes, voice activity, pitch and a mel spectrogram, on
+  one time axis. Written to `packages/pipeline/data/audio-views/`.
 
 The voice tools compare CAM++ voiceprints, the model diarization uses, of 2 s
 windows every 0.5 s (computed per minute of audio on first use, about a second

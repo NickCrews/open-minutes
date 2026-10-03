@@ -54,6 +54,11 @@ are `H:MM:SS.ss`, as psvtool prints them.
   to find where a hidden turn starts and ends.
 - `compare_speakers` lists labels that sound alike, such as a
   `segmented:spk-N` that is really a named person.
+- `render_audio` draws a stretch as an image; open it with Read. It lines up
+  the transcript's segments with who the audio sounds like, the pauses, the
+  pitch and a spectrogram, so a boundary that's a few words off, or speech
+  with no words under it, is plain to see. Look at one before splitting a
+  long segment.
 
 Similarities are of voiceprints: about 0.75 or more is very likely the same
 person, under 0.5 different people. Voices are matched against each label's
