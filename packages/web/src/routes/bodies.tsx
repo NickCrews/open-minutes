@@ -48,10 +48,7 @@ function BodiesPage() {
                 tabIndex={-1}
                 class="w-28 shrink-0 sm:w-36"
               >
-                <Thumbnail
-                  youtubeId={body.thumbnail_youtube_id}
-                  seeds={bodySeeds(body)}
-                />
+                <Thumbnail seeds={bodySeeds(body)} />
               </Link>
               <div class="min-w-0">
                 <Link

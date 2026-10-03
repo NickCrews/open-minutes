@@ -1,6 +1,6 @@
 /**
- * Generated artwork: a stand-in thumbnail for a meeting with no video, or a
- * body with no meetings. Everything is derived from string seeds, so the same
+ * Generated artwork: every body's thumbnail, and the stand-in for a meeting
+ * with no video. Everything is derived from string seeds, so the same
  * body or meeting draws the same picture on every page and every render, on
  * the server and in the browser alike. Kept free of Solid so it can be tested
  * on its own.

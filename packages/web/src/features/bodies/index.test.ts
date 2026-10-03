@@ -82,22 +82,3 @@ describe("getAllBodies coverage", () => {
     expect(body!.coverage).toEqual({ meetings: 1, first: null, last: null });
   });
 });
-
-describe("getAllBodies thumbnail", () => {
-  test("uses the most recent meeting that has a video", async ({ db }) => {
-    const gbos = await insertBody(db, "GBOS");
-    const empty = await insertBody(db, "Empty");
-    await insertMeeting(db, gbos, "2023-04-10");
-    await insertMeeting(db, gbos, null);
-    await insertMeeting(db, gbos, "2026-02-03");
-    const latest = `vid${nextYoutubeId - 1}`;
-    await db
-      .insert(meetingsTable)
-      .values({ body_id: gbos, youtube_id: "", date: "2027-01-01" });
-
-    const bodies = await getAllBodies(db);
-    expect(
-      Object.fromEntries(bodies.map((b) => [b.id, b.thumbnail_youtube_id])),
-    ).toEqual({ [gbos]: latest, [empty]: null });
-  });
-});
