@@ -11,6 +11,7 @@
   },
   "scripts": {
     "om": "tsx src/om/cli.ts",
+    "audio": "tsx src/listen/cli.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
@@ -21,7 +22,8 @@
     "citty": "^0.1.6",
     "drizzle-orm": "1.0.0-beta.21",
     "opus-decoder": "^0.7.12",
-    "sherpa-onnx-node": "^1.12.39"
+    "sherpa-onnx-node": "^1.12.39",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@open-minutes/fixtures": "workspace:*",

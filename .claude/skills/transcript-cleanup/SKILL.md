@@ -31,6 +31,22 @@ the ops files, or the script that generates them, so a batch can be fixed and
 re-run. `fixtures:check` doesn't verify that an `identified:` slug exists in
 `people.jsonl`, so add every new person yourself.
 
+### Listening to the audio
+
+The text can't show everything. `pnpm audio` has tools that read the
+meeting's audio, for a golden (`"meeting": "gbos_9HoIM5INxpI"`) or a database
+meeting (`"meeting": "12"`). Run `pnpm audio` to list them; times in and out
+are `H:MM:SS.ss`, as psvtool prints them.
+
+- `find_untranscribed_speech` lists stretches where someone is talking but
+  the transcript has no words, with what recognition hears there on its own.
+  Run it once per meeting: skipped roll-call answers, motions and seconds
+  hide in these gaps, and they are evidence for rule 1.
+- `transcribe_range` re-decodes a short stretch to recover dropped words or
+  check a misheard one.
+- `speech_activity` shows the pauses in a stretch, which is where a turn
+  can change.
+
 Running `transcribe.test.ts` with `SNAPSHOT_UPDATE=1` rewrites a golden's
 words from fresh recognition and keeps only its speaker layer, which discards
 every hand-corrected word.

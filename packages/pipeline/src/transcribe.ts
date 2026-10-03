@@ -174,6 +174,29 @@ export async function transcribeAudio(
   return windowSegments.flat();
 }
 
+/**
+ * Recognize one stretch of audio in a single pass, without VAD: the words in
+ * [start, end) of the waveform, with absolute onsets. For a closer look at a
+ * short range (under a few minutes); transcribeAudio is for whole meetings.
+ */
+export async function transcribeRange(
+  wave: WaveForm,
+  start: number,
+  end: number,
+): Promise<TranscriptWord[]> {
+  assertSampleRate(wave.sampleRate);
+  const from = Math.max(0, Math.floor(start * wave.sampleRate));
+  const to = Math.min(wave.samples.length, Math.ceil(end * wave.sampleRate));
+  const result = await transcribeSamples(
+    wave.samples.subarray(from, to),
+    wave.sampleRate,
+  );
+  const offset = from / wave.sampleRate;
+  return tokensToWords(result.tokens ?? [], result.timestamps ?? []).map(
+    (w) => ({ ...w, start: w.start + offset }),
+  );
+}
+
 /** A speech run as half-open sample-index bounds into the source waveform. */
 interface SpeechRun {
   startSample: number;

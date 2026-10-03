@@ -19,6 +19,7 @@
     "fixtures:check": "pnpm --silent --filter @open-minutes/fixtures run check",
     "fixtures:clean": "pnpm --silent --filter @open-minutes/fixtures run clean",
     "tools": "pnpm --silent --filter @open-minutes/tools run tools",
+    "audio": "pnpm --silent --filter @open-minutes/pipeline run audio",
     "deploy:prod": "pnpm --filter @open-minutes/web run deploy"
   },
   "devDependencies": {
