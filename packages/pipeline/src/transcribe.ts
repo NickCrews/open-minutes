@@ -175,26 +175,39 @@ export async function transcribeAudio(
 }
 
 /**
- * Recognize one stretch of audio in a single pass, without VAD: the words in
- * [start, end) of the waveform, with absolute onsets. For a closer look at a
+ * How much audio either side of the requested range transcribeRange decodes.
+ * The recognizer hears a word cut off at the edge of what it's given poorly,
+ * and the words around it guess better with their neighbours; a couple of
+ * seconds covers a word and a half either side.
+ */
+export const RANGE_CONTEXT_SEC = 2;
+
+/**
+ * Recognize one stretch of audio in a single pass, without VAD: the words
+ * whose onsets fall in [start, end) of the waveform, with absolute onsets.
+ * The pass decodes `contextSecs` more either side, so the model gets lead-in
+ * and lead-out, and the words found there are dropped. For a closer look at a
  * short range (under a few minutes); transcribeAudio is for whole meetings.
  */
 export async function transcribeRange(
   wave: WaveForm,
   start: number,
   end: number,
+  { contextSecs = RANGE_CONTEXT_SEC } = {},
 ): Promise<TranscriptWord[]> {
   assertSampleRate(wave.sampleRate);
-  const from = Math.max(0, Math.floor(start * wave.sampleRate));
-  const to = Math.min(wave.samples.length, Math.ceil(end * wave.sampleRate));
-  const result = await transcribeSamples(
-    wave.samples.subarray(from, to),
-    wave.sampleRate,
+  const rate = wave.sampleRate;
+  const from = Math.max(0, Math.floor((start - contextSecs) * rate));
+  const to = Math.min(
+    wave.samples.length,
+    Math.ceil((end + contextSecs) * rate),
   );
-  const offset = from / wave.sampleRate;
-  return tokensToWords(result.tokens ?? [], result.timestamps ?? []).map(
-    (w) => ({ ...w, start: w.start + offset }),
-  );
+  if (to <= from) return [];
+  const result = await transcribeSamples(wave.samples.subarray(from, to), rate);
+  const offset = from / rate;
+  return tokensToWords(result.tokens ?? [], result.timestamps ?? [])
+    .map((w) => ({ ...w, start: w.start + offset }))
+    .filter((w) => w.start >= start && w.start < end);
 }
 
 /** A speech run as half-open sample-index bounds into the source waveform. */

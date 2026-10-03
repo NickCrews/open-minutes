@@ -58,3 +58,12 @@ slow to compute (speech runs) is cached there too. Times are
 
 The tools are in `src/listen/`, typed like `@open-minutes/tools`' (a zod input
 schema and a description for the model), exported as `listenTools`.
+
+`transcribe_range` decodes two seconds of audio either side of the range it's
+given, so the words at its edges are heard in context, and returns only the
+words that start inside it.
+
+`src/listen/audio.test.ts` runs the tools on a checked-in minute of real
+meeting audio (`src/listen/testdata/`), and `src/listen/audio.bench.ts` times
+the models on it. Because the clip is one minute long, `pnpm bench` reports
+each model's time per minute of audio, so a model swap shows what it costs.

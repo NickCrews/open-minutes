@@ -13,6 +13,7 @@
     "om": "tsx src/om/cli.ts",
     "audio": "tsx src/listen/cli.ts",
     "test": "vitest run",
+    "bench": "vitest bench --run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

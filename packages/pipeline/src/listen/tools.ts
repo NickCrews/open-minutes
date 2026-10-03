@@ -24,7 +24,7 @@ import {
 
 /** The longest range transcribe_range decodes in one pass. */
 const MAX_TRANSCRIBE_SECS = 120;
-/** How much audio either side of a stretch find_untranscribed_speech decodes. */
+/** How far either side of a stretch find_untranscribed_speech reports words from (a word's onset can come a little before VAD hears it). */
 const TRANSCRIBE_PAD_SECS = 0.5;
 
 /** Words as one line, each sentence prefixed with its first word's onset. */

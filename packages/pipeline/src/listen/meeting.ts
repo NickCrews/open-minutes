@@ -16,6 +16,7 @@ import {
   getMeetingData,
   TEST_DATA_ROOT,
 } from "@open-minutes/fixtures/test-data";
+import type { GoldenSegment } from "@open-minutes/fixtures/psv";
 import { getCachedAudio, meetingCacheDir } from "../test-utils/audio-cache";
 
 /**
@@ -94,7 +95,17 @@ function loadFromGolden(ref: string) {
       `No golden meeting "${ref}" and not a database meeting id. Golden meetings are the directory names under packages/fixtures/test-data/meetings/.`,
     );
   const meeting = getMeetingData(ref);
-  const segments = meeting.segments
+  return {
+    youtubeId: meeting.youtube_id,
+    segments: labelGoldenSegments(meeting.segments),
+  };
+}
+
+/** A golden's segments, labelled and numbered as the audio tools show them. */
+export function labelGoldenSegments(
+  segments: readonly GoldenSegment[],
+): LabeledSegment[] {
+  return segments
     .map((seg, id) => ({ seg, id }))
     .filter(({ seg }) => seg.words.length > 0)
     .map(({ seg, id }) => {
@@ -106,7 +117,6 @@ function loadFromGolden(ref: string) {
             : "unlabeled";
       return toLabeled(id, label, seg.words);
     });
-  return { youtubeId: meeting.youtube_id, segments };
 }
 
 async function loadFromDb(db: DB, meetingId: number) {
