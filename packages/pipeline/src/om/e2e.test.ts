@@ -7,7 +7,7 @@ import { dbTest } from "@open-minutes/db/testing/vitest";
 import type { TranscriptWord } from "@open-minutes/core/transcription";
 import { getMeetingData } from "@open-minutes/fixtures/test-data";
 import type { GoldenSegment } from "@open-minutes/fixtures/psv";
-import { compareTranscripts } from "../test-utils/wer";
+import { compareTranscripts } from "@open-minutes/core/transcription";
 import { goldenMeetingsData } from "../seed/golden-meetings-data";
 import { GOLDEN_GBOS, fakeYouTube } from "./testing";
 import { ingestVideo } from "./ingest";
@@ -48,12 +48,12 @@ const E2E_WORK_ROOT = fileURLToPath(
 );
 
 // Step 1 as a declared dataset. Seeding computes real voiceprints from the two
-// meetings' audio, which is slow, so the harness does it once per change to
-// the fixtures (or the embedding model) and caches the result as a template;
-// every later run clones it in milliseconds.
+// meetings' audio (a minute or so, cold), so the harness does it once per
+// change to the fixtures (or the embedding model) and caches the result as a
+// template; every later run clones it in milliseconds.
 const test = dbTest({
   data: goldenMeetingsData(SEED_SLUGS),
-  setupTimeoutMs: 60 * 60_000,
+  setupTimeoutMs: 5 * 60_000,
 });
 
 describe("e2e cross-meeting speaker recognition", () => {

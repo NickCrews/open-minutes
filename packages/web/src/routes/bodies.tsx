@@ -2,8 +2,10 @@ import { createFileRoute, Link } from "@tanstack/solid-router";
 import { createServerFn } from "@tanstack/solid-start";
 import { For, Show } from "solid-js";
 import { type Coverage, getAllBodies } from "~/features/bodies";
+import { BodyThumbnail } from "~/features/bodies/body-thumbnail";
 import { formatMonthYear } from "@open-minutes/core/meeting-date";
 import { db } from "~/server/db";
+import { PinIcon } from "~/components/icons";
 
 const fetchBodies = createServerFn({ method: "GET" }).handler(() =>
   getAllBodies(db()),
@@ -39,28 +41,38 @@ function BodiesPage() {
           fallback={<li class="text-muted-foreground py-2">No bodies yet.</li>}
         >
           {(body) => (
-            <li class="py-2">
+            <li class="flex items-center gap-4 py-3">
               <Link
                 to="/bodies/$id"
                 params={{ id: String(body.id) }}
-                class="font-medium hover:underline"
+                tabIndex={-1}
+                class="w-28 shrink-0 sm:w-36"
               >
-                {body.name || "(unnamed)"}
+                <BodyThumbnail body={body} />
               </Link>
-              <Show when={body.jurisdiction.name}>
-                {(name) => (
-                  <span class="text-muted-foreground text-sm">
-                    {" "}
-                    — {name()}
-                    {body.jurisdiction.state
-                      ? `, ${body.jurisdiction.state}`
-                      : ""}
-                  </span>
-                )}
-              </Show>
-              <p class="text-muted-foreground text-sm">
-                {formatCoverage(body.coverage)}
-              </p>
+              <div class="min-w-0">
+                <Link
+                  to="/bodies/$id"
+                  params={{ id: String(body.id) }}
+                  class="font-medium hover:underline"
+                >
+                  {body.name || "(unnamed)"}
+                </Link>
+                <Show when={body.jurisdiction.name}>
+                  {(name) => (
+                    <p class="text-muted-foreground flex items-center gap-1 text-sm">
+                      <PinIcon class="size-3.5 shrink-0" />
+                      {name()}
+                      {body.jurisdiction.state
+                        ? `, ${body.jurisdiction.state}`
+                        : ""}
+                    </p>
+                  )}
+                </Show>
+                <p class="text-muted-foreground text-sm">
+                  {formatCoverage(body.coverage)}
+                </p>
+              </div>
             </li>
           )}
         </For>

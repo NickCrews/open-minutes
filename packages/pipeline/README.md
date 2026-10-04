@@ -1,6 +1,6 @@
 # @open-minutes/pipeline
 
-The offline processing pipeline that turns raw meeting audio into speaker-attributed transcripts in the database. It transcribes audio locally with sherpa-onnx (downloading ONNX models on demand), cleans disfluencies such as "um" and stutters out of the transcript (see `@open-minutes/core/transcription`'s `clean.ts`), diarizes it into anonymous speaker turns with per-speaker voiceprint embeddings, aligns those turns with the transcript at the word level, and then recognizes speakers by matching their voiceprints against the people already in the database (by cosine similarity) before inserting the resulting segments. Everything runs in-process with no external services or GPUs required.
+The offline processing pipeline that turns raw meeting audio into speaker-attributed transcripts in the database. It transcribes audio locally with `@open-minutes/audio` (sherpa-onnx, downloading ONNX models on demand), cleans disfluencies such as "um" and stutters out of the transcript (see `@open-minutes/core/transcription`'s `clean.ts`), diarizes it into anonymous speaker turns with per-speaker voiceprint embeddings (also `@open-minutes/audio`), aligns those turns with the transcript at the word level, and then recognizes speakers by matching their voiceprints against the people already in the database (by cosine similarity) before inserting the resulting segments. Everything runs in-process with no external services or GPUs required.
 
 ## The `om` CLI
 
@@ -29,50 +29,13 @@ its work directory. The CLI is a thin wrapper over the exported API
 (`listIngested`, `listAvailable`, `ingestVideo` from
 `@open-minutes/pipeline/om`), so scripts and tests reuse the same logic.
 
-## Audio tools for transcript cleanup
+## Audio for the agent tools
 
-Diarization and recognition make mistakes that the transcript's text alone
-can't reveal: two people folded under one label, or speech the recognizer
-skipped. `pnpm audio` gives an agent (or a person) tools that look at the
-meeting's audio itself. It works like `pnpm tools`: JSON in, JSON out.
-
-```sh
-pnpm audio                                   # list the tools and golden meetings
-pnpm audio <tool> --schema                   # a tool's input, as JSON Schema
-pnpm audio voice_timeline '{"meeting":"gbos_9HoIM5INxpI","segment":65}'
-pnpm audio find_untranscribed_speech '{"meeting":"gbos_9HoIM5INxpI"}'
-pnpm audio transcribe_range '{"meeting":"gbos_9HoIM5INxpI","from":"0:01:56","to":"0:02:07"}'
-```
-
-A meeting is a golden fixture name or a database meeting id (`--db` picks the
-database, as for `pnpm tools`). Its audio is downloaded into the per-machine
-cache (`~/.cache/open-minutes/meetings/<youtubeId>/`) on first use, and what's
-slow to compute (speech runs, voiceprints) is cached there too. Times are
-`H:MM:SS.ss` like golden PSV files, so they go straight into a psvtool op.
-
-- `voice_timeline`: one segment (with a few seconds either side) or a stretch
-  of up to 5 minutes as text, in time order: the words cut into phrases at
-  pauses, segment starts and changes of voice, each phrase's pitch and whose
-  voice it sounds like, and at each cut the cues for a change of speaker
-  (voice similarity either side, a pitch jump, a different voice match, the
-  pause), marked as a likely or possible change. Also speech with no words,
-  and for a segment, the labels and other segments its voice is closest to.
-- `find_untranscribed_speech`: stretches with speech but no transcript words,
-  each with what recognition hears when it decodes just that stretch.
-- `transcribe_range`: recognize one short stretch on its own, next to what the
-  transcript has there.
-- `audit_speaker`: whether one label is really one voice, and which of its
-  segments sound like someone else.
-- `compare_speakers`: label pairs that sound alike (an anonymous speaker
-  number that's really a named person).
-
-The voice tools compare CAM++ voiceprints, the model diarization uses, of 2 s
-windows every 0.5 s (computed per minute of audio on first use, about a second
-each, and cached). Each speaker label's voiceprint is sampled from its own
-segments. On the golden meetings, one person's voiceprints score about 0.75 or
-more against each other and different people under 0.5.
-
-The tools are in `src/listen/`, typed like `@open-minutes/tools`' (a zod input
-schema and a description for the model), exported as `listenTools`.
-`voice_timeline` builds its data in `timeline.ts` and writes it as text in
-`timeline-text.ts`, so another view (a web page) can draw the same data.
+`src/audio.ts`, exported as `@open-minutes/pipeline/audio`, is what the audio
+tools in `@open-minutes/tools` need: a meeting's cached audio, plus the model
+calls from `@open-minutes/audio` that they use. Those are speech runs from
+Silero VAD (`detectSpeech` in `speech-runs.ts`, with pauses down to 0.2 s where
+the transcriber cuts at 0.5 s), and `transcribeRange`, which decodes one
+stretch with two seconds of audio either side for context and returns only
+the words that start inside it. The voice tools also get the CAM++ speaker
+embedding extractor from here (`getEmbeddingExtractor`).

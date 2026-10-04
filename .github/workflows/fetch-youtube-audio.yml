@@ -4,10 +4,9 @@
 #   youtube/<video id>/speech.webm YouTube's Opus audio, re-encoded to 16 kHz
 #                                  mono Opus at 24 kbps (~11 MB per hour); see
 #                                  .github/scripts/encode-speech-audio.sh
-# Clients (getMetadata and ensureAudioDownloaded in
-# packages/pipeline/src/youtube) trigger this when a file is missing and poll
-# for it; they decode the Opus themselves, so nothing else is stored. YouTube's
-# original audio isn't kept. If every
+# Clients (getMetadata and ensureAudioDownloaded in packages/youtube) trigger
+# this when a file is missing and poll for it; they decode the Opus themselves,
+# so nothing else is stored. YouTube's original audio isn't kept. If every
 # download attempt fails, youtube/<video id>/error.json is written instead, so
 # clients stop waiting.
 #

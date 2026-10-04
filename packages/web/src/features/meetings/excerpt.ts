@@ -98,3 +98,22 @@ export function visibleIndices(items: ExcerptItem[]): Set<number> {
   }
   return visible;
 }
+
+/** Characters of lead-in a preview keeps before a query's first hit. */
+export const PREVIEW_LEAD = 80;
+
+/**
+ * `text` cut to start a little before the first case-insensitive occurrence of
+ * `query`, at a word boundary and marked with "…", so a clamped preview shows
+ * the hit even when it's deep in a long segment. Unchanged when the hit is
+ * already near the start, or there is none.
+ */
+export function previewText(text: string, query: string | undefined): string {
+  const q = query?.trim().toLowerCase();
+  if (!q) return text;
+  const at = text.toLowerCase().indexOf(q);
+  if (at <= PREVIEW_LEAD) return text;
+  const space = text.indexOf(" ", at - PREVIEW_LEAD);
+  const from = space === -1 || space >= at ? at : space + 1;
+  return `…${text.slice(from)}`;
+}

@@ -3,11 +3,14 @@ import { existsSync, mkdirSync, readdirSync, symlinkSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import sherpa_onnx from "sherpa-onnx-node";
+import { readWave } from "@open-minutes/audio/wav";
 
-import { computeSpeakerEmbeddings } from "./embed";
-import { diarizeAudio } from "./diarize";
-import { alignSpeakers, segmentsToSpeechRuns } from "./align";
+import { computeSpeakerEmbeddings } from "@open-minutes/audio/embed";
+import { diarizeAudio } from "@open-minutes/audio/diarize";
+import {
+  alignSpeakers,
+  segmentsToSpeechRuns,
+} from "@open-minutes/core/transcription";
 import {
   parsePsv,
   serializePsv,
@@ -35,7 +38,7 @@ describe("diarize", () => {
       cpDirSymlinked(meeting.meetingDir, runDir);
 
       const audioPath = await getMeetingAudio(meeting).then((a) => a.path);
-      const wave = sherpa_onnx.readWave(audioPath);
+      const wave = readWave(audioPath);
       const turns = diarizeAudio(wave);
 
       // Keep the transcription slice from the existing golden; relabel speakers.

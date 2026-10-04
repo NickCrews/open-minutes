@@ -18,12 +18,14 @@ YouTube ──yt-dlp──▶ pipeline (om ingest) ──▶ Postgres + pgvector
                     align / recognize
 ```
 
-A [pnpm](https://pnpm.io) workspace with six packages. Each depends only on
+A [pnpm](https://pnpm.io) workspace with eight packages. Each depends only on
 the ones listed above it:
 
 - **[`packages/core`](packages/core)** (`@open-minutes/core`): shared domain
-  code with no database or I/O: transcript and timeline types, voice-embedding
-  constants, body slugs, and `.env.local` loading.
+  code with no database or I/O: transcript and timeline types, transcript
+  cleaning and speaker alignment, word error rate, chapter rules, reading a
+  meeting's date from its title and transcript, the interface a video site
+  implements, voice-embedding constants, body slugs, and `.env.local` loading.
 - **[`packages/db`](packages/db)** (`@open-minutes/db`): the
   [Drizzle](https://orm.drizzle.team) schema and migrations, the `pnpm db` CLI,
   and the per-test database helpers (`@open-minutes/db/testing/vitest`).
@@ -31,14 +33,22 @@ the ones listed above it:
   data that seeds local and test databases. `test-data/` holds the real,
   hand-verified jurisdictions, bodies, people and golden meetings. Nothing here
   ships to production.
+- **[`packages/audio`](packages/audio)** (`@open-minutes/audio`): speech
+  processing, run locally with
+  [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx). It transcribes a WAV
+  (NeMo Parakeet ASR + Silero VAD) and diarizes it into speaker turns (pyannote
+  segmentation + CAM++ voice embeddings). No GPU or external API is needed;
+  models are downloaded on first use (or all at once with `pnpm om models`).
+  See the [audio README](packages/audio/README.md).
+- **[`packages/youtube`](packages/youtube)** (`@open-minutes/youtube`): the
+  YouTube source. It lists a channel's or playlist's videos and gets a video's
+  metadata and audio, with yt-dlp or from the object store (see below), and
+  decodes YouTube's Opus audio to WAV. See the
+  [youtube README](packages/youtube/README.md).
 - **[`packages/pipeline`](packages/pipeline)** (`@open-minutes/pipeline`): the
-  offline ingestion pipeline and the `om` CLI. It downloads audio, transcribes
-  it locally with [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) (NeMo
-  Parakeet ASR + Silero VAD), diarizes it into speaker turns (pyannote
-  segmentation + CAM++ voice embeddings), aligns turns to words, recognizes
-  speakers against known voiceprints, and writes the meeting to the database.
-  No GPU or external API is needed; models are downloaded on first use (or
-  all at once with `pnpm om models`). See the
+  offline ingestion pipeline and the `om` CLI. It gets a meeting's audio from
+  `@open-minutes/youtube`, runs it through `@open-minutes/audio`, aligns turns to words, recognizes speakers
+  against known voiceprints, and writes the meeting to the database. See the
   [pipeline README](packages/pipeline/README.md).
 - **[`packages/tools`](packages/tools)** (`@open-minutes/tools`): tools
   for editing the data (speaker labels, people, chapters), as typed tool
@@ -130,6 +140,7 @@ pnpm check       # typecheck + format:check + lint + test (run this before commi
 pnpm test        # fast tests only
 pnpm test:slow   # only the tests tagged `slow`
 pnpm test:all    # everything, including slow tests
+pnpm bench       # time the audio models per minute of audio (*.bench.ts)
 pnpm format      # prettier --write over the repo
 ```
 

@@ -17,12 +17,6 @@ import {
   CardTitle,
 } from "~/components/card";
 import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardPortal,
-  HoverCardTrigger,
-} from "~/components/hover-card";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -40,6 +34,7 @@ import {
 } from "~/features/meetings/list";
 import { MonthBadge } from "~/features/meetings/month-badge";
 import { MeetingDateTime } from "~/features/meetings/meeting-date-time";
+import { MeetingThumbnail } from "~/features/meetings/meeting-thumbnail";
 import { db } from "~/server/db";
 
 const fetchMeetings = createServerFn({ method: "GET" }).handler(() =>
@@ -230,58 +225,47 @@ function MeetingsPage() {
 
 function MeetingCard(props: { meeting: Meeting; onSaved: () => void }) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>
+    <Card class="flex-row gap-0 overflow-hidden py-0">
+      <Link
+        to="/meetings/$id"
+        params={{ id: String(props.meeting.id) }}
+        tabIndex={-1}
+        class="w-32 shrink-0 self-center py-4 pl-4 sm:w-44"
+      >
+        <MeetingThumbnail meeting={props.meeting} />
+      </Link>
+      <div class="flex min-w-0 flex-1 flex-col gap-3 py-4">
+        <CardHeader>
+          <CardTitle>
+            <Link
+              to="/meetings/$id"
+              params={{ id: String(props.meeting.id) }}
+              class="hover:underline"
+            >
+              {props.meeting.title || "(untitled)"}
+            </Link>
+          </CardTitle>
+          <CardDescription class="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <MeetingDateTime
+              meetingId={props.meeting.id}
+              date={props.meeting.date}
+              time={props.meeting.time}
+              timezone={props.meeting.body.timezone}
+              onSaved={props.onSaved}
+            />
+            <Duration durationSecs={props.meeting.duration_secs} />
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
           <Link
-            to="/meetings/$id"
-            params={{ id: String(props.meeting.id) }}
-            class="hover:underline"
-          >
-            {props.meeting.title || "(untitled)"}
-          </Link>
-        </CardTitle>
-        <CardDescription class="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <MeetingDateTime
-            meetingId={props.meeting.id}
-            date={props.meeting.date}
-            time={props.meeting.time}
-            timezone={props.meeting.body.timezone}
-            onSaved={props.onSaved}
-          />
-          <Duration durationSecs={props.meeting.duration_secs} />
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <HoverCard>
-          <HoverCardTrigger
-            as="span"
-            class="text-muted-foreground cursor-default text-sm underline decoration-dotted underline-offset-4"
+            to="/bodies/$id"
+            params={{ id: String(props.meeting.body.id) }}
+            class="text-muted-foreground text-sm hover:underline"
           >
             {props.meeting.body.name}
-          </HoverCardTrigger>
-          <HoverCardPortal>
-            <HoverCardContent>
-              <div class="flex flex-col gap-1">
-                <p class="font-semibold">{props.meeting.body.name}</p>
-                <p class="text-muted-foreground text-sm">
-                  {props.meeting.body.jurisdiction.name}
-                  <Show when={props.meeting.body.jurisdiction.state}>
-                    {(state) => <>, {state()}</>}
-                  </Show>
-                </p>
-                <Link
-                  to="/bodies/$id"
-                  params={{ id: String(props.meeting.body.id) }}
-                  class="text-sm font-medium hover:underline"
-                >
-                  View body →
-                </Link>
-              </div>
-            </HoverCardContent>
-          </HoverCardPortal>
-        </HoverCard>
-      </CardContent>
+          </Link>
+        </CardContent>
+      </div>
     </Card>
   );
 }

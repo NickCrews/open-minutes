@@ -11,6 +11,7 @@
     "test": "vitest run",
     "test:slow": "SLOW=1 vitest run --tagsFilter slow",
     "test:all": "SLOW=1 vitest run",
+    "bench": "vitest bench --run",
     "typecheck": "pnpm --filter @open-minutes/* run typecheck",
     "check": "pnpm typecheck && pnpm run format:check && pnpm run lint && pnpm run test",
     "web:dev": "pnpm --filter @open-minutes/web run dev",
@@ -19,7 +20,6 @@
     "fixtures:check": "pnpm --silent --filter @open-minutes/fixtures run check",
     "fixtures:clean": "pnpm --silent --filter @open-minutes/fixtures run clean",
     "tools": "pnpm --silent --filter @open-minutes/tools run tools",
-    "audio": "pnpm --silent --filter @open-minutes/pipeline run audio",
     "deploy:prod": "pnpm --filter @open-minutes/web run deploy"
   },
   "devDependencies": {

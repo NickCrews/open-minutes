@@ -26,17 +26,18 @@ never type one back in.
 Edit a golden with [scripts/psvtool.py](scripts/psvtool.py) rather than by
 hand: `render` shows it a segment at a time with the onset of every sentence,
 `words` lists each word's onset, and `apply` takes a file of `split`, `label`,
-`replace` and `replace_all` ops (run it with no arguments for details). Keep
+`replace`, `insert` (for words the transcript is missing) and `replace_all`
+ops (run it with no arguments for details). Keep
 the ops files, or the script that generates them, so a batch can be fixed and
 re-run. `fixtures:check` doesn't verify that an `identified:` slug exists in
 `people.jsonl`, so add every new person yourself.
 
 ### Listening to the audio
 
-The text can't show everything. `pnpm audio` has tools that read the
-meeting's audio, for a golden (`"meeting": "gbos_9HoIM5INxpI"`) or a database
-meeting (`"meeting": "12"`). Run `pnpm audio` to list them; times in and out
-are `H:MM:SS.ss`, as psvtool prints them.
+The text can't show everything. Some of the same tools read the meeting's
+audio, for a golden (`"meeting": "gbos_9HoIM5INxpI"`) or a database meeting
+(`"meeting": "12"`). A golden needs no database. Times in and out are
+`H:MM:SS.ss`, as psvtool prints them.
 
 - `find_untranscribed_speech` lists stretches where someone is talking but
   the transcript has no words, with what recognition hears there on its own.
@@ -44,9 +45,6 @@ are `H:MM:SS.ss`, as psvtool prints them.
   hide in these gaps, and they are evidence for rule 1.
 - `transcribe_range` re-decodes a short stretch to recover dropped words or
   check a misheard one.
-- `audit_speaker` checks that one label is one voice. Run it on the labels
-  with the most speech: the diarizer folds other people into the chair and
-  into busy members, and lists the segments that sound like someone else.
 - `voice_timeline` lays out one segment (`"segment": 65`), or a stretch, in
   time order: each phrase with its pitch and whose voice it sounds like (≠
   where that isn't its label), and at each pause, segment start or change of
@@ -54,6 +52,9 @@ are `H:MM:SS.ss`, as psvtool prints them.
   turn to split at; a new label where the voice carries on is a boundary to
   doubt. For a segment it also ranks the labels and segments its voice is
   closest to. Run it before splitting or relabelling a segment.
+- `audit_speaker` checks that one label is one voice. Run it on the labels
+  with the most speech: the diarizer folds other people into the chair and
+  into busy members, and lists the segments that sound like someone else.
 - `compare_speakers` lists labels that sound alike, such as a
   `segmented:spk-N` that is really a named person.
 
@@ -86,7 +87,7 @@ every hand-corrected word.
      whose own audit says one voice, and clearly above its current label. A
      segment of a few seconds is too short to judge this way; use the text.
 
-   Topic or tone of speech is not evidence. Without evidence, leave the label alone and
+   Topic or tone is not evidence. Without evidence, leave the label alone and
    report it.
 
 2. **Speech recognition misspells names** (Brian → Bryan, Crews → Cruz,

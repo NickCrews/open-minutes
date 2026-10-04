@@ -24,6 +24,13 @@
             Replace the word sequence starting at onset T. `old` must match
             the word texts exactly (space separated). `new` may have more or
             fewer words; "" deletes.
+        {"op":"insert","words":["0:01:57.24 Are","0:01:57.52 we"],"speaker":L}
+            Add words the transcript is missing (eg from `pnpm audio
+            transcribe_range`, whose "words" list has this shape), each at
+            its onset. With "speaker", they form their own turn and the
+            words after them go back to whoever was speaking; without it,
+            they join the segment they fall in. An onset that a word
+            already has is refused.
         {"op":"replace_all","old":"Gridwood","new":"Girdwood"}
             Replace every occurrence of a word sequence, ignoring case and
             trailing punctuation; the last old word's trailing punctuation is
@@ -151,6 +158,28 @@ def apply(segs, ops):
                 if got != old:
                     raise SystemExit(f"expected {old} at {op['at']}, found {got}")
                 splice(words, wi, len(old), op["new"].split())
+            elif kind == "insert":
+                speaker = op.get("speaker")
+                if speaker is not None:
+                    check_label(speaker)
+                flat = [[t, w, s["label"]] for s in segs for t, w in s["words"]]
+                taken = {t for t, _, _ in flat}
+                for item in op["words"]:
+                    at, _, text = item.partition(" ")
+                    t = parse_ts(at)
+                    if t in taken or not text.strip():
+                        raise SystemExit(f"can't insert {item!r}: onset taken or no word")
+                    taken.add(t)
+                    before = [x for x in flat if x[0] < t]
+                    label = speaker or (before[-1][2] if before else flat[0][2])
+                    flat.append([t, text.strip(), label])
+                flat.sort(key=lambda x: x[0])
+                segs[:] = []
+                for t, w, label in flat:
+                    if segs and segs[-1]["label"] == label:
+                        segs[-1]["words"].append([t, w])
+                    else:
+                        segs.append({"label": label, "words": [[t, w]]})
             elif kind == "replace_all":
                 old = [norm(w) for w in op["old"].split()]
                 newt = op["new"].split()

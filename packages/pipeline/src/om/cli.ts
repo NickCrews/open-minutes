@@ -20,7 +20,7 @@ import { prepareDatabase } from "@open-minutes/db/ensure";
 import { listIngested, type IngestedMeeting } from "./ingested";
 import { listAvailable } from "./available";
 import { ingestVideos } from "./ingest";
-import { ALL_MODEL_SPECS, ensureAllModels } from "../all-models";
+import { ALL_MODEL_SPECS, ensureAllModels } from "@open-minutes/audio/models";
 
 async function withDb<T>(fn: (db: DB) => Promise<T>): Promise<T> {
   // Same readiness rule as `pnpm dev`: local is migrated (and created, on a

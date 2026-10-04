@@ -1,5 +1,11 @@
 import { describe, expect, test } from "vitest";
-import { excerptItems, type Reveal, visibleIndices } from "./excerpt";
+import {
+  excerptItems,
+  PREVIEW_LEAD,
+  previewText,
+  type Reveal,
+  visibleIndices,
+} from "./excerpt";
 
 /** The excerpt as a compact string: pinned segments as "[i]", others as "i", gaps as "(hidden/size)". */
 function layout(
@@ -66,4 +72,28 @@ describe("excerptItems", () => {
 test("visibleIndices lists the shown segments", () => {
   const items = excerptItems(8, [2, 5], new Map([[3, { head: 1, tail: 0 }]]));
   expect([...visibleIndices(items)].sort()).toEqual([2, 3, 5]);
+});
+
+describe("previewText", () => {
+  const filler = "word ".repeat(40);
+
+  test("keeps text whose hit is near the start", () => {
+    expect(previewText("the budget passed", "budget")).toBe(
+      "the budget passed",
+    );
+  });
+
+  test("keeps text with no hit or no query", () => {
+    expect(previewText(filler, "budget")).toBe(filler);
+    expect(previewText(filler, undefined)).toBe(filler);
+  });
+
+  test("starts a deep hit's preview at a word boundary before it", () => {
+    const preview = previewText(`${filler}the Budget passed`, "budget");
+    expect(preview.startsWith("…word ")).toBe(true);
+    expect(preview.endsWith("the Budget passed")).toBe(true);
+    expect(preview.length).toBeLessThanOrEqual(
+      1 + PREVIEW_LEAD + "budget passed".length,
+    );
+  });
 });

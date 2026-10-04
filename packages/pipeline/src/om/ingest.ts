@@ -10,22 +10,23 @@ import {
   videoSourcesTable,
 } from "@open-minutes/db";
 import { bodySlug } from "@open-minutes/core/bodies";
-import { type YouTube, youtubeFromEnv } from "../youtube";
+import { type YouTube, youtubeFromEnv } from "@open-minutes/youtube";
 import {
+  alignSpeakers,
   cleanSpeechSegments,
   type DiarizationTurn,
+  segmentsToTurns,
   type SpeechSegment,
 } from "@open-minutes/core/transcription";
-import { transcribeAudio } from "../transcribe";
-import { computeSpeakerEmbeddings } from "../embed";
-import { diarizeAudio } from "../diarize";
-import { alignSpeakers, segmentsToTurns } from "../align";
+import { transcribeAudio } from "@open-minutes/audio/transcribe";
+import { computeSpeakerEmbeddings } from "@open-minutes/audio/embed";
+import { diarizeAudio } from "@open-minutes/audio/diarize";
 import { identifyAndInsertSegments } from "../identify";
 import {
   type MeetingDateTime,
   openingText,
   resolveMeetingDateTime,
-} from "../meeting_date";
+} from "@open-minutes/core/meeting-date";
 
 /**
  * Root of the per-meeting work directories (one `<body-slug>_<youtubeId>` dir
@@ -179,7 +180,7 @@ export async function ingestVideo(
         youtube_id: youtubeId,
         title: metadata.title,
         description: metadata.description,
-        // Parsed from the title and the chair's gavel-in (see meeting_date.ts),
+        // Parsed from the title and the chair's gavel-in (see @open-minutes/core/meeting-date),
         // not YouTube publish/stream times, which don't reliably reflect when
         // the meeting happened. A time without a date is meaningless.
         date: when.date,

@@ -1,4 +1,5 @@
 import { Show } from "solid-js";
+import { ClockIcon } from "~/components/icons";
 import { formatDuration } from "~/lib/format";
 
 /**
@@ -22,19 +23,7 @@ export function Duration(props: {
           {/* inline-flex, not flex: this sits in a flex row on the list page but
               mid-sentence on the detail page, where a block would break the line. */}
           <span class="inline-flex items-center gap-1">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-              class="size-3.5 shrink-0"
-            >
-              <circle cx="12" cy="12" r="9" />
-              <path d="M12 7v5l3 2" />
-            </svg>
+            <ClockIcon class="size-3.5 shrink-0" />
             {formatDuration(secs(), "minutes")}
           </span>
         </>

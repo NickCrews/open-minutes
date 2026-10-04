@@ -1,7 +1,7 @@
 {
   "name": "@open-minutes/tools",
   "version": "0.1.0",
-  "description": "Open Minutes data-editing tools for agents: a typed tool list and a JSON CLI over the database",
+  "description": "Open Minutes tools for agents cleaning up meetings: read and edit the data, and listen to the audio. A typed tool list and a JSON CLI",
   "type": "module",
   "bin": {
     "om-tools": "./src/cli.ts"
@@ -12,16 +12,18 @@
   "scripts": {
     "tools": "tsx src/cli.ts",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "bench": "vitest bench --run"
   },
   "dependencies": {
     "@open-minutes/core": "workspace:*",
     "@open-minutes/db": "workspace:*",
+    "@open-minutes/fixtures": "workspace:*",
+    "@open-minutes/pipeline": "workspace:*",
     "drizzle-orm": "1.0.0-beta.21",
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@open-minutes/fixtures": "workspace:*",
     "@types/node": "^25.6.0",
     "tsx": "^4.21.0",
     "vitest": "^4.0.18"
