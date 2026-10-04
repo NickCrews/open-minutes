@@ -1,0 +1,22 @@
+{
+  "name": "@open-minutes/youtube",
+  "version": "0.1.0",
+  "description": "Open Minutes' YouTube source: list a channel's or playlist's videos, read their metadata and get their audio as WAV",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@open-minutes/core": "workspace:*",
+    "opus-decoder": "^0.7.12"
+  },
+  "devDependencies": {
+    "@open-minutes/audio": "workspace:*",
+    "@types/node": "^22.19.17",
+    "vitest": "^4.0.18"
+  }
+}

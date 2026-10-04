@@ -322,7 +322,7 @@ async function requestFetch(id: string, token: string) {
 /**
  * Everything the pipeline gets from YouTube (via yt-dlp). Create one with
  * {@link youtube} or {@link youtubeFromEnv} and pass it around; tests pass a
- * fake instead (see `om/testing.ts`).
+ * fake instead (see the pipeline's `om/testing.ts`).
  */
 export interface YouTube extends AudioProvider {
   /** The videos on a channel, across all its tabs ("Videos", "Live", ...). */

@@ -9,7 +9,7 @@ import {
   videoSourcesTable,
 } from "@open-minutes/db";
 import { eq } from "drizzle-orm";
-import type { YouTube } from "../youtube";
+import type { YouTube } from "@open-minutes/youtube";
 import { dbTest } from "@open-minutes/db/testing/vitest";
 import { goldenData } from "@open-minutes/fixtures/golden-data";
 import { loadBodies } from "@open-minutes/fixtures/test-data";

@@ -1,8 +1,8 @@
 /**
  * A site meetings are published on (YouTube today), as the pipeline sees it:
  * what a video is, and its audio. Each site implements this (see
- * `youtube/index.ts` in @open-minutes/pipeline), so the pipeline can take one
- * without caring which, and tests can pass a fake (see its `om/testing.ts`).
+ * @open-minutes/youtube), so the pipeline can take one without caring which,
+ * and tests can pass a fake (see the pipeline's `om/testing.ts`).
  */
 export interface AudioProvider {
   /** The video's title, publisher and so on. */

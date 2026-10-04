@@ -18,7 +18,7 @@ YouTube ──yt-dlp──▶ pipeline (om ingest) ──▶ Postgres + pgvector
                     align / recognize
 ```
 
-A [pnpm](https://pnpm.io) workspace with six packages. Each depends only on
+A [pnpm](https://pnpm.io) workspace with eight packages. Each depends only on
 the ones listed above it:
 
 - **[`packages/core`](packages/core)** (`@open-minutes/core`): shared domain
@@ -40,9 +40,14 @@ the ones listed above it:
   segmentation + CAM++ voice embeddings). No GPU or external API is needed;
   models are downloaded on first use (or all at once with `pnpm om models`).
   See the [audio README](packages/audio/README.md).
+- **[`packages/youtube`](packages/youtube)** (`@open-minutes/youtube`): the
+  YouTube source. It lists a channel's or playlist's videos and gets a video's
+  metadata and audio, with yt-dlp or from the object store (see below), and
+  decodes YouTube's Opus audio to WAV. See the
+  [youtube README](packages/youtube/README.md).
 - **[`packages/pipeline`](packages/pipeline)** (`@open-minutes/pipeline`): the
-  offline ingestion pipeline and the `om` CLI. It downloads audio, runs it
-  through `@open-minutes/audio`, aligns turns to words, recognizes speakers
+  offline ingestion pipeline and the `om` CLI. It gets a meeting's audio from
+  `@open-minutes/youtube`, runs it through `@open-minutes/audio`, aligns turns to words, recognizes speakers
   against known voiceprints, and writes the meeting to the database. See the
   [pipeline README](packages/pipeline/README.md).
 - **[`packages/tools`](packages/tools)** (`@open-minutes/tools`): tools
