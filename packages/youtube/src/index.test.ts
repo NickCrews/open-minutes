@@ -10,8 +10,16 @@ describe("YouTube Module", () => {
   // tabs. MOA is the regression case: it has both tabs, and returning them
   // unflattened made `om available` report exactly 2 channel-ID "videos".
   const channels = [
-    { name: "GBOS", id: "UCOUlNInprZEjhbpVPiJOlEA", minVideos: 10 },
-    { name: "MOA", id: "UCZDEuWj4IxdlwBhqrk62_XA", minVideos: 1000 },
+    {
+      name: "GBOS",
+      url: "https://www.youtube.com/channel/UCOUlNInprZEjhbpVPiJOlEA",
+      minVideos: 10,
+    },
+    {
+      name: "MOA",
+      url: "https://www.youtube.com/channel/UCZDEuWj4IxdlwBhqrk62_XA",
+      minVideos: 1000,
+    },
   ];
 
   it.each(channels)(
@@ -19,15 +27,14 @@ describe("YouTube Module", () => {
     // MOA's flat playlist is thousands of entries and several MB of JSON, so
     // scraping it takes about a minute.
     { tags: ["slow"] },
-    async ({ id, minVideos }) => {
-      const videos = await yt.videosInChannel(id);
+    async ({ url, minVideos }) => {
+      const videos = await yt.listVideos(url);
       expect(videos).toBeInstanceOf(Array);
       expect(videos.length).toBeGreaterThan(minVideos);
       expect(videos[0]).toHaveProperty("id");
       expect(videos[0]).toHaveProperty("title");
       for (const video of videos) {
-        expect(video.id).not.toBe(id);
-        expect(video.entries).toBeUndefined();
+        expect(url).not.toContain(video.id);
       }
       expect(new Set(videos.map((v) => v.id)).size).toBe(videos.length);
     },

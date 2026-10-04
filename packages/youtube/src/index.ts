@@ -6,30 +6,16 @@ import type {
   AudioProvider,
   VideoMetadata,
 } from "@open-minutes/core/audio-provider";
+import type { ListedVideo, VideoLister } from "@open-minutes/core/video-lister";
 import { webmOpusToWav } from "./opus";
 
 export type {
   AudioProvider,
   VideoMetadata,
 } from "@open-minutes/core/audio-provider";
+export type { ListedVideo, VideoLister } from "@open-minutes/core/video-lister";
 
 const execFileAsync = promisify(execFile);
-
-function channelUrl(channelIdOrUrl: string) {
-  // if youtube.com already, return as-is
-  if (channelIdOrUrl.includes("youtube.com")) {
-    return channelIdOrUrl;
-  }
-  return `https://www.youtube.com/channel/${channelIdOrUrl}`;
-}
-
-function playlistUrl(playlistIdOrUrl: string) {
-  // if youtube.com already, return as-is
-  if (playlistIdOrUrl.includes("youtube.com")) {
-    return playlistIdOrUrl;
-  }
-  return `https://www.youtube.com/playlist?list=${playlistIdOrUrl}`;
-}
 
 /** The 11-character video ID, from either an ID or a watch/youtu.be URL. */
 export function videoId(videoIdOrUrl: string): string {
@@ -83,7 +69,7 @@ function ytDlp(config: YouTubeConfig, args: string[]) {
   );
 }
 
-export interface FlatEntry {
+interface FlatEntry {
   /** "url" for a video, "playlist" for a nested tab/playlist. */
   _type?: "url" | "playlist";
   id: string;
@@ -106,9 +92,18 @@ function flattenVideos(node: FlatEntry, seen = new Set<string>()): FlatEntry[] {
   return [node];
 }
 
-async function flatPlaylist(config: YouTubeConfig, url: string) {
+/**
+ * The videos at a channel or playlist URL. A channel's span all its tabs
+ * ("Videos", "Live", ...).
+ */
+async function listVideos(
+  config: YouTubeConfig,
+  url: string,
+): Promise<ListedVideo[]> {
   const { stdout } = await ytDlp(config, ["--flat-playlist", "-J", url]);
-  return flattenVideos(JSON.parse(stdout) as FlatEntry);
+  return flattenVideos(JSON.parse(stdout) as FlatEntry).map(
+    ({ id, title }) => ({ id, title }),
+  );
 }
 
 /** The fields of yt-dlp's info JSON that {@link VideoMetadata} uses. */
@@ -324,25 +319,12 @@ async function requestFetch(id: string, token: string) {
  * {@link youtube} or {@link youtubeFromEnv} and pass it around; tests pass a
  * fake instead (see the pipeline's `om/testing.ts`).
  */
-export interface YouTube extends AudioProvider {
-  /** The videos on a channel, across all its tabs ("Videos", "Live", ...). */
-  videosInChannel(channelIdOrUrl: string): Promise<FlatEntry[]>;
-  /**
-   * The videos in one playlist. Bodies that share a channel with their
-   * siblings (the Assembly, P&Z and the school board all publish to the MOA
-   * channel) are usually separated by playlist, so this is how a video gets
-   * attributed to the right body.
-   */
-  videosInPlaylist(playlistIdOrUrl: string): Promise<FlatEntry[]>;
-}
+export type YouTube = AudioProvider & VideoLister;
 
 /** A {@link YouTube} that uses `config`. Does no I/O until a method is called. */
 export function youtube(config: YouTubeConfig = {}): YouTube {
   return {
-    videosInChannel: (channelIdOrUrl) =>
-      flatPlaylist(config, channelUrl(channelIdOrUrl)),
-    videosInPlaylist: (playlistIdOrUrl) =>
-      flatPlaylist(config, playlistUrl(playlistIdOrUrl)),
+    listVideos: (sourceUrl) => listVideos(config, sourceUrl),
     getMetadata: (videoIdOrUrl) => getMetadata(config, videoIdOrUrl),
     ensureAudioDownloaded: (videoIdOrUrl, path, options) =>
       ensureAudioDownloaded(config, videoIdOrUrl, path, options),

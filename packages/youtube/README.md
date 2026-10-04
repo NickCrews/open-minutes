@@ -1,8 +1,9 @@
 # @open-minutes/youtube
 
-Where Open Minutes gets meetings published on YouTube. It lists the videos on
-a channel or in a playlist, and implements `@open-minutes/core`'s
-`AudioProvider` for a video: its metadata, and its audio as 16 kHz mono WAV.
+Where Open Minutes gets meetings published on YouTube. It implements
+`@open-minutes/core`'s `VideoLister` for a channel or playlist URL (the videos
+on it) and `AudioProvider` for a video (its metadata, and its audio as 16 kHz
+mono WAV).
 It knows nothing about the database or what happens to the audio next;
 `@open-minutes/pipeline` does that.
 
