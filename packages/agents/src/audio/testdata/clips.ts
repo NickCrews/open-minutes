@@ -2,7 +2,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { readWave, type WaveForm } from "@open-minutes/ingest/audio";
+import { readWave, type WaveForm } from "@open-minutes/audio/wav";
 import { parsePsv } from "@open-minutes/fixtures/psv";
 import { toolContext } from "../../context";
 import type { ToolContext } from "../../tool";

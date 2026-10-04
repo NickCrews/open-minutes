@@ -4,7 +4,7 @@ import {
   detectSpeech,
   type Span,
   SPEECH_RUNS_VERSION,
-} from "@open-minutes/ingest/audio";
+} from "@open-minutes/audio/speech-runs";
 import type { AudioMeeting, LabeledSegment } from "./meeting";
 
 // Where in a meeting someone is talking (Silero VAD, run by the pipeline's

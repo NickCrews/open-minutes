@@ -1,10 +1,10 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import type { TranscriptWord } from "@open-minutes/core/transcription";
+import { detectSpeech } from "@open-minutes/audio/speech-runs";
 import {
-  detectSpeech,
   loadTranscriptionModels,
   transcribeRange,
-} from "@open-minutes/ingest/audio";
+} from "@open-minutes/audio/transcribe";
 import { callTool } from "../tool";
 import {
   clip,

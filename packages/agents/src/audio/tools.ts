@@ -3,7 +3,7 @@ import {
   cleanWords,
   type TranscriptWord,
 } from "@open-minutes/core/transcription";
-import { transcribeRange } from "@open-minutes/ingest/audio";
+import { transcribeRange } from "@open-minutes/audio/transcribe";
 import {
   clip,
   pauses,
