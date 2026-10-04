@@ -8,11 +8,16 @@ chapters, and listening to the audio. Add new agent-facing tools here
 Each tool is a name, a description written for the model, a zod input schema
 (exported as JSON Schema), and `run(ctx, input)`. The context
 (`toolContext(...)`) opens the database and a meeting's audio only when a tool
-first needs them, so the audio tools on a golden fixture work without
-Postgres.
+first needs them.
+
+Every tool that takes a meeting takes `"meeting"`: its slug (eg
+`"gbos_9HoIM5INxpI"`, set on the golden fixture meetings, the same in every
+database) or its id in this database (eg `12`). `list_meetings` shows both.
+The tools read only the database, never the fixture files, so they work the
+same wherever the database is: locally, in tests, or in production.
 
 ```sh
-pnpm om tools                                # list the tools and golden meetings
+pnpm om tools                                # list the tools
 pnpm om tools <tool> --schema                # a tool's input, as JSON Schema
 pnpm om tools --describe                     # every tool with its schema, as JSON
 pnpm om tools list_meetings
@@ -38,8 +43,8 @@ const agentTools = tools.map((t) => toAgentTool(t, ctx));
 
 Diarization and recognition make mistakes the transcript's text can't show:
 two people folded under one label, or speech the recognizer skipped. The
-tools in `src/audio/` look at the audio itself. They take a golden fixture
-name or a database meeting id. Its audio is downloaded into the per-machine
+tools in `src/audio/` look at the audio itself, for any meeting with a YouTube
+video. Its audio is downloaded into the per-machine
 cache (`~/.cache/open-minutes/meetings/<youtubeId>/`) on first use, and speech
 runs, which are slow to compute, are cached there too. Times are `H:MM:SS.ss`
 like golden PSV files, so they go straight into a psvtool op. The tools call

@@ -37,9 +37,14 @@ re-run. `fixtures:check` doesn't verify that an `identified:` slug exists in
 ### Listening to the audio
 
 The text can't show everything. Some of the same tools read the meeting's
-audio, for a golden (`"meeting": "gbos_9HoIM5INxpI"`) or a database meeting
-(`"meeting": "12"`). A golden needs no database. Times in and out are
-`H:MM:SS.ss`, as psvtool prints them.
+audio. Like every tool, they take the meeting by slug
+(`"meeting": "gbos_9HoIM5INxpI"`) or by id (`"meeting": 12`), and read it from
+the database. A golden fixture's slug is its directory name; to listen to a
+golden, make sure the database you point at has it (`pnpm db up` seeds them
+into your local one), and run `pnpm db up --data-reset if-needed` after
+editing its PSV so the tools see your edits. Their segment ids are database
+row ids, not psvtool's numbering, so match segments by time: times in and out
+are `H:MM:SS.ss`, as psvtool prints them.
 
 - `find_untranscribed_speech` lists stretches where someone is talking but
   the transcript has no words, with what recognition hears there on its own.

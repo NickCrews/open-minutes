@@ -57,6 +57,7 @@ export async function seedGoldenMeeting(
   const [meetingRow] = await db
     .insert(meetingsTable)
     .values({
+      slug: meeting.slug,
       body_id: bodyId,
       youtube_id: meeting.youtube_id,
       title: meeting.title,

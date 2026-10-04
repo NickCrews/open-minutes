@@ -13,16 +13,17 @@ export function toolContext(db: Db | (() => Promise<Db>)): ToolContext {
   return {
     db: getDb,
     meeting(ref) {
-      let m = meetings.get(ref);
+      const key = String(ref);
+      let m = meetings.get(key);
       if (!m) {
-        m = openMeeting(ref, getDb);
+        m = getDb().then((db) => openMeeting(ref, db));
         // Cache a meeting once it opens, but not a failure: if the audio
         // download drops, or the meeting isn't ingested yet, the next call for
         // this ref should try again rather than rethrow the old error for the
         // life of the context. (The caller still gets the rejection from `m`;
         // this branch only evicts it.)
-        m.catch(() => meetings.delete(ref));
-        meetings.set(ref, m);
+        m.catch(() => meetings.delete(key));
+        meetings.set(key, m);
       }
       return m;
     },

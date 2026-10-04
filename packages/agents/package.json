@@ -19,13 +19,13 @@
     "@open-minutes/audio": "workspace:*",
     "@open-minutes/core": "workspace:*",
     "@open-minutes/db": "workspace:*",
-    "@open-minutes/fixtures": "workspace:*",
     "@open-minutes/ingest": "workspace:*",
     "citty": "^0.1.6",
     "drizzle-orm": "1.0.0-beta.21",
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@open-minutes/fixtures": "workspace:*",
     "@types/node": "^25.6.0",
     "tsx": "^4.21.0",
     "vitest": "^4.0.18"

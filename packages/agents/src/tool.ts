@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { DB } from "@open-minutes/db";
 import type { AudioMeeting } from "./audio/meeting";
+import type { MeetingRef } from "./meeting-ref";
 
 // The shape every tool shares, kept free of any one agent framework: a name, a
 // description written for a model, a zod input schema (exported as JSON
@@ -13,17 +14,16 @@ export type Db = DB | Parameters<Parameters<DB["transaction"]>[0]>[0];
 
 /**
  * What a tool runs against. Each part is opened on first use, so a tool that
- * only listens to a golden's audio never needs the database, and one that only
- * edits rows never loads a model. Make one with `toolContext`.
+ * only edits rows never downloads audio or loads a model. Make one with
+ * `toolContext`.
  */
 export interface ToolContext {
   /** The database. */
   db(): Promise<Db>;
   /**
-   * A meeting's audio and transcript, by golden fixture name or database
-   * meeting id. Opened once per context.
+   * A meeting's audio and transcript, by slug or id. Opened once per context.
    */
-  meeting(ref: string): Promise<AudioMeeting>;
+  meeting(ref: MeetingRef): Promise<AudioMeeting>;
 }
 
 export interface Tool<I extends z.ZodType = z.ZodType, O = unknown> {

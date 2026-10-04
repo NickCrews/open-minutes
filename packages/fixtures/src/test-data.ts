@@ -45,6 +45,8 @@ export interface GoldenPerson {
 }
 
 export interface GoldenMeeting {
+  /** The fixture's directory name, eg "gbos_9HoIM5INxpI": `meetings.slug`. */
+  slug: string;
   body_id: string;
   youtube_id: string;
   title: string;
@@ -188,6 +190,7 @@ export function getMeetingData(
   return {
     ...meeting,
     ...when,
+    slug: meetingSlug,
     meetingDir,
     segments,
     chapters,

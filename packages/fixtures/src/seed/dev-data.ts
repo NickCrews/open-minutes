@@ -30,7 +30,7 @@ import { advanceIdSequences } from "./sequences";
 
 // Bump when the seeder's behavior changes in a way the fixture files don't
 // capture.
-const DEV_SEED_VERSION = 2; // 2: seeds chapters
+const DEV_SEED_VERSION = 3; // 2: seeds chapters; 3: seeds meeting slugs
 
 // Every table the dev seeder owns. Truncated together (children would cascade
 // anyway); listing them keeps the footprint visible.
@@ -95,6 +95,7 @@ export async function seedDevDatabase(db: DB): Promise<DevSeedSummary> {
     const lastWord = m.segments.flatMap((s) => s.words).at(-1);
     return {
       id: i + 1,
+      slug: m.slug,
       body_id: bodyId,
       youtube_id: m.youtube_id,
       title: m.title,

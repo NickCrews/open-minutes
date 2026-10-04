@@ -47,9 +47,6 @@ importers:
       '@open-minutes/db':
         specifier: workspace:*
         version: link:../db
-      '@open-minutes/fixtures':
-        specifier: workspace:*
-        version: link:../fixtures
       '@open-minutes/ingest':
         specifier: workspace:*
         version: link:../ingest
@@ -63,6 +60,9 @@ importers:
         specifier: ^4.3.6
         version: 4.3.6
     devDependencies:
+      '@open-minutes/fixtures':
+        specifier: workspace:*
+        version: link:../fixtures
       '@types/node':
         specifier: ^25.6.0
         version: 25.6.0

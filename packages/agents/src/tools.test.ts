@@ -27,10 +27,7 @@ import {
 
 const test = dbTest({ data: devData });
 /** The March 23, 2026 GBOS golden meeting, the one with chapters. */
-async function gbosId(db: Db) {
-  const meetings = await callTool(toolContext(db), listMeetings, {});
-  return meetings.find((m) => m.youtubeId === "9HoIM5INxpI")!.id;
-}
+const GBOS = "gbos_9HoIM5INxpI";
 
 async function personId(db: Db, slug: string) {
   const [p] = await callTool(toolContext(db), findPeople, { query: slug });
@@ -40,24 +37,22 @@ async function personId(db: Db, slug: string) {
 /** Brian Burnett's "This is Brian Burnett chiming in" segment. */
 async function brianSegment(db: Db) {
   const segments = await callTool(toolContext(db), getTranscript, {
-    meetingId: await gbosId(db),
+    meeting: GBOS,
   });
   return segments.find((s) => s.text.includes("Burnett chiming"))!;
 }
 
 describe("reading", () => {
   test("lists meetings with their sizes", async ({ db }) => {
-    const MEETING = await gbosId(db);
     const meetings = await callTool(toolContext(db), listMeetings, {});
-    const gbos = meetings.find((m) => m.id === MEETING);
+    const gbos = meetings.find((m) => m.slug === GBOS);
     expect(gbos).toMatchObject({ body: "GBOS", chapters: 34 });
     expect(gbos!.segments).toBeGreaterThan(200);
   });
 
   test("reads part of a transcript, with words on request", async ({ db }) => {
-    const MEETING = await gbosId(db);
     const part = await callTool(toolContext(db), getTranscript, {
-      meetingId: MEETING,
+      meeting: GBOS,
       from: 600,
       to: 700,
       words: true,
@@ -71,27 +66,44 @@ describe("reading", () => {
   });
 
   test("tallies speakers, longest first", async ({ db }) => {
-    const MEETING = await gbosId(db);
     const speakers = await callTool(toolContext(db), listSpeakers, {
-      meetingId: MEETING,
+      meeting: GBOS,
     });
     expect(speakers[0]!.speaker).toMatchObject({ slug: "mike-edgington" });
     expect(speakers[0]!.secs).toBeGreaterThan(speakers[1]!.secs);
   });
 
   test("a clean meeting has no issues", async ({ db }) => {
-    const MEETING = await gbosId(db);
     expect(
-      await callTool(toolContext(db), checkMeetingTool, { meetingId: MEETING }),
+      await callTool(toolContext(db), checkMeetingTool, { meeting: GBOS }),
     ).toEqual([]);
+  });
+
+  test("takes a meeting by slug or by id", async ({ db }) => {
+    const meetings = await callTool(toolContext(db), listMeetings, {});
+    const { id } = meetings.find((m) => m.slug === GBOS)!;
+    const bySlug = await callTool(toolContext(db), getChapters, {
+      meeting: GBOS,
+    });
+    expect(bySlug.length).toBeGreaterThan(0);
+    for (const meeting of [id, `${id}`])
+      expect(await callTool(toolContext(db), getChapters, { meeting })).toEqual(
+        bySlug,
+      );
   });
 
   test("refuses bad input with a readable message", async ({ db }) => {
     await expect(
-      callTool(toolContext(db), getTranscript, { meetingId: "one" }),
-    ).rejects.toThrow(/Invalid input for get_transcript[\s\S]*meetingId/);
+      callTool(toolContext(db), getTranscript, { meeting: -1 }),
+    ).rejects.toThrow(/Invalid input for get_transcript[\s\S]*meeting/);
     await expect(
-      callTool(toolContext(db), checkMeetingTool, { meetingId: 999 }),
+      callTool(toolContext(db), checkMeetingTool, { meeting: 999 }),
+    ).rejects.toThrow(/No meeting with id "999"/);
+    await expect(
+      callTool(toolContext(db), getTranscript, { meeting: "gbos_nope" }),
+    ).rejects.toThrow(/No meeting with slug "gbos_nope"/);
+    await expect(
+      callTool(toolContext(db), getTranscript, { meeting: "99999999999" }),
     ).rejects.toThrow(ToolError);
   });
 });
@@ -125,7 +137,6 @@ describe("relabel_segments", () => {
 
 describe("split_segment and merge_segments", () => {
   test("split then merge restores the segment", async ({ db }) => {
-    const MEETING = await gbosId(db);
     const seg = await brianSegment(db);
     const split = await callTool(toolContext(db), splitSegment, {
       segmentId: seg.id,
@@ -134,7 +145,7 @@ describe("split_segment and merge_segments", () => {
     });
     expect(split.applied).toBe(true);
     const after = await callTool(toolContext(db), getTranscript, {
-      meetingId: MEETING,
+      meeting: GBOS,
     });
     const i = after.findIndex((s) => s.id === seg.id);
     expect(after[i]!.text).toBe("I have I");
@@ -151,9 +162,8 @@ describe("split_segment and merge_segments", () => {
   });
 
   test("refuses segments that aren't next to each other", async ({ db }) => {
-    const MEETING = await gbosId(db);
     const [a, , c] = await callTool(toolContext(db), getTranscript, {
-      meetingId: MEETING,
+      meeting: GBOS,
     });
     await expect(
       callTool(toolContext(db), mergeSegments, { segmentIds: [a!.id, c!.id] }),
@@ -209,11 +219,10 @@ describe("people", () => {
   });
 
   test("merges one voice split across two people", async ({ db }) => {
-    const MEETING = await gbosId(db);
     const keep = await personId(db, "kellie-okonek");
     const merge = await personId(db, "brianna-sullivan");
     const before = await callTool(toolContext(db), listSpeakers, {
-      meetingId: MEETING,
+      meeting: GBOS,
     });
     const segs = (slug: string) =>
       before.find(
@@ -227,7 +236,7 @@ describe("people", () => {
     });
     expect(out.applied).toBe(true);
     const after = await callTool(toolContext(db), listSpeakers, {
-      meetingId: MEETING,
+      meeting: GBOS,
     });
     expect(
       after.find(
@@ -252,9 +261,8 @@ describe("replace_chapters", () => {
   });
 
   test("replaces the chapters as a new generation", async ({ db }) => {
-    const MEETING = await gbosId(db);
     const out = await callTool(toolContext(db), replaceChapters, {
-      meetingId: MEETING,
+      meeting: GBOS,
       model: "human",
       reviewedByHuman: true,
       chapters: [
@@ -264,9 +272,9 @@ describe("replace_chapters", () => {
     });
     expect(out.applied).toBe(true);
     expect(
-      (
-        await callTool(toolContext(db), getChapters, { meetingId: MEETING })
-      ).map((c) => c.title),
+      (await callTool(toolContext(db), getChapters, { meeting: GBOS })).map(
+        (c) => c.title,
+      ),
     ).toEqual(["First half", "Second half"]);
     // Two 80-minute chapters break the size convention: warned, still saved.
     expect(out.issues.every((i) => i.severity === "warning")).toBe(true);
@@ -275,10 +283,9 @@ describe("replace_chapters", () => {
   test("refuses overlapping chapters before touching the database", async ({
     db,
   }) => {
-    const MEETING = await gbosId(db);
     await expect(
       callTool(toolContext(db), replaceChapters, {
-        meetingId: MEETING,
+        meeting: GBOS,
         model: "human",
         chapters: [chapter(0, 100), chapter(50, 200)],
       }),
@@ -288,12 +295,11 @@ describe("replace_chapters", () => {
   });
 
   test("rolls back a change that introduces an error", async ({ db }) => {
-    const MEETING = await gbosId(db);
     const before = await callTool(toolContext(db), getChapters, {
-      meetingId: MEETING,
+      meeting: GBOS,
     });
     const out = await callTool(toolContext(db), replaceChapters, {
-      meetingId: MEETING,
+      meeting: GBOS,
       model: "human",
       chapters: [chapter(0, 99_999, "Runs past the end")],
     });
@@ -304,7 +310,7 @@ describe("replace_chapters", () => {
       }),
     ]);
     expect(
-      await callTool(toolContext(db), getChapters, { meetingId: MEETING }),
+      await callTool(toolContext(db), getChapters, { meeting: GBOS }),
     ).toEqual(before);
   });
 });

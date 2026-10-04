@@ -15,6 +15,7 @@ import { LAST_WORD_DURATION_SEC } from "@open-minutes/core/transcription";
 import { audioTools } from "./audio/tools";
 import { checkMeeting, type Issue } from "./check";
 import { loadChapters, loadSegments, round, speakerOf } from "./load";
+import { findMeeting, meetingRef } from "./meeting-ref";
 import { type Db, defineTool, type Tool, ToolError } from "./tool";
 
 // Tools for an agent cleaning up a meeting's data: reading the transcript,
@@ -120,13 +121,14 @@ export const listMeetings = defineTool({
   name: "list_meetings",
   label: "List meetings",
   description:
-    "List every meeting with its id, body, date, and how many segments and chapters it has. Start here to find a meeting id.",
+    "List every meeting with its id, slug, body, date, and how many segments and chapters it has. Start here to find a meeting: other tools take its slug or its id.",
   input: z.object({}),
   run: async (ctx) => {
     const db = await ctx.db();
     const meetings = await db
       .select({
         id: meetingsTable.id,
+        slug: meetingsTable.slug,
         title: meetingsTable.title,
         body: bodiesTable.name_short,
         date: meetingsTable.date,
@@ -162,7 +164,7 @@ export const getTranscript = defineTool({
   description:
     "Read a meeting's transcript as segments (a run of words by one speaker), in time order, with segment ids, start and end seconds, speaker, and text. Pass from/to (seconds) to read part of a long meeting. Pass words: true to get each word's index and onset, which split_segment needs.",
   input: z.object({
-    meetingId: id,
+    meeting: meetingRef,
     from: z
       .number()
       .nonnegative()
@@ -177,7 +179,8 @@ export const getTranscript = defineTool({
   }),
   run: async (ctx, input) => {
     const db = await ctx.db();
-    const segments = await loadSegments(db, input.meetingId);
+    const { id: meetingId } = await findMeeting(db, input.meeting);
+    const segments = await loadSegments(db, meetingId);
     return segments
       .map((s) => ({
         id: s.id,
@@ -202,7 +205,7 @@ export const listSpeakers = defineTool({
   label: "List speakers",
   description:
     "List everyone who speaks in a meeting, by person or speaker number, with their segment count, speaking seconds, and first segment. Useful for spotting one voice split across two labels.",
-  input: z.object({ meetingId: id }),
+  input: z.object({ meeting: meetingRef }),
   run: async (ctx, input) => {
     const db = await ctx.db();
     const bySpeaker = new Map<
@@ -215,7 +218,8 @@ export const listSpeakers = defineTool({
         firstAt: number;
       }
     >();
-    for (const s of await loadSegments(db, input.meetingId)) {
+    const { id: meetingId } = await findMeeting(db, input.meeting);
+    for (const s of await loadSegments(db, meetingId)) {
       const speaker = speakerOf(s);
       const k = JSON.stringify(
         speaker && ("personId" in speaker ? speaker.personId : speaker),
@@ -281,8 +285,11 @@ export const checkMeetingTool = defineTool({
   label: "Check meeting",
   description:
     "List problems in a meeting's data. Errors: words or segments out of time order, invalid chapters. Warnings: speech no chapter covers, chapters outside the size conventions. Every write tool also returns this after its change.",
-  input: z.object({ meetingId: id }),
-  run: async (ctx, input) => checkMeeting(await ctx.db(), input.meetingId),
+  input: z.object({ meeting: meetingRef }),
+  run: async (ctx, input) => {
+    const db = await ctx.db();
+    return checkMeeting(db, (await findMeeting(db, input.meeting)).id);
+  },
 });
 
 export const relabelSegments = defineTool({
@@ -505,16 +512,19 @@ export const getChapters = defineTool({
   label: "Get chapters",
   description:
     "Read a meeting's chapters in order, with start and end seconds, title, summary and bullets.",
-  input: z.object({ meetingId: id }),
-  run: async (ctx, input) =>
-    (await loadChapters(await ctx.db(), input.meetingId)).map((c) => ({
+  input: z.object({ meeting: meetingRef }),
+  run: async (ctx, input) => {
+    const db = await ctx.db();
+    const { id: meetingId } = await findMeeting(db, input.meeting);
+    return (await loadChapters(db, meetingId)).map((c) => ({
       id: c.id,
       start: c.start,
       end: c.end,
       title: c.title,
       summary: c.summary,
       bullets: c.bullets,
-    })),
+    }));
+  },
 });
 
 const chapterInput = z.object({
@@ -534,7 +544,7 @@ export const replaceChapters = defineTool({
   description:
     "Replace all of a meeting's chapters with a new set, recorded as a new generation (who wrote them, and whether a human reviewed them). Chapters must be in order and not overlap; they should cover all speech. See docs/chapters.md for the conventions. To edit one chapter, get_chapters, change it, and pass the whole list back.",
   input: z.object({
-    meetingId: id,
+    meeting: meetingRef,
     model: z
       .string()
       .min(1)
@@ -556,14 +566,15 @@ export const replaceChapters = defineTool({
           )
           .join("\n"),
       );
-    const segments = await loadSegments(db, input.meetingId);
+    const { id: meetingId } = await findMeeting(db, input.meeting);
+    const segments = await loadSegments(db, meetingId);
     if (!segments.length)
-      throw new ToolError(`Meeting ${input.meetingId} has no transcript`);
-    return applyEdit(db, [input.meetingId], input.dryRun, async (tx) => {
+      throw new ToolError(`Meeting ${input.meeting} has no transcript`);
+    return applyEdit(db, [meetingId], input.dryRun, async (tx) => {
       const [generation] = await tx
         .insert(chapterGenerationsTable)
         .values({
-          meeting_id: input.meetingId,
+          meeting_id: meetingId,
           model: input.model,
           prompt_version: input.promptVersion,
           reviewed_by_human: input.reviewedByHuman,
@@ -572,10 +583,10 @@ export const replaceChapters = defineTool({
         .returning({ id: chapterGenerationsTable.id });
       await tx
         .delete(chaptersTable)
-        .where(eq(chaptersTable.meeting_id, input.meetingId));
+        .where(eq(chaptersTable.meeting_id, meetingId));
       await tx.insert(chaptersTable).values(
         input.chapters.map((c) => ({
-          meeting_id: input.meetingId,
+          meeting_id: meetingId,
           generation_id: generation!.id,
           // Postgres reads a bare number as seconds.
           start_secs: `${c.start}`,

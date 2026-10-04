@@ -2,13 +2,9 @@ import { z } from "zod";
 import { ToolError } from "../tool";
 import { formatClock, parseClock } from "./clock";
 
-// Inputs the audio tools share.
+// Inputs the audio tools share. The meeting is `meetingRef`, as for every tool.
 
-export const meetingRef = z
-  .string()
-  .describe(
-    'A golden fixture name (a directory under packages/fixtures/test-data/meetings/, eg "gbos_9HoIM5INxpI") or a database meeting id (eg "12").',
-  );
+export { meetingRef } from "../meeting-ref";
 
 /** A time: seconds, or a clock string as psvtool.py prints ("1:02:03.45"). */
 export const time = z
