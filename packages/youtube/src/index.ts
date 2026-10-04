@@ -15,12 +15,6 @@ import {
   youtubeVideoFiles,
 } from "./store";
 
-export type {
-  AudioProvider,
-  VideoMetadata,
-} from "@open-minutes/core/audio-provider";
-export type { ListedVideo, VideoLister } from "@open-minutes/core/video-lister";
-
 const execFileAsync = promisify(execFile);
 
 /**
