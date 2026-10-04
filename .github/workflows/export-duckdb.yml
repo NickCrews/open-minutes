@@ -1,0 +1,84 @@
+# Nightly, copies production's public data into a DuckDB file and stores it in
+# the object store, publicly readable at
+#   $OBJECT_STORE_PUBLIC_URL/exports/open-minutes.duckdb
+# for querying production's data without Postgres or its credentials. How to
+# use it: docs/agents/duckdb-export.md. What's copied:
+# .github/scripts/export-duckdb.sh.
+#
+# Trigger it by hand with `gh workflow run export-duckdb.yml`.
+#
+# Configuration: the object store's variables and object-store-writer secrets
+# (see fetch-youtube-audio.yml), plus NEON_PROJECT_ID and NEON_API_KEY (see
+# production.yml). Production is only read: the export attaches it read-only,
+# and the run wakes its compute for about a minute.
+name: export-duckdb
+
+on:
+  schedule:
+    - cron: "17 10 * * *" # ~2-3am in Alaska
+  workflow_dispatch:
+
+concurrency:
+  group: export-duckdb
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    if: vars.NEON_PROJECT_ID != ''
+    runs-on: ubuntu-latest
+    environment: object-store-writer
+    timeout-minutes: 30
+    env:
+      OBJECT_STORE_BUCKET: ${{ vars.OBJECT_STORE_BUCKET }}
+      AWS_ENDPOINT_URL: ${{ vars.OBJECT_STORE_ENDPOINT }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.OBJECT_STORE_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.OBJECT_STORE_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: ${{ vars.OBJECT_STORE_REGION || 'auto' }}
+      # Some S3-compatible stores (R2) reject the checksum headers newer AWS
+      # CLIs send by default; S3 itself accepts either.
+      AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install the DuckDB CLI
+        run: pipx install duckdb-cli==1.5.6
+
+      # Production is the Neon project's default branch, which neonctl uses
+      # when given no branch.
+      - name: Export production
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+        run: |
+          DATABASE_URL=$(npx --yes neonctl@2 connection-string \
+            --project-id "$NEON_PROJECT_ID" --no-analytics)
+          echo "::add-mask::$DATABASE_URL"
+          if [[ "$DATABASE_URL" != postgres* ]]; then
+            echo "::error::neonctl didn't return a connection string for production."
+            exit 1
+          fi
+          export DATABASE_URL
+          .github/scripts/export-duckdb.sh "$RUNNER_TEMP/open-minutes.duckdb"
+
+      # Refuse to replace a good export with an empty one.
+      - name: Check the export
+        run: |
+          OUT=$RUNNER_TEMP/open-minutes.duckdb
+          duckdb -readonly "$OUT" -c "SELECT * FROM export_info;
+            SELECT table_name, estimated_size AS rows FROM duckdb_tables() ORDER BY 1;"
+          meetings=$(duckdb -readonly -noheader -list "$OUT" -c "SELECT count(*) FROM meetings")
+          if [[ "$meetings" -lt 1 ]]; then
+            echo "::error::The export has no meetings."
+            exit 1
+          fi
+          ls -l "$OUT"
+
+      # One PUT replaces the object whole. no-cache, so readers' range requests
+      # don't mix a cached old file with the new one.
+      - name: Upload
+        run: |
+          aws s3 cp "$RUNNER_TEMP/open-minutes.duckdb" "s3://$OBJECT_STORE_BUCKET/exports/open-minutes.duckdb" \
+            --content-type application/octet-stream --cache-control no-cache --no-progress
