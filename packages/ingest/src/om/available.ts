@@ -7,7 +7,7 @@ import {
 } from "@open-minutes/db";
 import { bodySlug } from "@open-minutes/core/bodies";
 import type { VideoLister } from "@open-minutes/core/video-lister";
-import { youtubeConfigFromEnv, youtubeSource } from "@open-minutes/youtube";
+import { youtubeSource } from "@open-minutes/youtube";
 
 export type VideoSourceRow = typeof videoSourcesTable.$inferSelect;
 
@@ -23,10 +23,7 @@ export interface ListAvailableOptions {
 
 /** Every video source is on YouTube, for now. */
 export function defaultSourceFor(source: VideoSourceRow): VideoLister {
-  return youtubeSource(
-    { kind: source.kind, id: source.youtube_id },
-    youtubeConfigFromEnv(),
-  );
+  return youtubeSource({ kind: source.kind, id: source.youtube_id });
 }
 
 /**

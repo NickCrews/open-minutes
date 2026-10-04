@@ -59,13 +59,6 @@ function videoUrl(videoIdOrUrl: string) {
 /** How to reach YouTube. See {@link youtubeConfigFromEnv} for where each comes from. */
 export interface YouTubeConfig {
   /**
-   * A Netscape-format cookies.txt from a browser signed in to YouTube. YouTube
-   * makes datacenter IPs (CI runners, servers) "sign in to confirm you're not a
-   * bot", and these get past it. Anything else (a proxy, say) can go in
-   * yt-dlp's own config file.
-   */
-  cookies?: string;
-  /**
    * The object store's public base URL. With it, metadata and audio come
    * from the store (see {@link fetchStored}) instead of from YouTube.
    */
@@ -78,11 +71,11 @@ export interface YouTubeConfig {
   dispatchToken?: string;
 }
 
-/** Runs yt-dlp with the options every call shares. */
-function ytDlp(config: YouTubeConfig, args: string[]) {
+/** Runs yt-dlp. */
+function ytDlp(args: string[]) {
   return execFileAsync(
     "yt-dlp",
-    [...(config.cookies ? ["--cookies", config.cookies] : []), ...args],
+    args,
     // A busy channel's flat playlist runs to several MB.
     { maxBuffer: 100 * 1024 * 1024 },
   );
@@ -115,15 +108,8 @@ function flattenVideos(node: FlatEntry, seen = new Set<string>()): FlatEntry[] {
  * The videos in a channel or playlist. A channel's span all its tabs
  * ("Videos", "Live", ...).
  */
-async function listVideos(
-  config: YouTubeConfig,
-  source: YouTubeSource,
-): Promise<ListedVideo[]> {
-  const { stdout } = await ytDlp(config, [
-    "--flat-playlist",
-    "-J",
-    sourceUrl(source),
-  ]);
+async function listVideos(source: YouTubeSource): Promise<ListedVideo[]> {
+  const { stdout } = await ytDlp(["--flat-playlist", "-J", sourceUrl(source)]);
   return flattenVideos(JSON.parse(stdout) as FlatEntry).map(
     ({ id, title }) => ({ id, title }),
   );
@@ -153,8 +139,7 @@ async function getMetadata(
   const raw = stored
     ? (JSON.parse(new TextDecoder().decode(stored)) as YtDlpInfo)
     : (JSON.parse(
-        (await ytDlp(config, ["--skip-download", "-J", videoUrl(videoIdOrUrl)]))
-          .stdout,
+        (await ytDlp(["--skip-download", "-J", videoUrl(videoIdOrUrl)])).stdout,
       ) as YtDlpInfo);
   return {
     id: raw.id,
@@ -210,7 +195,7 @@ async function ensureAudioDownloaded(
   try {
     // The format the fetch-youtube-audio workflow re-encodes from. A single
     // format needs no ffmpeg to download.
-    await ytDlp(config, [
+    await ytDlp([
       "-f",
       "bestaudio[ext=webm]",
       "--no-playlist",
@@ -345,14 +330,11 @@ async function requestFetch(id: string, token: string) {
 export type YouTube = AudioProvider;
 
 /**
- * Lists the videos in `source` (via yt-dlp), using `config`. Does no I/O until
+ * Lists the videos in `source` (via yt-dlp). Does no I/O until
  * {@link VideoLister.listVideos} is called.
  */
-export function youtubeSource(
-  source: YouTubeSource,
-  config: YouTubeConfig = {},
-): VideoLister {
-  return { listVideos: () => listVideos(config, source) };
+export function youtubeSource(source: YouTubeSource): VideoLister {
+  return { listVideos: () => listVideos(source) };
 }
 
 /** A {@link YouTube} that uses `config`. Does no I/O until a method is called. */
@@ -366,13 +348,11 @@ export function youtube(config: YouTubeConfig = {}): YouTube {
 
 /**
  * A {@link YouTubeConfig} from environment variables:
- * - YOUTUBE_COOKIES: {@link YouTubeConfig.cookies}
  * - OBJECT_STORE_PUBLIC_URL: {@link YouTubeConfig.objectStoreUrl}
  * - YOUTUBE_AUDIO_DISPATCH_TOKEN: {@link YouTubeConfig.dispatchToken}
  */
 export function youtubeConfigFromEnv(env = process.env): YouTubeConfig {
   return {
-    cookies: env.YOUTUBE_COOKIES || undefined,
     objectStoreUrl: env.OBJECT_STORE_PUBLIC_URL || undefined,
     dispatchToken: env.YOUTUBE_AUDIO_DISPATCH_TOKEN || undefined,
   };
