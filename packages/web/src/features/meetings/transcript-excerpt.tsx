@@ -162,8 +162,8 @@ export function TranscriptExcerpt(props: {
             onClick={() => {
               if (playing()) props.player.pause();
               // Paused partway through: pick up where it left off.
-              else if (active()) void playFrom(props.player.currentTime());
-              else void playFrom(segmentStart(segment));
+              else if (active()) playFrom(props.player.currentTime());
+              else playFrom(segmentStart(segment));
             }}
           >
             <Show when={playing()} fallback={<PlayIcon />}>
@@ -180,7 +180,7 @@ export function TranscriptExcerpt(props: {
             status={() => (active() ? "active" : "past")}
             currentTime={props.player.currentTime}
             onSeek={(secs) => {
-              if (canPlay()) void playFrom(secs);
+              if (canPlay()) playFrom(secs);
             }}
             matches={() => matches().get(row.index) ?? []}
           />
