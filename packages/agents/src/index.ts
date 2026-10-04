@@ -6,9 +6,10 @@ export * from "./tools";
 export {
   audioTools,
   findUntranscribedSpeech,
-  speechActivity,
   transcribeRangeTool,
+  voiceTimeline,
 } from "./audio/tools";
+export { auditSpeaker, compareSpeakers } from "./audio/voice-tools";
 export { toolContext } from "./context";
 export {
   callTool,

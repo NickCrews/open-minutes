@@ -47,8 +47,23 @@ audio, for a golden (`"meeting": "gbos_9HoIM5INxpI"`) or a database meeting
   hide in these gaps, and they are evidence for rule 1.
 - `transcribe_range` re-decodes a short stretch to recover dropped words or
   check a misheard one.
-- `speech_activity` shows the pauses in a stretch, which is where a turn
-  can change.
+- `voice_timeline` lays out one segment (`"segment": 65`), or a stretch, in
+  time order: each phrase with its pitch and whose voice it sounds like (≠
+  where that isn't its label), and at each pause, segment start or change of
+  voice the cues for a change of speaker. ▲ inside a segment is a hidden
+  turn to split at; a new label where the voice carries on is a boundary to
+  doubt. For a segment it also ranks the labels and segments its voice is
+  closest to. Run it before splitting or relabelling a segment.
+- `audit_speaker` checks that one label is one voice. Run it on the labels
+  with the most speech: the diarizer folds other people into the chair and
+  into busy members, and lists the segments that sound like someone else.
+- `compare_speakers` lists labels that sound alike, such as a
+  `segmented:spk-N` that is really a named person.
+
+Similarities are of voiceprints: about 0.75 or more is very likely the same
+person, under 0.5 different people. Voices are matched against each label's
+own segments, so they are only as good as the labels: a label is a reliable
+reference once its audit says one voice.
 
 Running `transcribe.test.ts` with `SNAPSHOT_UPDATE=1` rewrites a golden's
 words from fresh recognition and keeps only its speaker layer, which discards
@@ -69,7 +84,10 @@ every hand-corrected word.
    - a roll call, including an unnamed answer placed by the body's fixed roll
      order or by elimination against the announced tally ("passes 4-1");
    - official minutes, which name movers, seconders, reporters and public
-     commenters (see [mishearings.md](mishearings.md) for where to find them).
+     commenters (see [mishearings.md](mishearings.md) for where to find them);
+   - the voice: `voice_timeline` puts the segment at 0.75 or more with a label
+     whose own audit says one voice, and clearly above its current label. A
+     segment of a few seconds is too short to judge this way; use the text.
 
    Topic or tone is not evidence. Without evidence, leave the label alone and
    report it.
@@ -106,9 +124,11 @@ every hand-corrected word.
    rows are certainly the same voice. Leave a one-off speaker on a speaker
    number. In a golden, a split-out voice with no name gets a speaker number
    not yet used in that meeting.
-7. **Don't untangle what needs the audio.** If one label seems to cover two
-   voices and the text doesn't show which is which, fix only the segments with
-   evidence and report the rest.
+7. **Untangle merged voices with the audio, not guesses.** If one label
+   seems to cover two voices, run `audit_speaker` on it and relabel the
+   segments whose voice clearly matches another label. Report the ones the
+   voice leaves uncertain (0.6-0.75, or two close candidates) rather than
+   guessing.
 8. **Fix misheard words when the intended word is clear:** place names,
    bodies and acronyms, people's names (in the `people.jsonl` spelling), and
    plain mishearings ("low cloud" → "roll call"). Keep the fix local ("good

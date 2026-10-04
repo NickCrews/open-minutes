@@ -83,8 +83,11 @@ export function toAgentTool<O>(tool: Tool<z.ZodType, O>, ctx: ToolContext) {
     parameters: parametersOf(tool),
     execute: async (_toolCallId: string, params: unknown) => {
       const details = await callTool(ctx, tool, params);
+      // A tool that returns text (voice_timeline) wrote it for the model.
+      const text =
+        typeof details === "string" ? details : JSON.stringify(details);
       return {
-        content: [{ type: "text" as const, text: JSON.stringify(details) }],
+        content: [{ type: "text" as const, text }],
         details,
       };
     },

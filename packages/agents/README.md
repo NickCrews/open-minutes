@@ -40,18 +40,37 @@ Diarization and recognition make mistakes the transcript's text can't show:
 two people folded under one label, or speech the recognizer skipped. The
 tools in `src/audio/` look at the audio itself. They take a golden fixture
 name or a database meeting id. Its audio is downloaded into the per-machine
-cache (`~/.cache/open-minutes/meetings/<youtubeId>/`) on first use, and speech
-runs, which are slow to compute, are cached there too. Times are `H:MM:SS.ss`
+cache (`~/.cache/open-minutes/meetings/<youtubeId>/`) on first use, and
+what's slow to compute (speech runs, voiceprints) is cached there too. Times are `H:MM:SS.ss`
 like golden PSV files, so they go straight into a psvtool op. The tools call
 the models in `@open-minutes/audio` directly, and get a meeting's audio from
 `@open-minutes/ingest/audio-cache`.
 
-- `speech_activity`: speech runs and pauses in a stretch, from voice activity
-  detection.
+- `voice_timeline`: one segment (with 5 s either side) or a stretch of up to
+  5 minutes, as text in time order. The words are cut into phrases at pauses,
+  segment starts and changes of voice, each with its median pitch and whose
+  voice it sounds like. Each cut carries the cues for a change of speaker:
+  voice similarity either side, a pitch jump, a different voice match and the
+  pause. Two or more cues mark a likely change (▲), one a possible one (△). It
+  also marks speech with no words, and for a segment ranks the labels and
+  segments its voice is closest to. It returns text, not JSON: the data is
+  built in `timeline.ts` and written out in `timeline-text.ts`, so another
+  view (a web page) can draw the same data.
 - `find_untranscribed_speech`: stretches with speech but no transcript words,
   each with what recognition hears when it decodes just that stretch.
 - `transcribe_range`: recognize one short stretch on its own, next to what the
   transcript has there.
+- `audit_speaker`: whether one label is really one voice, and which of its
+  segments sound like someone else.
+- `compare_speakers`: label pairs that sound alike (an anonymous speaker
+  number that's really a named person).
+
+The voice tools compare CAM++ voiceprints, the model diarization uses, of 2 s
+windows every 0.5 s (computed per minute of audio on first use, about a second
+each, and cached). Each speaker label's voiceprint is sampled from its own
+segments, and only labels with at least 6 s of speech get one. On the golden
+meetings, one person's voiceprints score about 0.75 or more against each
+other and different people under 0.5. Pitch is by YIN, 60-400 Hz.
 
 `src/audio/audio.test.ts` runs them on a checked-in minute of real meeting
 audio (`src/audio/testdata/`), and `src/audio/audio.bench.ts` times the

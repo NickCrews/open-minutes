@@ -4,18 +4,14 @@ import {
   type TranscriptWord,
 } from "@open-minutes/core/transcription";
 import { transcribeRange } from "@open-minutes/audio/transcribe";
-import {
-  clip,
-  pauses,
-  round,
-  speechRuns,
-  totalSecs,
-  untranscribedSpeech,
-} from "./activity";
+import { round, speechRuns, untranscribedSpeech } from "./activity";
 import { formatClock } from "./clock";
 import { defineTool } from "../tool";
 import { checkRange, meetingRef, time } from "./inputs";
 import type { AudioMeeting, LabeledSegment } from "./meeting";
+import { buildTimeline, CONTEXT_SECS, MAX_TIMELINE_SECS } from "./timeline";
+import { timelineText } from "./timeline-text";
+import { SIMILARITY_GUIDE, voiceTools } from "./voice-tools";
 
 // Tools that listen to a meeting's audio, for what the transcript's text can't
 // show: two people folded under one label, or speech the recognizer skipped.
@@ -65,48 +61,38 @@ function neighbours(segments: readonly LabeledSegment[], t: number) {
   return { before, after };
 }
 
-export const speechActivity = defineTool({
-  name: "speech_activity",
-  label: "Speech activity",
-  description:
-    "Where someone is talking in a stretch of a meeting, from voice activity detection on the audio (not the transcript): the speech runs, the pauses between them, and how much speech the transcript's words don't account for. Use it to find the silence where one turn ends and the next begins, or to check whether a quiet stretch really is quiet.",
-  input: z.object({
-    meeting: meetingRef,
-    from: time,
-    to: time,
-    minPauseSecs: z
-      .number()
-      .positive()
-      .default(0.5)
-      .describe("Shortest silence to report as a pause."),
-  }),
+export const voiceTimeline = defineTool({
+  name: "voice_timeline",
+  label: "Voice timeline",
+  description: `Everything the audio says about one segment (with ${CONTEXT_SECS} s either side), or a stretch of at most ${MAX_TIMELINE_SECS / 60} minutes, as text in time order: the transcript's words cut into phrases at pauses, segment starts and changes of voice; each phrase's pitch and whose voice it sounds like; and at each cut the cues for a change of speaker (how alike the voice is either side, a jump in pitch, a different voice match, the pause), marked as a likely or possible change. Also speech with no words under it. For a segment, also whose voice the whole segment sounds like, by label (its own label leaves it out) and by segment. Use it to check who said a segment, to find where a hidden turn starts and ends inside one, and to check its edges before splitting. ${SIMILARITY_GUIDE}`,
+  input: z
+    .object({
+      meeting: meetingRef,
+      segment: z
+        .number()
+        .int()
+        .nonnegative()
+        .optional()
+        .describe(
+          "A segment id: its index for a golden (as psvtool.py render numbers it), its row id in the database.",
+        ),
+      from: time.optional(),
+      to: time.optional(),
+    })
+    .refine(
+      (i) =>
+        (i.segment !== undefined) !==
+        (i.from !== undefined && i.to !== undefined),
+      { message: "give a segment, or from and to" },
+    ),
   run: async (ctx, input) => {
-    checkRange(input.from, input.to, 30 * 60);
     const meeting = await ctx.meeting(input.meeting);
-    const runs = clip(speechRuns(meeting), input.from, input.to);
-    const gaps = untranscribedSpeech(runs, meeting.segments, {
-      minSpeechSecs: 0.5,
-    });
-    const span = input.to - input.from;
-    return {
-      from: formatClock(input.from),
-      to: formatClock(input.to),
-      speechSecs: round(totalSecs(runs)),
-      speechFraction: round(totalSecs(runs) / span),
-      untranscribedSpeechSecs: round(
-        gaps.reduce((n, g) => n + g.speechSecs, 0),
-      ),
-      pauses: pauses(runs, input.from, input.to, input.minPauseSecs).map(
-        (p) => ({
-          from: formatClock(p.start),
-          to: formatClock(p.end),
-          secs: round(p.end - p.start),
-        }),
-      ),
-      ...(runs.length <= 200 && {
-        speechRuns: runs.map((r) => [formatClock(r.start), formatClock(r.end)]),
-      }),
-    };
+    if (input.segment !== undefined)
+      return timelineText(buildTimeline(meeting, { segment: input.segment }));
+    checkRange(input.from!, input.to!, MAX_TIMELINE_SECS);
+    return timelineText(
+      buildTimeline(meeting, { from: input.from!, to: input.to! }),
+    );
   },
 });
 
@@ -208,7 +194,8 @@ export const transcribeRangeTool = defineTool({
 
 /** The audio tools, in the order an agent would usually reach for them. */
 export const audioTools = [
-  speechActivity,
+  voiceTimeline,
   findUntranscribedSpeech,
   transcribeRangeTool,
+  ...voiceTools,
 ];
