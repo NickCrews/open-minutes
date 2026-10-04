@@ -50,11 +50,11 @@ the ones listed above it:
   YouTube source. It lists a committee's recorded meetings and gets a
   meeting's metadata and audio, decoding its MP3 to WAV. Not yet used by the
   pipeline. See the [akleg README](packages/akleg/README.md).
-- **[`packages/pipeline`](packages/pipeline)** (`@open-minutes/pipeline`): the
+- **[`packages/ingest`](packages/ingest)** (`@open-minutes/ingest`): the
   offline ingestion pipeline and the `om` CLI. It gets a meeting's audio from
   `@open-minutes/youtube`, runs it through `@open-minutes/audio`, aligns turns to words, recognizes speakers
   against known voiceprints, and writes the meeting to the database. See the
-  [pipeline README](packages/pipeline/README.md).
+  [ingest README](packages/ingest/README.md).
 - **[`packages/tools`](packages/tools)** (`@open-minutes/tools`): tools
   for editing the data (speaker labels, people, chapters), as typed tool
   definitions for agent loops and as the `pnpm tools` JSON CLI.
@@ -219,7 +219,7 @@ works from a home connection. See [`.env.example`](.env.example) and
 
 `om` writes to the same database as everything else (`DB=prod pnpm om ingest <id>`
 to ingest into production). See
-[`packages/pipeline/README.md`](packages/pipeline/README.md) for details.
+[`packages/ingest/README.md`](packages/ingest/README.md) for details.
 
 ## Working with the data directly
 
@@ -246,7 +246,7 @@ this work is in
 [`.claude/skills/transcript-cleanup`](.claude/skills/transcript-cleanup/SKILL.md).
 
 `pnpm db studio` opens a browser UI on it. The pipeline's API (`listIngested`,
-`listAvailable`, `ingestVideo` from `@open-minutes/pipeline/om`) and `om`'s
+`listAvailable`, `ingestVideo` from `@open-minutes/ingest/om`) and `om`'s
 JSON output (`pnpm -s om status --json`) are designed to be composed.
 
 ## Architecture Decision Records
@@ -267,7 +267,7 @@ records research, and mention it in the commit message.
 
 - Short, lowercase, imperative subject lines. Most use a type prefix
   (`feat:`, `fix:`, `refactor:`, `docs:`, `chore:`, `dx:`) or an area prefix
-  (`web:`, `pipeline:`, `db:`, `transcript:`). A scope such as `feat(web):` is
+  (`web:`, `ingest:`, `db:`, `transcript:`). A scope such as `feat(web):` is
   also fine.
 - For anything non-trivial, add a body that explains _why_, and what a
   reviewer should know (follow-ups, known breakage, ADRs).

@@ -31,7 +31,7 @@ import {
 /**
  * Root of the per-meeting work directories (one `<body-slug>_<youtubeId>` dir
  * per meeting, holding each stage's artifact for inspection and resume).
- * Lives at packages/pipeline/data/meetings/, gitignored via the root `data/`
+ * Lives at packages/ingest/data/meetings/, gitignored via the root `data/`
  * rule.
  */
 export const DEFAULT_WORK_ROOT = fileURLToPath(
