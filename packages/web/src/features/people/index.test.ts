@@ -39,7 +39,7 @@ async function insertPerson(db: DB, name: string): Promise<number> {
   return person!.id;
 }
 
-/** A meeting's site and site_id are unique, so meetings need distinct IDs. */
+/** A meeting's site_kind and site_id are unique, so meetings need distinct IDs. */
 let nextSiteId = 0;
 
 /** A meeting of `bodyId` on `date`, with `segments` segments by `personId`. */
@@ -54,7 +54,7 @@ async function insertMeeting(
     .insert(meetingsTable)
     .values({
       body_id: bodyId,
-      site: "youtube",
+      site_kind: "youtube",
       site_id: `vid${nextSiteId++}`,
       date,
     })

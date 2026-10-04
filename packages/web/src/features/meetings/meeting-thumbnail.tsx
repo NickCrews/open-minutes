@@ -12,7 +12,7 @@ import { youtubeIdOf } from "@open-minutes/core/meeting-source";
 
 export type ThumbnailMeeting = {
   id: number;
-  site: string;
+  site_kind: string;
   site_id: string;
   body: ThumbnailBody;
 };

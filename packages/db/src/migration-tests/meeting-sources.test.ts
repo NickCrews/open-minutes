@@ -54,15 +54,15 @@ describe(MIGRATION, () => {
     ]);
 
     expect(
-      await sql`SELECT site, site_id, url FROM meetings ORDER BY id`,
+      await sql`SELECT site_kind, site_id, url FROM meetings ORDER BY id`,
     ).toEqual([
       {
-        site: "youtube",
+        site_kind: "youtube",
         site_id: "vid-gbos",
         url: "https://www.youtube.com/watch?v=vid-gbos",
       },
       {
-        site: "youtube",
+        site_kind: "youtube",
         site_id: "vid-pzc",
         url: "https://www.youtube.com/watch?v=vid-pzc",
       },
@@ -86,7 +86,7 @@ describe(MIGRATION, () => {
     await testDb.migrateTo(MIGRATION);
 
     const rows = await sql`
-      INSERT INTO meetings (body_id, site, site_id) VALUES
+      INSERT INTO meetings (body_id, site_kind, site_id) VALUES
         (2, 'akleg', 'SL&C 2026-02-03 13:30:00'),
         (2, 'akleg', 'HRES 2018-09-10 14:00:00')
       RETURNING url`;
@@ -107,8 +107,8 @@ describe(MIGRATION, () => {
       sql`UPDATE bodies SET meeting_source = '{"type":"vimeo","id":"1"}' WHERE id = 3`,
     ).rejects.toThrow(/bodies_meeting_source_valid/);
     await expect(
-      sql`INSERT INTO meetings (body_id, site, site_id) VALUES (1, 'akleg', 'HRES 2018-09-10 14:00:00')`,
-    ).rejects.toThrow(/meetings_site_site_id_unique/);
+      sql`INSERT INTO meetings (body_id, site_kind, site_id) VALUES (1, 'akleg', 'HRES 2018-09-10 14:00:00')`,
+    ).rejects.toThrow(/meetings_site_kind_site_id_unique/);
   });
 });
 

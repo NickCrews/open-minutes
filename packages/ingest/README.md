@@ -23,7 +23,7 @@ YouTube channel or playlist, or an Alaska Legislature committee on akleg.gov.
 `om available` scans each one and prints a line per new meeting,
 `<id>\t<body slug>`, each body's newest first. The ID is a YouTube video ID or
 an akleg.gov meeting ID (`HRES 2018-09-10 14:00:00`, spaces and all), and the
-meeting goes in `meetings.site` and `meetings.site_id`. `om ingest` reads
+meeting goes in `meetings.site_kind` and `meetings.site_id`. `om ingest` reads
 those lines, or takes YouTube or akleg.gov IDs or URLs as arguments. Given no
 body, it uses the one whose meeting source is the meeting's YouTube channel or
 akleg.gov committee; a meeting from a playlist needs its body named with

@@ -97,7 +97,7 @@ describe("ingestMeeting", () => {
     });
 
     expect(result).toEqual({
-      site: "youtube",
+      siteKind: "youtube",
       siteId: VIDEO_ID,
       status: "skipped",
     });
@@ -154,7 +154,7 @@ describe("ingestMeeting", () => {
       workRoot,
     });
     expect(result).toMatchObject({
-      site: "youtube",
+      siteKind: "youtube",
       siteId: VIDEO_ID,
       status: "ingested",
       segmentCount: 2,
@@ -164,7 +164,7 @@ describe("ingestMeeting", () => {
 
     const [meeting] = await db.select().from(meetingsTable);
     expect(meeting).toMatchObject({
-      site: "youtube",
+      site_kind: "youtube",
       site_id: VIDEO_ID,
       url: `https://www.youtube.com/watch?v=${VIDEO_ID}`,
       title: METADATA.title,
@@ -285,7 +285,7 @@ describe("which body a meeting belongs to", () => {
       },
     );
     expect(result).toMatchObject({
-      site: "akleg",
+      siteKind: "akleg",
       siteId: AKLEG_ID,
       status: "ingested",
       // From the title.
@@ -294,7 +294,7 @@ describe("which body a meeting belongs to", () => {
     const [meeting] = await db.select().from(meetingsTable);
     expect(meeting).toMatchObject({
       body_id: hres!.id,
-      site: "akleg",
+      site_kind: "akleg",
       site_id: AKLEG_ID,
       url: "https://www.akleg.gov/basis/Meeting/Detail?Meeting=HRES%202018-09-10%2014:00:00",
     });

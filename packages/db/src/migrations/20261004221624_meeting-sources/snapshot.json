@@ -472,7 +472,7 @@
       "default": null,
       "generated": null,
       "identity": null,
-      "name": "site",
+      "name": "site_kind",
       "entityType": "columns",
       "schema": "public",
       "table": "meetings"
@@ -497,7 +497,7 @@
       "dimensions": 0,
       "default": null,
       "generated": {
-        "as": "CASE \"meetings\".\"site\"\n            WHEN 'youtube' THEN 'https://www.youtube.com/watch?v=' || \"meetings\".\"site_id\"\n            WHEN 'akleg' THEN 'https://www.akleg.gov/basis/Meeting/Detail?Meeting=' || replace(replace(\"meetings\".\"site_id\", '&', '%26'), ' ', '%20')\n          END",
+        "as": "CASE \"meetings\".\"site_kind\"\n            WHEN 'youtube' THEN 'https://www.youtube.com/watch?v=' || \"meetings\".\"site_id\"\n            WHEN 'akleg' THEN 'https://www.akleg.gov/basis/Meeting/Detail?Meeting=' || replace(replace(\"meetings\".\"site_id\", '&', '%26'), ' ', '%20')\n          END",
         "type": "stored"
       },
       "identity": null,
@@ -1045,11 +1045,11 @@
     {
       "nameExplicit": true,
       "columns": [
-        "site",
+        "site_kind",
         "site_id"
       ],
       "nullsNotDistinct": false,
-      "name": "meetings_site_site_id_unique",
+      "name": "meetings_site_kind_site_id_unique",
       "entityType": "uniques",
       "schema": "public",
       "table": "meetings"
@@ -1133,8 +1133,8 @@
       "table": "meetings"
     },
     {
-      "value": "\"site\" IN ('youtube', 'akleg')",
-      "name": "meetings_site_known",
+      "value": "\"site_kind\" IN ('youtube', 'akleg')",
+      "name": "meetings_site_kind_known",
       "entityType": "checks",
       "schema": "public",
       "table": "meetings"

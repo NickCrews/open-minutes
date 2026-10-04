@@ -78,7 +78,7 @@ const status = defineCommand({
 
 function printStatusTable(meetings: IngestedMeeting[]): void {
   const rows = meetings.map((m) => [
-    m.site,
+    m.siteKind,
     m.siteId,
     m.body,
     m.date ?? "",

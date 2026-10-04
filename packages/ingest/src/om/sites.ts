@@ -1,11 +1,14 @@
 import type { AudioProvider } from "@open-minutes/core/audio-provider";
-import type { MeetingSource, Site } from "@open-minutes/core/meeting-source";
+import type {
+  MeetingSource,
+  SiteKind,
+} from "@open-minutes/core/meeting-source";
 import type { VideoLister } from "@open-minutes/core/video-lister";
 import { akleg, aklegSource, parseMeetingId } from "@open-minutes/akleg";
 import { videoId, youtubeFromEnv, youtubeSource } from "@open-minutes/youtube";
 
 /** Each site's {@link AudioProvider}: where a meeting's metadata and audio come from. */
-export type Sites = Record<Site, AudioProvider>;
+export type Sites = Record<SiteKind, AudioProvider>;
 
 /**
  * `sites`, with each one missing filled in from the environment. Each is
@@ -37,9 +40,9 @@ export function listerFor(source: MeetingSource): VideoLister {
   }
 }
 
-/** A meeting on its site: see `meetings.site` and `meetings.site_id`. */
+/** A meeting on its site: see `meetings.site_kind` and `meetings.site_id`. */
 export interface SiteMeeting {
-  site: Site;
+  siteKind: SiteKind;
   siteId: string;
 }
 
@@ -49,9 +52,9 @@ export interface SiteMeeting {
  */
 export function parseMeetingRef(ref: string): SiteMeeting {
   const aklegId = parseMeetingId(ref);
-  if (aklegId) return { site: "akleg", siteId: aklegId };
+  if (aklegId) return { siteKind: "akleg", siteId: aklegId };
   return {
-    site: "youtube",
+    siteKind: "youtube",
     siteId: /^https?:\/\//.test(ref) ? videoId(ref) : ref,
   };
 }

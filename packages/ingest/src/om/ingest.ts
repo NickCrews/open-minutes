@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { and, eq, sql } from "drizzle-orm";
 import { type DB, bodiesTable, meetingsTable } from "@open-minutes/db";
 import { bodySlug } from "@open-minutes/core/bodies";
-import { type Site, siteOf } from "@open-minutes/core/meeting-source";
+import { type SiteKind, siteKindOf } from "@open-minutes/core/meeting-source";
 import {
   alignSpeakers,
   cleanSpeechSegments,
@@ -126,26 +126,31 @@ export async function ingestMeeting(
 ): Promise<IngestResult> {
   const { ref, body: bodyArg } =
     typeof meeting === "string" ? { ref: meeting } : meeting;
-  const { site, siteId } = parseMeetingRef(ref);
-  const provider = withDefaultSites(options.sites)[site];
+  const { siteKind, siteId } = parseMeetingRef(ref);
+  const provider = withDefaultSites(options.sites)[siteKind];
   const workRoot = options.workRoot ?? DEFAULT_WORK_ROOT;
   const tag = `[${siteId}]`;
 
   const existing = await db
     .select({ id: meetingsTable.id })
     .from(meetingsTable)
-    .where(and(eq(meetingsTable.site, site), eq(meetingsTable.site_id, siteId)))
+    .where(
+      and(
+        eq(meetingsTable.site_kind, siteKind),
+        eq(meetingsTable.site_id, siteId),
+      ),
+    )
     .limit(1);
   if (existing.length > 0) {
     console.error(`${tag} already ingested, skipping`);
-    return { site, siteId, status: "skipped" };
+    return { siteKind, siteId, status: "skipped" };
   }
 
-  console.error(`${tag} fetching ${site} metadata...`);
+  console.error(`${tag} fetching ${siteKind} metadata...`);
   const metadata = await provider.getMetadata(siteId);
   const body = await resolveBody(
     db,
-    { site, siteId },
+    { siteKind, siteId },
     metadata.channelId,
     bodyArg,
   );
@@ -223,7 +228,7 @@ export async function ingestMeeting(
       .insert(meetingsTable)
       .values({
         body_id: body.id,
-        site,
+        site_kind: siteKind,
         site_id: siteId,
         title: metadata.title,
         description: metadata.description,
@@ -248,7 +253,7 @@ export async function ingestMeeting(
   });
 
   return {
-    site,
+    siteKind,
     siteId,
     status: "ingested",
     meetingId,
@@ -297,7 +302,7 @@ function describeError(error: unknown): string {
  */
 async function resolveBody(
   db: DB,
-  { site, siteId }: SiteMeeting,
+  { siteKind, siteId }: SiteMeeting,
   channelId: string,
   slug: string | undefined,
 ) {
@@ -314,26 +319,26 @@ async function resolveBody(
     const body = bodies.find((b) => bodySlug(b) === slug.toLowerCase());
     if (!body) throw new Error(`No body with slug "${slug}"`);
     const source = body.meeting_source;
-    if (source && siteOf(source) !== site)
+    if (source && siteKindOf(source) !== siteKind)
       throw new Error(
-        `${site} meeting ${siteId} can't belong to ${body.name_short}, ` +
-          `whose meetings are on ${siteOf(source)}`,
+        `${siteKind} meeting ${siteId} can't belong to ${body.name_short}, ` +
+          `whose meetings are on ${siteKindOf(source)}`,
       );
     return body;
   }
 
   const matches = bodies.filter((b) =>
-    isChannelOf(b.meeting_source, site, channelId),
+    isChannelOf(b.meeting_source, siteKind, channelId),
   );
   if (matches.length === 1) return matches[0]!;
   if (matches.length > 1)
     throw new Error(
-      `${site} meeting ${siteId} is from "${channelId}", the meeting source ` +
+      `${siteKind} meeting ${siteId} is from "${channelId}", the meeting source ` +
         `of several bodies (${matches.map((b) => bodySlug(b)).join(", ")}). ` +
         `Say which body it belongs to.`,
     );
   throw new Error(
-    `${site} meeting ${siteId} is from "${channelId}", which is no body's ` +
+    `${siteKind} meeting ${siteId} is from "${channelId}", which is no body's ` +
       `meeting source. Refusing to ingest an unrelated meeting; if it's ` +
       `from a body's playlist, say which body it belongs to.`,
   );
@@ -341,14 +346,14 @@ async function resolveBody(
 
 function isChannelOf(
   source: (typeof bodiesTable.$inferSelect)["meeting_source"],
-  site: Site,
+  siteKind: SiteKind,
   channelId: string,
 ): boolean {
   switch (source?.type) {
     case "youtube_channel":
-      return site === "youtube" && source.channel_id === channelId;
+      return siteKind === "youtube" && source.channel_id === channelId;
     case "akleg_committee":
-      return site === "akleg" && source.committee === channelId;
+      return siteKind === "akleg" && source.committee === channelId;
     default:
       return false;
   }

@@ -45,7 +45,7 @@ const fetchMeetingSegments = createServerFn({ method: "GET" })
 export type ExcerptMeeting = MeetingWhen & {
   id: number;
   title: string | null;
-  site: string;
+  site_kind: string;
   site_id: string;
 };
 

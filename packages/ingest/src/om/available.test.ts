@@ -48,8 +48,8 @@ describe("listAvailable", () => {
       );
 
       expect(await listAvailable(db, { sourceFor })).toEqual([
-        { site: "youtube", siteId: "newest", body: "gbos" },
-        { site: "youtube", siteId: "oldest", body: "gbos" },
+        { siteKind: "youtube", siteId: "newest", body: "gbos" },
+        { siteKind: "youtube", siteId: "oldest", body: "gbos" },
       ]);
     },
   );
@@ -93,18 +93,18 @@ describe("listAvailable", () => {
       { id: "HRES 2026-01-01 13:00:00" },
     ]);
     expect(await listAvailable(db, { sourceFor })).toEqual([
-      { site: "akleg", siteId: "HRES 2026-02-01 13:00:00", body: "hres" },
-      { site: "akleg", siteId: "HRES 2026-01-01 13:00:00", body: "hres" },
+      { siteKind: "akleg", siteId: "HRES 2026-02-01 13:00:00", body: "hres" },
+      { siteKind: "akleg", siteId: "HRES 2026-01-01 13:00:00", body: "hres" },
     ]);
 
     await insertMeeting(
       db,
       await insertBody(db, { name: "Y", name_short: "Y" }),
       "HRES 2026-01-01 13:00:00",
-      { site: "akleg" },
+      { siteKind: "akleg" },
     );
     expect(await listAvailable(db, { sourceFor })).toEqual([
-      { site: "akleg", siteId: "HRES 2026-02-01 13:00:00", body: "hres" },
+      { siteKind: "akleg", siteId: "HRES 2026-02-01 13:00:00", body: "hres" },
     ]);
   });
 
@@ -120,7 +120,7 @@ describe("listAvailable", () => {
     const available = await listAvailable(db, { body: "gbos", sourceFor });
     expect(scraped).toEqual([JSON.stringify(GBOS_SOURCE)]);
     expect(available).toEqual([
-      { site: "youtube", siteId: "video", body: "gbos" },
+      { siteKind: "youtube", siteId: "video", body: "gbos" },
     ]);
   });
 

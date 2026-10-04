@@ -49,7 +49,7 @@ describe("devData", () => {
   }) => {
     const [row] = await db
       .insert(meetingsTable)
-      .values({ body_id: 1, site: "youtube", site_id: "new-one" })
+      .values({ body_id: 1, site_kind: "youtube", site_id: "new-one" })
       .returning({ id: meetingsTable.id });
     expect(row!.id).toBe(snapshot.meetings.length + 1);
   });

@@ -25,13 +25,13 @@ async function insertBody(db: DB, name: string): Promise<number> {
   return body!.id;
 }
 
-/** A meeting's site and site_id are unique, so meetings need distinct IDs. */
+/** A meeting's site_kind and site_id are unique, so meetings need distinct IDs. */
 let nextSiteId = 0;
 
 async function insertMeeting(db: DB, bodyId: number, date: string | null) {
   await db.insert(meetingsTable).values({
     body_id: bodyId,
-    site: "youtube",
+    site_kind: "youtube",
     site_id: `vid${nextSiteId++}`,
     date,
   });
