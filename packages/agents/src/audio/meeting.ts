@@ -2,12 +2,11 @@ import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { asc, eq } from "drizzle-orm";
 import { meetingsTable, peopleTable, segmentsTable } from "@open-minutes/db";
+import { readWave, type WaveForm } from "@open-minutes/audio/wav";
 import {
   getCachedAudio,
   meetingCacheDir,
-  readWave,
-  type WaveForm,
-} from "@open-minutes/ingest/audio";
+} from "@open-minutes/ingest/audio-cache";
 import {
   LAST_WORD_DURATION_SEC,
   type TranscriptWord,

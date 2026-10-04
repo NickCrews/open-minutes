@@ -29,12 +29,9 @@ its work directory. The CLI is a thin wrapper over the exported API
 (`listIngested`, `listAvailable`, `ingestVideo` from
 `@open-minutes/ingest/om`), so scripts and tests reuse the same logic.
 
-## Audio for the agent tools
+## Meeting audio cache
 
-`src/audio.ts`, exported as `@open-minutes/ingest/audio`, is what the audio
-tools in `@open-minutes/agents` need: a meeting's cached audio, plus the model
-calls from `@open-minutes/audio` that they use. Those are speech runs from
-Silero VAD (`detectSpeech` in `speech-runs.ts`, with pauses down to 0.2 s where
-the transcriber cuts at 0.5 s), and `transcribeRange`, which decodes one
-stretch with two seconds of audio either side for context and returns only
-the words that start inside it.
+`@open-minutes/ingest/audio-cache` downloads a meeting's audio into the
+per-machine cache (`~/.cache/open-minutes/meetings/<youtubeId>/`) and reads it
+back. The audio tools in `@open-minutes/agents` use it to open a meeting; they
+call the models in `@open-minutes/audio` directly.

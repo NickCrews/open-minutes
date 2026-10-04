@@ -42,9 +42,9 @@ tools in `src/audio/` look at the audio itself. They take a golden fixture
 name or a database meeting id. Its audio is downloaded into the per-machine
 cache (`~/.cache/open-minutes/meetings/<youtubeId>/`) on first use, and speech
 runs, which are slow to compute, are cached there too. Times are `H:MM:SS.ss`
-like golden PSV files, so they go straight into a psvtool op. The models run
-in `@open-minutes/audio`, reached with the audio cache through
-`@open-minutes/ingest/audio`.
+like golden PSV files, so they go straight into a psvtool op. The tools call
+the models in `@open-minutes/audio` directly, and get a meeting's audio from
+`@open-minutes/ingest/audio-cache`.
 
 - `speech_activity`: speech runs and pauses in a stretch, from voice activity
   detection.

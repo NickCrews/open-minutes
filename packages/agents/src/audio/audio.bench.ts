@@ -1,10 +1,10 @@
 import { bench, describe } from "vitest";
+import { detectSpeech } from "@open-minutes/audio/speech-runs";
 import {
-  detectSpeech,
   loadTranscriptionModels,
   transcribeAudio,
   transcribeRange,
-} from "@open-minutes/ingest/audio";
+} from "@open-minutes/audio/transcribe";
 import { callTool } from "../tool";
 import { findUntranscribedSpeech } from "./tools";
 import { clipContext, rollCallClip } from "./testdata/clips";
