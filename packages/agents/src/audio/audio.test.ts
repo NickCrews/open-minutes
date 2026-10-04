@@ -18,7 +18,7 @@ import {
   speechActivity,
   transcribeRangeTool,
 } from "./tools";
-import { clipContext, rollCallClip } from "./testdata/clips";
+import { clipContext, halfUntranscribedRollCallClip } from "./testdata/clips";
 
 // The audio tools on real meeting audio: Silero VAD and Parakeet run on a
 // checked-in clip (see testdata/clips.ts). activity.test.ts covers the span
@@ -36,8 +36,8 @@ function hears(words: readonly TranscriptWord[], phrase: string): boolean {
 // Decoding a stretch takes about a second on a laptop; leave CI headroom.
 const DECODE_TIMEOUT = 60_000;
 
-describe("on the GBOS roll call", () => {
-  const rollCall = rollCallClip();
+describe("on the GBOS roll call, half missing from the transcript", () => {
+  const rollCall = halfUntranscribedRollCallClip();
   let runs: Span[];
 
   // Loading the recognizer takes several seconds (downloading it, on a cold

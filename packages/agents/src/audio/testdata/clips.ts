@@ -32,8 +32,8 @@ export interface Clip {
  * connected? Brian Burnett? Present. Brianna Sullivan? Present. Thanks.",
  * at 0:00:12–0:00:21 of the clip, which the full-meeting pass dropped.
  */
-export function rollCallClip(): Clip {
-  return loadClip("gbos-roll-call", "gbos_9HoIM5INxpI", 105);
+export function halfUntranscribedRollCallClip(): Clip {
+  return loadClip("gbos-roll-call-half-untranscribed", "gbos_9HoIM5INxpI", 105);
 }
 
 function loadClip(name: string, source: string, offsetSecs: number): Clip {
