@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Copies a Postgres database's public data into a new DuckDB file, for
-# querying without Postgres; see docs/agents/duckdb-export.md. The
+# querying without Postgres; see skills/open-minutes-data/SKILL.md. The
 # export-duckdb workflow runs it nightly on production and publishes the file.
 # Usage: DATABASE_URL=postgres://... export-duckdb.sh <output .duckdb>
 #

@@ -2,7 +2,7 @@
 # the object store, publicly readable at
 #   $OBJECT_STORE_PUBLIC_URL/exports/open-minutes.duckdb
 # for querying production's data without Postgres or its credentials. How to
-# use it: docs/agents/duckdb-export.md. What's copied:
+# use it: skills/open-minutes-data/SKILL.md. What's copied:
 # .github/scripts/export-duckdb.sh.
 #
 # Trigger it by hand with `gh workflow run export-duckdb.yml`.
