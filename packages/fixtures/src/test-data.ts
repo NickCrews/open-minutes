@@ -45,7 +45,7 @@ export interface GoldenPerson {
 }
 
 export interface GoldenMeeting {
-  /** The fixture's directory name, eg "gbos_9HoIM5INxpI": `meetings.slug`. */
+  /** The fixture's directory name, eg "gbos-2026-03-23": `meetings.slug`. */
   slug: string;
   body_id: string;
   youtube_id: string;

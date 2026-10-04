@@ -23,7 +23,7 @@ describe("devData", () => {
     expect(meetings.map((m) => m.slug).sort()).toEqual(
       snapshot.meetings.map((m) => m.slug).sort(),
     );
-    expect(meetings.map((m) => m.slug)).toContain("gbos_9HoIM5INxpI");
+    expect(meetings.map((m) => m.slug)).toContain("gbos-2026-03-23");
     const [{ n }] = (await db.execute(
       sql`SELECT count(DISTINCT meeting_id)::int AS n FROM ${segmentsTable}`,
     )) as unknown as [{ n: number }];

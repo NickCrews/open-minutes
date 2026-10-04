@@ -23,7 +23,7 @@ word, speaker changes as `meta` marker lines.
 
 ## Comparison
 
-Measured on a real fixture (`gbos_9HoIM5INxpI/golden.psv`, 26,993 words, 228
+Measured on a real fixture (`gbos-2026-03-23/golden.psv`, 26,993 words, 228
 segments) by re-encoding it into each candidate format and applying four
 representative edits. Diff cost is `git diff --numstat` (added/deleted lines).
 

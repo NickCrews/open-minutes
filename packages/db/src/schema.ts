@@ -86,7 +86,7 @@ export const meetingsTable = pgTable(
   "meetings",
   {
     id: serial().primaryKey(),
-    // Stable, readable handle for a meeting (eg "gbos_9HoIM5INxpI") that means
+    // Stable, readable handle for a meeting (eg "gbos-2026-03-23") that means
     // the same meeting in every database, like `people.slug`. The golden
     // fixtures set it to their directory name under
     // packages/fixtures/test-data/meetings/, so tests, evals and agents can
@@ -140,7 +140,7 @@ export const peopleTable = pgTable(
     //
     // The slug links the golden fixtures to rows. For example:
     //   - people.jsonl has {"slug":"kyle-kelley","name":"Kyle Kelley",...}
-    //   - meetings/gbos_9HoIM5INxpI/golden.psv labels his turns
+    //   - meetings/gbos-2026-03-23/golden.psv labels his turns
     //     {"begin_speaker":"identified:kyle-kelley"}
     //   - seeding that meeting upserts the people row with slug "kyle-kelley",
     //     so seeding a second meeting he speaks in reuses the same row

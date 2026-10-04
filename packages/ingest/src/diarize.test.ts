@@ -29,7 +29,7 @@ const RUNS_DIR = join(HERE, "..", "test-runs");
 // speaker grouping, so neither test clobbers the other's slice — or your manual
 // tweaks. Generate the first pass with SNAPSHOT_UPDATE=1, then refine by hand.
 describe("diarize", () => {
-  const meetingSlugs = ["gbos_9HoIM5INxpI", "gbos_xTDznaSElgY"];
+  const meetingSlugs = ["gbos-2026-03-23", "gbos-2026-05-18"];
   for (const slug of meetingSlugs) {
     // It took 18 minutes on my M1 pro, probably slower on others.
     it(`diarizes meeting ${slug}`, { tags: ["slow"] }, async () => {

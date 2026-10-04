@@ -83,6 +83,9 @@ export function checkMeetingDir(dir: string): Issue[] {
       resolve(dir, "../.."),
     );
     segments = meeting.segments;
+    const slugIssue = checkMeetingSlug(meeting);
+    if (slugIssue)
+      issues.push({ file: dir, severity: "warning", message: slugIssue });
   } catch (err) {
     const message = (err as Error).message;
     if (!issues.some((i) => i.severity === "error"))
@@ -100,6 +103,28 @@ export function checkMeetingDir(dir: string): Issue[] {
     );
   }
   return issues;
+}
+
+/**
+ * A meeting's slug (its directory name) is `<body>-<date>`, eg
+ * "gbos-2026-03-23", plus a "-<suffix>" to tell apart two meetings of one
+ * body on one day; just `<body>-<suffix>` when the date is unknown.
+ */
+export function checkMeetingSlug(meeting: {
+  slug: string;
+  body_id: string;
+  date: string | null;
+}): string | null {
+  const stem = meeting.date
+    ? `${meeting.body_id}-${meeting.date}`
+    : meeting.body_id;
+  const rest = meeting.slug.startsWith(stem)
+    ? meeting.slug.slice(stem.length)
+    : null;
+  if (rest !== null && (/^-[a-z0-9-]+$/.test(rest) || (meeting.date && !rest)))
+    return null;
+  const want = meeting.date ? stem : `${stem}-<suffix>`;
+  return `Meeting directory "${meeting.slug}" should be named "${want}" (<body>-<date>): it's the meeting's slug in the database`;
 }
 
 /**

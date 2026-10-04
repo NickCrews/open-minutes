@@ -10,12 +10,12 @@ ALTER TABLE "meetings" ADD CONSTRAINT "meetings_slug_key" UNIQUE("slug");--> sta
 ALTER TABLE "meetings" ADD CONSTRAINT "meetings_slug_not_numeric" CHECK ("slug" !~ '^[0-9]+$');--> statement-breakpoint
 UPDATE "meetings" SET "slug" = golden.slug
 FROM (VALUES
-	('SGNnYNW26aQ', 'assembly_SGNnYNW26aQ'),
-	('vJURFS21w-w', 'assembly_vJURFS21w-w'),
-	('hK1Sq1a7aQM', 'ced_hK1Sq1a7aQM'),
-	('9HoIM5INxpI', 'gbos_9HoIM5INxpI'),
-	('hTKVG_L61ec', 'gbos_hTKVG_L61ec'),
-	('xTDznaSElgY', 'gbos_xTDznaSElgY'),
-	('DwFHRjobjcY', 'pzc_DwFHRjobjcY')
+	('SGNnYNW26aQ', 'assembly-2026-02-17'),
+	('vJURFS21w-w', 'assembly-2026-03-03'),
+	('hK1Sq1a7aQM', 'ced-2026-03-05'),
+	('9HoIM5INxpI', 'gbos-2026-03-23'),
+	('hTKVG_L61ec', 'gbos-2026-06-15'),
+	('xTDznaSElgY', 'gbos-2026-05-18'),
+	('DwFHRjobjcY', 'pzc-2026-06-08')
 ) AS golden(youtube_id, slug)
 WHERE "meetings"."youtube_id" = golden.youtube_id;

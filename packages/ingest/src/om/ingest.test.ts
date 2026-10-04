@@ -205,7 +205,7 @@ describe("ingestVideo", () => {
     "full pipeline on a real fixture meeting",
     { tags: ["slow"] },
     async ({ db, workRoot }) => {
-      const meeting = getMeetingData("gbos_9HoIM5INxpI");
+      const meeting = getMeetingData("gbos-2026-03-23");
       const audio = await getMeetingAudio(meeting);
 
       // Fake only the network boundary: metadata is canned and "download"

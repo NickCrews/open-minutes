@@ -54,7 +54,7 @@ export const MAX_WORD_SEC = 0.32;
  * window covers several runs and reports window-relative times — so consecutive
  * words can sit 0.08s apart while straddling a boundary. Clamping only within a
  * run lets such a word overlap the next run's first word (170 of 919 boundaries
- * on gbos_xTDznaSElgY).
+ * on gbos-2026-05-18).
  */
 function deriveTimedWords(speech: readonly SpeechSegment[]): TimedWord[] {
   // Runs are in time order and each holds a contiguous slice of the ordered

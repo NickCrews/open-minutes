@@ -19,7 +19,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const RUNS_DIR = join(HERE, "..", "test-runs");
 
 describe("transcribe", () => {
-  const meetingSlugs = ["gbos_9HoIM5INxpI", "gbos_xTDznaSElgY"];
+  const meetingSlugs = ["gbos-2026-03-23", "gbos-2026-05-18"];
   for (const slug of meetingSlugs) {
     it(
       `can transcribe meeting ${slug}, passing our accuracy limits`,

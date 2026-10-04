@@ -3,8 +3,8 @@ import { goldenMeetingsData } from "./golden-meetings-data";
 
 describe("goldenMeetingsData fingerprint", () => {
   test("differs per meeting set, and is stable", () => {
-    const a = goldenMeetingsData(["gbos_9HoIM5INxpI"]).fingerprint;
-    expect(goldenMeetingsData(["gbos_9HoIM5INxpI"]).fingerprint).toBe(a);
-    expect(goldenMeetingsData(["gbos_hTKVG_L61ec"]).fingerprint).not.toBe(a);
+    const a = goldenMeetingsData(["gbos-2026-03-23"]).fingerprint;
+    expect(goldenMeetingsData(["gbos-2026-03-23"]).fingerprint).toBe(a);
+    expect(goldenMeetingsData(["gbos-2026-06-15"]).fingerprint).not.toBe(a);
   });
 });

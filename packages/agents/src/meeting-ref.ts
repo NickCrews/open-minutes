@@ -11,7 +11,7 @@ import { type Db, ToolError } from "./tool";
 export const meetingRef = z
   .union([z.int().positive(), z.string().trim().min(1)])
   .describe(
-    'The meeting: its slug (eg "gbos_9HoIM5INxpI"), or its database id (eg 12). list_meetings shows both.',
+    'The meeting: its slug (eg "gbos-2026-03-23"), or its database id (eg 12). list_meetings shows both.',
   );
 
 export type MeetingRef = z.infer<typeof meetingRef>;
