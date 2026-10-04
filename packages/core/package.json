@@ -4,9 +4,10 @@
   "type": "module",
   "exports": {
     "./dotenv": "./src/dotenv.ts",
+    "./audio-provider": "./src/audio-provider.ts",
     "./bodies": "./src/bodies/index.ts",
     "./timeline": "./src/timeline.ts",
-    "./meeting-date": "./src/meeting-date.ts",
+    "./meeting-date": "./src/meeting-date/index.ts",
     "./transcription": "./src/transcription/index.ts",
     "./voice_embeddings": "./src/voice_embeddings/index.ts",
     "./chapters": "./src/chapters.ts",

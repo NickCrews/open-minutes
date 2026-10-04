@@ -6,7 +6,7 @@ import {
   formatTimeOfDay,
   parseMeetingDate,
   parseMeetingTime,
-} from "./meeting-date";
+} from "./format";
 
 describe("formatMeetingDate", () => {
   it("shows date and time when both are known", () => {

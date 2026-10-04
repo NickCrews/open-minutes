@@ -4,7 +4,7 @@ import {
   type SpeechSegment,
   type TranscriptSegment,
   type TranscriptWord,
-} from "@open-minutes/core/transcription";
+} from "./types";
 
 /**
  * A word with its derived end time. Stored words carry only their onset; ends

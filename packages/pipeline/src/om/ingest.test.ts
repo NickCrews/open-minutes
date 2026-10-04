@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect } from "vitest";
 import { meetingsTable, segmentsTable } from "@open-minutes/db";
-import type { VideoMetadata } from "../audio-provider";
+import type { VideoMetadata } from "@open-minutes/core/audio-provider";
 import type { SpeechSegment } from "@open-minutes/core/transcription";
 import { N_DIMENSIONS } from "@open-minutes/core/voice_embeddings";
 import { getMeetingData } from "@open-minutes/fixtures/test-data";

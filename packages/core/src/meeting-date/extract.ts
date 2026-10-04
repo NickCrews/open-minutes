@@ -12,7 +12,7 @@
 // times are wall-clock "HH:MM" (24h) — deliberately separate, since either can
 // be known without the other.
 
-import type { TranscriptWord } from "@open-minutes/core/transcription";
+import type { TranscriptWord } from "../transcription/types";
 
 export interface ParsedMeetingDateTime {
   /** Wall-clock date, "YYYY-MM-DD". */

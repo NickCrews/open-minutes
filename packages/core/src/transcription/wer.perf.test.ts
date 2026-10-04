@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { alignWords, type AlignedWordPair, type AlignmentOp } from "./wer";
-import type { TranscriptWord } from "@open-minutes/core/transcription";
+import type { TranscriptWord } from "./types";
 
 // Deterministic PRNG so the generated transcripts are stable across runs.
 function mulberry32(seed: number): () => number {

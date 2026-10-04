@@ -6,13 +6,12 @@ import {
   segmentsToSpeechRuns,
   segmentsToTurns,
 } from "./align";
-import { tokensToWords, VAD_MIN_SILENCE_SEC } from "./transcribe";
 import type {
   DiarizationTurn,
   SpeechSegment,
   TranscriptSegment,
   TranscriptWord,
-} from "@open-minutes/core/transcription";
+} from "./types";
 
 /** The text of each segment, in order — the shape a reader actually sees. */
 function texts(segments: TranscriptSegment[]): string[] {
@@ -83,17 +82,8 @@ describe("alignSpeakers", () => {
     // opens speaker 1's turn at 11.5 (pyannote catches the breath before the
     // first word).
     const speech = [
-      run(
-        tokensToWords(
-          [" quarter", "ly", " report", "."],
-          [9.6, 9.84, 10.08, 10.32],
-        ),
-        10.4,
-      ),
-      run(
-        tokensToWords([" Thanks", " Jennifer", "."], [12.0, 12.32, 12.56]),
-        12.9,
-      ),
+      run([w("quarterly", 9.6), w("report.", 10.08)], 10.4),
+      run([w("Thanks", 12.0), w("Jennifer.", 12.32)], 12.9),
     ];
     const turns: DiarizationTurn[] = [
       { start: 6.0, end: 10.5, speakerNum: 0 },
@@ -275,8 +265,8 @@ describe("alignSpeakers", () => {
     // the run's end — inside speaker 0's turn — no matter how close the next
     // run's words come to it in the flat stream.
     const speech = [
-      run(tokensToWords([" report", "."], [10.08, 10.32]), 10.4),
-      run(tokensToWords([" Thanks"], [12.0]), 12.3),
+      run([w("report.", 10.08)], 10.4),
+      run([w("Thanks", 12.0)], 12.3),
     ];
     const turns: DiarizationTurn[] = [
       { start: 6.0, end: 10.5, speakerNum: 0 },
@@ -302,8 +292,8 @@ describe("alignSpeakers", () => {
     // two seconds later, well within the range seen on real audio. Speaker 1's
     // turn opens at 11.5.
     const speech = [
-      run(tokensToWords([" report", "."], [10.08, 10.32]), 12.4),
-      run(tokensToWords([" Thanks"], [12.5]), 12.8),
+      run([w("report.", 10.08)], 12.4),
+      run([w("Thanks", 12.5)], 12.8),
     ];
     const turns: DiarizationTurn[] = [
       { start: 6.0, end: 10.5, speakerNum: 0 },
@@ -343,15 +333,6 @@ describe("alignSpeakers", () => {
 });
 
 describe("deriveTimedWords", () => {
-  // The whole safety argument for deriving word ends from onsets rests on this
-  // one inequality: a derived word is shorter than the shortest silence VAD
-  // will cut at, so no word can span a pause and be credited to whoever speaks
-  // after it. The two constants live in different files; this is what stops
-  // them drifting apart.
-  it("cannot span a pause long enough for VAD to have cut at it", () => {
-    expect(MAX_WORD_SEC).toBeLessThan(VAD_MIN_SILENCE_SEC);
-  });
-
   it("never lets a word outlast its own ceiling or overlap the next", () => {
     // Words 0.1s apart (tighter than the ceiling), then a gap wider than it,
     // spanning two runs so the flattened stream is what gets clamped.

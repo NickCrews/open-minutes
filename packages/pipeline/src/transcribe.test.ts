@@ -10,8 +10,8 @@ import {
   tokensToWords,
   transcribeAudio,
   type TranscribeWindowEndEvent,
+  VAD_MIN_SILENCE_SEC,
 } from "./transcribe";
-import { compareTranscripts } from "./test-utils/wer";
 import {
   reapplySpeakerLayer,
   serializePsv,
@@ -19,7 +19,11 @@ import {
 } from "@open-minutes/fixtures/psv";
 import { getMeetingData } from "@open-minutes/fixtures/test-data";
 import { getMeetingAudio } from "./test-utils/audio-cache";
-import { cleanSpeechSegments } from "@open-minutes/core/transcription";
+import {
+  cleanSpeechSegments,
+  compareTranscripts,
+  MAX_WORD_SEC,
+} from "@open-minutes/core/transcription";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const RUNS_DIR = join(HERE, "..", "test-runs");
@@ -72,7 +76,7 @@ function resample(samples: Float32Array, from: number, to: number) {
 
 // Parakeet reports one timestamp per token — the token's onset — and no
 // durations. A word keeps only its first token's onset; ends are derived from
-// the run structure later (see align.ts).
+// the run structure later (see align.ts in @open-minutes/core).
 describe("tokensToWords", () => {
   it("joins space-prefixed tokens into words and attaches punctuation", () => {
     const words = tokensToWords(
@@ -99,6 +103,17 @@ describe("tokensToWords", () => {
 
   it("returns no words for no tokens", () => {
     expect(tokensToWords([], [])).toEqual([]);
+  });
+});
+
+describe("VAD_MIN_SILENCE_SEC", () => {
+  // The whole safety argument for deriving word ends from onsets rests on this
+  // one inequality: a derived word is shorter than the shortest silence VAD
+  // will cut at, so no word can span a pause and be credited to whoever speaks
+  // after it. The two constants live in different packages; this is what
+  // stops them drifting apart.
+  it("is longer than any derived word, so no word spans a VAD cut", () => {
+    expect(MAX_WORD_SEC).toBeLessThan(VAD_MIN_SILENCE_SEC);
   });
 });
 
