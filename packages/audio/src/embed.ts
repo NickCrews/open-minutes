@@ -1,3 +1,4 @@
+/// <reference path="./sherpa-onnx-node.d.ts" />
 import sherpa_onnx, {
   type SpeakerEmbeddingExtractor,
   type WaveForm,

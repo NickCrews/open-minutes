@@ -1,3 +1,4 @@
+/// <reference path="./sherpa-onnx-node.d.ts" />
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 

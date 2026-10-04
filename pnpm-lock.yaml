@@ -36,6 +36,22 @@ importers:
         specifier: ^4.0.18
         version: 4.1.4(@types/node@22.19.17)(vite@7.3.2(@types/node@22.19.17)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.21.0))
 
+  packages/audio:
+    dependencies:
+      '@open-minutes/core':
+        specifier: workspace:*
+        version: link:../core
+      sherpa-onnx-node:
+        specifier: ^1.12.39
+        version: 1.12.39
+    devDependencies:
+      '@types/node':
+        specifier: ^22.19.17
+        version: 22.19.17
+      vitest:
+        specifier: ^4.0.18
+        version: 4.1.4(@types/node@22.19.17)(vite@7.3.2(@types/node@22.19.17)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.21.0))
+
   packages/core:
     dependencies:
       dotenv:
@@ -104,6 +120,9 @@ importers:
       '@neondatabase/serverless':
         specifier: ^1.1.0
         version: 1.1.0
+      '@open-minutes/audio':
+        specifier: workspace:*
+        version: link:../audio
       '@open-minutes/core':
         specifier: workspace:*
         version: link:../core
@@ -119,9 +138,6 @@ importers:
       opus-decoder:
         specifier: ^0.7.12
         version: 0.7.12
-      sherpa-onnx-node:
-        specifier: ^1.12.39
-        version: 1.12.39
     devDependencies:
       '@open-minutes/fixtures':
         specifier: workspace:*

@@ -9,7 +9,7 @@ import { createHash } from "node:crypto";
 import { symlink } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import sherpa from "sherpa-onnx-node";
+import { readWave } from "@open-minutes/audio/wav";
 import type { GoldenMeeting } from "@open-minutes/fixtures/test-data";
 import { youtubeFromEnv } from "../youtube";
 
@@ -67,7 +67,7 @@ export async function getCachedAudio(fixture: {
     );
   }
 
-  const wave = sherpa.readWave(audioPath);
+  const wave = readWave(audioPath);
   const manifest: AudioManifest = {
     youtube_id: fixture.youtubeId,
     sha256,

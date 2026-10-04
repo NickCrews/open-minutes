@@ -15,4 +15,11 @@ export default tseslint.config(
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
+  {
+    // sherpa-onnx-node ships no types, so audio declares them itself. Its
+    // modules reference that declaration file so that packages importing them
+    // typecheck without having to include it themselves.
+    files: ["packages/audio/src/**"],
+    rules: { "@typescript-eslint/triple-slash-reference": "off" },
+  },
 );
