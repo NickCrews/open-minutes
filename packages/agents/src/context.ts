@@ -16,7 +16,11 @@ export function toolContext(db: Db | (() => Promise<Db>)): ToolContext {
       let m = meetings.get(ref);
       if (!m) {
         m = openMeeting(ref, getDb);
-        // A failed open (a typo'd name) shouldn't stick.
+        // Cache a meeting once it opens, but not a failure: if the audio
+        // download drops, or the meeting isn't ingested yet, the next call for
+        // this ref should try again rather than rethrow the old error for the
+        // life of the context. (The caller still gets the rejection from `m`;
+        // this branch only evicts it.)
         m.catch(() => meetings.delete(ref));
         meetings.set(ref, m);
       }
