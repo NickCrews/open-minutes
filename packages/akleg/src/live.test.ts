@@ -9,8 +9,10 @@ import { akleg, aklegSource } from "./index";
 // here, in CI, rather than in an ingest. index.test.ts covers the parsing
 // offline; these check the API still answers the way its fixtures say. They
 // use past meetings, whose records shouldn't change, so a failure means
-// akleg.gov changed (or is down), not the data. ~10 s in all.
-describe("akleg.gov, live", () => {
+// akleg.gov changed (or is down), not the data. ~10 s in all when akleg.gov is
+// quick, but its BASIS API can take well over vitest's default 5 s per query,
+// so each test gets a minute.
+describe("akleg.gov, live", { timeout: 60_000 }, () => {
   const source = akleg();
 
   it("lists a committee's meetings and their recordings", async () => {
