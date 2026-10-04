@@ -34,3 +34,13 @@ as Opus can, so the channels are averaged and resampled with a polyphase
 windowed-sinc filter (`Resampler` in `mp3.ts`). A 3-hour meeting takes about a
 minute and 160 MB of memory. Its WAV matches ffmpeg's (`-ar 16000 -ac 1`) to a
 correlation of 0.9999999, about 1 ms apart (ffmpeg trims the encoder delay).
+
+## Tests
+
+- `index.test.ts` and `mp3.test.ts` run offline, on trimmed real API responses
+  (`src/fixtures/`) and a generated MP3.
+- `live.test.ts` runs against akleg.gov itself (~10 s), with every
+  `pnpm test` and in CI. It checks known past meetings field by field, lists
+  the current Legislature, and downloads and decodes a 7.5-minute meeting. A
+  change to the API's format fails it with a zod error naming the field; so
+  does akleg.gov being down.
