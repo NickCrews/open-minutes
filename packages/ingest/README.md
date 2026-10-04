@@ -1,10 +1,10 @@
-# @open-minutes/pipeline
+# @open-minutes/ingest
 
 The offline processing pipeline that turns raw meeting audio into speaker-attributed transcripts in the database. It transcribes audio locally with `@open-minutes/audio` (sherpa-onnx, downloading ONNX models on demand), cleans disfluencies such as "um" and stutters out of the transcript (see `@open-minutes/core/transcription`'s `clean.ts`), diarizes it into anonymous speaker turns with per-speaker voiceprint embeddings (also `@open-minutes/audio`), aligns those turns with the transcript at the word level, and then recognizes speakers by matching their voiceprints against the people already in the database (by cosine similarity) before inserting the resulting segments. Everything runs in-process with no external services or GPUs required.
 
 ## The `om` CLI
 
-The pipeline ships an `om` CLI with three composable commands. Run it as
+This package ships an `om` CLI with three composable commands. Run it as
 `pnpm om <command>` from anywhere in the repository. Machine-readable results
 go to stdout and all human progress/logs go to stderr, so results can be piped:
 
@@ -27,4 +27,4 @@ diarization JSON) is cached in a gitignored per-meeting work directory under
 the last completed stage; to fully reprocess a meeting, delete its DB row and
 its work directory. The CLI is a thin wrapper over the exported API
 (`listIngested`, `listAvailable`, `ingestVideo` from
-`@open-minutes/pipeline/om`), so scripts and tests reuse the same logic.
+`@open-minutes/ingest/om`), so scripts and tests reuse the same logic.

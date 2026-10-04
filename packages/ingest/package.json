@@ -1,5 +1,5 @@
 {
-  "name": "@open-minutes/pipeline",
+  "name": "@open-minutes/ingest",
   "version": "0.1.0",
   "description": "Open Minutes meeting ingestion: download a meeting, run it through @open-minutes/audio, identify speakers and write it to the database",
   "type": "module",
