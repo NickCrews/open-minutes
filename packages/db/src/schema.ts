@@ -86,6 +86,14 @@ export const meetingsTable = pgTable(
   "meetings",
   {
     id: serial().primaryKey(),
+    // Stable, readable handle for a meeting (eg "gbos_9HoIM5INxpI") that means
+    // the same meeting in every database, like `people.slug`. The golden
+    // fixtures set it to their directory name under
+    // packages/fixtures/test-data/meetings/, so tests, evals and agents can
+    // name a fixture meeting without knowing its id in a given database. Null
+    // for meetings that aren't fixtures. Never all digits, so a reference that
+    // is all digits is unambiguously an `id`.
+    slug: varchar().unique(),
     body_id: integer()
       .notNull()
       .references(() => bodiesTable.id),
@@ -117,6 +125,7 @@ export const meetingsTable = pgTable(
       "meetings_time_requires_date",
       sql`${table.time} IS NULL OR ${table.date} IS NOT NULL`,
     ),
+    check("meetings_slug_not_numeric", sql`${table.slug} !~ '^[0-9]+$'`),
   ],
 );
 

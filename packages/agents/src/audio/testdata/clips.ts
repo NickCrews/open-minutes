@@ -3,10 +3,10 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { readWave, type WaveForm } from "@open-minutes/audio/wav";
-import { parsePsv } from "@open-minutes/fixtures/psv";
+import { type GoldenSegment, parsePsv } from "@open-minutes/fixtures/psv";
 import { toolContext } from "../../context";
 import type { ToolContext } from "../../tool";
-import { type AudioMeeting, labelGoldenSegments } from "../meeting";
+import { type AudioMeeting, type LabeledSegment, toLabeled } from "../meeting";
 
 // Short stretches of real meeting audio, checked in so the audio tools can be
 // tested (and timed) without downloading a meeting. Each is a 16 kHz mono
@@ -58,12 +58,30 @@ function loadClip(name: string, source: string, offsetSecs: number): Clip {
   };
 }
 
+/** A clip's segments, labelled as in its PSV and numbered in file order. */
+function labelGoldenSegments(
+  segments: readonly GoldenSegment[],
+): LabeledSegment[] {
+  return segments
+    .map((seg, id) => ({ seg, id }))
+    .filter(({ seg }) => seg.words.length > 0)
+    .map(({ seg, id }) => {
+      const label =
+        seg.speaker.kind === "identified"
+          ? `identified:${seg.speaker.person}`
+          : seg.speaker.kind === "segmented"
+            ? `segmented:spk-${seg.speaker.cluster}`
+            : "unlabeled";
+      return toLabeled(id, label, seg.words);
+    });
+}
+
 /** A context whose only meeting is `clip`, under its name, and no database. */
 export function clipContext(clip: Clip): ToolContext {
   return {
     ...toolContext(() => Promise.reject(new Error("No database for clips"))),
     meeting: async (ref) => {
-      if (ref !== clip.meeting.ref) throw new Error(`No clip "${ref}"`);
+      if (String(ref) !== clip.meeting.ref) throw new Error(`No clip "${ref}"`);
       return clip.meeting;
     },
   };

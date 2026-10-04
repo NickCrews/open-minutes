@@ -27,6 +27,7 @@ describe("goldenMeetingsData", () => {
     const meeting = getMeetingData(SLUG);
     const meetings = await db.select().from(meetingsTable);
     expect(meetings.map((m) => m.youtube_id)).toEqual([meeting.youtube_id]);
+    expect(meetings.map((m) => m.slug)).toEqual([SLUG]);
 
     const [row] = (await db.execute(
       sql`SELECT count(*)::int AS n FROM ${segmentsTable}`,

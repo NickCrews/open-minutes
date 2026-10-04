@@ -19,7 +19,7 @@ import type { AudioMeeting, LabeledSegment } from "./meeting";
 
 // Tools that listen to a meeting's audio, for what the transcript's text can't
 // show: two people folded under one label, or speech the recognizer skipped.
-// They run on a golden fixture or a database meeting, whose audio is
+// They run on any meeting in the database with a YouTube video, whose audio is
 // downloaded into the per-machine cache on first use.
 
 /** The longest range transcribe_range decodes in one pass. */

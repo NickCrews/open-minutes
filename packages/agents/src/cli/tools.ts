@@ -7,13 +7,12 @@
 //
 // Results are JSON on stdout; progress goes to stderr. A refused call prints
 // {"error": "..."} and exits 1. The database is chosen as everywhere else:
-// --db, else $DB, else your branch's local database. It's only opened for a
-// tool that needs it: the audio tools on a golden fixture don't.
+// --db, else $DB, else your branch's local database. It's opened on the first
+// call that needs it.
 
 import { readFileSync } from "node:fs";
 import { getDb, resolveDatabaseUrl } from "@open-minutes/db";
 import { prepareDatabase } from "@open-minutes/db/ensure";
-import { goldenRefs } from "../audio/meeting";
 import { toolContext } from "../context";
 import { callTool, parametersOf, ToolError } from "../tool";
 import { tools } from "../tools";
@@ -39,7 +38,6 @@ export async function runTools(argv: string[]): Promise<void> {
   }
   if (!name) {
     for (const t of tools) console.log(`${t.name}\t${t.description}`);
-    console.log(`\nGolden meetings: ${goldenRefs().join(" ")}`);
     return;
   }
   const tool = tools.find((t) => t.name === name);
