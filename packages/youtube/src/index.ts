@@ -8,7 +8,12 @@ import type {
 } from "@open-minutes/core/audio-provider";
 import type { ListedVideo, VideoLister } from "@open-minutes/core/video-lister";
 import { webmOpusToWav } from "./opus";
-import { type StoredYoutubeFile, storedYoutubeFileUrl } from "./store";
+import {
+  type StoredFile,
+  type YoutubeVideoFiles,
+  type YtDlpInfo,
+  youtubeVideoFiles,
+} from "./store";
 
 export type {
   AudioProvider,
@@ -116,17 +121,6 @@ async function listVideos(source: YouTubeSource): Promise<ListedVideo[]> {
   );
 }
 
-/** The fields of yt-dlp's info JSON that {@link VideoMetadata} uses. */
-interface YtDlpInfo {
-  id: string;
-  channel_id?: string;
-  title?: string;
-  description?: string;
-  duration?: number | null;
-  /** "YYYYMMDD". */
-  upload_date?: string | null;
-}
-
 /**
  * With an object store configured, reads the info JSON the fetch-youtube-audio
  * workflow stored (see {@link fetchStored}), so this works where YouTube
@@ -136,12 +130,11 @@ async function getMetadata(
   config: YouTubeConfig,
   videoIdOrUrl: string,
 ): Promise<VideoMetadata> {
-  const stored = await fetchStored(config, videoId(videoIdOrUrl), "info.json");
-  const raw = stored
-    ? (JSON.parse(new TextDecoder().decode(stored)) as YtDlpInfo)
-    : (JSON.parse(
-        (await ytDlp(["--skip-download", "-J", videoUrl(videoIdOrUrl)])).stdout,
-      ) as YtDlpInfo);
+  const raw =
+    (await fetchStored(config, videoId(videoIdOrUrl), (f) => f.infoJson)) ??
+    (JSON.parse(
+      (await ytDlp(["--skip-download", "-J", videoUrl(videoIdOrUrl)])).stdout,
+    ) as YtDlpInfo);
   return {
     id: raw.id,
     channelId: raw.channel_id ?? "",
@@ -186,7 +179,7 @@ async function ensureAudioDownloaded(
   const stored = await fetchStored(
     config,
     videoId(videoIdOrUrl),
-    "speech.webm",
+    (f) => f.speechWebm,
   );
   if (stored) {
     await webmOpusToWav(stored, path);
@@ -218,8 +211,9 @@ const FETCH_YOUTUBE_AUDIO_POLL_MS = 5_000;
 const FETCH_YOUTUBE_AUDIO_TIMEOUT_MS = 20 * 60_000;
 
 /**
- * One of a video's files from the object store (see `./store`), or
- * null if the store isn't configured or can't supply it.
+ * The contents of one of a video's files in the object store, the one `pick`
+ * chooses (see {@link youtubeVideoFiles}), or null if the store isn't
+ * configured or can't supply it.
  *
  * The object store is the project's S3-compatible bucket of blobs, publicly
  * readable under {@link YouTubeConfig.objectStoreUrl}. YouTube blocks
@@ -230,15 +224,15 @@ const FETCH_YOUTUBE_AUDIO_TIMEOUT_MS = 20 * 60_000;
  * waits for the file. Without the token, a miss returns null, so a caller on a
  * residential connection falls back to yt-dlp.
  */
-async function fetchStored(
+async function fetchStored<T>(
   config: YouTubeConfig,
   id: string,
-  name: StoredYoutubeFile,
-): Promise<Uint8Array | null> {
-  const base = config.objectStoreUrl;
-  if (!base) return null;
-  const url = storedYoutubeFileUrl(base, id, name);
-  const first = await download(url);
+  pick: (files: YoutubeVideoFiles) => StoredFile<T>,
+): Promise<T | null> {
+  if (!config.objectStoreUrl) return null;
+  const files = youtubeVideoFiles(id, config.objectStoreUrl);
+  const file = pick(files);
+  const first = await file.fetch();
   if (first) return first;
 
   const token = config.dispatchToken;
@@ -248,42 +242,24 @@ async function fetchStored(
   const requestedAt = Date.now() - 60_000;
   await requestFetch(id, token);
   console.error(
-    `Waiting for the fetch-youtube-audio workflow to store ${url}...`,
+    `Waiting for the fetch-youtube-audio workflow to store ${file.url}...`,
   );
   const deadline = Date.now() + FETCH_YOUTUBE_AUDIO_TIMEOUT_MS;
   while (Date.now() < deadline) {
     await new Promise((r) => setTimeout(r, FETCH_YOUTUBE_AUDIO_POLL_MS));
-    // A cache-busting query string, so a 404 from before the upload isn't
-    // served again.
-    const stored = await download(`${url}?t=${Date.now()}`);
+    // Bypassing the cache, so a 404 from before the upload isn't served again.
+    const stored = await file.fetch({ bypassCache: true });
     if (stored) return stored;
-    const failure = await fetch(
-      `${storedYoutubeFileUrl(base, id, "error.json")}?t=${Date.now()}`,
-    );
-    if (failure.ok) {
-      const { failed_at, error, run_url } = (await failure.json()) as {
-        failed_at: string;
-        error: string;
-        run_url: string;
-      };
-      if (Date.parse(failed_at) >= requestedAt) {
-        throw new Error(
-          `fetch-youtube-audio failed for ${id}: ${error} (${run_url})`,
-        );
-      }
+    const failure = await files.errorJson.fetch({ bypassCache: true });
+    if (failure && Date.parse(failure.failed_at) >= requestedAt) {
+      throw new Error(
+        `fetch-youtube-audio failed for ${id}: ${failure.error} (${failure.run_url})`,
+      );
     }
   }
   throw new Error(
-    `Timed out waiting for fetch-youtube-audio to store ${url}; see https://github.com/${FETCH_YOUTUBE_AUDIO_REPO}/actions/workflows/fetch-youtube-audio.yml`,
+    `Timed out waiting for fetch-youtube-audio to store ${file.url}; see https://github.com/${FETCH_YOUTUBE_AUDIO_REPO}/actions/workflows/fetch-youtube-audio.yml`,
   );
-}
-
-/** The body of `url`; null on a 404. */
-async function download(url: string): Promise<Uint8Array | null> {
-  const res = await fetch(url);
-  if (res.status === 404) return null;
-  if (!res.ok) throw new Error(`GET ${url}: HTTP ${res.status}`);
-  return new Uint8Array(await res.arrayBuffer());
 }
 
 async function requestFetch(id: string, token: string) {

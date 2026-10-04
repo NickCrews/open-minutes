@@ -1,7 +1,7 @@
 import type { AudioPlayer, AudioPlayerEvents } from "./audio-player";
 
 /**
- * Plays the audio at `url` (an object store copy; see `storedYoutubeAudioUrl`)
+ * Plays the audio at `url` (an object store copy; see `youtubeVideoFiles`)
  * through an `<audio>` element, which starts in well under a second.
  *
  * Not every video is in the store: when the audio fails to load, it calls

@@ -1,6 +1,6 @@
 import { getRouteApi } from "@tanstack/solid-router";
 import { createSignal, onCleanup } from "solid-js";
-import { storedYoutubeAudioUrl } from "@open-minutes/youtube/store";
+import { youtubeVideoFiles } from "@open-minutes/youtube/store";
 import type { AudioPlayer } from "./audio-player";
 import { createStoredAudioPlayer } from "./stored-audio-player";
 import { createYouTubeAudioPlayers } from "./youtube-audio-player";
@@ -68,7 +68,8 @@ export function createHiddenPlayer() {
     player = canPlayWebmOpus()
       ? createStoredAudioPlayer({
           ...reportsFor(youtubeId),
-          url: storedYoutubeAudioUrl(config().objectStorePublicUrl, youtubeId),
+          url: youtubeVideoFiles(youtubeId, config().objectStorePublicUrl)
+            .speechWebm.url,
           onUnavailable: () => fallBack(youtubeId),
         })
       : youtube.player({ ...reportsFor(youtubeId), youtubeId });
