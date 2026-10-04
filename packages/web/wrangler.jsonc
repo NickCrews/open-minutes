@@ -13,7 +13,8 @@
   // both from process.env in src/server/config.ts.
   "vars": {
     // The object store's public base URL (OBJECT_STORE_PUBLIC_URL in
-    // .env.example). Excerpts play audio from it.
+    // .env.example). Excerpts play audio from it. It's the default in
+    // @open-minutes/youtube/store too, so keep the two the same.
     "OBJECT_STORE_PUBLIC_URL": "https://pub-ac21478ae97547c5a797c710cdc9df3d.r2.dev",
   },
 }
