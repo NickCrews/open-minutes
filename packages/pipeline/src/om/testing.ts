@@ -22,9 +22,6 @@ import { loadBodies } from "@open-minutes/fixtures/test-data";
  */
 export function fakeYouTube(overrides: Partial<YouTube> = {}): YouTube {
   return {
-    listVideos: async () => {
-      throw new Error("unexpected listVideos call");
-    },
     getMetadata: async () => {
       throw new Error("unexpected getMetadata call");
     },
@@ -70,16 +67,6 @@ export async function insertBody(
   return row!.id;
 }
 
-/** A YouTube video source's URL, as the `video_sources.url` column derives it. */
-export function youtubeSourceUrl(source: {
-  kind: "channel" | "playlist";
-  youtube_id: string;
-}): string {
-  return source.kind === "channel"
-    ? `https://www.youtube.com/channel/${source.youtube_id}`
-    : `https://www.youtube.com/playlist?list=${source.youtube_id}`;
-}
-
 /** Insert a bare meeting row (as if previously ingested). Returns its id. */
 export async function insertMeeting(
   db: DB,
@@ -123,15 +110,12 @@ export const goldenTest = dbTest({ data: goldenData }).extend<{
 }>(workRootFixture);
 
 const goldenGbos = loadBodies().find((b) => b.id === "gbos")!;
-const goldenGbosChannel = goldenGbos.video_sources.find(
-  (s) => s.kind === "channel",
-)!;
 
 /** GBOS as test-data/bodies.jsonl declares it: the one source of truth. */
 export const GOLDEN_GBOS = {
   name_short: goldenGbos.name_short,
-  channelId: goldenGbosChannel.youtube_id,
-  channelUrl: youtubeSourceUrl(goldenGbosChannel),
+  channelId: goldenGbos.video_sources.find((s) => s.kind === "channel")!
+    .youtube_id,
 };
 
 /** The golden GBOS body's id in a database seeded with {@link goldenData}. */

@@ -7,16 +7,26 @@ import {
 } from "@open-minutes/db";
 import { bodySlug } from "@open-minutes/core/bodies";
 import type { VideoLister } from "@open-minutes/core/video-lister";
-import { youtubeFromEnv } from "@open-minutes/youtube";
+import { youtubeConfigFromEnv, youtubeSource } from "@open-minutes/youtube";
+
+export type VideoSourceRow = typeof videoSourcesTable.$inferSelect;
 
 export interface ListAvailableOptions {
   /** Restrict the scrape to the body with this slug (eg "gbos"). */
   body?: string;
   /**
-   * Lists the videos at a video source's URL; injectable for tests. Defaults
-   * to {@link youtubeFromEnv}.
+   * The {@link VideoLister} for a `video_sources` row; injectable for tests.
+   * Defaults to {@link defaultSourceFor}.
    */
-  lister?: VideoLister;
+  sourceFor?: (source: VideoSourceRow) => VideoLister;
+}
+
+/** Every video source is on YouTube, for now. */
+export function defaultSourceFor(source: VideoSourceRow): VideoLister {
+  return youtubeSource(
+    { kind: source.kind, id: source.youtube_id },
+    youtubeConfigFromEnv(),
+  );
 }
 
 /**
@@ -28,7 +38,7 @@ export async function listAvailable(
   db: DB,
   options: ListAvailableOptions = {},
 ): Promise<string[]> {
-  const lister = options.lister ?? youtubeFromEnv();
+  const sourceFor = options.sourceFor ?? defaultSourceFor;
 
   const allBodies = await db.select().from(bodiesTable);
   let bodies = allBodies;
@@ -56,9 +66,8 @@ export async function listAvailable(
       .from(videoSourcesTable)
       .where(eq(videoSourcesTable.body_id, body.id));
     for (const source of sources) {
-      if (!source.url) throw new Error(`Video source ${source.id} has no URL`);
       console.error(`Scraping ${body.name_short} ${source.url}...`);
-      const videos = await lister.listVideos(source.url);
+      const videos = await sourceFor(source).listVideos();
       for (const video of videos) {
         if (!ingested.has(video.id)) available.push(video.id);
       }

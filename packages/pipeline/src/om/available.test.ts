@@ -1,16 +1,30 @@
 import { describe, expect } from "vitest";
+import type { ListedVideo } from "@open-minutes/core/video-lister";
 import { loadBodies } from "@open-minutes/fixtures/test-data";
-import { listAvailable } from "./available";
+import { type VideoSourceRow, listAvailable } from "./available";
 import {
   GOLDEN_GBOS,
-  fakeYouTube,
   goldenGbosId,
   goldenTest,
   insertBody,
   insertMeeting,
   test,
-  youtubeSourceUrl,
 } from "./testing";
+
+/**
+ * A `sourceFor` whose sources list `videos(source)` and record which sources
+ * were scraped, in `scraped`, as "kind:youtube_id".
+ */
+function fakeSources(videos: (source: VideoSourceRow) => ListedVideo[]) {
+  const scraped: string[] = [];
+  const sourceFor = (source: VideoSourceRow) => ({
+    listVideos: async () => {
+      scraped.push(`${source.kind}:${source.youtube_id}`);
+      return videos(source);
+    },
+  });
+  return { scraped, sourceFor };
+}
 
 describe("listAvailable", () => {
   goldenTest(
@@ -18,16 +32,15 @@ describe("listAvailable", () => {
     async ({ db }) => {
       await insertMeeting(db, await goldenGbosId(db), "already-in-db");
 
-      const lister = fakeYouTube({
+      const { sourceFor } = fakeSources((source) =>
         // Source order is newest-first; listAvailable must preserve it. The
         // other golden bodies' playlists have nothing new.
-        listVideos: async (url) =>
-          url === GOLDEN_GBOS.channelUrl
-            ? [{ id: "newest" }, { id: "already-in-db" }, { id: "oldest" }]
-            : [],
-      });
+        source.youtube_id === GOLDEN_GBOS.channelId
+          ? [{ id: "newest" }, { id: "already-in-db" }, { id: "oldest" }]
+          : [],
+      );
 
-      const ids = await listAvailable(db, { lister });
+      const ids = await listAvailable(db, { sourceFor });
       expect(ids).toEqual(["newest", "oldest"]);
     },
   );
@@ -35,24 +48,22 @@ describe("listAvailable", () => {
   goldenTest("scrapes only bodies that have a video source", async ({ db }) => {
     await insertBody(db, { name: "No Channel Town", name_short: "NCT" });
 
-    const scraped: string[] = [];
-    const lister = fakeYouTube({
-      listVideos: async (url) => {
-        scraped.push(url);
-        return [{ id: `video-${url}` }];
-      },
-    });
+    const { scraped, sourceFor } = fakeSources((source) => [
+      { id: `video-${source.youtube_id}` },
+    ]);
 
-    const ids = await listAvailable(db, { lister });
-    const goldenUrls = loadBodies().flatMap((b) =>
-      b.video_sources.map(youtubeSourceUrl),
+    const ids = await listAvailable(db, { sourceFor });
+    const goldenSources = loadBodies().flatMap((b) => b.video_sources);
+    expect(scraped.sort()).toEqual(
+      goldenSources.map((s) => `${s.kind}:${s.youtube_id}`).sort(),
     );
-    expect(scraped.sort()).toEqual([...goldenUrls].sort());
-    expect(ids.sort()).toEqual(goldenUrls.map((url) => `video-${url}`).sort());
+    expect(ids.sort()).toEqual(
+      goldenSources.map((s) => `video-${s.youtube_id}`).sort(),
+    );
   });
 
   // An empty database: the only body is the one with a playlist source.
-  test("scrapes a playlist source at its playlist URL", async ({ db }) => {
+  test("hands a playlist source over as a playlist", async ({ db }) => {
     // Bodies that share a channel with their siblings are separated by
     // playlist, so a playlist source must not be scraped as a channel.
     await insertBody(db, {
@@ -61,18 +72,12 @@ describe("listAvailable", () => {
       sources: [{ kind: "playlist", youtube_id: "PL_ASSEMBLY" }],
     });
 
-    const scraped: string[] = [];
-    const lister = fakeYouTube({
-      listVideos: async (url) => {
-        scraped.push(url);
-        return [{ id: "assembly-video" }];
-      },
-    });
-
-    expect(await listAvailable(db, { lister })).toEqual(["assembly-video"]);
-    expect(scraped).toEqual([
-      "https://www.youtube.com/playlist?list=PL_ASSEMBLY",
+    const { scraped, sourceFor } = fakeSources(() => [
+      { id: "assembly-video" },
     ]);
+
+    expect(await listAvailable(db, { sourceFor })).toEqual(["assembly-video"]);
+    expect(scraped).toEqual(["playlist:PL_ASSEMBLY"]);
   });
 
   goldenTest("--body restricts the scrape to that body", async ({ db }) => {
@@ -82,22 +87,21 @@ describe("listAvailable", () => {
       sources: [{ kind: "channel", youtube_id: "UC_OTHER_CHANNEL" }],
     });
 
-    const scraped: string[] = [];
-    const lister = fakeYouTube({
-      listVideos: async (url) => {
-        scraped.push(url);
-        return [{ id: `video-from-${url}` }];
-      },
-    });
+    const { scraped, sourceFor } = fakeSources((source) => [
+      { id: `video-from-${source.youtube_id}` },
+    ]);
 
-    const ids = await listAvailable(db, { body: "gbos", lister });
-    expect(scraped).toEqual([GOLDEN_GBOS.channelUrl]);
-    expect(ids).toEqual([`video-from-${GOLDEN_GBOS.channelUrl}`]);
+    const ids = await listAvailable(db, { body: "gbos", sourceFor });
+    expect(scraped).toEqual([`channel:${GOLDEN_GBOS.channelId}`]);
+    expect(ids).toEqual([`video-from-${GOLDEN_GBOS.channelId}`]);
   });
 
   goldenTest("rejects an unknown body slug", async ({ db }) => {
+    const { sourceFor } = fakeSources(() => {
+      throw new Error("unexpected listVideos call");
+    });
     await expect(
-      listAvailable(db, { body: "atlantis", lister: fakeYouTube() }),
+      listAvailable(db, { body: "atlantis", sourceFor }),
     ).rejects.toThrow(/atlantis/);
   });
 });
