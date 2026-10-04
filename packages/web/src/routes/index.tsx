@@ -55,6 +55,13 @@ function HomePage(): JSX.Element {
           />
         </Link>
       </div>
+      <p class="text-muted-foreground mt-8 text-sm">
+        For AI assistants:{" "}
+        <a href="/llms.txt" class="underline">
+          /llms.txt
+        </a>{" "}
+        explains what's covered and how to search and cite these meetings.
+      </p>
     </div>
   );
 }

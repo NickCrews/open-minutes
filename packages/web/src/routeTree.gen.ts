@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as PeopleRouteImport } from './routes/people'
 import { Route as MeetingsRouteImport } from './routes/meetings'
+import { Route as LlmsDottxtRouteImport } from './routes/llms[.]txt'
 import { Route as BodiesRouteImport } from './routes/bodies'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
@@ -32,6 +33,11 @@ const PeopleRoute = PeopleRouteImport.update({
 const MeetingsRoute = MeetingsRouteImport.update({
   id: '/meetings',
   path: '/meetings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LlmsDottxtRoute = LlmsDottxtRouteImport.update({
+  id: '/llms.txt',
+  path: '/llms.txt',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BodiesRoute = BodiesRouteImport.update({
@@ -69,6 +75,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/bodies': typeof BodiesRoute
+  '/llms.txt': typeof LlmsDottxtRoute
   '/meetings': typeof MeetingsRoute
   '/people': typeof PeopleRoute
   '/search': typeof SearchRoute
@@ -80,6 +87,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/bodies': typeof BodiesRoute
+  '/llms.txt': typeof LlmsDottxtRoute
   '/meetings': typeof MeetingsRoute
   '/people': typeof PeopleRoute
   '/search': typeof SearchRoute
@@ -92,6 +100,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/bodies': typeof BodiesRoute
+  '/llms.txt': typeof LlmsDottxtRoute
   '/meetings': typeof MeetingsRoute
   '/people': typeof PeopleRoute
   '/search': typeof SearchRoute
@@ -105,6 +114,7 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/bodies'
+    | '/llms.txt'
     | '/meetings'
     | '/people'
     | '/search'
@@ -116,6 +126,7 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/bodies'
+    | '/llms.txt'
     | '/meetings'
     | '/people'
     | '/search'
@@ -127,6 +138,7 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/bodies'
+    | '/llms.txt'
     | '/meetings'
     | '/people'
     | '/search'
@@ -139,6 +151,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
   BodiesRoute: typeof BodiesRoute
+  LlmsDottxtRoute: typeof LlmsDottxtRoute
   MeetingsRoute: typeof MeetingsRoute
   PeopleRoute: typeof PeopleRoute
   SearchRoute: typeof SearchRoute
@@ -168,6 +181,13 @@ declare module '@tanstack/solid-router' {
       path: '/meetings'
       fullPath: '/meetings'
       preLoaderRoute: typeof MeetingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/llms.txt': {
+      id: '/llms.txt'
+      path: '/llms.txt'
+      fullPath: '/llms.txt'
+      preLoaderRoute: typeof LlmsDottxtRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/bodies': {
@@ -219,6 +239,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
   BodiesRoute: BodiesRoute,
+  LlmsDottxtRoute: LlmsDottxtRoute,
   MeetingsRoute: MeetingsRoute,
   PeopleRoute: PeopleRoute,
   SearchRoute: SearchRoute,
