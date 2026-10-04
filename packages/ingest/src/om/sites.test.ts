@@ -3,7 +3,7 @@ import { parseMeetingRef, workDirName } from "./sites";
 
 describe("parseMeetingRef", () => {
   it("reads akleg.gov meeting IDs and URLs", () => {
-    const meeting = { site: "akleg", siteId: "SL&C 2017-03-07 13:30:00" };
+    const meeting = { siteKind: "akleg", siteId: "SL&C 2017-03-07 13:30:00" };
     expect(parseMeetingRef("SL&C 2017-03-07 13:30:00")).toEqual(meeting);
     expect(
       parseMeetingRef(
@@ -13,7 +13,7 @@ describe("parseMeetingRef", () => {
   });
 
   it("takes anything else for a YouTube video", () => {
-    const meeting = { site: "youtube", siteId: "hTKVG_L61ec" };
+    const meeting = { siteKind: "youtube", siteId: "hTKVG_L61ec" };
     expect(parseMeetingRef("hTKVG_L61ec")).toEqual(meeting);
     expect(
       parseMeetingRef("https://www.youtube.com/watch?v=hTKVG_L61ec"),

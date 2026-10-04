@@ -116,7 +116,7 @@ export function getPersonById(db: DB, personId: number) {
                 title: true,
                 date: true,
                 time: true,
-                site: true,
+                site_kind: true,
                 site_id: true,
               },
             },

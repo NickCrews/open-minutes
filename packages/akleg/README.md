@@ -11,7 +11,7 @@ the database or what happens to the audio next. `aklegSource({ committee:
 which `om available` takes.
 
 `om available` and `om ingest` use it for bodies whose meeting source is a
-committee; their meetings are stored with `site` `akleg`. The site's player
+committee; their meetings are stored with `site_kind` `akleg`. The site's player
 can't play them yet. See [docs/research/akleg.md](../../docs/research/akleg.md)
 for how akleg.gov publishes meetings, how to play them on our site, and
 what's left to do.

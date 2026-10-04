@@ -201,7 +201,7 @@ The database and pipeline take akleg.gov meetings:
   `{"type":"akleg_committee","committee":"HRES"}` is scanned by
   `om available`, which lists the committee's meetings in the Legislature
   sitting now.
-- Its meetings are stored with `site` `akleg` and the meeting ID as
+- Its meetings are stored with `site_kind` `akleg` and the meeting ID as
   `site_id`, and `om ingest` gets their metadata and audio from
   `@open-minutes/akleg`.
 - The meeting's date and time come from its ID, so `resolveMeetingDateTime`

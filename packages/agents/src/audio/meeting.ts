@@ -76,7 +76,7 @@ async function loadFromDb(db: Db, ref: MeetingRef) {
   const youtubeId = youtubeIdOf(meeting);
   if (!youtubeId)
     throw new ToolError(
-      `Meeting ${ref} is on ${meeting.site}; the audio tools only work with YouTube meetings`,
+      `Meeting ${ref} is on ${meeting.site_kind}; the audio tools only work with YouTube meetings`,
     );
   const rows = await db
     .select({

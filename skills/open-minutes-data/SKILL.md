@@ -75,7 +75,7 @@ Things to know:
 - **Dates** are local to where the meeting was held. `time` is null when the
   start time isn't known, and `date` can be null too. Fall back on the
   meeting's `title`, which usually has the date in it.
-- **Where a meeting was published**: `site` is `youtube` or `akleg` (the
+- **Where a meeting was published**: `site_kind` is `youtube` or `akleg` (the
   Alaska Legislature's akleg.gov), `site_id` is its ID there (a YouTube video
   ID, or an akleg.gov meeting ID like `HRES 2018-09-10 14:00:00`), and `url`
   is its page there.

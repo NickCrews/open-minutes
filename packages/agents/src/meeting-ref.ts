@@ -35,7 +35,7 @@ export async function findMeeting(db: Db, ref: MeetingRef) {
           .select({
             id: meetingsTable.id,
             slug: meetingsTable.slug,
-            site: meetingsTable.site,
+            site_kind: meetingsTable.site_kind,
             site_id: meetingsTable.site_id,
           })
           .from(meetingsTable)

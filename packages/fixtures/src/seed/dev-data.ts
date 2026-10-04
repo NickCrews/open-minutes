@@ -95,7 +95,7 @@ export async function seedDevDatabase(db: DB): Promise<DevSeedSummary> {
       id: i + 1,
       slug: m.slug,
       body_id: bodyId,
-      site: "youtube" as const,
+      site_kind: "youtube" as const,
       site_id: m.youtube_id,
       title: m.title,
       date: m.date,

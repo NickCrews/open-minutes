@@ -34,7 +34,7 @@ export async function listIngested(
 ): Promise<IngestedMeeting[]> {
   const rows = await db
     .select({
-      site: meetingsTable.site,
+      siteKind: meetingsTable.site_kind,
       siteId: meetingsTable.site_id,
       nameShort: bodiesTable.name_short,
       title: meetingsTable.title,

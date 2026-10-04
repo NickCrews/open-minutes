@@ -18,17 +18,17 @@ ALTER TABLE "bodies" ADD CONSTRAINT "bodies_meeting_source_valid" CHECK ("meetin
       WHEN 'akleg_committee' THEN jsonb_typeof("meeting_source"->'committee') = 'string'
       ELSE false END, false));--> statement-breakpoint
 -- Every meeting so far is a YouTube video.
-ALTER TABLE "meetings" ADD COLUMN "site" varchar;--> statement-breakpoint
+ALTER TABLE "meetings" ADD COLUMN "site_kind" varchar;--> statement-breakpoint
 ALTER TABLE "meetings" ADD COLUMN "site_id" varchar;--> statement-breakpoint
-UPDATE "meetings" SET "site" = 'youtube', "site_id" = "youtube_id";--> statement-breakpoint
-ALTER TABLE "meetings" ALTER COLUMN "site" SET NOT NULL;--> statement-breakpoint
+UPDATE "meetings" SET "site_kind" = 'youtube', "site_id" = "youtube_id";--> statement-breakpoint
+ALTER TABLE "meetings" ALTER COLUMN "site_kind" SET NOT NULL;--> statement-breakpoint
 ALTER TABLE "meetings" ALTER COLUMN "site_id" SET NOT NULL;--> statement-breakpoint
-ALTER TABLE "meetings" ADD COLUMN "url" varchar GENERATED ALWAYS AS (CASE "meetings"."site"
+ALTER TABLE "meetings" ADD COLUMN "url" varchar GENERATED ALWAYS AS (CASE "meetings"."site_kind"
             WHEN 'youtube' THEN 'https://www.youtube.com/watch?v=' || "meetings"."site_id"
             WHEN 'akleg' THEN 'https://www.akleg.gov/basis/Meeting/Detail?Meeting=' || replace(replace("meetings"."site_id", '&', '%26'), ' ', '%20')
           END) STORED NOT NULL;--> statement-breakpoint
-ALTER TABLE "meetings" ADD CONSTRAINT "meetings_site_site_id_unique" UNIQUE("site","site_id");--> statement-breakpoint
-ALTER TABLE "meetings" ADD CONSTRAINT "meetings_site_known" CHECK ("site" IN ('youtube', 'akleg'));--> statement-breakpoint
+ALTER TABLE "meetings" ADD CONSTRAINT "meetings_site_kind_site_id_unique" UNIQUE("site_kind","site_id");--> statement-breakpoint
+ALTER TABLE "meetings" ADD CONSTRAINT "meetings_site_kind_known" CHECK ("site_kind" IN ('youtube', 'akleg'));--> statement-breakpoint
 ALTER TABLE "meetings" DROP COLUMN "youtube_url";--> statement-breakpoint
 ALTER TABLE "meetings" DROP CONSTRAINT "meetings_youtube_id_key";--> statement-breakpoint
 ALTER TABLE "meetings" DROP COLUMN "youtube_id";--> statement-breakpoint

@@ -59,7 +59,7 @@ export async function seedGoldenMeeting(
     .values({
       slug: meeting.slug,
       body_id: bodyId,
-      site: "youtube",
+      site_kind: "youtube",
       site_id: meeting.youtube_id,
       title: meeting.title,
       date: meeting.date,

@@ -12,7 +12,7 @@ export function searchSegments(db: DB, query: string) {
           title: true,
           date: true,
           time: true,
-          site: true,
+          site_kind: true,
           site_id: true,
         },
         with: { body: { columns: { timezone: true } } },

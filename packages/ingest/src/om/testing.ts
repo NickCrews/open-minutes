@@ -9,7 +9,10 @@ import {
 } from "@open-minutes/db";
 import { eq } from "drizzle-orm";
 import type { AudioProvider } from "@open-minutes/core/audio-provider";
-import type { MeetingSource, Site } from "@open-minutes/core/meeting-source";
+import type {
+  MeetingSource,
+  SiteKind,
+} from "@open-minutes/core/meeting-source";
 import { dbTest } from "@open-minutes/db/testing/vitest";
 import { goldenData } from "@open-minutes/fixtures/golden-data";
 import { loadBodies } from "@open-minutes/fixtures/test-data";
@@ -73,11 +76,11 @@ export async function insertMeeting(
   db: DB,
   bodyId: number,
   siteId: string,
-  { date, site = "youtube" }: { date?: string; site?: Site } = {},
+  { date, siteKind = "youtube" }: { date?: string; siteKind?: SiteKind } = {},
 ): Promise<number> {
   const [row] = await db
     .insert(meetingsTable)
-    .values({ body_id: bodyId, site, site_id: siteId, date })
+    .values({ body_id: bodyId, site_kind: siteKind, site_id: siteId, date })
     .returning({ id: meetingsTable.id });
   return row!.id;
 }

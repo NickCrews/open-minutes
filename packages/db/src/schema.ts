@@ -19,7 +19,10 @@ import {
 } from "drizzle-orm/pg-core";
 import { N_DIMENSIONS as VOICE_N_DIMENSIONS } from "@open-minutes/core/voice_embeddings";
 import { TranscriptWord } from "@open-minutes/core/transcription";
-import type { MeetingSource, Site } from "@open-minutes/core/meeting-source";
+import type {
+  MeetingSource,
+  SiteKind,
+} from "@open-minutes/core/meeting-source";
 
 const secondsInterval = () => interval({ fields: "second", precision: 3 });
 
@@ -90,18 +93,18 @@ export const meetingsTable = pgTable(
     body_id: integer()
       .notNull()
       .references(() => bodiesTable.id),
-    // The site the meeting was published on, and its ID there: a YouTube
+    // The kind of site the meeting was published on, and its ID there: a YouTube
     // video ID, or an akleg.gov meeting ID ("HRES 2018-09-10 14:00:00"). The
     // audio we transcribed came from there, so transcript times are seconds
     // into its recording.
-    site: varchar().$type<Site>().notNull(),
+    site_kind: varchar().$type<SiteKind>().notNull(),
     site_id: varchar().notNull(),
     // The meeting's page on its site.
     url: varchar()
       .notNull()
       .generatedAlwaysAs(
         (): SQL =>
-          sql`CASE ${meetingsTable.site}
+          sql`CASE ${meetingsTable.site_kind}
             WHEN 'youtube' THEN 'https://www.youtube.com/watch?v=' || ${meetingsTable.site_id}
             WHEN 'akleg' THEN 'https://www.akleg.gov/basis/Meeting/Detail?Meeting=' || replace(replace(${meetingsTable.site_id}, '&', '%26'), ' ', '%20')
           END`,
@@ -130,8 +133,14 @@ export const meetingsTable = pgTable(
       sql`${table.time} IS NULL OR ${table.date} IS NOT NULL`,
     ),
     check("meetings_slug_not_numeric", sql`${table.slug} !~ '^[0-9]+$'`),
-    check("meetings_site_known", sql`${table.site} IN ('youtube', 'akleg')`),
-    unique("meetings_site_site_id_unique").on(table.site, table.site_id),
+    check(
+      "meetings_site_kind_known",
+      sql`${table.site_kind} IN ('youtube', 'akleg')`,
+    ),
+    unique("meetings_site_kind_site_id_unique").on(
+      table.site_kind,
+      table.site_id,
+    ),
   ],
 );
 

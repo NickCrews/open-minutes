@@ -3,7 +3,7 @@ import { bodySlug } from "@open-minutes/core/bodies";
 import {
   type MeetingSource,
   meetingSourceUrl,
-  siteOf,
+  siteKindOf,
 } from "@open-minutes/core/meeting-source";
 import type { VideoLister } from "@open-minutes/core/video-lister";
 import { listerFor, type SiteMeeting } from "./sites";
@@ -46,25 +46,28 @@ export async function listAvailable(
     }
   }
 
-  const key = (site: string, siteId: string) => `${site} ${siteId}`;
+  const key = (siteKind: string, siteId: string) => `${siteKind} ${siteId}`;
   const ingested = new Set(
     (
       await db
-        .select({ site: meetingsTable.site, siteId: meetingsTable.site_id })
+        .select({
+          siteKind: meetingsTable.site_kind,
+          siteId: meetingsTable.site_id,
+        })
         .from(meetingsTable)
-    ).map((r) => key(r.site, r.siteId)),
+    ).map((r) => key(r.siteKind, r.siteId)),
   );
 
   const available: AvailableMeeting[] = [];
   for (const body of bodies) {
     const source = body.meeting_source;
     if (!source) continue;
-    const site = siteOf(source);
+    const siteKind = siteKindOf(source);
     console.error(`Scraping ${body.name_short} ${meetingSourceUrl(source)}...`);
     const meetings = await sourceFor(source).listVideos();
     for (const { id } of meetings) {
-      if (!ingested.has(key(site, id)))
-        available.push({ site, siteId: id, body: bodySlug(body) });
+      if (!ingested.has(key(siteKind, id)))
+        available.push({ siteKind, siteId: id, body: bodySlug(body) });
     }
   }
   return available;

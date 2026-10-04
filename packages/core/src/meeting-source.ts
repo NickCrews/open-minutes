@@ -27,16 +27,16 @@ export type MeetingSource =
     };
 
 /**
- * A site meetings are published on: `meetings.site`. A meeting's ID on its
- * site (`meetings.site_id`) is a YouTube video ID, or an akleg.gov meeting ID
- * ("HRES 2018-09-10 14:00:00").
+ * Which site a meeting is published on: `meetings.site_kind`. A meeting's ID
+ * on its site (`meetings.site_id`) is a YouTube video ID, or an akleg.gov
+ * meeting ID ("HRES 2018-09-10 14:00:00").
  */
-export type Site = "youtube" | "akleg";
+export type SiteKind = "youtube" | "akleg";
 
-export const SITES: readonly Site[] = ["youtube", "akleg"];
+export const SITE_KINDS: readonly SiteKind[] = ["youtube", "akleg"];
 
-/** The site a source's meetings are on. */
-export function siteOf(source: MeetingSource): Site {
+/** The kind of site a source's meetings are on. */
+export function siteKindOf(source: MeetingSource): SiteKind {
   switch (source.type) {
     case "youtube_channel":
     case "youtube_playlist":
@@ -84,8 +84,8 @@ export function meetingSourceLabel(source: MeetingSource): string {
  * what only works with YouTube: its player and thumbnails.
  */
 export function youtubeIdOf(meeting: {
-  site: string;
+  site_kind: string;
   site_id: string;
 }): string | null {
-  return meeting.site === "youtube" ? meeting.site_id : null;
+  return meeting.site_kind === "youtube" ? meeting.site_id : null;
 }
