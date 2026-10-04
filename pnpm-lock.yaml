@@ -44,6 +44,9 @@ importers:
       mpg123-decoder:
         specifier: ^1.0.3
         version: 1.0.3
+      zod:
+        specifier: ^4.3.6
+        version: 4.3.6
     devDependencies:
       '@open-minutes/audio':
         specifier: workspace:*

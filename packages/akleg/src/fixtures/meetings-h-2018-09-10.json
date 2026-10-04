@@ -1,0 +1,186 @@
+{
+  "Basis": {
+    "Meetings": [
+      {
+        "MediaFiles": [
+          {
+            "StartTime": "/Date(1536614947000)/",
+            "Length": 0,
+            "MediaType": "V",
+            "Duration": 7323467,
+            "Url": "http://www.akleg.gov/video/\\2018\\20180910\\jmsc\\jmsc_1330.m4v",
+            "Mime": null,
+            "Encoding": null,
+            "Data": null
+          }
+        ],
+        "AudioFiles": [],
+        "VideoFiles": [
+          {
+            "StartTime": "/Date(1536614947000)/",
+            "Length": 0,
+            "MediaType": "V",
+            "Duration": 7323467,
+            "Url": "http://www.akleg.gov/video/\\2018\\20180910\\jmsc\\jmsc_1330.m4v",
+            "Mime": null,
+            "Encoding": null,
+            "Data": null
+          }
+        ],
+        "MeetingDate": "2018-09-10",
+        "BillChangeText": "",
+        "BillinCommittee": false,
+        "MeetingChangeText": "",
+        "MeetingCanceled": false,
+        "MeetingPostponed": false,
+        "MeetingTime": "13:30:00",
+        "MeetingTitle": "MSC",
+        "Location": "",
+        "MeetingSponsor": "MSC",
+        "SponsorType": "Other Committee",
+        "Chamber": "H",
+        "Media": {
+          "Url": "http://www.akleg.gov/video/\\2018\\20180910\\jmsc\\jmsc_1330.m4v",
+          "Mime": null,
+          "Encoding": null,
+          "Data": null
+        },
+        "HasDocuments": false,
+        "HasVideo": true,
+        "HasAudio": false,
+        "HasMedia": true,
+        "Url": "http://www.akleg.gov/basis/Meeting/Detail?Meeting=HMSC 2018-09-10 13:30:00",
+        "HasMinutes": false,
+        "HasSchedule": false,
+        "Id": 175541
+      },
+      {
+        "MediaFiles": [
+          {
+            "StartTime": "/Date(1536617700000)/",
+            "Length": 0,
+            "MediaType": "V",
+            "Duration": 11229833,
+            "Url": "http://www.akleg.gov/video/\\2018\\20180910\\jres\\jres_1400.m4v",
+            "Mime": null,
+            "Encoding": null,
+            "Data": null
+          },
+          {
+            "StartTime": "/Date(1536616835000)/",
+            "Length": 0,
+            "MediaType": "A",
+            "Duration": 10746500,
+            "Url": "http://www.akleg.gov/ftr/2018\\20180910\\sres\\sres_1400.mp3",
+            "Mime": null,
+            "Encoding": null,
+            "Data": null
+          }
+        ],
+        "AudioFiles": [
+          {
+            "StartTime": "/Date(1536616835000)/",
+            "Length": 0,
+            "MediaType": "A",
+            "Duration": 10746500,
+            "Url": "http://www.akleg.gov/ftr/2018\\20180910\\sres\\sres_1400.mp3",
+            "Mime": null,
+            "Encoding": null,
+            "Data": null
+          }
+        ],
+        "VideoFiles": [
+          {
+            "StartTime": "/Date(1536617700000)/",
+            "Length": 0,
+            "MediaType": "V",
+            "Duration": 11229833,
+            "Url": "http://www.akleg.gov/video/\\2018\\20180910\\jres\\jres_1400.m4v",
+            "Mime": null,
+            "Encoding": null,
+            "Data": null
+          }
+        ],
+        "MeetingDate": "2018-09-10",
+        "BillChangeText": "",
+        "BillinCommittee": false,
+        "MeetingChangeText": "",
+        "MeetingCanceled": false,
+        "MeetingPostponed": false,
+        "MeetingTime": "14:00:00",
+        "MeetingTitle": "RESOURCES",
+        "Location": "Anch LIO AUDITORIUM",
+        "MeetingSponsor": "RES",
+        "SponsorType": "Standing Committee",
+        "Chamber": "H",
+        "Media": {
+          "Url": "http://www.akleg.gov/video/\\2018\\20180910\\jres\\jres_1400.m4v",
+          "Mime": null,
+          "Encoding": null,
+          "Data": null
+        },
+        "HasDocuments": false,
+        "HasVideo": true,
+        "HasAudio": true,
+        "HasMedia": true,
+        "Url": "http://www.akleg.gov/basis/Meeting/Detail?Meeting=HRES 2018-09-10 14:00:00",
+        "HasMinutes": true,
+        "HasSchedule": true,
+        "Id": 165508
+      },
+      {
+        "MediaFiles": [
+          {
+            "StartTime": "/Date(1536622380000)/",
+            "Length": 0,
+            "MediaType": "A",
+            "Duration": 5621372,
+            "Url": "http://www.akleg.gov/ftr/2018\\20180910\\sres\\sres_1533.mp3",
+            "Mime": null,
+            "Encoding": null,
+            "Data": null
+          }
+        ],
+        "AudioFiles": [
+          {
+            "StartTime": "/Date(1536622380000)/",
+            "Length": 0,
+            "MediaType": "A",
+            "Duration": 5621372,
+            "Url": "http://www.akleg.gov/ftr/2018\\20180910\\sres\\sres_1533.mp3",
+            "Mime": null,
+            "Encoding": null,
+            "Data": null
+          }
+        ],
+        "VideoFiles": [],
+        "MeetingDate": "2018-09-10",
+        "BillChangeText": "",
+        "BillinCommittee": false,
+        "MeetingChangeText": "",
+        "MeetingCanceled": false,
+        "MeetingPostponed": false,
+        "MeetingTime": "15:30:00",
+        "MeetingTitle": "RESOURCES",
+        "Location": "Anch LIO AUDITORIUM",
+        "MeetingSponsor": "RES",
+        "SponsorType": "Standing Committee",
+        "Chamber": "H",
+        "Media": {
+          "Url": "http://www.akleg.gov/ftr/2018\\20180910\\sres\\sres_1533.mp3",
+          "Mime": null,
+          "Encoding": null,
+          "Data": null
+        },
+        "HasDocuments": false,
+        "HasVideo": false,
+        "HasAudio": true,
+        "HasMedia": true,
+        "Url": "http://www.akleg.gov/basis/Meeting/Detail?Meeting=HRES 2018-09-10 15:30:00",
+        "HasMinutes": true,
+        "HasSchedule": true,
+        "Id": 165509
+      }
+    ]
+  }
+}
