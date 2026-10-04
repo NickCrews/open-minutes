@@ -120,7 +120,7 @@ URLs are stable), then advance the id sequences past them.
 - `pnpm db wipe` refuses unless `ALLOW_REMOTE_WIPE=1`.
 
 To read production's data without credentials, use the nightly DuckDB export
-instead: see [../agents/duckdb-export.md](../agents/duckdb-export.md).
+instead: see [the open-minutes-data skill](../../skills/open-minutes-data/SKILL.md).
 
 Deploys migrate prod just before switching the Worker to the new code, so new
 code never runs on an old schema. Old code does briefly run on the new schema,

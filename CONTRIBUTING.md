@@ -123,7 +123,7 @@ pnpm db generate                    # write a migration after editing schema.ts
 See [docs/contributing/db.md](docs/contributing/db.md) for everything else.
 
 To query production's data without credentials, use the nightly DuckDB
-export: see [docs/agents/duckdb-export.md](docs/agents/duckdb-export.md).
+export: see [skills/open-minutes-data/SKILL.md](skills/open-minutes-data/SKILL.md).
 
 ## Deploying
 
