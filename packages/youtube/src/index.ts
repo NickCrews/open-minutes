@@ -18,10 +18,9 @@ import {
 const execFileAsync = promisify(execFile);
 
 /**
- * A body's video source on YouTube: a channel (all its videos) or one
- * playlist. Bodies that share a channel with their siblings (the Assembly, P&Z
- * and the school board all publish to the MOA channel) are usually separated
- * by playlist, so that's how a video gets attributed to the right body.
+ * A channel (all its videos) or one playlist, as a body's meeting source.
+ * Bodies that share a channel with their siblings (the Assembly, P&Z and the
+ * school board all publish to the MOA channel) each get a playlist on it.
  */
 export interface YouTubeSource {
   kind: "channel" | "playlist";

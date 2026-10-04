@@ -9,24 +9,44 @@ this package. Run it as `pnpm om <command>` from anywhere in the repository. Mac
 go to stdout and all human progress/logs go to stderr, so results can be piped:
 
 ```sh
-pnpm om status          # list ingested meetings (--json for JSON-lines, ids to filter)
-pnpm om available       # video IDs on bodies' video sources not yet ingested, newest first (--body <slug> to filter)
-pnpm om ingest [ids...] # run the full pipeline per video (reads stdin if no args)
+pnpm om status           # list ingested meetings (--json for JSON-lines, ids to filter)
+pnpm om available        # meetings on bodies' meeting sources not yet ingested (--body <slug> to filter)
+pnpm om ingest [refs...] # run the full pipeline per meeting (reads stdin if no args)
 
 pnpm -s om available | head -5 | pnpm -s om ingest   # ingest the 5 newest available meetings
 ```
 
 When piping, pass `-s` so pnpm doesn't echo the script to stdout.
 
+Each body has at most one **meeting source** (`bodies.meeting_source`): a
+YouTube channel or playlist, or an Alaska Legislature committee on akleg.gov.
+`om available` scans each one and prints a line per new meeting,
+`<id>\t<body slug>`, each body's newest first. The ID is a YouTube video ID or
+an akleg.gov meeting ID (`HRES 2018-09-10 14:00:00`, spaces and all), and the
+meeting goes in `meetings.site` and `meetings.site_id`. `om ingest` reads
+those lines, or takes YouTube or akleg.gov IDs or URLs as arguments. Given no
+body, it uses the one whose meeting source is the meeting's YouTube channel or
+akleg.gov committee; a meeting from a playlist needs its body named with
+`--body <slug>`, since a video doesn't say which playlists it's on.
+
+To scan a new body, set its source, eg:
+
+```sql
+UPDATE bodies SET meeting_source = '{"type":"akleg_committee","committee":"HRES"}' WHERE id = 5;
+-- or {"type":"youtube_channel","channel_id":"UC..."}
+-- or {"type":"youtube_playlist","playlist_id":"PL..."}
+```
+
 Commands default to the `local` database; target any named database with
 `DB=<name> pnpm om <cmd>` (eg `DB=prod`). Ingestion is all-or-nothing per meeting:
 the meeting row and its segments are committed in one transaction only after
 every stage succeeds. Each stage's artifact (audio, transcription JSON,
 diarization JSON) is cached in a gitignored per-meeting work directory under
-`data/meetings/<body-slug>_<youtubeId>/`, so an interrupted run resumes from
+`data/meetings/<body-slug>_<id>/` (an akleg.gov ID's spaces and colons become
+`-`), so an interrupted run resumes from
 the last completed stage; to fully reprocess a meeting, delete its DB row and
 its work directory. The CLI is a thin wrapper over the exported API
-(`listIngested`, `listAvailable`, `ingestVideo` from
+(`listIngested`, `listAvailable`, `ingestMeeting` from
 `@open-minutes/ingest/om`), so scripts and tests reuse the same logic.
 
 ## Meeting audio cache

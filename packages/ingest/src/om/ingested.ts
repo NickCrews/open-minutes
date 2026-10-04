@@ -6,10 +6,10 @@ import {
   segmentsTable,
 } from "@open-minutes/db";
 import { bodySlug } from "@open-minutes/core/bodies";
+import type { SiteMeeting } from "./sites";
 
 /** One fully ingested meeting, as listed by `om status`. */
-export interface IngestedMeeting {
-  youtubeId: string;
+export interface IngestedMeeting extends SiteMeeting {
   /** Body slug (eg "gbos"). */
   body: string;
   title: string;
@@ -24,8 +24,9 @@ export interface IngestedMeeting {
 
 /**
  * The meetings ingested in the database, newest first. A meeting row existing
- * means fully ingested (there is no partial state — see ingestVideo's
- * all-or-nothing commit). Pass `ids` to filter to specific YouTube video IDs.
+ * means fully ingested (there is no partial state — see ingestMeeting's
+ * all-or-nothing commit). Pass `ids` to filter to meetings with those IDs on
+ * their sites (`meetings.site_id`).
  */
 export async function listIngested(
   db: DB,
@@ -33,7 +34,8 @@ export async function listIngested(
 ): Promise<IngestedMeeting[]> {
   const rows = await db
     .select({
-      youtubeId: meetingsTable.youtube_id,
+      site: meetingsTable.site,
+      siteId: meetingsTable.site_id,
       nameShort: bodiesTable.name_short,
       title: meetingsTable.title,
       date: meetingsTable.date,
@@ -45,9 +47,7 @@ export async function listIngested(
     .innerJoin(bodiesTable, eq(meetingsTable.body_id, bodiesTable.id))
     .leftJoin(segmentsTable, eq(segmentsTable.meeting_id, meetingsTable.id))
     .where(
-      ids && ids.length > 0
-        ? inArray(meetingsTable.youtube_id, ids)
-        : undefined,
+      ids && ids.length > 0 ? inArray(meetingsTable.site_id, ids) : undefined,
     )
     .groupBy(meetingsTable.id, bodiesTable.id)
     .orderBy(

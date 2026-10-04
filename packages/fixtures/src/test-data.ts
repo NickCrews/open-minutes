@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { type GoldenSegment, parsePsv, parseTimestamp } from "./psv";
+import type { MeetingSource } from "@open-minutes/core/meeting-source";
 import {
   type MeetingWhen,
   parseMeetingDate,
@@ -21,11 +22,6 @@ export interface GoldenJurisdiction {
   state: string;
 }
 
-export interface GoldenVideoSource {
-  kind: "channel" | "playlist";
-  youtube_id: string;
-}
-
 export interface GoldenBody {
   id: string;
   /** Snapshot id of the jurisdiction this body sits inside (eg "moa"). */
@@ -34,7 +30,8 @@ export interface GoldenBody {
   name_short: string;
   /** IANA zone the body meets in, eg "America/Anchorage". */
   timezone: string;
-  video_sources: GoldenVideoSource[];
+  /** As in `bodies.meeting_source`; absent for a body nobody scans. */
+  meeting_source?: MeetingSource;
 }
 
 export interface GoldenPerson {
@@ -48,6 +45,7 @@ export interface GoldenMeeting {
   /** The fixture's directory name, eg "gbos-2026-03-23": `meetings.slug`. */
   slug: string;
   body_id: string;
+  /** Every fixture meeting is a YouTube video: `meetings.site_id`. */
   youtube_id: string;
   title: string;
   /**

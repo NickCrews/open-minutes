@@ -179,6 +179,9 @@ importers:
       '@neondatabase/serverless':
         specifier: ^1.1.0
         version: 1.1.0
+      '@open-minutes/akleg':
+        specifier: workspace:*
+        version: link:../akleg
       '@open-minutes/audio':
         specifier: workspace:*
         version: link:../audio

@@ -39,6 +39,18 @@ export function meetingId(meetingIdOrUrl: string): string {
   return id;
 }
 
+/**
+ * The meeting ID in `ref` (see {@link meetingId}), or undefined when it names
+ * no akleg.gov meeting, eg because it's a YouTube video's.
+ */
+export function parseMeetingId(ref: string): string | undefined {
+  try {
+    return meetingId(ref);
+  } catch {
+    return undefined;
+  }
+}
+
 /** The meeting's page on akleg.gov. */
 export function meetingUrl(meetingIdOrUrl: string): string {
   const id = meetingId(meetingIdOrUrl);
@@ -322,7 +334,7 @@ export function akleg(config: AkLegConfig = {}): AkLeg {
   };
 }
 
-/** One committee's meetings on akleg.gov, as a body's video source. */
+/** One committee's meetings on akleg.gov, as a body's meeting source. */
 export interface AkLegSource {
   /** The chamber and committee code, as in meeting IDs ("HRES"). */
   committee: string;

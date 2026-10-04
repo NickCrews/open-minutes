@@ -1,41 +1,39 @@
-import { eq } from "drizzle-orm";
-import {
-  type DB,
-  bodiesTable,
-  meetingsTable,
-  videoSourcesTable,
-} from "@open-minutes/db";
+import { type DB, bodiesTable, meetingsTable } from "@open-minutes/db";
 import { bodySlug } from "@open-minutes/core/bodies";
+import {
+  type MeetingSource,
+  meetingSourceUrl,
+  siteOf,
+} from "@open-minutes/core/meeting-source";
 import type { VideoLister } from "@open-minutes/core/video-lister";
-import { youtubeSource } from "@open-minutes/youtube";
-
-export type VideoSourceRow = typeof videoSourcesTable.$inferSelect;
+import { listerFor, type SiteMeeting } from "./sites";
 
 export interface ListAvailableOptions {
   /** Restrict the scrape to the body with this slug (eg "gbos"). */
   body?: string;
   /**
-   * The {@link VideoLister} for a `video_sources` row; injectable for tests.
-   * Defaults to {@link defaultSourceFor}.
+   * The {@link VideoLister} for a body's meeting source; injectable for tests.
+   * Defaults to {@link listerFor}.
    */
-  sourceFor?: (source: VideoSourceRow) => VideoLister;
+  sourceFor?: (source: MeetingSource) => VideoLister;
 }
 
-/** Every video source is on YouTube, for now. */
-export function defaultSourceFor(source: VideoSourceRow): VideoLister {
-  return youtubeSource({ kind: source.kind, id: source.youtube_id });
+/** A meeting on a body's meeting source that isn't in the database yet. */
+export interface AvailableMeeting extends SiteMeeting {
+  /** The slug of the body whose source lists it, eg "gbos". */
+  body: string;
 }
 
 /**
- * Scrape every body's video sources and return the video IDs not yet
- * ingested, newest first (the source's natural order). A pure read: no database
- * writes, no persisted discovery state.
+ * Scrape every body's meeting source and return the meetings not yet
+ * ingested, each body's newest first (the source's natural order). A pure
+ * read: no database writes, no persisted discovery state.
  */
 export async function listAvailable(
   db: DB,
   options: ListAvailableOptions = {},
-): Promise<string[]> {
-  const sourceFor = options.sourceFor ?? defaultSourceFor;
+): Promise<AvailableMeeting[]> {
+  const sourceFor = options.sourceFor ?? listerFor;
 
   const allBodies = await db.select().from(bodiesTable);
   let bodies = allBodies;
@@ -48,26 +46,25 @@ export async function listAvailable(
     }
   }
 
+  const key = (site: string, siteId: string) => `${site} ${siteId}`;
   const ingested = new Set(
     (
       await db
-        .select({ youtubeId: meetingsTable.youtube_id })
+        .select({ site: meetingsTable.site, siteId: meetingsTable.site_id })
         .from(meetingsTable)
-    ).map((r) => r.youtubeId),
+    ).map((r) => key(r.site, r.siteId)),
   );
 
-  const available: string[] = [];
+  const available: AvailableMeeting[] = [];
   for (const body of bodies) {
-    const sources = await db
-      .select()
-      .from(videoSourcesTable)
-      .where(eq(videoSourcesTable.body_id, body.id));
-    for (const source of sources) {
-      console.error(`Scraping ${body.name_short} ${source.url}...`);
-      const videos = await sourceFor(source).listVideos();
-      for (const video of videos) {
-        if (!ingested.has(video.id)) available.push(video.id);
-      }
+    const source = body.meeting_source;
+    if (!source) continue;
+    const site = siteOf(source);
+    console.error(`Scraping ${body.name_short} ${meetingSourceUrl(source)}...`);
+    const meetings = await sourceFor(source).listVideos();
+    for (const { id } of meetings) {
+      if (!ingested.has(key(site, id)))
+        available.push({ site, siteId: id, body: bodySlug(body) });
     }
   }
   return available;

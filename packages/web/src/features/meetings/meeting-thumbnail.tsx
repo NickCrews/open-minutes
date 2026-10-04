@@ -8,10 +8,12 @@ import {
   ThumbnailFrame,
 } from "~/features/thumbnails/thumbnail";
 import { YouTubeThumbnail } from "~/features/thumbnails/youtube-thumbnail";
+import { youtubeIdOf } from "@open-minutes/core/meeting-source";
 
 export type ThumbnailMeeting = {
   id: number;
-  youtube_id: string;
+  site: string;
+  site_id: string;
   body: ThumbnailBody;
 };
 
@@ -34,7 +36,7 @@ export function MeetingThumbnail(props: {
   return (
     <ThumbnailFrame class={props.class}>
       <YouTubeThumbnail
-        videoId={props.meeting.youtube_id}
+        videoId={youtubeIdOf(props.meeting)}
         fallback={<GeneratedArtwork seeds={meetingSeeds(props.meeting)} />}
       />
     </ThumbnailFrame>

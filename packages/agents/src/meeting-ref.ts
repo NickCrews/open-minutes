@@ -35,7 +35,8 @@ export async function findMeeting(db: Db, ref: MeetingRef) {
           .select({
             id: meetingsTable.id,
             slug: meetingsTable.slug,
-            youtubeId: meetingsTable.youtube_id,
+            site: meetingsTable.site,
+            site_id: meetingsTable.site_id,
           })
           .from(meetingsTable)
           .where(

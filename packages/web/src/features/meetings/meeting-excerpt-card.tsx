@@ -25,6 +25,7 @@ import { formatTimestamp, intervalToSecs } from "~/lib/format";
 import { db } from "~/server/db";
 import { ChevronDownIcon } from "~/components/icons";
 import { cx } from "~/lib/cva";
+import { youtubeIdOf } from "@open-minutes/core/meeting-source";
 import { z } from "zod";
 import { getMeetingSegments } from ".";
 import { previewText } from "./excerpt";
@@ -44,7 +45,8 @@ const fetchMeetingSegments = createServerFn({ method: "GET" })
 export type ExcerptMeeting = MeetingWhen & {
   id: number;
   title: string | null;
-  youtube_id: string;
+  site: string;
+  site_id: string;
 };
 
 /**
@@ -197,7 +199,7 @@ export function MeetingExcerptCard(props: {
               {(segments) => (
                 <TranscriptExcerpt
                   meetingId={props.meeting.id}
-                  youtubeId={props.meeting.youtube_id}
+                  youtubeId={youtubeIdOf(props.meeting) ?? ""}
                   segments={segments()}
                   pinned={pinned(segments())}
                   query={props.query}

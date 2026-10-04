@@ -2,15 +2,10 @@ import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { eq, sql } from "drizzle-orm";
-import {
-  type DB,
-  bodiesTable,
-  meetingsTable,
-  videoSourcesTable,
-} from "@open-minutes/db";
+import { and, eq, sql } from "drizzle-orm";
+import { type DB, bodiesTable, meetingsTable } from "@open-minutes/db";
 import { bodySlug } from "@open-minutes/core/bodies";
-import { type YouTube, youtubeFromEnv } from "@open-minutes/youtube";
+import { type Site, siteOf } from "@open-minutes/core/meeting-source";
 import {
   alignSpeakers,
   cleanSpeechSegments,
@@ -27,10 +22,17 @@ import {
   openingText,
   resolveMeetingDateTime,
 } from "@open-minutes/core/meeting-date";
+import {
+  parseMeetingRef,
+  type SiteMeeting,
+  type Sites,
+  withDefaultSites,
+  workDirName,
+} from "./sites";
 
 /**
- * Root of the per-meeting work directories (one `<body-slug>_<youtubeId>` dir
- * per meeting, holding each stage's artifact for inspection and resume).
+ * Root of the per-meeting work directories (one per meeting, named by
+ * {@link workDirName}, eg `gbos_hTKVG_L61ec`, holding each stage's artifact for inspection and resume).
  * Lives at packages/ingest/data/meetings/, gitignored via the root `data/`
  * rule.
  */
@@ -39,22 +41,57 @@ export const DEFAULT_WORK_ROOT = fileURLToPath(
 );
 
 export interface IngestOptions {
-  /** YouTube boundary, injectable for tests. Defaults to {@link youtubeFromEnv}. */
-  yt?: YouTube;
+  /**
+   * Each site's metadata and audio, injectable for tests. Any not given come
+   * from the environment (see {@link withDefaultSites}).
+   */
+  sites?: Partial<Sites>;
   /** Where per-meeting work directories live. Defaults to {@link DEFAULT_WORK_ROOT}. */
   workRoot?: string;
 }
 
-export type IngestResult =
-  | {
-      youtubeId: string;
-      status: "ingested";
-      meetingId: number;
-      segmentCount: number;
-      /** When the meeting happened, read from its title and opening minutes. */
-      when: MeetingDateTime;
-    }
-  | { youtubeId: string; status: "skipped" };
+/**
+ * A meeting to ingest: `ref` is a YouTube video ID or URL, or an akleg.gov
+ * meeting ID or URL (see {@link parseMeetingRef}). `body` is the slug of the
+ * body it belongs to (as `om available` gives it). Without one, it's the body
+ * whose meeting source is the meeting's YouTube channel or akleg.gov
+ * committee; a body whose source is a playlist has to be named.
+ */
+export interface MeetingToIngest {
+  ref: string;
+  body?: string;
+}
+
+/**
+ * Meetings to ingest, one per line as `om available` prints them:
+ * `<id>[\t<body slug>]`. An ID may hold spaces (akleg.gov's do), so only a tab
+ * separates it from the body.
+ */
+export function parseMeetingLines(
+  text: string,
+  defaultBody?: string,
+): MeetingToIngest[] {
+  return text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [ref, body] = line.split("\t").map((part) => part.trim());
+      return { ref: ref!, body: body || defaultBody };
+    });
+}
+
+export type IngestResult = SiteMeeting &
+  (
+    | {
+        status: "ingested";
+        meetingId: number;
+        segmentCount: number;
+        /** When the meeting happened, read from its title and opening minutes. */
+        when: MeetingDateTime;
+      }
+    | { status: "skipped" }
+  );
 
 /** On-disk shape of a work directory's diarization.json. */
 interface DiarizationArtifact {
@@ -69,8 +106,8 @@ interface DiarizationArtifact {
 type EmbeddingsArtifact = Array<{ speaker: number; centroid: number[] }>;
 
 /**
- * Run the full pipeline for one video — download → transcribe → clean →
- * diarize → align → identify — and commit the meeting to the database.
+ * Run the full pipeline for one meeting — download → transcribe → clean →
+ * diarize → align → identify — and commit it to the database.
  *
  * Each stage's output is cached as a file in the meeting's work directory; a
  * stage whose artifact already exists is skipped, so an interrupted run
@@ -79,43 +116,52 @@ type EmbeddingsArtifact = Array<{ speaker: number; centroid: number[] }>;
  * only after every stage has succeeded, so partially processed meetings never
  * appear in queries.
  *
- * An already-ingested video is skipped (returns `status: "skipped"`); a video
- * whose channel matches no known body is an error.
+ * An already-ingested meeting is skipped (returns `status: "skipped"`); a
+ * meeting that belongs to no body is an error.
  */
-export async function ingestVideo(
+export async function ingestMeeting(
   db: DB,
-  youtubeId: string,
+  meeting: MeetingToIngest | string,
   options: IngestOptions = {},
 ): Promise<IngestResult> {
-  const yt = options.yt ?? youtubeFromEnv();
+  const { ref, body: bodyArg } =
+    typeof meeting === "string" ? { ref: meeting } : meeting;
+  const { site, siteId } = parseMeetingRef(ref);
+  const provider = withDefaultSites(options.sites)[site];
   const workRoot = options.workRoot ?? DEFAULT_WORK_ROOT;
+  const tag = `[${siteId}]`;
 
   const existing = await db
     .select({ id: meetingsTable.id })
     .from(meetingsTable)
-    .where(eq(meetingsTable.youtube_id, youtubeId))
+    .where(and(eq(meetingsTable.site, site), eq(meetingsTable.site_id, siteId)))
     .limit(1);
   if (existing.length > 0) {
-    console.error(`[${youtubeId}] already ingested, skipping`);
-    return { youtubeId, status: "skipped" };
+    console.error(`${tag} already ingested, skipping`);
+    return { site, siteId, status: "skipped" };
   }
 
-  console.error(`[${youtubeId}] fetching video metadata...`);
-  const metadata = await yt.getMetadata(youtubeId);
-  const body = await resolveBody(db, youtubeId, metadata.channelId);
+  console.error(`${tag} fetching ${site} metadata...`);
+  const metadata = await provider.getMetadata(siteId);
+  const body = await resolveBody(
+    db,
+    { site, siteId },
+    metadata.channelId,
+    bodyArg,
+  );
 
-  const workDir = join(workRoot, `${bodySlug(body)}_${youtubeId}`);
+  const workDir = join(workRoot, workDirName(bodySlug(body), siteId));
   await mkdir(workDir, { recursive: true });
 
   const audioPath = join(workDir, "audio.wav");
   if (existsSync(audioPath)) {
-    console.error(`[${youtubeId}] audio.wav exists, skipping download`);
+    console.error(`${tag} audio.wav exists, skipping download`);
   } else {
-    await yt.ensureAudioDownloaded(youtubeId, audioPath);
+    await provider.ensureAudioDownloaded(siteId, audioPath);
   }
 
   const rawSpeechSegments = await cachedStage<SpeechSegment[]>(
-    youtubeId,
+    tag,
     join(workDir, "transcription.json"),
     () => transcribeAudio(audioPath),
   );
@@ -132,15 +178,15 @@ export async function ingestVideo(
     { uploadDate: metadata.uploadDate ?? undefined },
   );
   console.error(
-    `[${youtubeId}] meeting date ${when.date ?? "unknown"} (from ${when.dateSource ?? "nothing"}), ` +
+    `${tag} meeting date ${when.date ?? "unknown"} (from ${when.dateSource ?? "nothing"}), ` +
       `start ${when.time ?? "unknown"} (from ${when.timeSource ?? "nothing"})`,
   );
   for (const warning of when.warnings) {
-    console.error(`[${youtubeId}] WARNING: ${warning}`);
+    console.error(`${tag} WARNING: ${warning}`);
   }
 
   const diarization = await cachedStage<DiarizationArtifact>(
-    youtubeId,
+    tag,
     join(workDir, "diarization.json"),
     () => ({ turns: diarizeAudio(audioPath) }),
   );
@@ -155,7 +201,7 @@ export async function ingestVideo(
 
   // Voiceprints come from the cleaned segments, not the raw diarization turns.
   const embeddings = await cachedStage<EmbeddingsArtifact>(
-    youtubeId,
+    tag,
     join(workDir, "embeddings.json"),
     () =>
       [...computeSpeakerEmbeddings(audioPath, segmentsToTurns(segments))].map(
@@ -170,18 +216,19 @@ export async function ingestVideo(
   );
 
   console.error(
-    `[${youtubeId}] committing meeting with ${segments.length} segment(s)...`,
+    `${tag} committing meeting with ${segments.length} segment(s)...`,
   );
   const meetingId = await db.transaction(async (tx) => {
     const [meeting] = await tx
       .insert(meetingsTable)
       .values({
         body_id: body.id,
-        youtube_id: youtubeId,
+        site,
+        site_id: siteId,
         title: metadata.title,
         description: metadata.description,
         // Parsed from the title and the chair's gavel-in (see @open-minutes/core/meeting-date),
-        // not YouTube publish/stream times, which don't reliably reflect when
+        // not the site's publish/stream times, which don't reliably reflect when
         // the meeting happened. A time without a date is meaningless.
         date: when.date,
         time: when.date ? when.time : null,
@@ -201,7 +248,8 @@ export async function ingestVideo(
   });
 
   return {
-    youtubeId,
+    site,
+    siteId,
     status: "ingested",
     meetingId,
     segmentCount: segments.length,
@@ -211,27 +259,28 @@ export async function ingestVideo(
 
 export interface IngestBatchSummary {
   results: IngestResult[];
-  failures: Array<{ youtubeId: string; error: unknown }>;
+  failures: Array<{ meeting: MeetingToIngest; error: unknown }>;
 }
 
 /**
- * Ingest a batch of videos sequentially, continuing past individual failures.
- * Each failure is logged to stderr; the summary reports every outcome so the
- * caller can decide the exit status.
+ * Ingest a batch of meetings sequentially, continuing past individual
+ * failures. Each failure is logged to stderr; the summary reports every
+ * outcome so the caller can decide the exit status.
  */
-export async function ingestVideos(
+export async function ingestMeetings(
   db: DB,
-  youtubeIds: string[],
+  meetings: Array<MeetingToIngest | string>,
   options: IngestOptions = {},
 ): Promise<IngestBatchSummary> {
   const results: IngestResult[] = [];
   const failures: IngestBatchSummary["failures"] = [];
-  for (const youtubeId of youtubeIds) {
+  for (const meeting of meetings) {
     try {
-      results.push(await ingestVideo(db, youtubeId, options));
+      results.push(await ingestMeeting(db, meeting, options));
     } catch (error) {
-      console.error(`[${youtubeId}] FAILED: ${describeError(error)}`);
-      failures.push({ youtubeId, error });
+      const m = typeof meeting === "string" ? { ref: meeting } : meeting;
+      console.error(`[${m.ref}] FAILED: ${describeError(error)}`);
+      failures.push({ meeting: m, error });
     }
   }
   return { results, failures };
@@ -241,27 +290,68 @@ function describeError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-async function resolveBody(db: DB, youtubeId: string, channelId: string) {
-  if (channelId) {
-    const [body] = await db
-      .select({
-        id: bodiesTable.id,
-        name: bodiesTable.name,
-        name_short: bodiesTable.name_short,
-      })
-      .from(bodiesTable)
-      .innerJoin(
-        videoSourcesTable,
-        eq(videoSourcesTable.body_id, bodiesTable.id),
-      )
-      .where(eq(videoSourcesTable.youtube_id, channelId))
-      .limit(1);
-    if (body) return body;
+/**
+ * The body a meeting belongs to: the one with slug `slug` if given, else the
+ * one whose meeting source is the meeting's channel (a YouTube channel ID, or
+ * an akleg.gov committee: see VideoMetadata.channelId).
+ */
+async function resolveBody(
+  db: DB,
+  { site, siteId }: SiteMeeting,
+  channelId: string,
+  slug: string | undefined,
+) {
+  const bodies = await db
+    .select({
+      id: bodiesTable.id,
+      name: bodiesTable.name,
+      name_short: bodiesTable.name_short,
+      meeting_source: bodiesTable.meeting_source,
+    })
+    .from(bodiesTable);
+
+  if (slug !== undefined) {
+    const body = bodies.find((b) => bodySlug(b) === slug.toLowerCase());
+    if (!body) throw new Error(`No body with slug "${slug}"`);
+    const source = body.meeting_source;
+    if (source && siteOf(source) !== site)
+      throw new Error(
+        `${site} meeting ${siteId} can't belong to ${body.name_short}, ` +
+          `whose meetings are on ${siteOf(source)}`,
+      );
+    return body;
   }
-  throw new Error(
-    `Video ${youtubeId} is on channel "${channelId}", which matches no ` +
-      `body's video sources. Refusing to ingest an unrelated video.`,
+
+  const matches = bodies.filter((b) =>
+    isChannelOf(b.meeting_source, site, channelId),
   );
+  if (matches.length === 1) return matches[0]!;
+  if (matches.length > 1)
+    throw new Error(
+      `${site} meeting ${siteId} is from "${channelId}", the meeting source ` +
+        `of several bodies (${matches.map((b) => bodySlug(b)).join(", ")}). ` +
+        `Say which body it belongs to.`,
+    );
+  throw new Error(
+    `${site} meeting ${siteId} is from "${channelId}", which is no body's ` +
+      `meeting source. Refusing to ingest an unrelated meeting; if it's ` +
+      `from a body's playlist, say which body it belongs to.`,
+  );
+}
+
+function isChannelOf(
+  source: (typeof bodiesTable.$inferSelect)["meeting_source"],
+  site: Site,
+  channelId: string,
+): boolean {
+  switch (source?.type) {
+    case "youtube_channel":
+      return site === "youtube" && source.channel_id === channelId;
+    case "akleg_committee":
+      return site === "akleg" && source.committee === channelId;
+    default:
+      return false;
+  }
 }
 
 /**
@@ -269,13 +359,13 @@ async function resolveBody(db: DB, youtubeId: string, channelId: string) {
  * it and skip the computation; otherwise compute and persist it.
  */
 async function cachedStage<T>(
-  youtubeId: string,
+  tag: string,
   artifactPath: string,
   compute: () => Promise<T> | T,
 ): Promise<T> {
   const artifactName = artifactPath.split("/").at(-1)!;
   if (existsSync(artifactPath)) {
-    console.error(`[${youtubeId}] ${artifactName} exists, skipping stage`);
+    console.error(`${tag} ${artifactName} exists, skipping stage`);
     return JSON.parse(await readFile(artifactPath, "utf8")) as T;
   }
   const result = await compute();

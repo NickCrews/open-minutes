@@ -15,6 +15,7 @@ import {
 import { MeetingDateTime } from "~/features/meetings/meeting-date-time";
 import { Transcript } from "~/features/meetings/transcript";
 import { intervalToSecs } from "~/lib/format";
+import { youtubeIdOf } from "@open-minutes/core/meeting-source";
 import { type YouTubeController } from "~/lib/youtube";
 import { db } from "~/server/db";
 import { z } from "zod";
@@ -199,7 +200,7 @@ function MeetingPage() {
       <div class="flex min-h-0 flex-1 flex-col gap-3 landscape:flex-row landscape:gap-4 lg:flex-row lg:gap-4">
         <div class="flex shrink-0 flex-col gap-4 landscape:min-h-0 landscape:w-2/5 lg:min-h-0 lg:w-3/5 lg:landscape:w-3/5">
           <Show
-            when={meeting().youtube_id}
+            when={youtubeIdOf(meeting())}
             fallback={
               <div class="bg-muted text-muted-foreground flex aspect-video w-full shrink-0 items-center justify-center rounded-lg text-sm">
                 No video available

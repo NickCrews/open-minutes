@@ -24,7 +24,7 @@ async function insertMeeting(db: DB): Promise<number> {
     .returning({ id: bodiesTable.id });
   const [meeting] = await db
     .insert(meetingsTable)
-    .values({ body_id: body!.id })
+    .values({ body_id: body!.id, site: "youtube", site_id: "test-video" })
     .returning({ id: meetingsTable.id });
   return meeting!.id;
 }

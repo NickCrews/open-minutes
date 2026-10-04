@@ -195,22 +195,28 @@ choose.
    the MP3 so the timelines match by construction, needs the same AAC decoder
    and still leaves audio-only meetings on the MP3.
 
-Beyond the player, the database and pipeline assume YouTube:
+The database and pipeline take akleg.gov meetings:
 
-- `video_sources` holds `youtube_id` with kind `channel` or `playlist`. An
-  akleg.gov source is a committee (`HRES`); the Legislature number follows
-  from the date, so `om available` can list the current Legislature (and the
-  previous one, early in a new one).
-- `om available` already builds each source's lister with `sourceFor(row)`;
-  an akleg.gov row would map to `aklegSource({ committee })`, which
-  implements core's `VideoLister`.
-- `meetings.youtube_id` and the generated `youtube_url` would need a
-  source-neutral ID (`HRES 2018-09-10 14:00:00`) and media URL columns.
-- `om ingest` takes a `YouTube` and would pick the `AudioProvider` by the
-  body's source.
+- A body whose meeting source is
+  `{"type":"akleg_committee","committee":"HRES"}` is scanned by
+  `om available`, which lists the committee's meetings in the Legislature
+  sitting now.
+- Its meetings are stored with `site` `akleg` and the meeting ID as
+  `site_id`, and `om ingest` gets their metadata and audio from
+  `@open-minutes/akleg`.
 - The meeting's date and time come from its ID, so `resolveMeetingDateTime`
-  finds them in the title the prototype builds, eg
+  finds them in the title the source builds, eg
   `House RESOURCES - 2018-09-10 14:00:00`, without reading the transcript.
+
+Left to do:
+
+- **The player.** Meetings store no media URLs yet (step 1 above); the site
+  shows an akleg.gov meeting's transcript, but can't play it.
+- **Earlier Legislatures.** `om available` lists only the current one, so
+  early in a new Legislature it misses the end of the last one, and older
+  meetings need `om ingest` by ID.
+- **Joint meetings** have an ID per chamber sharing one recording, so if both
+  committees are bodies, the recording is ingested once for each.
 
 ## Not in the API
 

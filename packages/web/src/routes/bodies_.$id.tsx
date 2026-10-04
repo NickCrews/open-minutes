@@ -4,6 +4,10 @@ import { For, Show } from "solid-js";
 import { getBodyById } from "~/features/bodies";
 import { MeetingThumbnail } from "~/features/meetings/meeting-thumbnail";
 import { formatMeetingDate } from "@open-minutes/core/meeting-date";
+import {
+  meetingSourceLabel,
+  meetingSourceUrl,
+} from "@open-minutes/core/meeting-source";
 import { db } from "~/server/db";
 import { z } from "zod";
 
@@ -25,21 +29,19 @@ function BodyPage() {
         {body().jurisdiction.name}
         {body().jurisdiction.state ? `, ${body().jurisdiction.state}` : ""}
       </p>
-      <Show when={body().videoSources.length > 0}>
-        <p class="mb-4 flex gap-4">
-          <For each={body().videoSources}>
-            {(source) => (
-              <a
-                href={source.url!}
-                target="_blank"
-                rel="noreferrer"
-                class="text-sm font-medium hover:underline"
-              >
-                YouTube {source.kind}
-              </a>
-            )}
-          </For>
-        </p>
+      <Show when={body().meeting_source}>
+        {(source) => (
+          <p class="mb-4">
+            <a
+              href={meetingSourceUrl(source())}
+              target="_blank"
+              rel="noreferrer"
+              class="text-sm font-medium hover:underline"
+            >
+              {meetingSourceLabel(source())}
+            </a>
+          </p>
+        )}
       </Show>
       <h2 class="mb-4 border-b pb-2 text-lg font-semibold">Meetings</h2>
       <ul class="divide-y">

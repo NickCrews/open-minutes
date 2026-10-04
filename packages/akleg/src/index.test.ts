@@ -7,6 +7,7 @@ import {
   mainAudio,
   mediaUrl,
   meetingId,
+  parseMeetingId,
   meetingUrl,
 } from "./index";
 
@@ -60,6 +61,18 @@ describe("meetingId", () => {
     expect(() => meetingId("https://www.akleg.gov/basis/Committee/")).toThrow(
       "No akleg.gov meeting ID",
     );
+  });
+});
+
+describe("parseMeetingId", () => {
+  it("is undefined for what isn't an akleg.gov meeting", () => {
+    expect(parseMeetingId("SL&C 2017-03-07 13:30:00")).toBe(
+      "SL&C 2017-03-07 13:30:00",
+    );
+    expect(parseMeetingId("hTKVG_L61ec")).toBeUndefined();
+    expect(
+      parseMeetingId("https://www.youtube.com/watch?v=hTKVG_L61ec"),
+    ).toBeUndefined();
   });
 });
 
