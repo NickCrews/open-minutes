@@ -1,42 +1,33 @@
 import { onCleanup, onMount } from "solid-js";
-import { createYouTubePlayer, PlayerState, type YTPlayer } from "~/lib/youtube";
+import { createYouTubeController, type YouTubeController } from "~/lib/youtube";
 
+/**
+ * The meeting page's video: a {@link createYouTubeController} in a visible
+ * host. `onPlayer` hands over the controller once the video is ready to play.
+ */
 export function VideoPlayer(props: {
   videoId: string;
-  onPlayer: (player: YTPlayer) => void;
+  onPlayer: (player: YouTubeController) => void;
   onTime: (secs: number) => void;
   onDuration?: (secs: number) => void;
   onPlayingChange?: (playing: boolean) => void;
 }) {
   let host!: HTMLDivElement;
   onMount(() => {
-    let player: YTPlayer | undefined;
-    let disposed = false;
-    void createYouTubePlayer(host, {
-      videoId: props.videoId,
-      playerVars: { playsinline: 1 },
-      onStateChange: ({ data }) =>
-        props.onPlayingChange?.(data === PlayerState.playing),
-    }).then((created) => {
-      if (disposed) return created.destroy();
-      player = created;
-      props.onPlayer(created);
+    const player = createYouTubeController({
+      host: () => host,
+      onStateChange: (state) => props.onPlayingChange?.(state === "playing"),
+      onTick: ({ secs, duration }) => {
+        props.onTime(secs);
+        // Duration reads as 0 until metadata loads, so it's polled rather
+        // than read once on ready.
+        if (duration > 0) props.onDuration?.(duration);
+      },
     });
-    // The IFrame API has no timeupdate event, so poll. This also picks up
-    // the user clicking around the player's own timeline.
-    const poll = setInterval(() => {
-      const secs = player?.getCurrentTime?.();
-      if (typeof secs === "number" && !Number.isNaN(secs)) props.onTime(secs);
-      // Duration reads as 0 until metadata loads, so poll it rather than
-      // reading it once on ready.
-      const total = player?.getDuration?.();
-      if (typeof total === "number" && total > 0) props.onDuration?.(total);
-    }, 250);
-    onCleanup(() => {
-      disposed = true;
-      clearInterval(poll);
-      player?.destroy();
+    void player.load(props.videoId).then((ready) => {
+      if (ready) props.onPlayer(player);
     });
+    onCleanup(() => player.destroy());
   });
   return (
     <div
