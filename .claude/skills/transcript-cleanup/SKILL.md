@@ -55,25 +55,24 @@ are `H:MM:SS.ss`, as psvtool prints them.
 - `speech_activity` shows the pauses in a stretch, which is where a turn
   can change.
 
-Four more compare voices, by the voiceprints diarization uses:
+Two more compare voices, by the voiceprints diarization uses:
 
+- `speaker_voices` gives every label's voice across the meeting: whether it
+  is one voice, how many of its segments sound like someone else, and the
+  labels that sound alike, such as a speaker number that is really a named
+  person. Start here. Given a label, it lists that label's suspect segments.
+  Look at the labels with the most speech: the diarizer folds other people
+  into the chair and into busy members.
 - `voice_timeline` lays out up to five minutes in passages, cut at each new
-  segment and each change of voice, with each passage's pitch and the label
-  its voice is most like. Its `findings` are where the voice and the labels
-  disagree: a change of voice inside one label (a missed turn: split there)
-  or a new label where the voice carries on. Run it before splitting,
-  merging or relabelling.
-- `match_voice` says which labels and segments one segment's voice is most
-  like, leaving the segment itself out of its own label's voice.
-- `audit_speaker` checks that one label is one voice, and lists the segments
-  that sound like someone else. Run it on the labels with the most speech:
-  the diarizer folds other people into the chair and into busy members.
-- `compare_speakers` lists labels that sound alike, such as a speaker number
-  that is really a named person.
+  segment and each change of voice, with each passage's pitch and the labels
+  its voice is most like, its own label sampled without its segment. Its
+  `findings` are where the voice and the labels disagree: a change of voice
+  inside one label (a missed turn: split there) or a new label where the
+  voice carries on. Run it before splitting, merging or relabelling.
 
 A similarity of 0.75 or more is very likely the same person, under 0.5
 different people. Each label's voice is sampled from its own segments, so a
-match is only as good as the label: trust one once `audit_speaker` says the
+match is only as good as the label: trust one once `speaker_voices` says the
 label is one voice. A passage under 2 s is too short to voiceprint; its pitch
 still tells a low voice from a high one.
 
@@ -97,8 +96,9 @@ every hand-corrected word.
      order or by elimination against the announced tally ("passes 4-1");
    - official minutes, which name movers, seconders, reporters and public
      commenters (see [mishearings.md](mishearings.md) for where to find them);
-   - the voice: `match_voice` puts the segment at 0.75 or more with a label
-     that `audit_speaker` says is one voice, and clearly above any other.
+   - the voice: `voice_timeline` puts the segment's passages at 0.75 or more
+     with a label that `speaker_voices` says is one voice, and clearly above
+     any other.
 
    Topic or tone is not evidence. Without evidence, leave the label alone and
    report it.
@@ -136,7 +136,7 @@ every hand-corrected word.
    number. In a golden, a split-out voice with no name gets a speaker number
    not yet used in that meeting.
 7. **Untangle merged voices with the audio, not guesses.** If one label
-   seems to cover two voices, run `audit_speaker` on it and relabel the
+   seems to cover two voices, run `speaker_voices` on it and relabel the
    segments whose voice clearly matches another label. Report the ones the
    voice leaves uncertain (0.5-0.75, or two close candidates).
 8. **Fix misheard words when the intended word is clear:** place names,

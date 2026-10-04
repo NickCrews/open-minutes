@@ -4,10 +4,9 @@ import {
   alikePairs,
   auditLabel,
   labelVoices,
-  matchSegment,
-  MIN_MATCH,
   ONE_VOICE,
   references,
+  referencesWithout,
   SAME_PERSON,
 } from "./speakers";
 import { fakeGrid, type Turn } from "./testdata/fake-voices";
@@ -126,28 +125,22 @@ describe("alikePairs", () => {
   });
 });
 
-describe("matchSegment", () => {
-  it("matches a segment to its voice's label and segments", () => {
-    const { grid } = world();
-    const match = matchSegment(grid, segments, segments[5]!)!;
-    expect(match.soundsLike[0]!.label).toBe("B");
-    expect(match.soundsLike[0]!.similarity).toBeGreaterThan(SAME_PERSON);
-    // spk-2 has no other segment to vouch for it.
-    expect(match.ownLabelRanked).toBe(false);
-    expect(match.soundsLike.map((m) => m.label)).not.toContain("spk-2");
-    expect(match.closest[0]!.segment.id).toBe(1);
-  });
-
-  it("leaves the segment itself out of its own label's voice", () => {
-    const { grid } = world();
-    const match = matchSegment(grid, segments, segments[2]!)!; // carol, as A
-    expect(match.ownLabelRanked).toBe(true);
-    // A without carol is just alice, so carol matches nobody.
-    expect(match.soundsLike[0]!.similarity).toBeLessThan(MIN_MATCH);
-  });
-
-  it("is null for a segment too short to voiceprint", () => {
-    const { grid } = world();
-    expect(matchSegment(grid, segments, segment(99, "A", 10, 11.5))).toBeNull();
+describe("referencesWithout", () => {
+  it("samples a segment's label from its other segments", () => {
+    const { grid, voices: people } = world();
+    const voices = labelVoices(grid, segments);
+    // spk-2 is all segment 5, so without it spk-2 is no reference.
+    expect(
+      referencesWithout(grid, segments, voices, segments[5]!).map(
+        (v) => v.label,
+      ),
+    ).toEqual(["A", "B"]);
+    // A without carol's segment is just alice.
+    const a = referencesWithout(grid, segments, voices, segments[2]!).find(
+      (v) => v.label === "A",
+    )!;
+    expect(similarity(a.voiceprint, people.get("alice")!)).toBeGreaterThan(
+      0.95,
+    );
   });
 });

@@ -178,23 +178,56 @@ describe("buildTimeline", () => {
     ]);
   });
 
-  it("gives each passage its words, pitch and the label its voice is like", () => {
+  it("gives each passage its words, pitch and the labels its voice is like", () => {
     const ps = passages(timeline().items);
     expect(ps[0]).toMatchObject({
       start: 0,
       segment: { id: 0 },
       text: expect.stringMatching(/^w0 w1 w2 /) as string,
       pitchHz: 110,
-      soundsLike: { label: "A" },
     });
     // Bob's words under segment 0 sound like B, bob's label.
     const bobInA = ps.find((p) => p.start === 10)!;
     expect(bobInA.segment.id).toBe(0);
-    expect(bobInA.soundsLike!.label).toBe("B");
-    expect(ps.find((p) => p.start === 38)).toMatchObject({
-      pitchHz: 220,
-      soundsLike: { label: "C" },
+    expect(bobInA.soundsLike[0]!.label).toBe("B");
+    const carol = ps.find((p) => p.start === 38)!;
+    expect(carol).toMatchObject({ pitchHz: 220, ownLabelRanked: true });
+    expect(carol.soundsLike.map((m) => m.label)).toEqual(["C", "A", "B"]);
+  });
+
+  it("leaves a passage's segment out of its own label's voice", () => {
+    // A is all segment 0, so segment 0 can't vouch for A.
+    const inA = passages(timeline().items).filter((p) => p.segment.id === 0);
+    expect(inA).toHaveLength(2);
+    for (const p of inA) {
+      expect(p.ownLabelRanked).toBe(false);
+      expect(p.soundsLike.map((m) => m.label)).not.toContain("A");
+    }
+    // Carol filed under alice's label: A without her segment is just alice.
+    const { grid } = fakeGrid(
+      [
+        { person: "alice", start: 0, end: 10 },
+        { person: "carol", start: 11, end: 20 },
+        { person: "alice", start: 21, end: 30 },
+      ],
+      30,
+    );
+    const { items } = buildTimeline({
+      from: 0,
+      to: 30,
+      segments: [
+        segment(0, "A", 0, 10),
+        segment(1, "A", 11, 20),
+        segment(2, "A", 21, 30),
+      ],
+      grid,
+      pitch: () => null,
     });
+    const carol = passages(items).find((p) => p.segment.id === 1)!;
+    expect(carol.ownLabelRanked).toBe(true);
+    expect(carol.soundsLike[0]!.similarity).toBeLessThan(0.5);
+    const alice = passages(items).find((p) => p.segment.id === 2)!;
+    expect(alice.soundsLike[0]!.similarity).toBeGreaterThan(0.5);
   });
 
   it("shows speech with no words, and that it's no one's voice", () => {
@@ -208,7 +241,7 @@ describe("buildTimeline", () => {
       pitchHz: 220,
     });
     expect(gaps[0]!.speechSecs).toBeGreaterThan(3);
-    expect(gaps[0]!.soundsLike!.similarity).toBeLessThan(0.5);
+    expect(gaps[0]!.soundsLike[0]!.similarity).toBeLessThan(0.5);
   });
 
   it("lists items in time order, each cut just before its passage", () => {

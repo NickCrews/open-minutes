@@ -65,6 +65,27 @@ export function references(voices: readonly LabelVoice[]): LabelVoice[] {
   return voices.filter((v) => v.sampledSecs >= MIN_REFERENCE_SECS);
 }
 
+/**
+ * The reference voices with `segment`'s label sampled from its other
+ * segments only, so the segment can't vouch for its own label. `voices` are
+ * all the labels' voices, from {@link labelVoices} over `segments`. The label
+ * drops out if its other segments are too thin.
+ */
+export function referencesWithout(
+  grid: VoiceGrid,
+  segments: readonly LabeledSegment[],
+  voices: readonly LabelVoice[],
+  segment: LabeledSegment,
+): LabelVoice[] {
+  const rest = segments.filter(
+    (s) => s.label === segment.label && s !== segment,
+  );
+  return references([
+    ...voices.filter((v) => v.label !== segment.label),
+    ...labelVoices(grid, rest),
+  ]);
+}
+
 /** `voices` by how alike they are to `voiceprint`, best first. */
 export function rank(
   voiceprint: Vector,
@@ -116,14 +137,15 @@ export interface SplitGroup {
  * the two most different groups, and check each segment against the labels'
  * voices. A segment is suspect if it matches another label better than its
  * own, or, when the label holds two voices, is in the smaller group.
+ * `voices` are the reference voices, if already at hand.
  */
 export function auditLabel(
   grid: VoiceGrid,
   segments: readonly LabeledSegment[],
   label: string,
+  voices: readonly LabelVoice[] = references(labelVoices(grid, segments)),
 ): LabelAudit {
   const own = segments.filter((s) => s.label === label);
-  const voices = references(labelVoices(grid, segments));
   const ownVoice = voices.find((v) => v.label === label);
   const measured = own.flatMap((segment) => {
     const v = segmentVoiceprint(grid, segment);
@@ -198,49 +220,4 @@ export function alikePairs(
         pairs.push({ a: voices[i]!.label, b: voices[j]!.label, similarity: s });
     }
   return pairs.sort((x, y) => y.similarity - x.similarity);
-}
-
-export interface SegmentMatch {
-  segment: LabeledSegment;
-  sampledSecs: number;
-  /**
-   * The reference labels, best first, each sampled without this segment, so
-   * a segment can't vouch for its own label.
-   */
-  soundsLike: Match[];
-  /** Whether its own label has enough other speech to be among soundsLike. */
-  ownLabelRanked: boolean;
-  /** The other segments, closest voice first. */
-  closest: (Match & { segment: LabeledSegment })[];
-}
-
-/** Whose voice segment `segment` sounds like; null if it's too short to tell. */
-export function matchSegment(
-  grid: VoiceGrid,
-  segments: readonly LabeledSegment[],
-  segment: LabeledSegment,
-): SegmentMatch | null {
-  const v = segmentVoiceprint(grid, segment, MAX_LABEL_WINDOWS);
-  if (!v) return null;
-  const others = segments.filter((s) => s !== segment);
-  const voices = references(labelVoices(grid, others));
-  const closest = others.flatMap((s) => {
-    const o = segmentVoiceprint(grid, s);
-    return o
-      ? [
-          {
-            segment: s,
-            label: s.label,
-            similarity: similarity(v.voiceprint, o.voiceprint),
-          },
-        ]
-      : [];
-  });
-  return {
-    segment,
-    sampledSecs: v.sampledSecs,
-    soundsLike: rank(v.voiceprint, voices),
-    ownLabelRanked: voices.some((x) => x.label === segment.label),
-    closest: closest.sort((a, b) => b.similarity - a.similarity),
-  };
 }

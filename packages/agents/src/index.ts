@@ -9,13 +9,7 @@ export {
   speechActivity,
   transcribeRangeTool,
 } from "./audio/tools";
-export {
-  auditSpeaker,
-  compareSpeakers,
-  matchVoice,
-  voiceTimeline,
-  voiceTools,
-} from "./audio/voice-tools";
+export { speakerVoices, voiceTimeline, voiceTools } from "./audio/voice-tools";
 export { toolContext } from "./context";
 export {
   callTool,

@@ -10,6 +10,7 @@ import {
   type Match,
   rank,
   references,
+  referencesWithout,
 } from "./speakers";
 import { centroid, similarity } from "./vectors";
 import { type VoiceGrid, type VoiceWindow, WINDOW_SEC } from "./voiceprints";
@@ -17,7 +18,7 @@ import { type VoiceGrid, type VoiceWindow, WINDOW_SEC } from "./voiceprints";
 // A stretch of a meeting as the audio hears it, on one clock. The
 // transcript's words are cut into passages wherever the speaker may change:
 // at each new segment, and at each change of voice the audio hears. Each
-// passage has its pitch and the label its voice is most like, and each cut
+// passage has its pitch and the labels its voice is most like, and each cut
 // how alike the voice is either side of it. Where the voice and the labels
 // disagree, the transcript likely has who-said-what wrong.
 
@@ -45,8 +46,14 @@ export interface Passage extends Span {
   text: string;
   /** Median pitch in Hz; null with too little voiced speech. */
   pitchHz: number | null;
-  /** The reference label its voice is most like; null if it's under 2 s. */
-  soundsLike: Match | null;
+  /**
+   * The reference labels, best match first, its own label sampled without
+   * its segment, so a segment can't vouch for its own label. Empty if it's
+   * under 2 s.
+   */
+  soundsLike: Match[];
+  /** Whether its own label has enough other speech to be among soundsLike. */
+  ownLabelRanked: boolean;
 }
 
 /** Where the voice and the labels disagree at a cut. */
@@ -77,7 +84,8 @@ export interface Untranscribed extends Span {
   type: "untranscribed";
   speechSecs: number;
   pitchHz: number | null;
-  soundsLike: Match | null;
+  /** The reference labels, best match first; empty if it's under 2 s. */
+  soundsLike: Match[];
 }
 
 export type TimelineItem = Passage | Cut | Untranscribed;
@@ -112,7 +120,17 @@ interface Run extends Span {
 /** The timeline of [from, to). */
 export function buildTimeline(input: TimelineInput): Timeline {
   const { from, to, grid } = input;
-  const voices = references(labelVoices(grid, input.segments));
+  const all = labelVoices(grid, input.segments);
+  const voices = references(all);
+  const without = new Map<LabeledSegment, LabelVoice[]>();
+  const voicesWithout = (segment: LabeledSegment) => {
+    let v = without.get(segment);
+    if (!v) {
+      v = referencesWithout(grid, input.segments, all, segment);
+      without.set(segment, v);
+    }
+    return v;
+  };
   const windows = grid.windows(from - ACROSS_SEC - WINDOW_SEC, to + ACROSS_SEC);
   const voicedIn = (start: number, end: number) =>
     windows.filter((w) => w.voiceprint && w.start >= start && w.end <= end);
@@ -156,14 +174,17 @@ export function buildTimeline(input: TimelineInput): Timeline {
   runs.forEach((run, i) => {
     const prev = runs[i - 1];
     if (prev) items.push(cut(prev, run, grid.speech));
+    const segment = run.words[0]!.segment;
+    const refs = voicesWithout(segment);
     items.push({
       type: "passage",
       start: run.start,
       end: run.end,
-      segment: run.words[0]!.segment,
+      segment,
       text: run.words.map((w) => w.text).join(" "),
       pitchHz: input.pitch(run.start, run.end),
-      soundsLike: soundsLike(run.windows, voices),
+      soundsLike: soundsLike(run.windows, refs),
+      ownLabelRanked: refs.some((v) => v.label === segment.label),
     });
   });
 
@@ -268,13 +289,13 @@ function longestPause(speech: readonly Span[], from: number, to: number) {
   );
 }
 
-/** The reference label the voice of `windows` is most like; null for none. */
+/** `voices` by how alike the voice of `windows` is to each; empty for none. */
 function soundsLike(
   windows: readonly VoiceWindow[],
   voices: readonly LabelVoice[],
-): Match | null {
+): Match[] {
   const voice = centroid(windows.map((w) => w.voiceprint!));
-  return (voice && rank(voice, voices)[0]) ?? null;
+  return voice ? rank(voice, voices) : [];
 }
 
 /**

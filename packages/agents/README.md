@@ -58,17 +58,18 @@ the models in `@open-minutes/audio` directly, and get a meeting's audio from
 - `transcribe_range`: recognize one short stretch on its own, next to what the
   transcript has there.
 
-Four more compare voices: who a stretch of audio sounds like, by CAM++
-voiceprint, the model diarization uses.
+Two more compare voices: who a stretch of audio sounds like, by CAM++
+voiceprint, the model diarization uses. One looks closely at a few minutes,
+the other at each label across the meeting.
 
 - `voice_timeline`: up to five minutes in passages, cut at each new segment
-  and each change of voice, each with its median pitch and the label its
-  voice is most like, and at each cut how alike the voice is either side.
-  `findings` lists where the voice and the labels disagree.
-- `match_voice`: the labels and segments one segment's voice is most like.
-- `audit_speaker`: whether one label is one voice, and which of its segments
-  sound like someone else.
-- `compare_speakers`: label pairs that sound alike.
+  and each change of voice, each with its median pitch and the labels its
+  voice is most like (its own label sampled without its segment, so a wrong
+  label can't vouch for itself), and at each cut how alike the voice is
+  either side. `findings` lists where the voice and the labels disagree.
+- `speaker_voices`: every label, with whether it is one voice and the label
+  pairs that sound alike; given a label, which of its segments sound like
+  someone else.
 
 They are layered so each part can be tested on its own:
 

@@ -21,12 +21,7 @@ import {
 import type { LabeledSegment } from "./meeting";
 import { VOICE_CHANGE } from "./timeline";
 import { clipContext, halfUntranscribedRollCallClip } from "./testdata/clips";
-import {
-  auditSpeaker,
-  compareSpeakers,
-  matchVoice,
-  voiceTimeline,
-} from "./voice-tools";
+import { speakerVoices, voiceTimeline } from "./voice-tools";
 
 // The audio tools on real meeting audio: Silero VAD and Parakeet run on a
 // checked-in clip (see testdata/clips.ts). activity.test.ts covers the span
@@ -271,17 +266,24 @@ describe("on the GBOS roll call, half missing from the transcript", () => {
         const passage = (at: string) =>
           out.items.find((i) => i.type === "passage" && i.at === at) as {
             pitchHz: number | null;
-            soundsLike: string | null;
+            soundsLike: string[];
           };
         // Brian's voice is higher than the chair's, and the clerk's higher still.
         expect(passage("0:00:00.01").pitchHz).toBeGreaterThan(160);
         expect(passage("0:00:06.73").pitchHz).toBeLessThan(150);
         expect(passage("0:00:21.82").pitchHz).toBeGreaterThan(200);
-        // The chair's long passage is most of his label's voice.
-        const [label, similarity] =
-          passage("0:00:27.66").soundsLike!.split(" ");
-        expect(label).toBe(CHAIR);
-        expect(Number(similarity)).toBeGreaterThanOrEqual(0.75);
+        // The chair's thanks sound like the rest of the chair's speech.
+        expect(passage("0:00:06.73").soundsLike[0]).toMatch(
+          /^identified:mike-edgington 0\.[789]/,
+        );
+        // Brian sounds nothing like the chair, the one label with enough
+        // speech here to match against.
+        const [, brian] = passage("0:00:00.01").soundsLike[0]!.split(" ");
+        expect(Number(brian)).toBeLessThan(0.5);
+        // The chair's long passage is most of his speech in this minute, so
+        // it can't vouch for him: without it, his label is too thin.
+        expect(passage("0:00:27.66").soundsLike).toEqual([]);
+        expect(out.tooThinToMatch).toContain(CHAIR);
         // Brian and the chair are different people.
         const handover = out.items.find(
           (i) => i.type === "cut" && i.at === "0:00:06.73",
@@ -345,54 +347,47 @@ describe("on the GBOS roll call, half missing from the transcript", () => {
     );
 
     it(
-      "match_voice matches the chair's thanks to the chair",
-      async () => {
-        const out = await callTool(clipContext(rollCall), matchVoice, {
-          meeting,
-          segment: 1,
-        });
-        expect(out.soundsLike[0]).toMatch(
-          /^identified:mike-edgington 0\.[789]/,
-        );
-        expect(out.closestSegments[0]).toMatch(/^7 identified:mike-edgington /);
-      },
-      DECODE_TIMEOUT,
-    );
-
-    it(
-      "audit_speaker finds Brian filed under the chair",
+      "speaker_voices finds Brian filed under the chair",
       async () => {
         const misfiled = rollCall.meeting.segments.map((s) =>
           s.id === 0 ? { ...s, label: CHAIR } : s,
         );
-        const out = await callTool(relabelled(misfiled), auditSpeaker, {
+        const overview = await callTool(relabelled(misfiled), speakerVoices, {
+          meeting,
+        });
+        expect(overview.labels![0]).toMatchObject({
+          label: CHAIR,
+          verdict: "more than one voice",
+          suspects: 1,
+        });
+        const out = await callTool(relabelled(misfiled), speakerVoices, {
           meeting,
           label: CHAIR,
         });
-        expect(out.verdict).toBe("more than one voice");
-        expect(out.suspects).toEqual([
+        expect(out.audit!.verdict).toBe("more than one voice");
+        expect(out.audit!.suspects).toEqual([
           expect.objectContaining({
             segment: 0,
             group: 1,
             text: expect.stringMatching(/^a wider community/) as string,
           }),
         ]);
-        const clean = await callTool(clipContext(rollCall), auditSpeaker, {
+        const clean = await callTool(clipContext(rollCall), speakerVoices, {
           meeting,
           label: CHAIR,
         });
-        expect(clean.verdict).toBe("one voice");
-        expect(clean.suspects).toEqual([]);
+        expect(clean.audit!.verdict).toBe("one voice");
+        expect(clean.audit!.suspects).toEqual([]);
       },
       DECODE_TIMEOUT,
     );
 
     it(
-      "compare_speakers finds one voice under two labels",
+      "speaker_voices finds one voice under two labels",
       async () => {
         const out = await callTool(
           relabelled(splitAt(7, 40.6, "segmented:spk-99")),
-          compareSpeakers,
+          speakerVoices,
           { meeting },
         );
         expect(out.alike).toEqual([
@@ -407,27 +402,14 @@ describe("on the GBOS roll call, half missing from the transcript", () => {
       DECODE_TIMEOUT,
     );
 
-    it("refuses a segment or label the meeting doesn't have", async () => {
+    it("refuses a label the meeting doesn't have", async () => {
       const ctx = clipContext(rollCall);
       await expect(
-        callTool(ctx, matchVoice, { meeting, segment: 999 }),
-      ).rejects.toThrow(/No segment 999/);
-      await expect(
-        callTool(ctx, auditSpeaker, { meeting, label: "speaker:1" }),
+        callTool(ctx, speakerVoices, { meeting, label: "speaker:1" }),
       ).rejects.toThrow(/No segments labelled "speaker:1"/);
       await expect(
         callTool(ctx, voiceTimeline, { meeting, from: 0, to: 400 }),
       ).rejects.toThrow(/at most 300 s/);
     });
-
-    it(
-      "match_voice refuses a segment too short to match",
-      async () => {
-        await expect(
-          callTool(clipContext(rollCall), matchVoice, { meeting, segment: 5 }),
-        ).rejects.toThrow(/no 2 s of clear speech/);
-      },
-      DECODE_TIMEOUT,
-    );
   });
 });
