@@ -18,7 +18,7 @@ YouTube ──yt-dlp──▶ pipeline (om ingest) ──▶ Postgres + pgvector
                     align / recognize
 ```
 
-A [pnpm](https://pnpm.io) workspace with eight packages. Each depends only on
+A [pnpm](https://pnpm.io) workspace with nine packages. Each depends only on
 the ones listed above it:
 
 - **[`packages/core`](packages/core)** (`@open-minutes/core`): shared domain
@@ -45,6 +45,11 @@ the ones listed above it:
   metadata and audio, with yt-dlp or from the object store (see below), and
   decodes YouTube's Opus audio to WAV. See the
   [youtube README](packages/youtube/README.md).
+- **[`packages/akleg`](packages/akleg)** (`@open-minutes/akleg`): a prototype
+  source for the Alaska Legislature's meetings on akleg.gov, a peer of the
+  YouTube source. It lists a committee's recorded meetings and gets a
+  meeting's metadata and audio, decoding its MP3 to WAV. Not yet used by the
+  pipeline. See the [akleg README](packages/akleg/README.md).
 - **[`packages/pipeline`](packages/pipeline)** (`@open-minutes/pipeline`): the
   offline ingestion pipeline and the `om` CLI. It gets a meeting's audio from
   `@open-minutes/youtube`, runs it through `@open-minutes/audio`, aligns turns to words, recognizes speakers
