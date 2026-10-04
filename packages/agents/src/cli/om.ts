@@ -1,6 +1,8 @@
 #!/usr/bin/env tsx
-// The `om` CLI: composable meeting-ingestion commands. A thin wrapper over the
-// exported API in ./index.ts — commands only parse arguments and wire stdio.
+// The `om` CLI: composable meeting-ingestion commands, model downloads, and the
+// data-editing tools. A thin wrapper over the exported APIs of
+// @open-minutes/ingest/om, @open-minutes/audio and ../tools — commands only
+// parse arguments and wire stdio.
 // Unix conventions: machine-readable results on stdout, human progress/logs on
 // stderr, so pipes like `om available | head -5 | om ingest` stay clean.
 //
@@ -17,10 +19,13 @@ process.stdout.on("error", (error: NodeJS.ErrnoException) => {
 });
 import { getDb, resolveDatabaseUrl, type DB } from "@open-minutes/db";
 import { prepareDatabase } from "@open-minutes/db/ensure";
-import { listIngested, type IngestedMeeting } from "./ingested";
-import { listAvailable } from "./available";
-import { ingestVideos } from "./ingest";
-import { ALL_MODEL_SPECS, ensureAllModels } from "@open-minutes/audio/models";
+import type { IngestedMeeting } from "@open-minutes/ingest/om";
+import { runTools } from "./tools";
+
+// Ingestion and the models pull in sherpa-onnx's native module, so they are
+// imported only by the commands that need them; `om tools` stays light.
+const ingestApi = () => import("@open-minutes/ingest/om");
+const audioModels = () => import("@open-minutes/audio/models");
 
 async function withDb<T>(fn: (db: DB) => Promise<T>): Promise<T> {
   // Same readiness rule as `pnpm dev`: local is migrated (and created, on a
@@ -51,6 +56,7 @@ const status = defineCommand({
   },
   async run({ args }) {
     const ids = args._;
+    const { listIngested } = await ingestApi();
     await withDb(async (db) => {
       const meetings = await listIngested(db, ids.length > 0 ? ids : undefined);
       if (args.json) {
@@ -101,6 +107,7 @@ const available = defineCommand({
     },
   },
   async run({ args }) {
+    const { listAvailable } = await ingestApi();
     await withDb(async (db) => {
       const ids = await listAvailable(db, { body: args.body });
       for (const id of ids) {
@@ -130,6 +137,7 @@ const ingest = defineCommand({
           "(eg `om available | head -5 | om ingest`).",
       );
     }
+    const { ingestVideos } = await ingestApi();
     await withDb(async (db) => {
       const { results, failures } = await ingestVideos(db, ids);
       for (const result of results) {
@@ -163,7 +171,8 @@ const models = defineCommand({
       default: false,
     },
   },
-  run({ args }) {
+  async run({ args }) {
+    const { ALL_MODEL_SPECS, ensureAllModels } = await audioModels();
     if (args.list) {
       for (const spec of ALL_MODEL_SPECS) {
         console.log(JSON.stringify(spec));
@@ -171,6 +180,20 @@ const models = defineCommand({
       return;
     }
     ensureAllModels();
+  },
+});
+
+const toolsCommand = defineCommand({
+  meta: {
+    name: "tools",
+    description:
+      "The data-editing tools as a JSON CLI: no arguments lists them, " +
+      "`<tool> --schema` prints a tool's input, `<tool> '<json>'` calls it " +
+      "(input may also come on stdin), and --describe prints every tool " +
+      "with its schema. --db <name> picks the database.",
+  },
+  async run({ rawArgs }) {
+    await runTools(rawArgs);
   },
 });
 
@@ -187,7 +210,7 @@ const main = defineCommand({
     name: "om",
     description: "Manage the open-minutes meeting database",
   },
-  subCommands: { status, available, ingest, models },
+  subCommands: { status, available, ingest, models, tools: toolsCommand },
 });
 
 await runMain(main);

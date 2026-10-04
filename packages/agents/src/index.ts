@@ -1,5 +1,6 @@
 // Agent-facing tools for editing Open Minutes data. See ./tool.ts for the
-// shape, ./tools.ts for the list, and ./cli.ts for the shell interface.
+// shape, ./tools.ts for the list, and ./cli/tools.ts for the shell interface
+// (`om tools`).
 export { tools } from "./tools";
 export * from "./tools";
 export {

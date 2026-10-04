@@ -3,14 +3,10 @@
   "version": "0.1.0",
   "description": "Open Minutes meeting ingestion: download a meeting, run it through @open-minutes/audio, identify speakers and write it to the database",
   "type": "module",
-  "bin": {
-    "om": "./src/om/cli.ts"
-  },
   "exports": {
     "./om": "./src/om/index.ts"
   },
   "scripts": {
-    "om": "tsx src/om/cli.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
@@ -20,7 +16,6 @@
     "@open-minutes/core": "workspace:*",
     "@open-minutes/db": "workspace:*",
     "@open-minutes/youtube": "workspace:*",
-    "citty": "^0.1.6",
     "drizzle-orm": "1.0.0-beta.21"
   },
   "devDependencies": {
