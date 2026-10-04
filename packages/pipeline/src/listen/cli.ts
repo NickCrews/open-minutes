@@ -7,7 +7,7 @@
 //   pnpm audio <tool> '<json>'          call it; input may also come on stdin
 //   pnpm audio --describe               every tool with its schema, as JSON
 //
-// Results are JSON on stdout; progress goes to stderr. A refused call prints
+// Results are JSON (or, for voice_timeline, text) on stdout; progress goes to stderr. A refused call prints
 // {"error": "..."} and exits 1. A meeting is a golden fixture name or a
 // database meeting id; the database is chosen as everywhere else (--db, else
 // $DB, else your branch's local database) and only opened for an id.
@@ -72,7 +72,10 @@ const ctx = listenContext(async (): Promise<DB> => {
   return opened.db;
 });
 try {
-  print(await callListenTool(ctx, tool, input));
+  const result = await callListenTool(ctx, tool, input);
+  // A tool written for a model to read (voice_timeline) returns text.
+  if (typeof result === "string") console.log(result);
+  else print(result);
 } catch (err) {
   if (!(err instanceof ListenError)) throw err;
   print({ error: err.message });

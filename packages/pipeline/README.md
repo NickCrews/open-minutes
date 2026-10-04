@@ -39,6 +39,7 @@ meeting's audio itself. It works like `pnpm tools`: JSON in, JSON out.
 ```sh
 pnpm audio                                   # list the tools and golden meetings
 pnpm audio <tool> --schema                   # a tool's input, as JSON Schema
+pnpm audio voice_timeline '{"meeting":"gbos_9HoIM5INxpI","segment":65}'
 pnpm audio find_untranscribed_speech '{"meeting":"gbos_9HoIM5INxpI"}'
 pnpm audio transcribe_range '{"meeting":"gbos_9HoIM5INxpI","from":"0:01:56","to":"0:02:07"}'
 ```
@@ -49,24 +50,21 @@ cache (`~/.cache/open-minutes/meetings/<youtubeId>/`) on first use, and what's
 slow to compute (speech runs, voiceprints) is cached there too. Times are
 `H:MM:SS.ss` like golden PSV files, so they go straight into a psvtool op.
 
-- `speech_activity`: speech runs and pauses in a stretch, from voice activity
-  detection.
+- `voice_timeline`: one segment (with a few seconds either side) or a stretch
+  of up to 5 minutes as text, in time order: the words cut into phrases at
+  pauses, segment starts and changes of voice, each phrase's pitch and whose
+  voice it sounds like, and at each cut the cues for a change of speaker
+  (voice similarity either side, a pitch jump, a different voice match, the
+  pause), marked as a likely or possible change. Also speech with no words,
+  and for a segment, the labels and other segments its voice is closest to.
 - `find_untranscribed_speech`: stretches with speech but no transcript words,
   each with what recognition hears when it decodes just that stretch.
 - `transcribe_range`: recognize one short stretch on its own, next to what the
   transcript has there.
-- `voice_timeline`: who it sounds like, moment to moment, next to the
-  transcript's labels, and where the voice changes.
-- `match_voice`: whose voice a stretch or segment sounds like, ranked over the
-  meeting's speaker labels.
 - `audit_speaker`: whether one label is really one voice, and which of its
   segments sound like someone else.
 - `compare_speakers`: label pairs that sound alike (an anonymous speaker
   number that's really a named person).
-- `render_audio`: a PNG of a stretch (up to 10 minutes) for a model or a person
-  to look at: the transcript's segments and words, who the audio sounds like,
-  how much the voice changes, voice activity, pitch and a mel spectrogram, on
-  one time axis. Written to `packages/pipeline/data/audio-views/`.
 
 The voice tools compare CAM++ voiceprints, the model diarization uses, of 2 s
 windows every 0.5 s (computed per minute of audio on first use, about a second
@@ -76,3 +74,5 @@ more against each other and different people under 0.5.
 
 The tools are in `src/listen/`, typed like `@open-minutes/tools`' (a zod input
 schema and a description for the model), exported as `listenTools`.
+`voice_timeline` builds its data in `timeline.ts` and writes it as text in
+`timeline-text.ts`, so another view (a web page) can draw the same data.

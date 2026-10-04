@@ -44,21 +44,18 @@ are `H:MM:SS.ss`, as psvtool prints them.
   hide in these gaps, and they are evidence for rule 1.
 - `transcribe_range` re-decodes a short stretch to recover dropped words or
   check a misheard one.
-- `speech_activity` shows the pauses in a stretch, which is where a turn
-  can change.
 - `audit_speaker` checks that one label is one voice. Run it on the labels
   with the most speech: the diarizer folds other people into the chair and
   into busy members, and lists the segments that sound like someone else.
-- `match_voice` ranks whose voice a segment or stretch sounds like, and
-  `voice_timeline` follows the voice moment to moment through a long segment
-  to find where a hidden turn starts and ends.
+- `voice_timeline` lays out one segment (`"segment": 65`), or a stretch, in
+  time order: each phrase with its pitch and whose voice it sounds like (≠
+  where that isn't its label), and at each pause, segment start or change of
+  voice the cues for a change of speaker. ▲ inside a segment is a hidden
+  turn to split at; a new label where the voice carries on is a boundary to
+  doubt. For a segment it also ranks the labels and segments its voice is
+  closest to. Run it before splitting or relabelling a segment.
 - `compare_speakers` lists labels that sound alike, such as a
   `segmented:spk-N` that is really a named person.
-- `render_audio` draws a stretch as an image; open it with Read. It lines up
-  the transcript's segments with who the audio sounds like, the pauses, the
-  pitch and a spectrogram, so a boundary that's a few words off, or speech
-  with no words under it, is plain to see. Look at one before splitting a
-  long segment.
 
 Similarities are of voiceprints: about 0.75 or more is very likely the same
 person, under 0.5 different people. Voices are matched against each label's
@@ -85,7 +82,7 @@ every hand-corrected word.
      order or by elimination against the announced tally ("passes 4-1");
    - official minutes, which name movers, seconders, reporters and public
      commenters (see [mishearings.md](mishearings.md) for where to find them);
-   - the voice: `match_voice` puts the segment at 0.75 or more with a label
+   - the voice: `voice_timeline` puts the segment at 0.75 or more with a label
      whose own audit says one voice, and clearly above its current label. A
      segment of a few seconds is too short to judge this way; use the text.
 

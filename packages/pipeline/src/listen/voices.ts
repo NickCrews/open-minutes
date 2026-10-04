@@ -364,3 +364,66 @@ export function twoMeans(
   }
   return { groups, centroids };
 }
+
+/** Most windows sampled per segment to build its voiceprint. */
+const MAX_SEGMENT_WINDOWS = 4;
+const SEGMENT_VOICES_VERSION = 1;
+
+/**
+ * A voiceprint for every segment with a clean 2 s of speech, from up to
+ * {@link MAX_SEGMENT_WINDOWS} windows spread across it. Cached beside the
+ * audio by each segment's times, so editing a segment recomputes only it.
+ */
+export function segmentVoices(
+  meeting: ListenMeeting,
+): Map<number, Float32Array> {
+  const dir = join(
+    meeting.cacheDir,
+    `segment-voices-v${SEGMENT_VOICES_VERSION}`,
+  );
+  const path = join(dir, "voiceprints.json");
+  const cache: Record<string, number[] | null> = existsSync(path)
+    ? JSON.parse(readFileSync(path, "utf8"))
+    : {};
+  const runs = speechRuns(meeting);
+  const out = new Map<number, Float32Array>();
+  let computed = 0;
+  for (const seg of meeting.segments) {
+    const key = `${seg.start}-${seg.end}`;
+    if (!(key in cache)) {
+      if (computed === 0)
+        console.error(`Voiceprinting ${meeting.ref}'s segments...`);
+      cache[key] = segmentVoiceprint(meeting, runs, seg);
+      computed++;
+    }
+    const v = cache[key];
+    if (v) out.set(seg.id, Float32Array.from(v));
+  }
+  if (computed > 0) {
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(path, JSON.stringify(cache));
+  }
+  return out;
+}
+
+function segmentVoiceprint(
+  meeting: ListenMeeting,
+  runs: readonly Span[],
+  seg: Span,
+): number[] | null {
+  const candidates: Span[] = [];
+  for (let t = seg.start; t + WINDOW_SEC <= seg.end; t += HOP_SEC) {
+    const speech = totalSecs(clip(runs, t, t + WINDOW_SEC)) / WINDOW_SEC;
+    if (speech >= MIN_SPEECH_FRACTION)
+      candidates.push({ start: t, end: t + WINDOW_SEC });
+  }
+  if (candidates.length === 0) return null;
+  const step = Math.max(1, candidates.length / MAX_SEGMENT_WINDOWS);
+  const wave = meeting.wave();
+  const picked: Float32Array[] = [];
+  for (let i = 0; i < candidates.length; i += step) {
+    const s = candidates[Math.floor(i)]!;
+    picked.push(embed(wave, s.start, s.end));
+  }
+  return Array.from(centroid(picked)!);
+}

@@ -6,34 +6,30 @@ import {
   ListenError,
   type ListenMeeting,
 } from "./meeting";
-import { checkRange, defineListenTool, meetingRef, time } from "./tool";
+import { defineListenTool, meetingRef } from "./tool";
 import {
-  changePoints,
-  HOP_SEC,
   type LabelVoice,
   labelVoices,
   rankVoices,
   similarity,
   spanVoiceprint,
   twoMeans,
-  voiceWindows,
-  WINDOW_SEC,
 } from "./voices";
 
 // How to read similarities, calibrated on the golden meetings' labels.
 // Repeated in the tool descriptions, which is where the model reads them.
 /** Two voiceprints at least this alike are very likely the same person. */
-const SAME_PERSON = 0.75;
+export const SAME_PERSON = 0.75;
 /** A label whose two halves are less alike than this holds two voices. */
-const ONE_VOICE = 0.68;
+export const ONE_VOICE = 0.68;
 /** Labels sampled from less speech than this make unreliable references. */
-const MIN_REFERENCE_SECS = 6;
+export const MIN_REFERENCE_SECS = 6;
 /** Window-to-window similarity below this marks a likely change of voice. */
-const CHANGE_THRESHOLD = 0.4;
+export const CHANGE_THRESHOLD = 0.4;
 
-const SIMILARITY_GUIDE = `Each "label 0.83" gives a label and its cosine similarity. Similarities are those of CAM++ voiceprints, the model diarization uses: about ${SAME_PERSON} or more is very likely the same person, 0.6-${SAME_PERSON} is uncertain, under 0.5 is different people. Voices are matched against each speaker label's voiceprint, sampled from that label's segments, so a label that wrongly holds two people matches both of them only moderately.`;
+export const SIMILARITY_GUIDE = `Each "label 0.83" gives a label and its cosine similarity. Similarities are those of CAM++ voiceprints, the model diarization uses: about ${SAME_PERSON} or more is very likely the same person, 0.6-${SAME_PERSON} is uncertain, under 0.5 is different people. Voices are matched against each speaker label's voiceprint, sampled from that label's segments, so a label that wrongly holds two people matches both of them only moderately.`;
 
-function referenceVoices(meeting: ListenMeeting): LabelVoice[] {
+export function referenceVoices(meeting: ListenMeeting): LabelVoice[] {
   return labelVoices(meeting).filter(
     (v) => v.sampledSecs >= MIN_REFERENCE_SECS,
   );
@@ -56,174 +52,6 @@ function excerpt(seg: LabeledSegment, words = 14): string {
     .join(" ");
   return seg.words.length > words ? `${text} …` : text;
 }
-
-/** The transcript label covering most of [from, to], if any. */
-export function transcriptLabel(
-  meeting: ListenMeeting,
-  from: number,
-  to: number,
-): string | null {
-  const overlap = new Map<string, number>();
-  for (const s of meeting.segments) {
-    const o = Math.min(s.end, to) - Math.max(s.start, from);
-    if (o > 0) overlap.set(s.label, (overlap.get(s.label) ?? 0) + o);
-  }
-  let best: string | null = null;
-  let bestSecs = 0;
-  for (const [label, secs] of overlap)
-    if (secs > bestSecs) [best, bestSecs] = [label, secs];
-  return best;
-}
-
-/**
- * For each voiceprint window starting in [from, to - WINDOW_SEC): the two
- * labels it sounds most like, and the best label smoothed by majority over 5
- * windows (2.5 s). Null where nobody's talking.
- */
-export function windowVoices(meeting: ListenMeeting, from: number, to: number) {
-  const voices = referenceVoices(meeting);
-  const windows = voiceWindows(meeting, from, to - WINDOW_SEC);
-  const best = windows.map((w) =>
-    w.embedding ? rankVoices(w.embedding, voices).slice(0, 2) : null,
-  );
-  const smoothed = best.map((b, i) => {
-    if (!b) return null;
-    const counts = new Map<string, number>();
-    for (let j = i - 2; j <= i + 2; j++) {
-      const label = best[j]?.[0]?.label;
-      if (label) counts.set(label, (counts.get(label) ?? 0) + 1);
-    }
-    return [...counts].sort((a, b) => b[1] - a[1])[0]![0];
-  });
-  return { windows, best, smoothed };
-}
-
-/** Each window speaks for the hop-long slice at its centre; where that starts. */
-export const sliceStart = (window: { start: number }) =>
-  window.start + (WINDOW_SEC - HOP_SEC) / 2;
-
-export const voiceTimeline = defineListenTool({
-  name: "voice_timeline",
-  description: `Who it sounds like, moment to moment, in a stretch of a meeting (at most 20 minutes), from the audio. Returns runs of time with the speaker label whose voice matches best, next to the label the transcript gives there (flagging where they disagree), and the moments the voice changes, each as "time similarity" across it (lower is a sharper change), noting a segment that starts within 3 s. Use it to find where one person stops and another starts inside a long segment, or to check a stretch the diarizer may have folded into the wrong speaker. ${SIMILARITY_GUIDE}`,
-  input: z.object({ meeting: meetingRef, from: time, to: time }),
-  run: async (ctx, input) => {
-    checkRange(input.from, input.to, 20 * 60);
-    const meeting = await ctx.meeting(input.meeting);
-    const { windows, best, smoothed } = windowVoices(
-      meeting,
-      input.from,
-      input.to,
-    );
-    type Run = { label: string; first: number; last: number };
-    const runs: Run[] = [];
-    smoothed.forEach((label, i) => {
-      if (!label) return;
-      const run = runs.at(-1);
-      // Bridge up to a second of quiet within one voice.
-      if (run && run.label === label && i - run.last <= 1 / HOP_SEC + 1)
-        run.last = i;
-      else runs.push({ label, first: i, last: i });
-    });
-
-    // A run under a second is a blip between voices, not a turn.
-    const voiceRuns = runs
-      .filter((r) => r.last - r.first + 1 >= 1 / HOP_SEC)
-      .map((r) => {
-        const from = sliceStart(windows[r.first]!);
-        const to = sliceStart(windows[r.last]!) + HOP_SEC;
-        const sims = new Map<string, number[]>();
-        for (let i = r.first; i <= r.last; i++)
-          for (const v of best[i] ?? [])
-            sims.set(v.label, [...(sims.get(v.label) ?? []), v.similarity]);
-        const mean = (xs: number[] = []) =>
-          xs.length ? round(xs.reduce((a, b) => a + b, 0) / xs.length) : null;
-        const runnerUp = [...sims.keys()]
-          .filter((l) => l !== r.label)
-          .sort(
-            (a, b) => (mean(sims.get(b)) ?? 0) - (mean(sims.get(a)) ?? 0),
-          )[0];
-        const transcript = transcriptLabel(meeting, from, to);
-        return {
-          from: formatClock(from),
-          to: formatClock(to),
-          soundsLike: r.label,
-          similarity: mean(sims.get(r.label)),
-          ...(runnerUp && {
-            runnerUp: `${runnerUp} ${mean(sims.get(runnerUp))!.toFixed(2)}`,
-          }),
-          transcript,
-          ...(transcript !== r.label && { disagrees: true }),
-        };
-      });
-
-    const boundaries = meeting.segments.map((s) => s.start);
-    return {
-      voices: voiceRuns,
-      changes: changePoints(windows, CHANGE_THRESHOLD).map((c) => {
-        const nearest = boundaries.reduce(
-          (a, b) => (Math.abs(b - c.at) < Math.abs(a - c.at) ? b : a),
-          Infinity,
-        );
-        const atSegment =
-          Math.abs(nearest - c.at) <= 3
-            ? ` (a segment starts ${formatClock(nearest)})`
-            : "";
-        return `${formatClock(c.at)} ${c.similarity.toFixed(2)}${atSegment}`;
-      }),
-    };
-  },
-});
-
-export const matchVoice = defineListenTool({
-  name: "match_voice",
-  description: `Whose voice a stretch of audio (or one segment) sounds like, ranked over the meeting's speaker labels. Needs at least 2 seconds of speech. When you pass a segment, its own label's voiceprint leaves that segment out, so the segment can't vouch for itself. ${SIMILARITY_GUIDE}`,
-  input: z
-    .object({
-      meeting: meetingRef,
-      segment: z
-        .number()
-        .int()
-        .nonnegative()
-        .optional()
-        .describe(
-          "A segment id: its index for a golden (as psvtool.py render numbers it), its row id in the database.",
-        ),
-      from: time.optional(),
-      to: time.optional(),
-    })
-    .refine(
-      (i) =>
-        (i.segment !== undefined) !==
-        (i.from !== undefined && i.to !== undefined),
-      { message: "give a segment, or from and to" },
-    ),
-  run: async (ctx, input) => {
-    const meeting = await ctx.meeting(input.meeting);
-    const segment =
-      input.segment === undefined
-        ? null
-        : meeting.segments.find((s) => s.id === input.segment);
-    if (segment === undefined)
-      throw new ListenError(`No segment ${input.segment} in ${meeting.ref}`);
-    const span = segment ?? { start: input.from!, end: input.to! };
-    if (!segment) checkRange(span.start, span.end, 20 * 60);
-    const voiceprint = spanVoiceprint(meeting, span);
-    if (!voiceprint)
-      throw new ListenError(
-        `Not enough clear speech in ${formatClock(span.start)}-${formatClock(span.end)} to match a voice (it needs about 2 s).`,
-      );
-    const voices = labelVoices(meeting, {
-      exclude: segment ? (s) => s.id === segment.id : undefined,
-    }).filter((v) => v.sampledSecs >= MIN_REFERENCE_SECS);
-    return {
-      from: formatClock(span.start),
-      to: formatClock(span.end),
-      transcript:
-        segment?.label ?? transcriptLabel(meeting, span.start, span.end),
-      soundsLike: top(voiceprint, voices, 5),
-    };
-  },
-});
 
 export const auditSpeaker = defineListenTool({
   name: "audit_speaker",
@@ -358,9 +186,4 @@ export const compareSpeakers = defineListenTool({
   },
 });
 
-export const voiceTools = [
-  voiceTimeline,
-  matchVoice,
-  auditSpeaker,
-  compareSpeakers,
-];
+export const voiceTools = [auditSpeaker, compareSpeakers];
