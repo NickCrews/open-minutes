@@ -132,7 +132,7 @@ export const listMeetings = defineTool({
         title: meetingsTable.title,
         body: bodiesTable.name_short,
         date: meetingsTable.date,
-        youtubeId: meetingsTable.youtube_id,
+        url: meetingsTable.url,
       })
       .from(meetingsTable)
       .innerJoin(bodiesTable, eq(bodiesTable.id, meetingsTable.body_id))

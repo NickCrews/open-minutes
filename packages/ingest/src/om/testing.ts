@@ -6,10 +6,10 @@ import {
   bodiesTable,
   jurisdictionsTable,
   meetingsTable,
-  videoSourcesTable,
 } from "@open-minutes/db";
 import { eq } from "drizzle-orm";
-import type { YouTube } from "@open-minutes/youtube";
+import type { AudioProvider } from "@open-minutes/core/audio-provider";
+import type { MeetingSource, Site } from "@open-minutes/core/meeting-source";
 import { dbTest } from "@open-minutes/db/testing/vitest";
 import { goldenData } from "@open-minutes/fixtures/golden-data";
 import { loadBodies } from "@open-minutes/fixtures/test-data";
@@ -17,10 +17,12 @@ import { loadBodies } from "@open-minutes/fixtures/test-data";
 // Test helpers for the om API tests (not collected by vitest — no .test suffix).
 
 /**
- * A {@link YouTube} boundary where every call throws unless overridden, so a
+ * A site (YouTube, akleg.gov) where every call throws unless overridden, so a
  * test both avoids the network and proves which calls were (not) made.
  */
-export function fakeYouTube(overrides: Partial<YouTube> = {}): YouTube {
+export function fakeSite(
+  overrides: Partial<AudioProvider> = {},
+): AudioProvider {
   return {
     getMetadata: async () => {
       throw new Error("unexpected getMetadata call");
@@ -33,7 +35,7 @@ export function fakeYouTube(overrides: Partial<YouTube> = {}): YouTube {
 }
 
 /**
- * Insert a body, with its video sources, under a throwaway jurisdiction of the
+ * Insert a body, with its meeting source, under a throwaway jurisdiction of the
  * same name. Returns its id. For tests that need a second body alongside the
  * golden GBOS one (see {@link goldenTest}).
  */
@@ -43,7 +45,7 @@ export async function insertBody(
     name: string;
     name_short: string;
     timezone?: string;
-    sources?: Array<{ kind: "channel" | "playlist"; youtube_id: string }>;
+    source?: MeetingSource;
   },
 ): Promise<number> {
   const [jurisdiction] = await db
@@ -57,30 +59,25 @@ export async function insertBody(
       name_short: body.name_short,
       jurisdiction_id: jurisdiction!.id,
       timezone: body.timezone ?? "America/Anchorage",
+      meeting_source: body.source,
     })
     .returning({ id: bodiesTable.id });
-  if (body.sources?.length) {
-    await db
-      .insert(videoSourcesTable)
-      .values(body.sources.map((s) => ({ ...s, body_id: row!.id })));
-  }
   return row!.id;
 }
 
-/** Insert a bare meeting row (as if previously ingested). Returns its id. */
+/**
+ * Insert a bare meeting row (as if previously ingested), by default a YouTube
+ * video. Returns its id.
+ */
 export async function insertMeeting(
   db: DB,
   bodyId: number,
-  youtubeId: string,
-  date?: string,
+  siteId: string,
+  { date, site = "youtube" }: { date?: string; site?: Site } = {},
 ): Promise<number> {
   const [row] = await db
     .insert(meetingsTable)
-    .values({
-      body_id: bodyId,
-      youtube_id: youtubeId,
-      date,
-    })
+    .values({ body_id: bodyId, site, site_id: siteId, date })
     .returning({ id: meetingsTable.id });
   return row!.id;
 }
@@ -101,8 +98,8 @@ const workRootFixture = {
 export const test = dbTest().extend<{ workRoot: string }>(workRootFixture);
 
 /**
- * A database starting from the golden dataset (the MOA jurisdiction and its
- * bodies with their video sources, from test-data/), plus a work root.
+ * A database starting from the golden dataset (the jurisdictions and their
+ * bodies with their meeting sources, from test-data/), plus a work root.
  * Tests layer their own scenario rows on top.
  */
 export const goldenTest = dbTest({ data: goldenData }).extend<{
@@ -110,12 +107,13 @@ export const goldenTest = dbTest({ data: goldenData }).extend<{
 }>(workRootFixture);
 
 const goldenGbos = loadBodies().find((b) => b.id === "gbos")!;
+if (goldenGbos.meeting_source?.type !== "youtube_channel")
+  throw new Error("Golden GBOS's meeting source should be a YouTube channel");
 
 /** GBOS as test-data/bodies.jsonl declares it: the one source of truth. */
 export const GOLDEN_GBOS = {
   name_short: goldenGbos.name_short,
-  channelId: goldenGbos.video_sources.find((s) => s.kind === "channel")!
-    .youtube_id,
+  channelId: goldenGbos.meeting_source.channel_id,
 };
 
 /** The golden GBOS body's id in a database seeded with {@link goldenData}. */

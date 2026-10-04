@@ -1,19 +1,20 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { meetingsTable, segmentsTable } from "@open-minutes/db";
 import type { VideoMetadata } from "@open-minutes/core/audio-provider";
 import type { SpeechSegment } from "@open-minutes/core/transcription";
 import { N_DIMENSIONS } from "@open-minutes/core/voice_embeddings";
 import { getMeetingData } from "@open-minutes/fixtures/test-data";
-import { ingestVideo, ingestVideos } from "./ingest";
+import { ingestMeeting, ingestMeetings, parseMeetingLines } from "./ingest";
 import { listIngested } from "./ingested";
 import {
   GOLDEN_GBOS,
-  fakeYouTube,
+  fakeSite,
   goldenGbosId,
   goldenTest as test,
+  insertBody,
   insertMeeting,
 } from "./testing";
 import { getMeetingAudio } from "../test-utils/audio-cache";
@@ -69,8 +70,8 @@ const EMBEDDINGS = [
  * Pre-seed a meeting's work directory with every stage artifact, as if a prior
  * run completed all compute stages and crashed before the DB commit.
  */
-async function seedWorkDir(workRoot: string, youtubeId: string): Promise<void> {
-  const dir = join(workRoot, `gbos_${youtubeId}`);
+async function seedWorkDir(workRoot: string, dirName: string): Promise<void> {
+  const dir = join(workRoot, dirName);
   await mkdir(dir, { recursive: true });
   await writeFile(join(dir, "audio.wav"), "not really audio");
   await writeFile(
@@ -81,7 +82,7 @@ async function seedWorkDir(workRoot: string, youtubeId: string): Promise<void> {
   await writeFile(join(dir, "embeddings.json"), JSON.stringify(EMBEDDINGS));
 }
 
-describe("ingestVideo", () => {
+describe("ingestMeeting", () => {
   test("skips an already-ingested video without touching YouTube", async ({
     db,
     workRoot,
@@ -89,12 +90,16 @@ describe("ingestVideo", () => {
     await insertMeeting(db, await goldenGbosId(db), VIDEO_ID);
 
     // Every fake YouTube call throws, so success proves nothing was fetched.
-    const result = await ingestVideo(db, VIDEO_ID, {
-      yt: fakeYouTube(),
+    const result = await ingestMeeting(db, VIDEO_ID, {
+      sites: { youtube: fakeSite() },
       workRoot,
     });
 
-    expect(result).toEqual({ youtubeId: VIDEO_ID, status: "skipped" });
+    expect(result).toEqual({
+      site: "youtube",
+      siteId: VIDEO_ID,
+      status: "skipped",
+    });
     expect(await db.select().from(meetingsTable)).toHaveLength(1);
   });
 
@@ -102,16 +107,16 @@ describe("ingestVideo", () => {
     db,
     workRoot,
   }) => {
-    const yt = fakeYouTube({
+    const youtube = fakeSite({
       getMetadata: async () => ({
         ...METADATA,
         channelId: "UC_SOMEONE_ELSES_CHANNEL",
       }),
     });
 
-    await expect(ingestVideo(db, VIDEO_ID, { yt, workRoot })).rejects.toThrow(
-      /matches no body's video sources/,
-    );
+    await expect(
+      ingestMeeting(db, VIDEO_ID, { sites: { youtube }, workRoot }),
+    ).rejects.toThrow(/no body's meeting source/);
     expect(await db.select().from(meetingsTable)).toHaveLength(0);
   });
 
@@ -119,16 +124,16 @@ describe("ingestVideo", () => {
     db,
     workRoot,
   }) => {
-    const yt = fakeYouTube({
+    const youtube = fakeSite({
       getMetadata: async () => METADATA,
       ensureAudioDownloaded: async () => {
         throw new Error("network down");
       },
     });
 
-    await expect(ingestVideo(db, VIDEO_ID, { yt, workRoot })).rejects.toThrow(
-      "network down",
-    );
+    await expect(
+      ingestMeeting(db, VIDEO_ID, { sites: { youtube }, workRoot }),
+    ).rejects.toThrow("network down");
     expect(await db.select().from(meetingsTable)).toHaveLength(0);
     expect(await db.select().from(segmentsTable)).toHaveLength(0);
   });
@@ -137,15 +142,19 @@ describe("ingestVideo", () => {
     db,
     workRoot,
   }) => {
-    await seedWorkDir(workRoot, VIDEO_ID);
+    await seedWorkDir(workRoot, `gbos_${VIDEO_ID}`);
 
     // Only metadata is fetched; download/transcribe/diarize must all be
     // skipped because their artifacts exist (download would throw).
-    const yt = fakeYouTube({ getMetadata: async () => METADATA });
+    const youtube = fakeSite({ getMetadata: async () => METADATA });
 
-    const result = await ingestVideo(db, VIDEO_ID, { yt, workRoot });
+    const result = await ingestMeeting(db, VIDEO_ID, {
+      sites: { youtube },
+      workRoot,
+    });
     expect(result).toMatchObject({
-      youtubeId: VIDEO_ID,
+      site: "youtube",
+      siteId: VIDEO_ID,
       status: "ingested",
       segmentCount: 2,
       // Neither the title nor the transcript says when the meeting was.
@@ -154,7 +163,10 @@ describe("ingestVideo", () => {
 
     const [meeting] = await db.select().from(meetingsTable);
     expect(meeting).toMatchObject({
-      youtube_id: VIDEO_ID,
+      site: "youtube",
+      site_id: VIDEO_ID,
+      url: `https://www.youtube.com/watch?v=${VIDEO_ID}`,
+      youtube_id: null,
       title: METADATA.title,
       description: METADATA.description,
       date: null,
@@ -193,8 +205,8 @@ describe("ingestVideo", () => {
     expect(cached).toEqual(TRANSCRIPTION);
 
     // Re-ingesting the same video is a harmless no-op.
-    const again = await ingestVideo(db, VIDEO_ID, {
-      yt: fakeYouTube(),
+    const again = await ingestMeeting(db, VIDEO_ID, {
+      sites: { youtube: fakeSite() },
       workRoot,
     });
     expect(again.status).toBe("skipped");
@@ -211,7 +223,7 @@ describe("ingestVideo", () => {
       // Fake only the network boundary: metadata is canned and "download"
       // symlinks the cached fixture audio. Transcribe/diarize/align/identify
       // run for real.
-      const yt = fakeYouTube({
+      const youtube = fakeSite({
         getMetadata: async () => ({
           ...METADATA,
           id: meeting.youtube_id,
@@ -224,8 +236,8 @@ describe("ingestVideo", () => {
         },
       });
 
-      const result = await ingestVideo(db, meeting.youtube_id, {
-        yt,
+      const result = await ingestMeeting(db, meeting.youtube_id, {
+        sites: { youtube },
         workRoot,
       });
       expect(result.status).toBe("ingested");
@@ -241,34 +253,152 @@ describe("ingestVideo", () => {
   );
 });
 
-describe("ingestVideos", () => {
+describe("which body a meeting belongs to", () => {
+  const AKLEG_ID = "HRES 2018-09-10 14:00:00";
+  const AKLEG_METADATA: VideoMetadata = {
+    id: AKLEG_ID,
+    channelId: "HRES",
+    title: "House RESOURCES - 2018-09-10 14:00:00",
+    description: "Anch LIO AUDITORIUM",
+    durationSecs: 3600,
+    uploadDate: "2018-09-10",
+  };
+
+  test("an akleg.gov meeting is its committee's", async ({ db, workRoot }) => {
+    const hres = await insertBody(db, {
+      name: "House Resources Committee",
+      name_short: "HRES",
+      source: { type: "akleg_committee", committee: "HRES" },
+    });
+    await seedWorkDir(workRoot, "hres_HRES-2018-09-10-14-00-00");
+
+    // A URL names it too; YouTube is never asked.
+    const result = await ingestMeeting(
+      db,
+      "https://www.akleg.gov/basis/Meeting/Detail?Meeting=HRES%202018-09-10%2014:00:00",
+      {
+        sites: {
+          youtube: fakeSite(),
+          akleg: fakeSite({ getMetadata: async () => AKLEG_METADATA }),
+        },
+        workRoot,
+      },
+    );
+    expect(result).toMatchObject({
+      site: "akleg",
+      siteId: AKLEG_ID,
+      status: "ingested",
+      // From the title.
+      when: { date: "2018-09-10", time: "14:00" },
+    });
+    const [meeting] = await db.select().from(meetingsTable);
+    expect(meeting).toMatchObject({
+      body_id: hres,
+      site: "akleg",
+      site_id: AKLEG_ID,
+      url: "https://www.akleg.gov/basis/Meeting/Detail?Meeting=HRES%202018-09-10%2014:00:00",
+    });
+  });
+
+  test("a playlist's meeting needs its body named", async ({
+    db,
+    workRoot,
+  }) => {
+    const council = await insertBody(db, {
+      name: "Town Council",
+      name_short: "TC",
+      source: { type: "youtube_playlist", playlist_id: "PL_COUNCIL" },
+    });
+    await seedWorkDir(workRoot, `tc_${VIDEO_ID}`);
+    const youtube = fakeSite({
+      getMetadata: async () => ({ ...METADATA, channelId: "UC_MOA" }),
+    });
+
+    await expect(
+      ingestMeeting(db, VIDEO_ID, { sites: { youtube }, workRoot }),
+    ).rejects.toThrow(/say which body/);
+
+    const result = await ingestMeeting(
+      db,
+      { ref: VIDEO_ID, body: "tc" },
+      { sites: { youtube }, workRoot },
+    );
+    expect(result.status).toBe("ingested");
+    const [meeting] = await db.select().from(meetingsTable);
+    expect(meeting!.body_id).toBe(council);
+  });
+
+  test("a named body must publish on the meeting's site", async ({
+    db,
+    workRoot,
+  }) => {
+    const youtube = fakeSite({ getMetadata: async () => METADATA });
+    await expect(
+      ingestMeeting(
+        db,
+        { ref: VIDEO_ID, body: "nope" },
+        { sites: { youtube }, workRoot },
+      ),
+    ).rejects.toThrow(/No body with slug "nope"/);
+
+    const akleg = fakeSite({ getMetadata: async () => AKLEG_METADATA });
+    await expect(
+      ingestMeeting(
+        db,
+        { ref: AKLEG_ID, body: "gbos" },
+        { sites: { akleg }, workRoot },
+      ),
+    ).rejects.toThrow(/can't belong to GBOS, whose meetings are on youtube/);
+    expect(await db.select().from(meetingsTable)).toHaveLength(0);
+  });
+});
+
+describe("parseMeetingLines", () => {
+  it("reads `om available`'s lines, whose IDs may hold spaces", () => {
+    expect(
+      parseMeetingLines(
+        "hTKVG_L61ec\tgbos\nHRES 2018-09-10 14:00:00\thres\n\n  xTDznaSElgY \n",
+        "default",
+      ),
+    ).toEqual([
+      { ref: "hTKVG_L61ec", body: "gbos" },
+      { ref: "HRES 2018-09-10 14:00:00", body: "hres" },
+      { ref: "xTDznaSElgY", body: "default" },
+    ]);
+  });
+});
+
+describe("ingestMeetings", () => {
   test("continues past failures and reports every outcome", async ({
     db,
     workRoot,
   }) => {
     const goodId = "good-video";
     const badId = "bad-video";
-    await seedWorkDir(workRoot, goodId);
+    await seedWorkDir(workRoot, `gbos_${goodId}`);
 
-    const yt = fakeYouTube({
+    const youtube = fakeSite({
       getMetadata: async (videoId) => {
         if (videoId === badId) throw new Error("video is private");
         return { ...METADATA, id: goodId };
       },
     });
 
-    const summary = await ingestVideos(db, [badId, goodId], { yt, workRoot });
+    const summary = await ingestMeetings(db, [badId, goodId], {
+      sites: { youtube },
+      workRoot,
+    });
 
     expect(summary.failures).toHaveLength(1);
-    expect(summary.failures[0]!.youtubeId).toBe(badId);
+    expect(summary.failures[0]!.meeting).toEqual({ ref: badId });
     expect(summary.results).toHaveLength(1);
     expect(summary.results[0]).toMatchObject({
-      youtubeId: goodId,
+      siteId: goodId,
       status: "ingested",
     });
     const meetings = await db.select().from(meetingsTable);
     expect(meetings).toHaveLength(1);
-    expect(meetings[0]!.youtube_id).toBe(goodId);
+    expect(meetings[0]!.site_id).toBe(goodId);
   });
 });
 
@@ -277,19 +407,16 @@ describe("listIngested", () => {
     db,
     workRoot,
   }) => {
-    await seedWorkDir(workRoot, VIDEO_ID);
-    const yt = fakeYouTube({ getMetadata: async () => METADATA });
-    await ingestVideo(db, VIDEO_ID, { yt, workRoot });
+    await seedWorkDir(workRoot, `gbos_${VIDEO_ID}`);
+    const youtube = fakeSite({ getMetadata: async () => METADATA });
+    await ingestMeeting(db, VIDEO_ID, { sites: { youtube }, workRoot });
     // An older meeting with no segments.
-    await insertMeeting(
-      db,
-      await goldenGbosId(db),
-      "older-video",
-      "2020-01-01",
-    );
+    await insertMeeting(db, await goldenGbosId(db), "older-video", {
+      date: "2020-01-01",
+    });
 
     const all = await listIngested(db);
-    expect(all.map((m) => m.youtubeId)).toEqual([VIDEO_ID, "older-video"]);
+    expect(all.map((m) => m.siteId)).toEqual([VIDEO_ID, "older-video"]);
     expect(all[0]).toMatchObject({
       body: "gbos",
       title: METADATA.title,
@@ -299,6 +426,6 @@ describe("listIngested", () => {
     expect(all[1]!.segmentCount).toBe(0);
 
     const filtered = await listIngested(db, ["older-video", "not-ingested"]);
-    expect(filtered.map((m) => m.youtubeId)).toEqual(["older-video"]);
+    expect(filtered.map((m) => m.siteId)).toEqual(["older-video"]);
   });
 });

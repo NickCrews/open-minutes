@@ -87,7 +87,7 @@ The datasets are:
   meetings' full transcripts, chapters and people. Voiceprints are
   placeholders.
 - **`golden`**: only the hand-verified rows from
-  `packages/fixtures/test-data/` (jurisdictions, bodies, video sources).
+  `packages/fixtures/test-data/` (jurisdictions, and bodies with their meeting sources).
 
 [`dbranch.config.ts`](../../dbranch.config.ts) at the repository root lists the
 datasets `--data` can name and picks the default, so `@open-minutes/db` imports

@@ -17,7 +17,7 @@ const test = dbTest({ data: devData });
 describe("devData", () => {
   test("seeds every golden meeting, with transcripts", async ({ db }) => {
     const meetings = await db.select().from(meetingsTable);
-    expect(meetings.map((m) => m.youtube_id).sort()).toEqual(
+    expect(meetings.map((m) => m.site_id).sort()).toEqual(
       snapshot.meetings.map((m) => m.youtube_id).sort(),
     );
     expect(meetings.map((m) => m.slug).sort()).toEqual(
@@ -49,7 +49,7 @@ describe("devData", () => {
   }) => {
     const [row] = await db
       .insert(meetingsTable)
-      .values({ body_id: 1, youtube_id: "new-one" })
+      .values({ body_id: 1, site: "youtube", site_id: "new-one" })
       .returning({ id: meetingsTable.id });
     expect(row!.id).toBe(snapshot.meetings.length + 1);
   });

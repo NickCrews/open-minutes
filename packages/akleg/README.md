@@ -6,12 +6,15 @@ Where Open Minutes gets meetings published by the Alaska Legislature on
 meetings, and implements `@open-minutes/core`'s `AudioProvider` for a
 meeting: its metadata, and its audio as 16 kHz mono WAV. It knows nothing about
 the database or what happens to the audio next. `aklegSource({ committee:
-"HRES" })` is a committee as a body's video source: core's `VideoLister`,
+"HRES" })` is a committee as a body's meeting source
+(`{"type":"akleg_committee","committee":"HRES"}`): core's `VideoLister`,
 which `om available` takes.
 
-**Status: prototype.** The pipeline doesn't use it yet. See
-[docs/research/akleg.md](../../docs/research/akleg.md) for how akleg.gov
-publishes meetings, how to play them on our site, and what's left to do.
+`om available` and `om ingest` use it for bodies whose meeting source is a
+committee; their meetings are stored with `site` `akleg`. The site's player
+can't play them yet. See [docs/research/akleg.md](../../docs/research/akleg.md)
+for how akleg.gov publishes meetings, how to play them on our site, and
+what's left to do.
 
 ## Metadata
 

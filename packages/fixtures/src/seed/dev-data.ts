@@ -11,7 +11,6 @@ import {
   meetingsTable,
   peopleTable,
   segmentsTable,
-  videoSourcesTable,
 } from "@open-minutes/db";
 import type { DataState } from "@open-minutes/db/ensure";
 import { LAST_WORD_DURATION_SEC } from "@open-minutes/core/transcription";
@@ -30,7 +29,9 @@ import { advanceIdSequences } from "./sequences";
 
 // Bump when the seeder's behavior changes in a way the fixture files don't
 // capture.
-const DEV_SEED_VERSION = 3; // 2: seeds chapters; 3: seeds meeting slugs
+// 2: seeds chapters; 3: seeds meeting slugs; 4: bodies' meeting sources
+// replace video_sources, and meetings are on sites
+const DEV_SEED_VERSION = 4;
 
 // Every table the dev seeder owns. Truncated together (children would cascade
 // anyway); listing them keeps the footprint visible.
@@ -40,7 +41,6 @@ const DEV_TABLES = [
   segmentsTable,
   meetingsTable,
   peopleTable,
-  videoSourcesTable,
   bodiesTable,
   jurisdictionsTable,
 ];
@@ -89,15 +89,14 @@ export async function seedDevDatabase(db: DB): Promise<DevSeedSummary> {
   const meetings = snapshot.meetings.map((m, i) => {
     const bodyId = mapped.bodyIdByKey.get(m.body_id);
     if (bodyId === undefined)
-      throw new Error(
-        `Meeting ${m.youtube_id} has unknown body "${m.body_id}"`,
-      );
+      throw new Error(`Meeting ${m.slug} has unknown body "${m.body_id}"`);
     const lastWord = m.segments.flatMap((s) => s.words).at(-1);
     return {
       id: i + 1,
       slug: m.slug,
       body_id: bodyId,
-      youtube_id: m.youtube_id,
+      site: "youtube" as const,
+      site_id: m.youtube_id,
       title: m.title,
       date: m.date,
       time: m.time,
@@ -157,8 +156,6 @@ export async function seedDevDatabase(db: DB): Promise<DevSeedSummary> {
     await tx.execute(sql`TRUNCATE TABLE ${tables} RESTART IDENTITY CASCADE`);
     await tx.insert(jurisdictionsTable).values(mapped.jurisdictions);
     await tx.insert(bodiesTable).values(mapped.bodies);
-    if (mapped.videoSources.length)
-      await tx.insert(videoSourcesTable).values(mapped.videoSources);
     await tx.insert(peopleTable).values(people);
     await tx.insert(meetingsTable).values(meetings);
     for (let i = 0; i < segments.length; i += INSERT_CHUNK) {
@@ -174,7 +171,6 @@ export async function seedDevDatabase(db: DB): Promise<DevSeedSummary> {
     return {
       jurisdictions: mapped.jurisdictions.length,
       bodies: mapped.bodies.length,
-      video_sources: mapped.videoSources.length,
       people: people.length,
       meetings: meetings.length,
       segments: segments.length,

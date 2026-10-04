@@ -9,8 +9,8 @@ import { getMeetingData } from "@open-minutes/fixtures/test-data";
 import type { GoldenSegment } from "@open-minutes/fixtures/psv";
 import { compareTranscripts } from "@open-minutes/core/transcription";
 import { goldenMeetingsData } from "../seed/golden-meetings-data";
-import { GOLDEN_GBOS, fakeYouTube } from "./testing";
-import { ingestVideo } from "./ingest";
+import { GOLDEN_GBOS, fakeSite } from "./testing";
+import { ingestMeeting } from "./ingest";
 import { getMeetingAudio } from "../test-utils/audio-cache";
 
 // End-to-end cross-meeting speaker recognition.
@@ -79,7 +79,7 @@ describe("e2e cross-meeting speaker recognition", () => {
       //    but never the golden's labels.
       const held = getMeetingData(HELD_OUT_SLUG);
       const heldAudio = await getMeetingAudio(held);
-      const yt = fakeYouTube({
+      const youtube = fakeSite({
         getMetadata: async (id: string) => ({
           id,
           channelId: GOLDEN_GBOS.channelId,
@@ -93,8 +93,8 @@ describe("e2e cross-meeting speaker recognition", () => {
           return { downloaded: true };
         },
       });
-      const result = await ingestVideo(db, held.youtube_id, {
-        yt,
+      const result = await ingestMeeting(db, held.youtube_id, {
+        sites: { youtube },
         workRoot: E2E_WORK_ROOT,
       });
       if (result.status !== "ingested") {

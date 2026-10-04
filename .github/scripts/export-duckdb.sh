@@ -25,7 +25,6 @@ ATTACH '${DATABASE_URL//\'/\'\'}' AS pg (TYPE postgres, READ_ONLY);
 -- keeps each column's min and max per row group), even read over HTTP.
 CREATE TABLE jurisdictions AS FROM pg.public.jurisdictions ORDER BY id;
 CREATE TABLE bodies AS FROM pg.public.bodies ORDER BY id;
-CREATE TABLE video_sources AS FROM pg.public.video_sources ORDER BY id;
 CREATE TABLE meetings AS FROM pg.public.meetings ORDER BY id;
 -- DuckDB reads pgvector's vector as text, e.g. "[0.1,-0.2,...]".
 CREATE TABLE people AS

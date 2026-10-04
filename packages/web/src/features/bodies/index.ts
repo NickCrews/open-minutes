@@ -50,7 +50,6 @@ export function getBodyById(db: DB, bodyId: number) {
       where: { id: bodyId },
       with: {
         jurisdiction: true,
-        videoSources: true,
         meetings: {
           orderBy: { date: "desc", time: "desc" },
         },

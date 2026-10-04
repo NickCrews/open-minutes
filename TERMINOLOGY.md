@@ -21,9 +21,13 @@ _Avoid_: muni, board, council, committee, organization, group
 A body's short lowercased name, such as `gbos`, used to refer to it on the command line and in file paths.
 _Avoid_: muni slug, body id, short name
 
-**Video source**:
-A YouTube channel or playlist that is scanned for a body's meeting videos. A body may have several, and one channel may serve several bodies.
-_Avoid_: feed, playlist, channel (unless it really is one)
+**Meeting source**:
+Where a body's meetings are published, scanned for new ones: a YouTube channel or playlist, or an Alaska Legislature committee on akleg.gov. A body has at most one; bodies that share a YouTube channel each get a playlist on it.
+_Avoid_: video source, feed, playlist, channel (unless it really is one)
+
+**Site**:
+A website meetings are published on, YouTube or akleg.gov, from which we get a meeting's metadata and audio. A meeting has an ID on its site: a YouTube video ID, or an akleg.gov meeting ID like `HRES 2018-09-10 14:00:00`.
+_Avoid_: platform, provider, host
 
 ### Meetings and transcripts
 
@@ -36,7 +40,7 @@ A golden fixture meeting's stable, unique handle, such as `gbos-2026-03-23` (its
 _Avoid_: fixture name, meeting key
 
 **Video**:
-The YouTube recording of a meeting, from which its audio comes.
+The YouTube recording of a meeting, from which its audio comes. An akleg.gov meeting has an audio recording, which is what we transcribe, and usually a video too.
 _Avoid_: stream, clip, media
 
 **Meeting date**:
@@ -141,12 +145,12 @@ _Avoid_: identification, matching, labeling
 ### Pipeline
 
 **Ingestion**:
-Running one video through transcription, diarization, alignment, and recognition, then storing the meeting and its segments all at once.
+Running one meeting's recording through transcription, diarization, alignment, and recognition, then storing the meeting and its segments all at once.
 _Avoid_: import, processing, scraping, sync
 
-**Available video**:
-A video on one of a body's video sources that hasn't been ingested yet.
-_Avoid_: new video, pending video, backlog
+**Available meeting**:
+A meeting on a body's meeting source that hasn't been ingested yet.
+_Avoid_: available video, new video, pending video, backlog
 
 **Transcription**:
 The stage that turns audio into words with onsets. The process, not the artifact; that's the transcript.

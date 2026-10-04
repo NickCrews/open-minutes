@@ -45,14 +45,14 @@ the ones listed above it:
   metadata and audio, with yt-dlp or from the object store (see below), and
   decodes YouTube's Opus audio to WAV. See the
   [youtube README](packages/youtube/README.md).
-- **[`packages/akleg`](packages/akleg)** (`@open-minutes/akleg`): a prototype
-  source for the Alaska Legislature's meetings on akleg.gov, a peer of the
-  YouTube source. It lists a committee's recorded meetings and gets a
-  meeting's metadata and audio, decoding its MP3 to WAV. Not yet used by the
-  pipeline. See the [akleg README](packages/akleg/README.md).
+- **[`packages/akleg`](packages/akleg)** (`@open-minutes/akleg`): the source
+  for the Alaska Legislature's meetings on akleg.gov, a peer of the YouTube
+  source. It lists a committee's recorded meetings and gets a meeting's
+  metadata and audio, decoding its MP3 to WAV. See the
+  [akleg README](packages/akleg/README.md).
 - **[`packages/ingest`](packages/ingest)** (`@open-minutes/ingest`): the
   offline ingestion pipeline. It gets a meeting's audio from
-  `@open-minutes/youtube`, runs it through `@open-minutes/audio`, aligns turns to words, recognizes speakers
+  `@open-minutes/youtube` or `@open-minutes/akleg`, runs it through `@open-minutes/audio`, aligns turns to words, recognizes speakers
   against known voiceprints, and writes the meeting to the database. See the
   [ingest README](packages/ingest/README.md).
 - **[`packages/agents`](packages/agents)** (`@open-minutes/agents`): the
@@ -71,15 +71,17 @@ Docker via [`docker-compose.yml`](docker-compose.yml). Production is on
 [Neon](https://neon.tech), which the Worker reaches over Neon's HTTP driver
 (Workers can't open raw TCP sockets).
 
-**Data model:** **jurisdictions** contain **bodies**, each with one or more
-YouTube **video sources**. **Meetings** belong to a body, and each meeting's
+**Data model:** **jurisdictions** contain **bodies**, each with at most one
+**meeting source** (a YouTube channel or playlist, or an akleg.gov
+committee) that is scanned for new meetings. **Meetings** belong to a body,
+and record the site they were published on (YouTube or akleg.gov), and each meeting's
 transcript is a sequence of **segments** (a run of words by one speaker, with
 word-level onsets). Segments are attributed to **people**, who carry a
 voiceprint so they can be recognized in later meetings. A meeting may also have
 **chapters**, a table of contents of titled time ranges (see
 [docs/chapters.md](docs/chapters.md)). See
 [`packages/db/src/schema.ts`](packages/db/src/schema.ts). The configured
-bodies and video sources live in
+bodies and their meeting sources live in
 [`packages/fixtures/test-data/`](packages/fixtures/test-data/); adding a body
 means adding rows there.
 
@@ -203,8 +205,8 @@ tests, then run `pnpm fixtures:clean` and review the golden diff.
 
 ```sh
 pnpm om status          # meetings already ingested
-pnpm om available       # videos not yet ingested
-pnpm om ingest <id>     # run the full pipeline for a video
+pnpm om available       # meetings not yet ingested, on bodies' meeting sources
+pnpm om ingest <id>     # run the full pipeline for a meeting
 pnpm om models          # download every ML model up front (~650MB)
 ```
 

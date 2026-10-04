@@ -1,11 +1,6 @@
 import { createHash } from "node:crypto";
 import { sql } from "drizzle-orm";
-import {
-  type DB,
-  bodiesTable,
-  jurisdictionsTable,
-  videoSourcesTable,
-} from "@open-minutes/db";
+import { type DB, bodiesTable, jurisdictionsTable } from "@open-minutes/db";
 import type { DataState } from "@open-minutes/db/ensure";
 import { loadAllTestData } from "../test-data";
 import { mapSnapshot } from "./map";
@@ -17,12 +12,14 @@ import { advanceIdSequences } from "./sequences";
 
 // Bump when seedGolden's behavior changes in a way the rows below don't
 // capture (e.g. it starts seeding another table from the same snapshot).
-const SEED_VERSION = 2; // 2: advances id sequences past the seeded rows
+// 2: advances id sequences past the seeded rows; 3: bodies' meeting sources
+// replace video_sources
+const SEED_VERSION = 3;
 
 // Tables the golden seeder owns, parents before children. `TRUNCATE ...
 // CASCADE` already clears dependent rows, but listing the seeded tables
 // explicitly keeps the seeder's footprint visible.
-const SEEDED_TABLES = [jurisdictionsTable, bodiesTable, videoSourcesTable];
+const SEEDED_TABLES = [jurisdictionsTable, bodiesTable];
 
 /**
  * Replace the contents of the seeded tables with the `test-data/` snapshot, in
@@ -39,7 +36,6 @@ async function seedGolden(db: DB): Promise<void> {
     await tx.execute(sql`TRUNCATE TABLE ${tables} RESTART IDENTITY CASCADE`);
     await tx.insert(jurisdictionsTable).values(mapped.jurisdictions);
     await tx.insert(bodiesTable).values(mapped.bodies);
-    await tx.insert(videoSourcesTable).values(mapped.videoSources);
     await advanceIdSequences(tx, SEEDED_TABLES);
   });
 }
@@ -47,17 +43,14 @@ async function seedGolden(db: DB): Promise<void> {
 let fingerprint: string | undefined;
 
 function computeFingerprint(): string {
-  const { jurisdictions, bodies, videoSources } =
-    mapSnapshot(loadAllTestData());
+  const { jurisdictions, bodies } = mapSnapshot(loadAllTestData());
   return createHash("sha256")
-    .update(
-      JSON.stringify({ SEED_VERSION, jurisdictions, bodies, videoSources }),
-    )
+    .update(JSON.stringify({ SEED_VERSION, jurisdictions, bodies }))
     .digest("hex")
     .slice(0, 12);
 }
 
-/** The jurisdictions, bodies, and video sources from `test-data/`. */
+/** The jurisdictions and bodies (with their meeting sources) from `test-data/`. */
 export const goldenData: DataState = {
   name: "golden",
   get fingerprint() {

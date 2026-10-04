@@ -9,6 +9,7 @@ import {
   LAST_WORD_DURATION_SEC,
   type TranscriptWord,
 } from "@open-minutes/core/transcription";
+import { youtubeIdOf } from "@open-minutes/core/meeting-source";
 import { findMeeting, type MeetingRef } from "../meeting-ref";
 import { type Db, ToolError } from "../tool";
 
@@ -71,8 +72,12 @@ export async function openMeeting(
 
 async function loadFromDb(db: Db, ref: MeetingRef) {
   const meeting = await findMeeting(db, ref);
-  if (!meeting.youtubeId)
-    throw new ToolError(`Meeting ${ref} has no YouTube video`);
+  // The audio cache only knows YouTube's audio.
+  const youtubeId = youtubeIdOf(meeting);
+  if (!youtubeId)
+    throw new ToolError(
+      `Meeting ${ref} is on ${meeting.site}; the audio tools only work with YouTube meetings`,
+    );
   const rows = await db
     .select({
       id: segmentsTable.id,
@@ -94,7 +99,7 @@ async function loadFromDb(db: Db, ref: MeetingRef) {
           : "unattributed";
     return toLabeled(r.id, label, r.words);
   });
-  return { youtubeId: meeting.youtubeId, segments };
+  return { youtubeId, segments };
 }
 
 export function toLabeled(

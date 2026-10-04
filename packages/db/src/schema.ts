@@ -19,6 +19,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { N_DIMENSIONS as VOICE_N_DIMENSIONS } from "@open-minutes/core/voice_embeddings";
 import { TranscriptWord } from "@open-minutes/core/transcription";
+import type { MeetingSource, Site } from "@open-minutes/core/meeting-source";
 
 const secondsInterval = () => interval({ fields: "second", precision: 3 });
 
@@ -42,27 +43,42 @@ export const jurisdictionsTable = pgTable("jurisdictions", {
  * not off the jurisdiction — one jurisdiction has many, and they are what a
  * reader browses by.
  */
-export const bodiesTable = pgTable("bodies", {
-  id: serial().primaryKey(),
-  jurisdiction_id: integer()
-    .notNull()
-    .references(() => jurisdictionsTable.id),
-  name: varchar().notNull().default(""),
-  name_short: varchar().notNull().default(""),
-  homepage_url: varchar(),
-  // IANA zone the body meets in, eg "America/Anchorage". A meeting's `date` and
-  // `time` are wall-clock readings in this zone (see ADR 0004); this is what
-  // would turn one into an instant, should anything ever need one.
-  timezone: varchar().notNull(),
-  created_at: timestamp().notNull().defaultNow(),
-});
+export const bodiesTable = pgTable(
+  "bodies",
+  {
+    id: serial().primaryKey(),
+    jurisdiction_id: integer()
+      .notNull()
+      .references(() => jurisdictionsTable.id),
+    name: varchar().notNull().default(""),
+    name_short: varchar().notNull().default(""),
+    homepage_url: varchar(),
+    // IANA zone the body meets in, eg "America/Anchorage". A meeting's `date` and
+    // `time` are wall-clock readings in this zone (see ADR 0004); this is what
+    // would turn one into an instant, should anything ever need one.
+    timezone: varchar().notNull(),
+    // Where the body's meetings are published, which `om available` scans for
+    // new ones: a YouTube channel or playlist, or an akleg.gov committee (see
+    // MeetingSource for the shapes). Null for a body nobody scans.
+    meeting_source: jsonb().$type<MeetingSource>(),
+    created_at: timestamp().notNull().defaultNow(),
+  },
+  (table) => [
+    check(
+      "bodies_meeting_source_valid",
+      sql`${table.meeting_source} IS NULL OR coalesce(CASE ${table.meeting_source}->>'type'
+      WHEN 'youtube_channel' THEN jsonb_typeof(${table.meeting_source}->'channel_id') = 'string'
+      WHEN 'youtube_playlist' THEN jsonb_typeof(${table.meeting_source}->'playlist_id') = 'string'
+      WHEN 'akleg_committee' THEN jsonb_typeof(${table.meeting_source}->'committee') = 'string'
+      ELSE false END, false)`,
+    ),
+  ],
+);
 
 /**
- * Where a body's video comes from. Deliberately not a column on `bodies`,
- * because neither direction of that relationship is one-to-one: the MOA channel
- * carries the Assembly, P&Z and the school board mixed together, and a single
- * body may be spread across a channel plus several playlists. Ingestion uses
- * the source a video was found under to decide which body it belongs to.
+ * @deprecated Replaced by `bodies.meeting_source`, and no longer read or
+ * written. Kept only so the code deployed before it briefly runs on the new
+ * schema (see docs/contributing/db.md); drop it in a later migration.
  */
 export const videoSourcesTable = pgTable("video_sources", {
   id: serial().primaryKey(),
@@ -97,13 +113,36 @@ export const meetingsTable = pgTable(
     body_id: integer()
       .notNull()
       .references(() => bodiesTable.id),
-    youtube_id: varchar().notNull().default("").unique(),
+    // The site the meeting was published on, and its ID there: a YouTube
+    // video ID, or an akleg.gov meeting ID ("HRES 2018-09-10 14:00:00"). The
+    // audio we transcribed came from there, so transcript times are seconds
+    // into its recording.
+    site: varchar().$type<Site>().notNull(),
+    site_id: varchar().notNull(),
+    // The meeting's page on its site.
+    url: varchar()
+      .notNull()
+      .generatedAlwaysAs(
+        (): SQL =>
+          sql`CASE ${meetingsTable.site}
+            WHEN 'youtube' THEN 'https://www.youtube.com/watch?v=' || ${meetingsTable.site_id}
+            WHEN 'akleg' THEN 'https://www.akleg.gov/basis/Meeting/Detail?Meeting=' || replace(replace(${meetingsTable.site_id}, '&', '%26'), ' ', '%20')
+          END`,
+      ),
+    /**
+     * @deprecated Replaced by `site` and `site_id`, and no longer read or
+     * written. Kept, with `youtube_url`, only so the code deployed before it
+     * briefly runs on the new schema (see docs/contributing/db.md); drop both
+     * in a later migration.
+     */
+    youtube_id: varchar().unique(),
+    /** @deprecated See `youtube_id`. */
     youtube_url: varchar().generatedAlwaysAs(
       (): SQL =>
         sql`CASE WHEN ${meetingsTable.youtube_id} != '' THEN 'https://www.youtube.com/watch?v=' || ${meetingsTable.youtube_id} ELSE '' END`,
     ),
     title: varchar().notNull().default(""),
-    // Free text from the video source, copied verbatim at ingest: the YouTube
+    // Free text from the meeting's site, copied verbatim at ingest: the YouTube
     // video description, or the room for akleg.gov meetings. Written by the
     // publisher, never generated by us.
     description: varchar().notNull().default(""),
@@ -126,6 +165,8 @@ export const meetingsTable = pgTable(
       sql`${table.time} IS NULL OR ${table.date} IS NOT NULL`,
     ),
     check("meetings_slug_not_numeric", sql`${table.slug} !~ '^[0-9]+$'`),
+    check("meetings_site_known", sql`${table.site} IN ('youtube', 'akleg')`),
+    unique("meetings_site_site_id_unique").on(table.site, table.site_id),
   ],
 );
 

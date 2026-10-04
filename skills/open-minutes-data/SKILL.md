@@ -54,7 +54,7 @@ If a download is blocked, tell the person which website needs to be allowed:
 | ------------------ | --------------------------------------------------------------- | ----------------------------------------------------------------------------- |
 | `jurisdictions`    | government, e.g. the Municipality of Anchorage                  | `name`, `state`                                                               |
 | `bodies`           | group that holds meetings, e.g. the Anchorage Assembly          | `jurisdiction_id`, `name`, `name_short`, `timezone`                           |
-| `meetings`         | recorded meeting                                                | `body_id`, `title`, `date`, `time`, `youtube_id`, `duration_secs`             |
+| `meetings`         | recorded meeting                                                | `body_id`, `title`, `date`, `time`, `url`, `duration_secs`                    |
 | `segments`         | stretch of one person talking                                   | `meeting_id`, `person_id`, `speaker_number`, `text`, `start_secs`, `end_secs` |
 | `people`           | person who speaks in meetings                                   | `name`, `bio`, `voice_embedding`                                              |
 | `chapters`         | section of a meeting, usually one agenda item or public comment | `meeting_id`, `start_secs`, `end_secs`, `title`, `summary`, `bullets`         |
@@ -65,8 +65,7 @@ Joins: `meetings.body_id → bodies.id`, `bodies.jurisdiction_id →
 jurisdictions.id`, and `segments.meeting_id`/`chapters.meeting_id →
 meetings.id`, `segments.person_id → people.id`.
 
-There are also `video_sources` and `chapter_generations`, which you'll rarely
-need.
+There's also `chapter_generations`, which you'll rarely need.
 
 Things to know:
 
@@ -76,9 +75,14 @@ Things to know:
 - **Dates** are local to where the meeting was held. `time` is null when the
   start time isn't known, and `date` can be null too. Fall back on the
   meeting's `title`, which usually has the date in it.
+- **Where a meeting was published**: `site` is `youtube` or `akleg` (the
+  Alaska Legislature's akleg.gov), `site_id` is its ID there (a YouTube video
+  ID, or an akleg.gov meeting ID like `HRES 2018-09-10 14:00:00`), and `url`
+  is its page there. Ignore `youtube_id` and `youtube_url`, which are on their
+  way out and empty for newer meetings.
 - **Times within a meeting** (`start_secs`, `end_secs`, `duration_secs`) are
-  `INTERVAL`s from the start of the video. `epoch(start_secs)` gives seconds as
-  a number.
+  `INTERVAL`s from the start of its recording. `epoch(start_secs)` gives
+  seconds as a number.
 - **Speakers**: a segment's `person_id` points to a person, but many people
   don't have a `name` yet. If `person_id` is null, `speaker_number` tells
   apart the voices within that one meeting ("speaker 3"). Call an unnamed
@@ -98,8 +102,8 @@ Always give the person a way to check what you tell them:
 
 - On Open Minutes, at that moment:
   `https://open-minutes.nicholas-b-crews.workers.dev/meetings/<meeting id>?t=<seconds>`
-- On YouTube, at that moment:
-  `https://www.youtube.com/watch?v=<youtube_id>&t=<seconds>s`
+- Where it was published: the meeting's `url`. For a YouTube meeting, add
+  `&t=<seconds>s` to it to start at that moment.
 - A person's page, with everything they said:
   `https://open-minutes.nicholas-b-crews.workers.dev/people/<person id>`
 
@@ -124,7 +128,7 @@ because the transcript may phrase it differently than the person did:
 ```sql
 SELECT m.id AS meeting_id, m.date, b.name_short AS body,
        coalesce(p.name, 'unidentified speaker') AS speaker,
-       epoch(s.start_secs)::int AS t, m.youtube_id, left(s.text, 300) AS text
+       epoch(s.start_secs)::int AS t, m.url, left(s.text, 300) AS text
 FROM segments s
 JOIN meetings m ON m.id = s.meeting_id
 JOIN bodies b ON b.id = m.body_id

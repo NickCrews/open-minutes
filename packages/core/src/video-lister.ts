@@ -1,8 +1,7 @@
 /**
- * One of a body's video sources on some site (a YouTube channel or playlist, a
- * Vimeo showcase, a legislature's video archive...), as `om available` sees
- * it: the videos it lists. Each site has its own constructor taking whatever
- * identifies a source there (see @open-minutes/youtube's `youtubeSource`), so
+ * A body's meeting source on some site (a YouTube channel or playlist, an
+ * akleg.gov committee...), as `om available` sees it: the videos it lists.
+ * Each site has its own constructor taking whatever identifies a source there (see @open-minutes/youtube's `youtubeSource`), so
  * discovering new meetings doesn't care which site, and tests can pass a fake.
  * Getting a listed video's metadata and audio is `AudioProvider`'s job (see
  * ./audio-provider).

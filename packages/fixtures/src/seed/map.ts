@@ -1,18 +1,12 @@
-import {
-  bodiesTable,
-  jurisdictionsTable,
-  videoSourcesTable,
-} from "@open-minutes/db";
+import { bodiesTable, jurisdictionsTable } from "@open-minutes/db";
 import type { TestData } from "../test-data";
 
 type JurisdictionInsert = typeof jurisdictionsTable.$inferInsert;
 type BodyInsert = typeof bodiesTable.$inferInsert;
-type VideoSourceInsert = typeof videoSourcesTable.$inferInsert;
 
 export interface MappedRows {
   jurisdictions: JurisdictionInsert[];
   bodies: BodyInsert[];
-  videoSources: VideoSourceInsert[];
   /**
    * Resolves a snapshot body id (e.g. "gbos") to its assigned serial primary
    * key. This is the seam later slices use to wire up foreign keys (meetings →
@@ -46,7 +40,6 @@ export function mapSnapshot(data: TestData): MappedRows {
   });
 
   const bodyIdByKey = new Map<string, number>();
-  const videoSources: VideoSourceInsert[] = [];
   const bodies = data.bodies.map((b, i): BodyInsert => {
     const id = i + 1;
     bodyIdByKey.set(b.id, id);
@@ -55,22 +48,15 @@ export function mapSnapshot(data: TestData): MappedRows {
       throw new Error(
         `Body "${b.id}" references unknown jurisdiction "${b.jurisdiction_id}"`,
       );
-    for (const source of b.video_sources) {
-      videoSources.push({
-        id: videoSources.length + 1,
-        body_id: id,
-        kind: source.kind,
-        youtube_id: source.youtube_id,
-      });
-    }
     return {
       id,
       jurisdiction_id: jurisdictionId,
       name: b.name,
       name_short: b.name_short,
       timezone: b.timezone,
+      meeting_source: b.meeting_source ?? null,
     };
   });
 
-  return { jurisdictions, bodies, videoSources, bodyIdByKey };
+  return { jurisdictions, bodies, bodyIdByKey };
 }

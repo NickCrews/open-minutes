@@ -24,7 +24,7 @@ process.stdout.on("error", (error: NodeJS.ErrnoException) => {
 });
 import { getDb, resolveDatabaseUrl, type DB } from "@open-minutes/db";
 import { prepareDatabase } from "@open-minutes/db/ensure";
-import type { IngestedMeeting } from "@open-minutes/ingest/om";
+import type { IngestedMeeting, MeetingToIngest } from "@open-minutes/ingest/om";
 import { runTools } from "./tools";
 
 // Ingestion and the model downloads are heavy, so they are imported only by
@@ -50,7 +50,8 @@ const status = defineCommand({
     name: "status",
     description:
       "List the meetings ingested in the current database. " +
-      "Pass YouTube video IDs to filter to just those.",
+      "Pass meetings' IDs on their sites (YouTube video IDs, akleg.gov " +
+      "meeting IDs) to filter to just those.",
   },
   args: {
     json: {
@@ -77,13 +78,14 @@ const status = defineCommand({
 
 function printStatusTable(meetings: IngestedMeeting[]): void {
   const rows = meetings.map((m) => [
-    m.youtubeId,
+    m.site,
+    m.siteId,
     m.body,
     m.date ?? "",
     String(m.segmentCount),
     m.title,
   ]);
-  const header = ["VIDEO", "BODY", "DATE", "SEGMENTS", "TITLE"];
+  const header = ["SITE", "ID", "BODY", "DATE", "SEGMENTS", "TITLE"];
   const widths = header.map((h, col) =>
     Math.max(h.length, ...rows.map((r) => r[col]!.length)),
   );
@@ -102,8 +104,9 @@ const available = defineCommand({
   meta: {
     name: "available",
     description:
-      "Print the YouTube video IDs on bodies' video sources that are not yet " +
-      "in the database, one per line, newest first",
+      "Print the meetings on bodies' meeting sources that are not yet in " +
+      "the database, one per line as `<id>\t<body slug>`, each body's " +
+      "newest first. `om ingest` reads this.",
   },
   args: {
     body: {
@@ -114,9 +117,9 @@ const available = defineCommand({
   async run({ args }) {
     const { listAvailable } = await ingestApi();
     await withDb(async (db) => {
-      const ids = await listAvailable(db, { body: args.body });
-      for (const id of ids) {
-        console.log(id);
+      const meetings = await listAvailable(db, { body: args.body });
+      for (const { siteId, body } of meetings) {
+        console.log(`${siteId}\t${body}`);
       }
     });
   },
@@ -127,31 +130,45 @@ const ingest = defineCommand({
     name: "ingest",
     description:
       "Run the full pipeline (download → transcribe → clean → diarize → " +
-      "align → identify) for each video ID from args and/or stdin, and commit each " +
-      "meeting to the database",
+      "align → identify) for each meeting, and commit it to the database. " +
+      "Meetings are YouTube video IDs or URLs, or akleg.gov meeting IDs or " +
+      "URLs, as arguments, or on stdin one per line as `om available` " +
+      "prints them: `<id>[\t<body slug>]`.",
   },
-  args: {},
+  args: {
+    body: {
+      type: "string",
+      description:
+        "The slug of the body the meetings belong to. Needed when it's not " +
+        "the body whose meeting source is the meeting's YouTube channel or " +
+        "akleg.gov committee, eg when the source is a playlist",
+    },
+  },
   async run({ args }) {
-    let ids = args._;
-    if (ids.length === 0) {
-      ids = (await readStdin()).split(/\s+/).filter(Boolean);
+    let meetings: MeetingToIngest[] = args._.map((ref) => ({
+      ref,
+      body: args.body,
+    }));
+    if (meetings.length === 0) {
+      const { parseMeetingLines } = await ingestApi();
+      meetings = parseMeetingLines(await readStdin(), args.body);
     }
-    if (ids.length === 0) {
+    if (meetings.length === 0) {
       throw new Error(
-        "No video IDs given. Pass them as arguments or pipe them to stdin " +
+        "No meetings given. Pass them as arguments or pipe them to stdin " +
           "(eg `om available | head -5 | om ingest`).",
       );
     }
-    const { ingestVideos } = await ingestApi();
+    const { ingestMeetings } = await ingestApi();
     await withDb(async (db) => {
-      const { results, failures } = await ingestVideos(db, ids);
+      const { results, failures } = await ingestMeetings(db, meetings);
       for (const result of results) {
-        if (result.status === "ingested") console.log(result.youtubeId);
+        if (result.status === "ingested") console.log(result.siteId);
       }
       const ingested = results.filter((r) => r.status === "ingested").length;
       const skipped = results.filter((r) => r.status === "skipped").length;
       console.error(
-        `Ingested ${ingested}, skipped ${skipped}, failed ${failures.length} of ${ids.length} video(s)`,
+        `Ingested ${ingested}, skipped ${skipped}, failed ${failures.length} of ${meetings.length} meeting(s)`,
       );
       if (failures.length > 0) {
         process.exitCode = 1;
