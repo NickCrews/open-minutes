@@ -199,15 +199,18 @@ Beyond the player, the database and pipeline assume YouTube:
 
 - `video_sources` holds `youtube_id` with kind `channel` or `playlist`. An
   akleg.gov source is a committee (`HRES`); the Legislature number follows
-  from the date, so `om available` can query the current Legislature (and the
+  from the date, so `om available` can list the current Legislature (and the
   previous one, early in a new one).
+- `om available` already builds each source's lister with `sourceFor(row)`;
+  an akleg.gov row would map to `aklegSource({ committee })`, which
+  implements core's `VideoLister`.
 - `meetings.youtube_id` and the generated `youtube_url` would need a
   source-neutral ID (`HRES 2018-09-10 14:00:00`) and media URL columns.
-- `om ingest` and `om available` take a `YouTube` and would pick the provider
-  by the body's source.
+- `om ingest` takes a `YouTube` and would pick the `AudioProvider` by the
+  body's source.
 - The meeting's date and time come from its ID, so `resolveMeetingDateTime`
-  finds them in the title the prototype builds (`House RESOURCES -
-2018-09-10 14:00:00`) without reading the transcript.
+  finds them in the title the prototype builds, eg
+  `House RESOURCES - 2018-09-10 14:00:00`, without reading the transcript.
 
 ## Not in the API
 

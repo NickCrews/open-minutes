@@ -5,12 +5,14 @@ import type {
   AudioProvider,
   VideoMetadata,
 } from "@open-minutes/core/audio-provider";
+import type { VideoLister } from "@open-minutes/core/video-lister";
 import { mp3ToWav } from "./mp3";
 
 export type {
   AudioProvider,
   VideoMetadata,
 } from "@open-minutes/core/audio-provider";
+export type { ListedVideo, VideoLister } from "@open-minutes/core/video-lister";
 
 const BASE = "https://www.akleg.gov";
 
@@ -316,6 +318,38 @@ export function akleg(config: AkLegConfig = {}): AkLeg {
       // Decoded as it downloads; see mp3ToWav.
       await mp3ToWav(chunksOf(res.body), path);
       return { downloaded: true };
+    },
+  };
+}
+
+/** One committee's meetings on akleg.gov, as a body's video source. */
+export interface AkLegSource {
+  /** The chamber and committee code, as in meeting IDs ("HRES"). */
+  committee: string;
+  /**
+   * The Legislature whose meetings to list; the one sitting now if omitted
+   * (see {@link legislatureOf}).
+   */
+  legislature?: number;
+}
+
+/**
+ * Lists the meetings with audio in `source`, newest first, using `config`.
+ * Does no I/O until {@link VideoLister.listVideos} is called.
+ */
+export function aklegSource(
+  source: AkLegSource,
+  config: AkLegConfig = {},
+): VideoLister {
+  return {
+    async listVideos() {
+      const legislature =
+        source.legislature ?? legislatureOf(new Date().getFullYear());
+      const meetings = await akleg(config).meetingsOfCommittee(
+        source.committee,
+        legislature,
+      );
+      return meetings.map((m) => ({ id: m.id, title: toMetadata(m).title }));
     },
   };
 }

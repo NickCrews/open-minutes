@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import {
   akleg,
+  aklegSource,
   legislatureOf,
   mainAudio,
   mediaUrl,
@@ -184,5 +185,33 @@ describe("mainAudio", () => {
       meeting.audio[0],
     );
     expect(mainAudio({ ...meeting, audio: [] })).toBeUndefined();
+  });
+});
+
+describe("aklegSource", () => {
+  it("lists a committee's meetings as videos", async () => {
+    const requests: string[] = [];
+    const source = aklegSource(
+      { committee: "HRES", legislature: 30 },
+      {
+        fetch: (async (url: string) => {
+          requests.push(url);
+          return new Response(COMMITTEE);
+        }) as typeof fetch,
+      },
+    );
+    expect(await source.listVideos()).toEqual([
+      {
+        id: "HRES 2018-09-10 15:30:00",
+        title: "House RESOURCES - 2018-09-10 15:30:00",
+      },
+      {
+        id: "HRES 2018-09-10 14:00:00",
+        title: "House RESOURCES - 2018-09-10 14:00:00",
+      },
+    ]);
+    expect(requests).toEqual([
+      "https://www.akleg.gov/publicservice/basis/committees?minifyresult=true&json=true&session=30",
+    ]);
   });
 });
