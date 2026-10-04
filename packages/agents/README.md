@@ -11,7 +11,7 @@ Each tool is a name, a description written for the model, a zod input schema
 first needs them.
 
 Every tool that takes a meeting takes `"meeting"`: its slug (eg
-`"gbos_9HoIM5INxpI"`, set on the golden fixture meetings, the same in every
+`"gbos-2026-03-23"`, set on the golden fixture meetings, the same in every
 database) or its id in this database (eg `12`). `list_meetings` shows both.
 The tools read only the database, never the fixture files, so they work the
 same wherever the database is: locally, in tests, or in production.
@@ -21,8 +21,8 @@ pnpm om tools                                # list the tools
 pnpm om tools <tool> --schema                # a tool's input, as JSON Schema
 pnpm om tools --describe                     # every tool with its schema, as JSON
 pnpm om tools list_meetings
-pnpm om tools find_untranscribed_speech '{"meeting":"gbos_9HoIM5INxpI"}'
-pnpm om tools transcribe_range '{"meeting":"gbos_9HoIM5INxpI","from":"0:01:56","to":"0:02:07"}'
+pnpm om tools find_untranscribed_speech '{"meeting":"gbos-2026-03-23"}'
+pnpm om tools transcribe_range '{"meeting":"gbos-2026-03-23","from":"0:01:56","to":"0:02:07"}'
 ```
 
 From TypeScript:

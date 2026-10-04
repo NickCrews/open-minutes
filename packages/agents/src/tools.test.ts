@@ -27,7 +27,7 @@ import {
 
 const test = dbTest({ data: devData });
 /** The March 23, 2026 GBOS golden meeting, the one with chapters. */
-const GBOS = "gbos_9HoIM5INxpI";
+const GBOS = "gbos-2026-03-23";
 
 async function personId(db: Db, slug: string) {
   const [p] = await callTool(toolContext(db), findPeople, { query: slug });

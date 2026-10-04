@@ -47,7 +47,7 @@ export interface AudioMeeting {
 }
 
 /**
- * Open a meeting by slug ("gbos_9HoIM5INxpI") or id (12), from the database.
+ * Open a meeting by slug ("gbos-2026-03-23") or id (12), from the database.
  * Downloads its audio into the per-machine cache the tests use on first use.
  */
 export async function openMeeting(

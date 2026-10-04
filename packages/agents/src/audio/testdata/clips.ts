@@ -25,7 +25,7 @@ export interface Clip {
 }
 
 /**
- * 0:01:45–0:02:45 of the March 23, 2026 GBOS meeting (gbos_9HoIM5INxpI):
+ * 0:01:45–0:02:45 of the March 23, 2026 GBOS meeting (gbos-2026-03-23):
  * the end of the land acknowledgement, the chair asking staff for the roll
  * call, the roll call, and the chair's announcements. Its transcript (as the
  * golden had it) is missing the first half of the roll call: "Are we all
@@ -33,7 +33,7 @@ export interface Clip {
  * at 0:00:12–0:00:21 of the clip, which the full-meeting pass dropped.
  */
 export function halfUntranscribedRollCallClip(): Clip {
-  return loadClip("gbos-roll-call-half-untranscribed", "gbos_9HoIM5INxpI", 105);
+  return loadClip("gbos-roll-call-half-untranscribed", "gbos-2026-03-23", 105);
 }
 
 function loadClip(name: string, source: string, offsetSecs: number): Clip {

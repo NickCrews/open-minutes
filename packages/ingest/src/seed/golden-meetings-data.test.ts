@@ -11,7 +11,7 @@ import { goldenMeetingsData } from "./golden-meetings-data";
 // harness caches the seeded database as a template. The shortest golden keeps
 // the cold path short. Tests that don't need the database belong in
 // golden-meetings-data.fingerprint.test.ts, so they don't wait on the audio.
-const SLUG = "pzc_DwFHRjobjcY";
+const SLUG = "pzc-2026-06-08";
 
 const test = dbTest({
   data: goldenMeetingsData([SLUG]),

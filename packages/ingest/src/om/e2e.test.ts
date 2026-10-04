@@ -35,8 +35,8 @@ import { getMeetingAudio } from "../test-utils/audio-cache";
 // transcript, to be hand-cleaned (and hand-labeled with identified people) later.
 // This exercises the full machinery end to end today; tighten as the data firms.
 
-const SEED_SLUGS = ["gbos_9HoIM5INxpI", "gbos_xTDznaSElgY"];
-const HELD_OUT_SLUG = "gbos_hTKVG_L61ec";
+const SEED_SLUGS = ["gbos-2026-03-23", "gbos-2026-05-18"];
+const HELD_OUT_SLUG = "gbos-2026-06-15";
 
 // Ingesting the held-out meeting re-runs transcription + diarization, which take
 // the better part of an hour on a ~2.7h recording. Persist the pipeline's

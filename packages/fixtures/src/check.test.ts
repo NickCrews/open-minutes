@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   checkChapters,
   checkFixtures,
+  checkMeetingSlug,
   checkPsv,
   formatIssue,
   meetingDirs,
@@ -33,6 +34,25 @@ describe("all fixtures", () => {
   it("include chapters for at least one golden meeting", () => {
     expect(loadAllTestData().meetings.some((m) => m.chapters)).toBe(true);
     expect(meetingDirs().length).toBeGreaterThan(0);
+  });
+});
+
+describe("checkMeetingSlug", () => {
+  const ok = (slug: string, date: string | null = "2026-03-23") =>
+    checkMeetingSlug({ slug, body_id: "gbos", date }) === null;
+
+  it("wants <body>-<date>, with an optional suffix", () => {
+    expect(ok("gbos-2026-03-23")).toBe(true);
+    expect(ok("gbos-2026-03-23-special")).toBe(true);
+    expect(ok("gbos-2026-03-24")).toBe(false);
+    expect(ok("gbos_9HoIM5INxpI")).toBe(false);
+    expect(ok("pzc-2026-03-23")).toBe(false);
+    expect(ok("gbos-2026-03-23x")).toBe(false);
+  });
+
+  it("wants <body>-<suffix> when the date is unknown", () => {
+    expect(ok("gbos-budget-workshop", null)).toBe(true);
+    expect(ok("gbos", null)).toBe(false);
   });
 });
 

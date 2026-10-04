@@ -32,7 +32,7 @@ One gathering of one body, recorded as one video; the unit we ingest, store, and
 _Avoid_: session, hearing, event, recording, video
 
 **Meeting slug**:
-A golden fixture meeting's stable, unique handle, such as `gbos_9HoIM5INxpI` (its fixture directory's name), that names it in every database; other meetings have none and go by their id.
+A golden fixture meeting's stable, unique handle, such as `gbos-2026-03-23` (its fixture directory's name), that names it in every database; other meetings have none and go by their id.
 _Avoid_: fixture name, meeting key
 
 **Video**:

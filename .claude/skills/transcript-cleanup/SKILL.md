@@ -38,7 +38,7 @@ re-run. `fixtures:check` doesn't verify that an `identified:` slug exists in
 
 The text can't show everything. Some of the same tools read the meeting's
 audio. Like every tool, they take the meeting by slug
-(`"meeting": "gbos_9HoIM5INxpI"`) or by id (`"meeting": 12`), and read it from
+(`"meeting": "gbos-2026-03-23"`) or by id (`"meeting": 12`), and read it from
 the database. A golden fixture's slug is its directory name; to listen to a
 golden, make sure the database you point at has it (`pnpm db up` seeds them
 into your local one), and run `pnpm db up --data-reset if-needed` after
