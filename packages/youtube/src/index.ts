@@ -17,6 +17,25 @@ export type { ListedVideo, VideoLister } from "@open-minutes/core/video-lister";
 
 const execFileAsync = promisify(execFile);
 
+/**
+ * A body's video source on YouTube: a channel (all its videos) or one
+ * playlist. Bodies that share a channel with their siblings (the Assembly, P&Z
+ * and the school board all publish to the MOA channel) are usually separated
+ * by playlist, so that's how a video gets attributed to the right body.
+ */
+export interface YouTubeSource {
+  kind: "channel" | "playlist";
+  /** A channel ID (UC...) or playlist ID (PL...), per `kind`. */
+  id: string;
+}
+
+/** The URL of a {@link YouTubeSource}. */
+export function sourceUrl({ kind, id }: YouTubeSource): string {
+  return kind === "channel"
+    ? `https://www.youtube.com/channel/${id}`
+    : `https://www.youtube.com/playlist?list=${id}`;
+}
+
 /** The 11-character video ID, from either an ID or a watch/youtu.be URL. */
 export function videoId(videoIdOrUrl: string): string {
   if (/^[A-Za-z0-9_-]{11}$/.test(videoIdOrUrl)) return videoIdOrUrl;
@@ -37,7 +56,7 @@ function videoUrl(videoIdOrUrl: string) {
   return `https://www.youtube.com/watch?v=${videoIdOrUrl}`;
 }
 
-/** How to reach YouTube. See {@link youtubeFromEnv} for where each comes from. */
+/** How to reach YouTube. See {@link youtubeConfigFromEnv} for where each comes from. */
 export interface YouTubeConfig {
   /**
    * A Netscape-format cookies.txt from a browser signed in to YouTube. YouTube
@@ -93,14 +112,18 @@ function flattenVideos(node: FlatEntry, seen = new Set<string>()): FlatEntry[] {
 }
 
 /**
- * The videos at a channel or playlist URL. A channel's span all its tabs
+ * The videos in a channel or playlist. A channel's span all its tabs
  * ("Videos", "Live", ...).
  */
 async function listVideos(
   config: YouTubeConfig,
-  url: string,
+  source: YouTubeSource,
 ): Promise<ListedVideo[]> {
-  const { stdout } = await ytDlp(config, ["--flat-playlist", "-J", url]);
+  const { stdout } = await ytDlp(config, [
+    "--flat-playlist",
+    "-J",
+    sourceUrl(source),
+  ]);
   return flattenVideos(JSON.parse(stdout) as FlatEntry).map(
     ({ id, title }) => ({ id, title }),
   );
@@ -315,16 +338,26 @@ async function requestFetch(id: string, token: string) {
 }
 
 /**
- * Everything the pipeline gets from YouTube (via yt-dlp). Create one with
+ * A video's metadata and audio from YouTube (via yt-dlp). Create one with
  * {@link youtube} or {@link youtubeFromEnv} and pass it around; tests pass a
  * fake instead (see the pipeline's `om/testing.ts`).
  */
-export type YouTube = AudioProvider & VideoLister;
+export type YouTube = AudioProvider;
+
+/**
+ * Lists the videos in `source` (via yt-dlp), using `config`. Does no I/O until
+ * {@link VideoLister.listVideos} is called.
+ */
+export function youtubeSource(
+  source: YouTubeSource,
+  config: YouTubeConfig = {},
+): VideoLister {
+  return { listVideos: () => listVideos(config, source) };
+}
 
 /** A {@link YouTube} that uses `config`. Does no I/O until a method is called. */
 export function youtube(config: YouTubeConfig = {}): YouTube {
   return {
-    listVideos: (sourceUrl) => listVideos(config, sourceUrl),
     getMetadata: (videoIdOrUrl) => getMetadata(config, videoIdOrUrl),
     ensureAudioDownloaded: (videoIdOrUrl, path, options) =>
       ensureAudioDownloaded(config, videoIdOrUrl, path, options),
@@ -332,15 +365,20 @@ export function youtube(config: YouTubeConfig = {}): YouTube {
 }
 
 /**
- * A {@link YouTube} configured from environment variables:
+ * A {@link YouTubeConfig} from environment variables:
  * - YOUTUBE_COOKIES: {@link YouTubeConfig.cookies}
  * - OBJECT_STORE_PUBLIC_URL: {@link YouTubeConfig.objectStoreUrl}
  * - YOUTUBE_AUDIO_DISPATCH_TOKEN: {@link YouTubeConfig.dispatchToken}
  */
-export function youtubeFromEnv(env = process.env): YouTube {
-  return youtube({
+export function youtubeConfigFromEnv(env = process.env): YouTubeConfig {
+  return {
     cookies: env.YOUTUBE_COOKIES || undefined,
     objectStoreUrl: env.OBJECT_STORE_PUBLIC_URL || undefined,
     dispatchToken: env.YOUTUBE_AUDIO_DISPATCH_TOKEN || undefined,
-  });
+  };
+}
+
+/** A {@link YouTube} configured by {@link youtubeConfigFromEnv}. */
+export function youtubeFromEnv(env = process.env): YouTube {
+  return youtube(youtubeConfigFromEnv(env));
 }
