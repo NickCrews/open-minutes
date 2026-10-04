@@ -10,7 +10,7 @@ import {
   videoSourcesTable,
 } from "@open-minutes/db";
 import { bodySlug } from "@open-minutes/core/bodies";
-import { type YouTube, youtubeFromEnv } from "../youtube";
+import { type YouTube, youtubeFromEnv } from "@open-minutes/youtube";
 import {
   alignSpeakers,
   cleanSpeechSegments,

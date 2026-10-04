@@ -19,9 +19,9 @@
     "@open-minutes/audio": "workspace:*",
     "@open-minutes/core": "workspace:*",
     "@open-minutes/db": "workspace:*",
+    "@open-minutes/youtube": "workspace:*",
     "citty": "^0.1.6",
-    "drizzle-orm": "1.0.0-beta.21",
-    "opus-decoder": "^0.7.12"
+    "drizzle-orm": "1.0.0-beta.21"
   },
   "devDependencies": {
     "@open-minutes/fixtures": "workspace:*",

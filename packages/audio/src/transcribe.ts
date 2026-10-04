@@ -48,7 +48,7 @@ export const VAD_MODEL_SPEC = {
 } as const satisfies ModelSpec;
 
 // Both the recognizer and Silero VAD expect 16 kHz mono (EXPECTED_SAMPLE_RATE).
-// The yt-dlp download in youtube/index.ts produces that; we assert rather than
+// @open-minutes/youtube's audio download produces that; we assert rather than
 // resample.
 
 // Parakeet TDT processes audio in a single pass. Its encoder uses a learned

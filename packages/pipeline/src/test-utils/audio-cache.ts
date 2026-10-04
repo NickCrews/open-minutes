@@ -11,7 +11,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { readWave } from "@open-minutes/audio/wav";
 import type { GoldenMeeting } from "@open-minutes/fixtures/test-data";
-import { youtubeFromEnv } from "../youtube";
+import { youtubeFromEnv } from "@open-minutes/youtube";
 
 const CACHE_ROOT = join(homedir(), ".cache", "open-minutes", "meetings");
 
