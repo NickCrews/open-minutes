@@ -1,8 +1,9 @@
 # @open-minutes/youtube
 
-Where Open Minutes gets meetings published on YouTube. It lists the videos on
-a channel or in a playlist, and implements `@open-minutes/core`'s
-`AudioProvider` for a video: its metadata, and its audio as 16 kHz mono WAV.
+Where Open Minutes gets meetings published on YouTube. It implements
+`@open-minutes/core`'s `VideoLister` for a channel or playlist (`youtubeSource`:
+the videos in it) and `AudioProvider` for a video (`youtube`: its metadata, and
+its audio as 16 kHz mono WAV).
 It knows nothing about the database or what happens to the audio next;
 `@open-minutes/pipeline` does that.
 
@@ -11,4 +12,4 @@ servers), from the project's object store, which the
 [`fetch-youtube-audio`](../../.github/workflows/fetch-youtube-audio.yml)
 workflow fills. YouTube's Opus audio is decoded to WAV here with libopus
 compiled to WebAssembly (`opus-decoder`), so no ffmpeg is needed. See
-`youtubeFromEnv` for the environment variables it reads.
+`youtubeConfigFromEnv` for the environment variables it reads.

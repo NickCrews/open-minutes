@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { youtubeFromEnv } from ".";
+import { youtubeConfigFromEnv, youtubeFromEnv, youtubeSource } from ".";
 import { rmSync, existsSync } from "node:fs";
 
 describe("YouTube Module", () => {
@@ -20,14 +20,16 @@ describe("YouTube Module", () => {
     // scraping it takes about a minute.
     { tags: ["slow"] },
     async ({ id, minVideos }) => {
-      const videos = await yt.videosInChannel(id);
+      const videos = await youtubeSource(
+        { kind: "channel", id },
+        youtubeConfigFromEnv(),
+      ).listVideos();
       expect(videos).toBeInstanceOf(Array);
       expect(videos.length).toBeGreaterThan(minVideos);
       expect(videos[0]).toHaveProperty("id");
       expect(videos[0]).toHaveProperty("title");
       for (const video of videos) {
         expect(video.id).not.toBe(id);
-        expect(video.entries).toBeUndefined();
       }
       expect(new Set(videos.map((v) => v.id)).size).toBe(videos.length);
     },

@@ -6,29 +6,34 @@ import type {
   AudioProvider,
   VideoMetadata,
 } from "@open-minutes/core/audio-provider";
+import type { ListedVideo, VideoLister } from "@open-minutes/core/video-lister";
 import { webmOpusToWav } from "./opus";
 
 export type {
   AudioProvider,
   VideoMetadata,
 } from "@open-minutes/core/audio-provider";
+export type { ListedVideo, VideoLister } from "@open-minutes/core/video-lister";
 
 const execFileAsync = promisify(execFile);
 
-function channelUrl(channelIdOrUrl: string) {
-  // if youtube.com already, return as-is
-  if (channelIdOrUrl.includes("youtube.com")) {
-    return channelIdOrUrl;
-  }
-  return `https://www.youtube.com/channel/${channelIdOrUrl}`;
+/**
+ * A body's video source on YouTube: a channel (all its videos) or one
+ * playlist. Bodies that share a channel with their siblings (the Assembly, P&Z
+ * and the school board all publish to the MOA channel) are usually separated
+ * by playlist, so that's how a video gets attributed to the right body.
+ */
+export interface YouTubeSource {
+  kind: "channel" | "playlist";
+  /** A channel ID (UC...) or playlist ID (PL...), per `kind`. */
+  id: string;
 }
 
-function playlistUrl(playlistIdOrUrl: string) {
-  // if youtube.com already, return as-is
-  if (playlistIdOrUrl.includes("youtube.com")) {
-    return playlistIdOrUrl;
-  }
-  return `https://www.youtube.com/playlist?list=${playlistIdOrUrl}`;
+/** The URL of a {@link YouTubeSource}. */
+export function sourceUrl({ kind, id }: YouTubeSource): string {
+  return kind === "channel"
+    ? `https://www.youtube.com/channel/${id}`
+    : `https://www.youtube.com/playlist?list=${id}`;
 }
 
 /** The 11-character video ID, from either an ID or a watch/youtu.be URL. */
@@ -51,7 +56,7 @@ function videoUrl(videoIdOrUrl: string) {
   return `https://www.youtube.com/watch?v=${videoIdOrUrl}`;
 }
 
-/** How to reach YouTube. See {@link youtubeFromEnv} for where each comes from. */
+/** How to reach YouTube. See {@link youtubeConfigFromEnv} for where each comes from. */
 export interface YouTubeConfig {
   /**
    * A Netscape-format cookies.txt from a browser signed in to YouTube. YouTube
@@ -83,7 +88,7 @@ function ytDlp(config: YouTubeConfig, args: string[]) {
   );
 }
 
-export interface FlatEntry {
+interface FlatEntry {
   /** "url" for a video, "playlist" for a nested tab/playlist. */
   _type?: "url" | "playlist";
   id: string;
@@ -106,9 +111,22 @@ function flattenVideos(node: FlatEntry, seen = new Set<string>()): FlatEntry[] {
   return [node];
 }
 
-async function flatPlaylist(config: YouTubeConfig, url: string) {
-  const { stdout } = await ytDlp(config, ["--flat-playlist", "-J", url]);
-  return flattenVideos(JSON.parse(stdout) as FlatEntry);
+/**
+ * The videos in a channel or playlist. A channel's span all its tabs
+ * ("Videos", "Live", ...).
+ */
+async function listVideos(
+  config: YouTubeConfig,
+  source: YouTubeSource,
+): Promise<ListedVideo[]> {
+  const { stdout } = await ytDlp(config, [
+    "--flat-playlist",
+    "-J",
+    sourceUrl(source),
+  ]);
+  return flattenVideos(JSON.parse(stdout) as FlatEntry).map(
+    ({ id, title }) => ({ id, title }),
+  );
 }
 
 /** The fields of yt-dlp's info JSON that {@link VideoMetadata} uses. */
@@ -320,29 +338,26 @@ async function requestFetch(id: string, token: string) {
 }
 
 /**
- * Everything the pipeline gets from YouTube (via yt-dlp). Create one with
+ * A video's metadata and audio from YouTube (via yt-dlp). Create one with
  * {@link youtube} or {@link youtubeFromEnv} and pass it around; tests pass a
  * fake instead (see the pipeline's `om/testing.ts`).
  */
-export interface YouTube extends AudioProvider {
-  /** The videos on a channel, across all its tabs ("Videos", "Live", ...). */
-  videosInChannel(channelIdOrUrl: string): Promise<FlatEntry[]>;
-  /**
-   * The videos in one playlist. Bodies that share a channel with their
-   * siblings (the Assembly, P&Z and the school board all publish to the MOA
-   * channel) are usually separated by playlist, so this is how a video gets
-   * attributed to the right body.
-   */
-  videosInPlaylist(playlistIdOrUrl: string): Promise<FlatEntry[]>;
+export type YouTube = AudioProvider;
+
+/**
+ * Lists the videos in `source` (via yt-dlp), using `config`. Does no I/O until
+ * {@link VideoLister.listVideos} is called.
+ */
+export function youtubeSource(
+  source: YouTubeSource,
+  config: YouTubeConfig = {},
+): VideoLister {
+  return { listVideos: () => listVideos(config, source) };
 }
 
 /** A {@link YouTube} that uses `config`. Does no I/O until a method is called. */
 export function youtube(config: YouTubeConfig = {}): YouTube {
   return {
-    videosInChannel: (channelIdOrUrl) =>
-      flatPlaylist(config, channelUrl(channelIdOrUrl)),
-    videosInPlaylist: (playlistIdOrUrl) =>
-      flatPlaylist(config, playlistUrl(playlistIdOrUrl)),
     getMetadata: (videoIdOrUrl) => getMetadata(config, videoIdOrUrl),
     ensureAudioDownloaded: (videoIdOrUrl, path, options) =>
       ensureAudioDownloaded(config, videoIdOrUrl, path, options),
@@ -350,15 +365,20 @@ export function youtube(config: YouTubeConfig = {}): YouTube {
 }
 
 /**
- * A {@link YouTube} configured from environment variables:
+ * A {@link YouTubeConfig} from environment variables:
  * - YOUTUBE_COOKIES: {@link YouTubeConfig.cookies}
  * - OBJECT_STORE_PUBLIC_URL: {@link YouTubeConfig.objectStoreUrl}
  * - YOUTUBE_AUDIO_DISPATCH_TOKEN: {@link YouTubeConfig.dispatchToken}
  */
-export function youtubeFromEnv(env = process.env): YouTube {
-  return youtube({
+export function youtubeConfigFromEnv(env = process.env): YouTubeConfig {
+  return {
     cookies: env.YOUTUBE_COOKIES || undefined,
     objectStoreUrl: env.OBJECT_STORE_PUBLIC_URL || undefined,
     dispatchToken: env.YOUTUBE_AUDIO_DISPATCH_TOKEN || undefined,
-  });
+  };
+}
+
+/** A {@link YouTube} configured by {@link youtubeConfigFromEnv}. */
+export function youtubeFromEnv(env = process.env): YouTube {
+  return youtube(youtubeConfigFromEnv(env));
 }

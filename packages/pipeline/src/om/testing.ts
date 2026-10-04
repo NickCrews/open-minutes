@@ -22,12 +22,6 @@ import { loadBodies } from "@open-minutes/fixtures/test-data";
  */
 export function fakeYouTube(overrides: Partial<YouTube> = {}): YouTube {
   return {
-    videosInChannel: async () => {
-      throw new Error("unexpected videosInChannel call");
-    },
-    videosInPlaylist: async () => {
-      throw new Error("unexpected videosInPlaylist call");
-    },
     getMetadata: async () => {
       throw new Error("unexpected getMetadata call");
     },
