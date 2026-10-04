@@ -9,7 +9,7 @@ import {
   LAST_WORD_DURATION_SEC,
   type DiarizationTurn,
 } from "@open-minutes/core/transcription";
-import { computeSpeakerEmbeddings } from "../embed";
+import { computeSpeakerEmbeddings } from "@open-minutes/audio/embed";
 import type {
   GoldenMeeting,
   GoldenPerson,

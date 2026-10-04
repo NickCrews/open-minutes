@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { DataState } from "@open-minutes/db/ensure";
-import { EMBEDDING_MODEL_SPEC } from "../embed";
+import { EMBEDDING_MODEL_SPEC } from "@open-minutes/audio/embed";
 import {
   TEST_DATA_ROOT,
   getMeetingData,

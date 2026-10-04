@@ -18,9 +18,9 @@ import {
   segmentsToTurns,
   type SpeechSegment,
 } from "@open-minutes/core/transcription";
-import { transcribeAudio } from "../transcribe";
-import { computeSpeakerEmbeddings } from "../embed";
-import { diarizeAudio } from "../diarize";
+import { transcribeAudio } from "@open-minutes/audio/transcribe";
+import { computeSpeakerEmbeddings } from "@open-minutes/audio/embed";
+import { diarizeAudio } from "@open-minutes/audio/diarize";
 import { identifyAndInsertSegments } from "../identify";
 import {
   type MeetingDateTime,

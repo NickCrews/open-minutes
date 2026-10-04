@@ -33,14 +33,17 @@ the ones listed above it:
   data that seeds local and test databases. `test-data/` holds the real,
   hand-verified jurisdictions, bodies, people and golden meetings. Nothing here
   ships to production.
+- **[`packages/audio`](packages/audio)** (`@open-minutes/audio`): speech
+  processing, run locally with
+  [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx). It transcribes a WAV
+  (NeMo Parakeet ASR + Silero VAD) and diarizes it into speaker turns (pyannote
+  segmentation + CAM++ voice embeddings). No GPU or external API is needed;
+  models are downloaded on first use (or all at once with `pnpm om models`).
+  See the [audio README](packages/audio/README.md).
 - **[`packages/pipeline`](packages/pipeline)** (`@open-minutes/pipeline`): the
-  offline ingestion pipeline and the `om` CLI. It downloads audio, transcribes
-  it locally with [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) (NeMo
-  Parakeet ASR + Silero VAD), diarizes it into speaker turns (pyannote
-  segmentation + CAM++ voice embeddings), aligns turns to words, recognizes
-  speakers against known voiceprints, and writes the meeting to the database.
-  No GPU or external API is needed; models are downloaded on first use (or
-  all at once with `pnpm om models`). See the
+  offline ingestion pipeline and the `om` CLI. It downloads audio, runs it
+  through `@open-minutes/audio`, aligns turns to words, recognizes speakers
+  against known voiceprints, and writes the meeting to the database. See the
   [pipeline README](packages/pipeline/README.md).
 - **[`packages/tools`](packages/tools)** (`@open-minutes/tools`): tools
   for editing the data (speaker labels, people, chapters), as typed tool
