@@ -15,8 +15,8 @@ import {
 } from "./activity";
 import {
   findUntranscribedSpeech,
-  speechActivity,
   transcribeRangeTool,
+  voiceTimeline,
 } from "./tools";
 import { clipContext, rollCallClip } from "./testdata/clips";
 
@@ -153,18 +153,52 @@ describe("on the GBOS roll call", () => {
     const ctx = clipContext(rollCall);
     const meeting = rollCall.meeting.ref;
 
-    it("speech_activity reports runs, pauses and untranscribed speech", async () => {
-      const out = await callTool(ctx, speechActivity, {
-        meeting,
-        from: "0:00:10",
-        to: "0:00:30",
-        minPauseSecs: 0.3,
-      });
-      expect(out.speechFraction).toBeGreaterThan(0.5);
-      expect(out.untranscribedSpeechSecs).toBeGreaterThan(4);
-      expect(out.pauses.length).toBeGreaterThan(3);
-      expect(out.speechRuns?.[0]?.[0]).toMatch(/^0:00:\d\d\.\d\d$/);
-    });
+    it(
+      "voice_timeline hears each change of speaker and the missing roll call",
+      async () => {
+        const out = (await callTool(ctx, voiceTimeline, {
+          meeting,
+          from: "0:00:00",
+          to: "0:01:00",
+        })) as string;
+        const lines = out.split("\n");
+        const line = (prefix: string) =>
+          lines.find((l) => l.startsWith(prefix)) ?? "";
+        // The chair takes over from Brian, and the clerk from the chair.
+        expect(line("── seg 1 identified:mike-edgington ──")).toContain("▲");
+        expect(line("── seg 2 identified:margaret-tyler ──")).toMatch(
+          /▲ voice 0\.\d\d · pitch 1\d\d→2\d\d Hz/,
+        );
+        // The chair's voice is low and matches his label.
+        expect(line("0:00:34.46")).toMatch(
+          /^0:00:34\.46 {2}1\d\d Hz {2}identified:mike-edgington 0\.[789]\d {2}\| Announcement\./,
+        );
+        // "Brian Burnett? Present. Brianna Sullivan? Present." has no words.
+        expect(out).toMatch(/^⚠ 0:00:1\d\.\d\d-0:00:(1\d|2[01])\.\d\d /m);
+        // The clerk has too little speech in a minute to match a voice to.
+        expect(out).toMatch(
+          /^Too little speech to match a voice against: .*identified:margaret-tyler/m,
+        );
+      },
+      DECODE_TIMEOUT,
+    );
+
+    it(
+      "voice_timeline of a segment finds the segments in the same voice",
+      async () => {
+        const out = (await callTool(ctx, voiceTimeline, {
+          meeting,
+          segment: 7,
+        })) as string;
+        expect(out).toMatch(
+          /^ {2}closest segments: 1 identified:mike-edgington 0:00:06\.73 0\.[6-9]\d/m,
+        );
+        expect(out).toContain(
+          "(identified:mike-edgington has too little speech besides this segment to rank)",
+        );
+      },
+      DECODE_TIMEOUT,
+    );
 
     it(
       "find_untranscribed_speech finds the roll call between the chair and the clerk",

@@ -6,7 +6,7 @@
 //   pnpm tools <tool> '<json>'          call it; input may also come on stdin
 //   pnpm tools --describe               every tool with its schema, as JSON
 //
-// Results are JSON on stdout; progress goes to stderr. A refused call prints
+// Results are JSON (or, for voice_timeline, text) on stdout; progress goes to stderr. A refused call prints
 // {"error": "..."} and exits 1. The database is chosen as everywhere else:
 // --db, else $DB, else your branch's local database. It's only opened for a
 // tool that needs it: the audio tools on a golden fixture don't.
@@ -73,7 +73,10 @@ const ctx = toolContext(async () => {
   return opened.db;
 });
 try {
-  print(await callTool(ctx, tool, input));
+  const result = await callTool(ctx, tool, input);
+  // A tool written for a model to read (voice_timeline) returns text.
+  if (typeof result === "string") console.log(result);
+  else print(result);
 } catch (err) {
   if (!(err instanceof ToolError)) throw err;
   print({ error: err.message });

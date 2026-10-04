@@ -1,5 +1,6 @@
 // What the agent tools in @open-minutes/tools need from the models: reading a
-// meeting's audio, finding speech in it, and decoding a stretch of it.
+// meeting's audio, finding speech in it, decoding a stretch of it, and
+// voiceprinting it.
 export { readWave, type WaveForm } from "@open-minutes/audio/wav";
 export {
   detectSpeech,
@@ -12,4 +13,5 @@ export {
   transcribeAudio,
   transcribeRange,
 } from "@open-minutes/audio/transcribe";
+export { getEmbeddingExtractor } from "@open-minutes/audio/embed";
 export { getCachedAudio, meetingCacheDir } from "./test-utils/audio-cache";

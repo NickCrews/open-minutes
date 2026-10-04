@@ -37,4 +37,5 @@ calls from `@open-minutes/audio` that they use. Those are speech runs from
 Silero VAD (`detectSpeech` in `speech-runs.ts`, with pauses down to 0.2 s where
 the transcriber cuts at 0.5 s), and `transcribeRange`, which decodes one
 stretch with two seconds of audio either side for context and returns only
-the words that start inside it.
+the words that start inside it. The voice tools also get the CAM++ speaker
+embedding extractor from here (`getEmbeddingExtractor`).
