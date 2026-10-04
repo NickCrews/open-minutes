@@ -143,11 +143,12 @@ function MeetingPage() {
     />
   );
 
-  // The page fills the viewport below the nav (3rem) and main's padding
-  // (2 × 1rem) exactly, so only the transcript scrolls: the video stays put
-  // above it and the playback controls stay pinned below it, on every screen.
+  // The page fills the viewport below the WIP banner (2rem), the nav (3rem)
+  // and main's padding (2 × 1rem) exactly, so only the transcript scrolls: the
+  // video stays put above it and the playback controls stay pinned below it,
+  // on every screen.
   return (
-    <div class="flex h-[calc(100dvh-5rem)] flex-col gap-3">
+    <div class="flex h-[calc(100dvh-7rem)] flex-col gap-3">
       <header class="flex shrink-0 items-start gap-2">
         <div class="min-w-0 flex-1">
           {/* Phones get a single line; the Info tab has the full title. */}
