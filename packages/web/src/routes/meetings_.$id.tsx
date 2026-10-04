@@ -15,7 +15,7 @@ import {
 import { MeetingDateTime } from "~/features/meetings/meeting-date-time";
 import { Transcript } from "~/features/meetings/transcript";
 import { intervalToSecs } from "~/lib/format";
-import { type YTPlayer } from "~/lib/youtube";
+import { type YouTubeController } from "~/lib/youtube";
 import { db } from "~/server/db";
 import { z } from "zod";
 
@@ -80,7 +80,7 @@ function MeetingPage() {
   const [duration, setDuration] = createSignal(0);
   const [playing, setPlaying] = createSignal(false);
   const [playbackRate, setPlaybackRate] = createSignal(1);
-  const [player, setPlayer] = createSignal<YTPlayer>();
+  const [player, setPlayer] = createSignal<YouTubeController>();
   // The player's own length once it reports one; until then (or with no video
   // at all) the stored length, so the scrubber can draw straight away.
   const videoDuration = () =>
@@ -112,8 +112,8 @@ function MeetingPage() {
   const togglePlay = () => {
     const p = player();
     if (!p) return;
-    if (playing()) p.pauseVideo();
-    else p.playVideo();
+    if (playing()) p.pause();
+    else void p.play();
   };
   const changeRate = (rate: number) => {
     player()?.setPlaybackRate(rate);
