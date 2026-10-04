@@ -1,10 +1,28 @@
+/** Where a YouTube player is in playing its video. */
+export type PlayerState =
+  | "unstarted"
+  | "ended"
+  | "playing"
+  | "paused"
+  | "buffering"
+  | "cued";
+
+/**
+ * A YouTube player, as `createYouTubePlayer` makes it: the parts of the
+ * IFrame Player API we use, with its numeric states turned into
+ * {@link PlayerState}s.
+ */
+export interface YTPlayer extends Omit<RawPlayer, "getPlayerState"> {
+  getPlayerState(): PlayerState;
+}
+
 /**
  * Minimal typings for the parts of the YouTube IFrame Player API we use.
  * https://developers.google.com/youtube/iframe_api_reference
  */
-export interface YTPlayer {
+interface RawPlayer {
   getCurrentTime(): number;
-  /** One of YT.PlayerState: -1 unstarted, 0 ended, 1 playing, 2 paused, 3 buffering, 5 cued. */
+  /** A YT.PlayerState code; see {@link toPlayerState}. */
   getPlayerState(): number;
   /** Total length in seconds, or 0 until the video's metadata has loaded. */
   getDuration(): number;
@@ -19,20 +37,27 @@ export interface YTPlayer {
 /** Playback rates the IFrame API accepts, slowest first. */
 export const PLAYBACK_RATES = [0.75, 1, 1.25, 1.5, 1.75, 2] as const;
 
-/** The subset of YT.PlayerState values we care about. */
-export const PlayerState = {
-  unstarted: -1,
-  ended: 0,
-  playing: 1,
-  paused: 2,
-  cued: 5,
-} as const;
+/** The IFrame API's YT.PlayerState codes, by name. */
+const PLAYER_STATES: Record<number, PlayerState> = {
+  [-1]: "unstarted",
+  0: "ended",
+  1: "playing",
+  2: "paused",
+  3: "buffering",
+  5: "cued",
+};
+
+/** A YT.PlayerState code as a {@link PlayerState}. */
+function toPlayerState(code: number): PlayerState {
+  // The API documents no other codes; nothing has played if one appears.
+  return PLAYER_STATES[code] ?? "unstarted";
+}
 
 interface YTNamespace {
   Player: new (
     element: HTMLElement,
     options: { events?: PlayerEvents },
-  ) => YTPlayer;
+  ) => RawPlayer;
 }
 
 interface PlayerEvents {
@@ -82,7 +107,7 @@ export function createYouTubePlayer(
   options: {
     videoId: string;
     playerVars?: Record<string, string | number>;
-    onStateChange?: PlayerEvents["onStateChange"];
+    onStateChange?: (state: PlayerState) => void;
   },
 ): Promise<YTPlayer> {
   const params = new URLSearchParams({
@@ -107,10 +132,23 @@ export function createYouTubePlayer(
   return Promise.all([loadYouTubeIframeApi(), loaded]).then(
     ([YT]) =>
       new Promise<YTPlayer>((resolve) => {
-        const player: YTPlayer = new YT.Player(iframe, {
+        const player: RawPlayer = new YT.Player(iframe, {
           events: {
-            onReady: () => resolve(player),
-            onStateChange: options.onStateChange,
+            onReady: () =>
+              resolve({
+                getCurrentTime: () => player.getCurrentTime(),
+                getPlayerState: () => toPlayerState(player.getPlayerState()),
+                getDuration: () => player.getDuration(),
+                seekTo: (secs, allowSeekAhead) =>
+                  player.seekTo(secs, allowSeekAhead),
+                loadVideoById: (args) => player.loadVideoById(args),
+                playVideo: () => player.playVideo(),
+                pauseVideo: () => player.pauseVideo(),
+                setPlaybackRate: (rate) => player.setPlaybackRate(rate),
+                destroy: () => player.destroy(),
+              }),
+            onStateChange: ({ data }) =>
+              options.onStateChange?.(toPlayerState(data)),
           },
         });
       }),

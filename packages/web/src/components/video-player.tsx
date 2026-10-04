@@ -1,5 +1,5 @@
 import { onCleanup, onMount } from "solid-js";
-import { createYouTubePlayer, PlayerState, type YTPlayer } from "~/lib/youtube";
+import { createYouTubePlayer, type YTPlayer } from "~/lib/youtube";
 
 export function VideoPlayer(props: {
   videoId: string;
@@ -15,8 +15,7 @@ export function VideoPlayer(props: {
     void createYouTubePlayer(host, {
       videoId: props.videoId,
       playerVars: { playsinline: 1 },
-      onStateChange: ({ data }) =>
-        props.onPlayingChange?.(data === PlayerState.playing),
+      onStateChange: (state) => props.onPlayingChange?.(state === "playing"),
     }).then((created) => {
       if (disposed) return created.destroy();
       player = created;

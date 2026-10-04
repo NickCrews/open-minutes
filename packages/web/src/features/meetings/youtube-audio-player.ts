@@ -1,4 +1,4 @@
-import { createYouTubePlayer, PlayerState, type YTPlayer } from "~/lib/youtube";
+import { createYouTubePlayer, type YTPlayer } from "~/lib/youtube";
 import type { AudioPlayer, AudioPlayerEvents } from "./audio-player";
 
 /**
@@ -32,9 +32,9 @@ export function createYouTubeAudioPlayer(
     return createYouTubePlayer(host, {
       videoId,
       playerVars: { playsinline: 1 },
-      onStateChange: ({ data }) => {
-        if (data === PlayerState.playing) options.onPlayingChange(true);
-        else if (data === PlayerState.paused || data === PlayerState.ended)
+      onStateChange: (state) => {
+        if (state === "playing") options.onPlayingChange(true);
+        else if (state === "paused" || state === "ended")
           options.onPlayingChange(false);
       },
     }).then((created) => {
@@ -67,14 +67,12 @@ export function createYouTubeAudioPlayer(
     },
     playhead() {
       if (!player) return null;
-      const state = player.getPlayerState?.();
+      const state = player.getPlayerState();
       // Unstarted or cued, it reports 0 rather than where it will start.
-      if (state === PlayerState.unstarted || state === PlayerState.cued) {
-        return null;
-      }
-      const secs = player.getCurrentTime?.();
-      if (typeof secs !== "number" || Number.isNaN(secs)) return null;
-      return { secs, moving: state === PlayerState.playing };
+      if (state === "unstarted" || state === "cued") return null;
+      const secs = player.getCurrentTime();
+      if (Number.isNaN(secs)) return null;
+      return { secs, moving: state === "playing" };
     },
     destroy() {
       destroyed = true;
