@@ -11,7 +11,6 @@
 // tool that needs it: the audio tools on a golden fixture don't.
 
 import { readFileSync } from "node:fs";
-import { loadRootDotEnv } from "@open-minutes/core/dotenv";
 import { getDb, resolveDatabaseUrl } from "@open-minutes/db";
 import { prepareDatabase } from "@open-minutes/db/ensure";
 import { goldenRefs } from "../audio/meeting";
@@ -21,8 +20,6 @@ import { tools } from "../tools";
 
 /** Run `om tools` with the arguments that follow `tools`. */
 export async function runTools(argv: string[]): Promise<void> {
-  // The audio tools read OBJECT_STORE_PUBLIC_URL to download a meeting's audio.
-  loadRootDotEnv();
   const args = [...argv];
   const dbAt = args.indexOf("--db");
   const target = dbAt >= 0 ? args.splice(dbAt, 2)[1] : undefined;
