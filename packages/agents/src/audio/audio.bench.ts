@@ -7,7 +7,7 @@ import {
 } from "@open-minutes/audio/transcribe";
 import { callTool } from "../tool";
 import { findUntranscribedSpeech } from "./tools";
-import { clipContext, rollCallClip } from "./testdata/clips";
+import { clipContext, halfUntranscribedRollCallClip } from "./testdata/clips";
 
 // How long the audio models take per minute of meeting audio, so swapping a
 // model (or its settings) shows what it costs. The clip is exactly one minute,
@@ -16,7 +16,7 @@ import { clipContext, rollCallClip } from "./testdata/clips";
 //
 // Models load before timing starts; loading isn't per minute of audio.
 
-const rollCall = rollCallClip();
+const rollCall = halfUntranscribedRollCallClip();
 const opts = {
   // Each run takes a second or more, so a handful is plenty.
   iterations: 5,
@@ -55,7 +55,7 @@ describe("find_untranscribed_speech on the clip", () => {
   bench(
     "speech runs + decoding the one stretch it finds",
     async () => {
-      const clip = rollCallClip();
+      const clip = halfUntranscribedRollCallClip();
       await callTool(clipContext(clip), findUntranscribedSpeech, {
         meeting: clip.meeting.ref,
       });
