@@ -62,7 +62,7 @@ explain each column. In short:
 | `video_sources`       | YouTube channel or playlist a body posts to | `body_id`, `kind`, `url`                                                                                              |
 | `meetings`            | meeting, i.e. one video                     | `body_id`, `title`, `date`, `time` (wall clock in the body's timezone; null = unknown), `youtube_id`, `duration_secs` |
 | `segments`            | stretch of one speaker talking              | `meeting_id`, `person_id`, `speaker_number`, `text`, `start_secs`, `end_secs`, `words`                                |
-| `people`              | person (voice) across meetings              | `name` (null = not yet identified), `slug`, `bio`                                                                     |
+| `people`              | person (voice) across meetings              | `name` (null = not yet identified), `slug`, `bio`, `voice_embedding`                                                  |
 | `chapter_generations` | run that wrote a meeting's chapters         | `meeting_id`, `model` (`"human"` if hand-written), `reviewed_by_human`                                                |
 | `chapters`            | table-of-contents entry of a meeting        | `meeting_id`, `start_secs`, `end_secs`, `title`, `summary`, `bullets`                                                 |
 | `chapter_speakers`    | speaker in a chapter                        | `chapter_id`, `person_id`, `speaker_number`, `speaking_secs`                                                          |
@@ -78,9 +78,13 @@ Things that trip people up:
   means no speaker info.
 - **`words`** is a JSON array of `{"text", "start"}` objects: the word-level
   timing that `text`, `start_secs` and `end_secs` are derived from.
-- **Not included**: voice embeddings, and any table not listed above. The
-  file is public, so tables are added to the export by hand, in
-  `.github/scripts/export-duckdb.sh`.
+- **`voice_embedding`** is the person's voiceprint: a `FLOAT[]` of 192
+  numbers. Ingestion treats two voices as the same person when their cosine
+  similarity is at least 0.55 (`packages/ingest/src/identify.ts`). Compare
+  them with `list_cosine_similarity`. Select the column only to compare it,
+  never to print it.
+- **Not included**: any table not listed above. The file is public, so tables
+  are added to the export by hand, in `.github/scripts/export-duckdb.sh`.
 - **No indexes**. Joins and filters are plain scans, which DuckDB is fast at.
 
 ## Example queries
@@ -130,6 +134,17 @@ FROM meetings m
 JOIN segments s ON s.meeting_id = m.id
 LEFT JOIN people p ON p.id = s.person_id
 GROUP BY ALL ORDER BY unnamed_segments DESC;
+```
+
+Voices most like a given person's: candidates for the same person
+recognized twice, or for naming an unnamed voice.
+
+```sql
+SELECT other.id, other.name,
+       round(list_cosine_similarity(me.voice_embedding, other.voice_embedding), 3) AS similarity
+FROM people me, people other
+WHERE me.id = 1 AND other.id != me.id
+ORDER BY similarity DESC LIMIT 10;
 ```
 
 ## Keeping output small
