@@ -5,6 +5,7 @@
   "exports": {
     "./dotenv": "./src/dotenv.ts",
     "./audio-provider": "./src/audio-provider.ts",
+    "./video-lister": "./src/video-lister.ts",
     "./bodies": "./src/bodies/index.ts",
     "./timeline": "./src/timeline.ts",
     "./meeting-date": "./src/meeting-date/index.ts",
