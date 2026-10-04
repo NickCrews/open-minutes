@@ -7,6 +7,7 @@ import {
 } from "@tanstack/solid-router";
 import type { JSX } from "solid-js";
 import { HydrationScript } from "solid-js/web";
+import { fetchPublicConfig } from "~/server/config";
 import appCss from "~/styles/app.css?url";
 
 export const Route = createRootRoute({
@@ -24,6 +25,11 @@ export const Route = createRootRoute({
       { rel: "icon", type: "image/png", href: "/favicon.png" },
     ],
   }),
+  // The browser's share of the app's configuration (see ~/server/config).
+  // It can't change while the page is open, so it's fetched once, with the
+  // first page, and never again on navigation.
+  loader: () => fetchPublicConfig(),
+  staleTime: Infinity,
   component: RootComponent,
 });
 

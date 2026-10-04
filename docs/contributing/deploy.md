@@ -81,3 +81,18 @@ Protect `production` with a ruleset that blocks force pushes and deletion.
 Don't restrict who can push or require PRs: the workflow pushes with the
 built-in `GITHUB_TOKEN`, which can't bypass branch rules. Anyone who can push
 to the repo can push `production` directly, and that push deploys.
+
+## Configuration
+
+The Worker reads all of its configuration from its environment, on the server
+(see [`packages/web/src/server/config.ts`](../../packages/web/src/server/config.ts)).
+The browser gets only what that file's `PublicConfig` passes it, with the
+first page.
+
+- **Plain values** (like `OBJECT_STORE_PUBLIC_URL`) are `vars` in
+  [`packages/web/wrangler.jsonc`](../../packages/web/wrangler.jsonc). Dev, PR
+  previews and production all read them from there; change one by committing.
+- **Secrets** (`DATABASE_URL`) never go in that file: the dev server passes
+  the one it resolves to the Worker (`vite.config.ts`), PR previews upload
+  theirs with `--secrets-file`, and production's is set once on the Worker,
+  which new versions keep.
