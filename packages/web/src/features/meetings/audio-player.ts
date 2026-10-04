@@ -2,18 +2,18 @@
 export type Playhead = { secs: number; moving: boolean };
 
 /**
- * One way of playing a meeting's audio, invisibly. `createHiddenPlayer`
- * chooses between them (see `stored-audio-player` and `youtube-audio-player`).
+ * One meeting's audio, from one source, played invisibly. A player is made
+ * for its source (see `stored-audio-player` and `youtube-audio-player`), and
+ * `createHiddenPlayer` chooses which to make for each meeting.
  *
- * A player holds one video at a time, named by its YouTube ID, and makes its
- * element or embed lazily, on the first `load` or `play`, so it's free to
- * create one during SSR.
+ * It makes its element or embed lazily, on the first `load` or `play`, so
+ * it's free to create one during SSR.
  */
 export interface AudioPlayer {
-  /** Starts loading `youtubeId`, so a later `play` of it starts sooner. */
-  load(youtubeId: string): void;
-  /** Plays `youtubeId` from `secs`, loading it first if need be. */
-  play(youtubeId: string, secs: number): void;
+  /** Starts loading, so a later `play` starts sooner. */
+  load(): void;
+  /** Plays from `secs`, loading first if need be. */
+  play(secs: number): void;
   pause(): void;
   /**
    * The playhead, or null while the player can't say where it is (nothing

@@ -2,35 +2,64 @@ import { createYouTubeController } from "~/lib/youtube";
 import type { AudioPlayer, AudioPlayerEvents } from "./audio-player";
 
 /**
- * Plays a video's audio through a YouTube controller in `host()`, which the
- * page keeps out of sight. It works for any video, but the embed takes a few
- * seconds to make, so `load` makes it ahead of the first play.
+ * Makes players for YouTube videos' audio, all sharing one embed in
+ * `host()`, which the page keeps out of sight. The embed takes a few seconds
+ * to make, so one is made once, by the first `load` or `play`, and then
+ * switches videos.
+ *
+ * A player's events and playhead are its own only while it holds the embed:
+ * from its `play` until another player's.
  */
-export function createYouTubeAudioPlayer(
-  options: AudioPlayerEvents & { host: () => HTMLElement | undefined },
-): AudioPlayer {
+export function createYouTubeAudioPlayers(options: {
+  host: () => HTMLElement | undefined;
+}) {
+  /** The player holding the embed, and its events. */
+  let owner: { player: AudioPlayer; events: AudioPlayerEvents } | null = null;
+
   const controller = createYouTubeController({
     host: options.host,
     onStateChange: (state) => {
-      if (state === "playing") options.onPlayingChange(true);
+      if (state === "playing") owner?.events.onPlayingChange(true);
       else if (state === "paused" || state === "ended")
-        options.onPlayingChange(false);
+        owner?.events.onPlayingChange(false);
     },
   });
 
-  return {
-    load: (youtubeId) => void controller.load(youtubeId),
-    play: (youtubeId, secs) =>
-      void controller.play({ videoId: youtubeId, secs }),
-    pause: () => controller.pause(),
-    playhead() {
-      const tick = controller.tick();
-      // Unstarted or cued, it reports 0 rather than where it will start.
-      if (!tick || tick.state === "unstarted" || tick.state === "cued") {
-        return null;
-      }
-      return { secs: tick.secs, moving: tick.state === "playing" };
-    },
-    destroy: () => controller.destroy(),
+  /** A player for `youtubeId`'s audio. */
+  const player = (
+    options: AudioPlayerEvents & { youtubeId: string },
+  ): AudioPlayer => {
+    const { youtubeId } = options;
+    const self: AudioPlayer = {
+      // Makes the embed, cued to this video unless it's made already.
+      load: () => void controller.load(youtubeId),
+      play(secs) {
+        if (owner && owner.player !== self) {
+          owner.events.onPlayingChange(false);
+        }
+        owner = { player: self, events: options };
+        void controller.play({ videoId: youtubeId, secs });
+      },
+      pause() {
+        if (owner?.player === self) controller.pause();
+      },
+      playhead() {
+        if (owner?.player !== self) return null;
+        const tick = controller.tick();
+        // Unstarted or cued, it reports 0 rather than where it will start.
+        if (!tick || tick.state === "unstarted" || tick.state === "cued") {
+          return null;
+        }
+        return { secs: tick.secs, moving: tick.state === "playing" };
+      },
+      destroy() {
+        if (owner?.player !== self) return;
+        controller.pause();
+        owner = null;
+      },
+    };
+    return self;
   };
+
+  return { player, destroy: () => controller.destroy() };
 }
