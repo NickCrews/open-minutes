@@ -3,7 +3,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { readWave } from "@open-minutes/audio/wav";
-import { akleg, legislatureOf } from "./index";
+import { akleg, aklegSource } from "./index";
 
 // Against the live akleg.gov, so a change to its API or media server fails
 // here, in CI, rather than in an ingest. index.test.ts covers the parsing
@@ -40,9 +40,8 @@ describe("akleg.gov, live", () => {
 
   it("lists the current Legislature's meetings", async () => {
     // Early in a new Legislature this may be empty; it must still parse.
-    const year = new Date().getFullYear();
     await expect(
-      source.meetingsOfCommittee("HRES", legislatureOf(year)),
+      aklegSource({ committee: "HRES" }).listVideos(),
     ).resolves.toBeInstanceOf(Array);
   });
 
