@@ -18,7 +18,7 @@ YouTube ──yt-dlp──▶ pipeline (om ingest) ──▶ Postgres + pgvector
                     align / recognize
 ```
 
-A [pnpm](https://pnpm.io) workspace with eight packages. Each depends only on
+A [pnpm](https://pnpm.io) workspace with nine packages. Each depends only on
 the ones listed above it:
 
 - **[`packages/core`](packages/core)** (`@open-minutes/core`): shared domain
@@ -45,14 +45,21 @@ the ones listed above it:
   metadata and audio, with yt-dlp or from the object store (see below), and
   decodes YouTube's Opus audio to WAV. See the
   [youtube README](packages/youtube/README.md).
-- **[`packages/pipeline`](packages/pipeline)** (`@open-minutes/pipeline`): the
-  offline ingestion pipeline and the `om` CLI. It gets a meeting's audio from
+- **[`packages/akleg`](packages/akleg)** (`@open-minutes/akleg`): a prototype
+  source for the Alaska Legislature's meetings on akleg.gov, a peer of the
+  YouTube source. It lists a committee's recorded meetings and gets a
+  meeting's metadata and audio, decoding its MP3 to WAV. Not yet used by the
+  pipeline. See the [akleg README](packages/akleg/README.md).
+- **[`packages/ingest`](packages/ingest)** (`@open-minutes/ingest`): the
+  offline ingestion pipeline. It gets a meeting's audio from
   `@open-minutes/youtube`, runs it through `@open-minutes/audio`, aligns turns to words, recognizes speakers
   against known voiceprints, and writes the meeting to the database. See the
-  [pipeline README](packages/pipeline/README.md).
-- **[`packages/tools`](packages/tools)** (`@open-minutes/tools`): tools
-  for editing the data (speaker labels, people, chapters), as typed tool
-  definitions for agent loops and as the `pnpm tools` JSON CLI.
+  [ingest README](packages/ingest/README.md).
+- **[`packages/agents`](packages/agents)** (`@open-minutes/agents`): the
+  interface for agents and people. Tools for editing the data (speaker
+  labels, people, chapters) as typed tool definitions for agent loops, and
+  the `om` CLI: `om ingest` and friends over `@open-minutes/ingest`,
+  `om models`, and `om tools`, the tools as a JSON CLI.
 - **[`packages/web`](packages/web)** (`@open-minutes/web`): the public
   transcript browser, built with [SolidJS](https://www.solidjs.com) +
   [TanStack Start](https://tanstack.com/start), Kobalte and Tailwind, deployed
@@ -213,9 +220,10 @@ waits for it; without it, a missing video is downloaded with yt-dlp, which
 works from a home connection. See [`.env.example`](.env.example) and
 [docs/research/youtube-in-ci.md](docs/research/youtube-in-ci.md).
 
-`om` writes to the same database as everything else (`DB=prod pnpm om ingest <id>`
-to ingest into production). See
-[`packages/pipeline/README.md`](packages/pipeline/README.md) for details.
+`om` (in [`packages/agents`](packages/agents/src/cli/om.ts)) writes to the
+same database as everything else (`DB=prod pnpm om ingest <id>` to ingest
+into production). See [`packages/ingest/README.md`](packages/ingest/README.md)
+for details.
 
 ## Working with the data directly
 
@@ -233,16 +241,16 @@ ORDER BY m.start_time, s.start_secs;
 ```
 
 To change the data, agents (and people) use the tools in
-[`packages/tools`](packages/tools/src/tools.ts) rather than raw SQL: `pnpm
-tools` lists them, and `pnpm tools <tool> '<json>'` calls one and prints JSON.
-The same tools are exported from `@open-minutes/tools`, with `toAgentTool` to
+[`packages/agents`](packages/agents/src/tools.ts) rather than raw SQL: `pnpm om
+tools` lists them, and `pnpm om tools <tool> '<json>'` calls one and prints
+JSON. The same tools are exported from `@open-minutes/agents`, with `toAgentTool` to
 hand them to an agent loop such as pi. Every write re-checks the meetings it
 touched and rolls back if it introduced an error. Guidance for agents doing
 this work is in
 [`.claude/skills/transcript-cleanup`](.claude/skills/transcript-cleanup/SKILL.md).
 
 `pnpm db studio` opens a browser UI on it. The pipeline's API (`listIngested`,
-`listAvailable`, `ingestVideo` from `@open-minutes/pipeline/om`) and `om`'s
+`listAvailable`, `ingestVideo` from `@open-minutes/ingest/om`) and `om`'s
 JSON output (`pnpm -s om status --json`) are designed to be composed.
 
 ## Architecture Decision Records
@@ -263,7 +271,7 @@ records research, and mention it in the commit message.
 
 - Short, lowercase, imperative subject lines. Most use a type prefix
   (`feat:`, `fix:`, `refactor:`, `docs:`, `chore:`, `dx:`) or an area prefix
-  (`web:`, `pipeline:`, `db:`, `transcript:`). A scope such as `feat(web):` is
+  (`web:`, `ingest:`, `db:`, `transcript:`). A scope such as `feat(web):` is
   also fine.
 - For anything non-trivial, add a body that explains _why_, and what a
   reviewer should know (follow-ups, known breakage, ADRs).

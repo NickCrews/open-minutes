@@ -6,7 +6,7 @@ it transcribes it (NeMo Parakeet ASR, with Silero VAD cutting it into speech
 runs), diarizes it into anonymous speaker turns (pyannote segmentation), and
 computes a voiceprint per speaker (3D-Speaker CAM++). It returns
 `@open-minutes/core` types and knows nothing about the database or where the
-audio came from; `@open-minutes/pipeline` does that.
+audio came from; `@open-minutes/ingest` does that.
 
 This is the only package that depends on `sherpa-onnx-node`. Other packages
 read and write WAV files through `@open-minutes/audio/wav`.

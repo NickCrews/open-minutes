@@ -30,6 +30,18 @@ export const Route = createRootRoute({
 function RootComponent() {
   return (
     <RootDocument>
+      {/* Like the nav, a fixed height that never wraps, so full-viewport
+          pages can subtract it. */}
+      <div
+        role="note"
+        class="flex h-8 items-center justify-center gap-1 overflow-x-auto whitespace-nowrap border-b border-amber-300 bg-amber-100 px-4 text-xs text-amber-950 sm:text-sm dark:border-amber-500/40 dark:bg-amber-500/20 dark:text-amber-100"
+      >
+        <span aria-hidden="true">⚠</span>
+        <span>Open Minutes is an early work in progress.</span>
+        <Link to="/about" hash="work-in-progress" class="font-medium underline">
+          Learn what that means
+        </Link>
+      </div>
       {/* A fixed height that never wraps (it scrolls sideways if it must),
           so full-viewport pages like the meeting page can subtract it. */}
       <nav class="flex h-12 items-center gap-4 overflow-x-auto whitespace-nowrap border-b px-4 text-sm sm:text-base">

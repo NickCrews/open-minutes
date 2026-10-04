@@ -36,6 +36,65 @@ importers:
         specifier: ^4.0.18
         version: 4.1.4(@types/node@22.19.17)(vite@7.3.2(@types/node@22.19.17)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.21.0))
 
+  packages/agents:
+    dependencies:
+      '@open-minutes/audio':
+        specifier: workspace:*
+        version: link:../audio
+      '@open-minutes/core':
+        specifier: workspace:*
+        version: link:../core
+      '@open-minutes/db':
+        specifier: workspace:*
+        version: link:../db
+      '@open-minutes/fixtures':
+        specifier: workspace:*
+        version: link:../fixtures
+      '@open-minutes/ingest':
+        specifier: workspace:*
+        version: link:../ingest
+      citty:
+        specifier: ^0.1.6
+        version: 0.1.6
+      drizzle-orm:
+        specifier: 1.0.0-beta.21
+        version: 1.0.0-beta.21(@neondatabase/serverless@1.1.0)(@types/mssql@9.1.11(@azure/core-client@1.10.1))(mssql@11.0.1(@azure/core-client@1.10.1))(postgres@3.4.9)(zod@4.3.6)
+      zod:
+        specifier: ^4.3.6
+        version: 4.3.6
+    devDependencies:
+      '@types/node':
+        specifier: ^25.6.0
+        version: 25.6.0
+      tsx:
+        specifier: ^4.21.0
+        version: 4.21.0
+      vitest:
+        specifier: ^4.0.18
+        version: 4.1.4(@types/node@25.6.0)(vite@7.3.2(@types/node@25.6.0)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.21.0))
+
+  packages/akleg:
+    dependencies:
+      '@open-minutes/core':
+        specifier: workspace:*
+        version: link:../core
+      mpg123-decoder:
+        specifier: ^1.0.3
+        version: 1.0.3
+      zod:
+        specifier: ^4.3.6
+        version: 4.3.6
+    devDependencies:
+      '@open-minutes/audio':
+        specifier: workspace:*
+        version: link:../audio
+      '@types/node':
+        specifier: ^22.19.17
+        version: 22.19.17
+      vitest:
+        specifier: ^4.0.18
+        version: 4.1.4(@types/node@22.19.17)(vite@7.3.2(@types/node@22.19.17)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.21.0))
+
   packages/audio:
     dependencies:
       '@open-minutes/core':
@@ -115,7 +174,7 @@ importers:
         specifier: ^4.0.18
         version: 4.1.4(@types/node@25.6.0)(vite@7.3.2(@types/node@25.6.0)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.21.0))
 
-  packages/pipeline:
+  packages/ingest:
     dependencies:
       '@neondatabase/serverless':
         specifier: ^1.1.0
@@ -132,9 +191,6 @@ importers:
       '@open-minutes/youtube':
         specifier: workspace:*
         version: link:../youtube
-      citty:
-        specifier: ^0.1.6
-        version: 0.1.6
       drizzle-orm:
         specifier: 1.0.0-beta.21
         version: 1.0.0-beta.21(@neondatabase/serverless@1.1.0)(@types/mssql@9.1.11(@azure/core-client@1.10.1))(mssql@11.0.1(@azure/core-client@1.10.1))(postgres@3.4.9)(zod@4.3.6)
@@ -148,37 +204,6 @@ importers:
       tsx:
         specifier: ^4.21.0
         version: 4.21.0
-
-  packages/tools:
-    dependencies:
-      '@open-minutes/core':
-        specifier: workspace:*
-        version: link:../core
-      '@open-minutes/db':
-        specifier: workspace:*
-        version: link:../db
-      '@open-minutes/fixtures':
-        specifier: workspace:*
-        version: link:../fixtures
-      '@open-minutes/pipeline':
-        specifier: workspace:*
-        version: link:../pipeline
-      drizzle-orm:
-        specifier: 1.0.0-beta.21
-        version: 1.0.0-beta.21(@neondatabase/serverless@1.1.0)(@types/mssql@9.1.11(@azure/core-client@1.10.1))(mssql@11.0.1(@azure/core-client@1.10.1))(postgres@3.4.9)(zod@4.3.6)
-      zod:
-        specifier: ^4.3.6
-        version: 4.3.6
-    devDependencies:
-      '@types/node':
-        specifier: ^25.6.0
-        version: 25.6.0
-      tsx:
-        specifier: ^4.21.0
-        version: 4.21.0
-      vitest:
-        specifier: ^4.0.18
-        version: 4.1.4(@types/node@25.6.0)(vite@7.3.2(@types/node@25.6.0)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.21.0))
 
   packages/web:
     dependencies:
@@ -2650,6 +2675,9 @@ packages:
 
   minimatch@3.1.5:
     resolution: {integrity: sha512-VgjWUsnnT6n+NUk6eZq77zeFdpW2LWDzP6zFGrCbHXiYNul5Dzqk2HHQ5uFH2DNW5Xbp8+jVzaeNt94ssEEl4w==}
+
+  mpg123-decoder@1.0.3:
+    resolution: {integrity: sha512-+fjxnWigodWJm3+4pndi+KUg9TBojgn31DPk85zEsim7C6s0X5Ztc/hQYdytXkwuGXH+aB0/aEkG40Emukv6oQ==}
 
   ms@2.1.3:
     resolution: {integrity: sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==}
@@ -5434,6 +5462,10 @@ snapshots:
   minimatch@3.1.5:
     dependencies:
       brace-expansion: 1.1.14
+
+  mpg123-decoder@1.0.3:
+    dependencies:
+      '@wasm-audio-decoders/common': 9.0.7
 
   ms@2.1.3: {}
 

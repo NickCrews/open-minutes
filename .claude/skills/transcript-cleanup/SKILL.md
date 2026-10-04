@@ -7,11 +7,13 @@ description: Fix who-said-what, people, and chapters in Open Minutes meeting dat
 
 ## Tools
 
-Edit the database only through `@open-minutes/tools`, never raw SQL:
+Edit the database only through the tools in `@open-minutes/agents`, never raw
+SQL:
 
-- Shell: `pnpm tools` lists the tools, `pnpm tools <tool> --schema` shows a
-  tool's input, and `pnpm tools <tool> '<json>'` calls it. Output is JSON.
-- TypeScript: `import { tools, toAgentTool } from "@open-minutes/tools"`.
+- Shell: `pnpm om tools` lists the tools, `pnpm om tools <tool> --schema`
+  shows a tool's input, and `pnpm om tools <tool> '<json>'` calls it. Output
+  is JSON.
+- TypeScript: `import { tools, toAgentTool } from "@open-minutes/agents"`.
 
 Every write returns `issues` for the meetings it touched, and it rolls back
 if the change introduces an error. Read the issues each time. Pass

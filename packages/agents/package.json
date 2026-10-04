@@ -1,0 +1,33 @@
+{
+  "name": "@open-minutes/agents",
+  "version": "0.1.0",
+  "description": "Open Minutes interfaces for agents and people: tools for cleaning up meetings (read and edit the data, listen to the audio) with typed schemas, and the om CLI over ingestion, models and the tools",
+  "type": "module",
+  "bin": {
+    "om": "./src/cli/om.ts"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "om": "tsx src/cli/om.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "bench": "vitest bench --run"
+  },
+  "dependencies": {
+    "@open-minutes/audio": "workspace:*",
+    "@open-minutes/core": "workspace:*",
+    "@open-minutes/db": "workspace:*",
+    "@open-minutes/fixtures": "workspace:*",
+    "@open-minutes/ingest": "workspace:*",
+    "citty": "^0.1.6",
+    "drizzle-orm": "1.0.0-beta.21",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "tsx": "^4.21.0",
+    "vitest": "^4.0.18"
+  }
+}
