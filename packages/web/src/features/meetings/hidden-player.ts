@@ -3,7 +3,7 @@ import { createSignal, onCleanup } from "solid-js";
 import { storedAudioUrl } from "~/lib/audio-store";
 import type { AudioPlayer } from "./audio-player";
 import { createStoredAudioPlayer } from "./stored-audio-player";
-import { createYouTubeAudioPlayer } from "./youtube-audio-player";
+import { createYouTubeAudioPlayers } from "./youtube-audio-player";
 
 /** A meeting's video, as the hidden player needs to know it. */
 export type PlayableMeeting = { id: number; youtubeId: string };
@@ -12,7 +12,7 @@ export type PlayableMeeting = { id: number; youtubeId: string };
  * An invisible player for audio-only playback of meeting excerpts, one shared
  * by every meeting on the page.
  *
- * It plays each meeting through one of two players, and is what the page
+ * It plays each meeting through a player of its own, of one of two kinds, and is what the page
  * sees: which meeting is playing, where, and whether it's playing.
  * - The object store's copy of the audio (`createStoredAudioPlayer`) where
  *   there is one and the browser can play it: it starts in well under a
@@ -41,47 +41,54 @@ export function createHiddenPlayer() {
   // nor get checked against `shouldStop`.
   let pendingSeek: number | null = null;
   let poll: ReturnType<typeof setInterval> | undefined;
-  /** Videos the store turned out not to have, so they play from YouTube. */
-  const notStored = new Set<string>();
-
-  const storedUrl = (youtubeId: string) =>
-    notStored.has(youtubeId)
-      ? null
-      : storedAudioUrl(config().objectStorePublicUrl, youtubeId);
-
-  // Each player's own reports count only while it's the one in use.
-  const stored: AudioPlayer = createStoredAudioPlayer({
-    urlFor: (youtubeId) => storedUrl(youtubeId) ?? "",
-    onPlayingChange: (now) => {
-      if (active === stored) setPlaying(now);
-    },
-    onUnavailable: (youtubeId) => {
-      notStored.add(youtubeId);
-      if (active === stored && current?.youtubeId === youtubeId) {
-        // Carry on from YouTube, if the reader is waiting on it.
-        if (playing()) {
-          use(youtube).play(youtubeId, pendingSeek ?? currentTime());
-        }
-      } else if (!current) {
-        youtube.load(youtubeId);
-      }
-    },
-  });
-  const youtube: AudioPlayer = createYouTubeAudioPlayer({
-    host: () => host,
-    onPlayingChange: (now) => {
-      if (active === youtube) setPlaying(now);
-    },
-  });
+  /** Each video's player, made the first time it's needed. */
+  const players = new Map<string, AudioPlayer>();
+  const youtube = createYouTubeAudioPlayers({ host: () => host });
 
   onCleanup(() => {
     clearInterval(poll);
-    stored.destroy();
+    for (const player of players.values()) player.destroy();
     youtube.destroy();
   });
 
-  const playerFor = (youtubeId: string) =>
-    storedUrl(youtubeId) ? stored : youtube;
+  // Each player's own reports count only while it's the one in use.
+  const reportsFor = (youtubeId: string) => ({
+    onPlayingChange: (now: boolean) => {
+      if (active && active === players.get(youtubeId)) setPlaying(now);
+    },
+  });
+
+  /** `youtubeId`'s player: from the store where it has the audio, else YouTube. */
+  const playerFor = (youtubeId: string): AudioPlayer => {
+    let player = players.get(youtubeId);
+    if (player) return player;
+    const url = storedAudioUrl(config().objectStorePublicUrl, youtubeId);
+    player = url
+      ? createStoredAudioPlayer({
+          ...reportsFor(youtubeId),
+          url,
+          onUnavailable: () => fallBack(youtubeId),
+        })
+      : youtube.player({ ...reportsFor(youtubeId), youtubeId });
+    players.set(youtubeId, player);
+    return player;
+  };
+
+  /** Swaps `youtubeId`'s player from the store for YouTube's, and carries on. */
+  const fallBack = (youtubeId: string) => {
+    const failed = players.get(youtubeId);
+    if (!failed) return;
+    const replacement = youtube.player({ ...reportsFor(youtubeId), youtubeId });
+    players.set(youtubeId, replacement);
+    failed.destroy();
+    if (active === failed) {
+      // Carry on from YouTube, if the reader is waiting on it.
+      active = null;
+      if (playing()) use(replacement).play(pendingSeek ?? currentTime());
+    } else if (!current) {
+      replacement.load();
+    }
+  };
 
   const onPoll = () => {
     const head = active?.playhead();
@@ -100,11 +107,11 @@ export function createHiddenPlayer() {
     }
   };
 
-  /** Makes `player` the one in use, pausing the other. */
+  /** Makes `player` the one in use, pausing the one before. */
   const use = (player: AudioPlayer) => {
     if (active && active !== player) active.pause();
     active = player;
-    // Neither player has an event fine-grained enough to follow words by.
+    // Neither kind of player has an event fine-grained enough to follow words by.
     poll ??= setInterval(onPoll, 250);
     return player;
   };
@@ -122,7 +129,7 @@ export function createHiddenPlayer() {
     current = meeting;
     shouldStop = stop;
     pendingSeek = secs;
-    use(playerFor(meeting.youtubeId)).play(meeting.youtubeId, secs);
+    use(playerFor(meeting.youtubeId)).play(secs);
   };
 
   /**
@@ -132,7 +139,7 @@ export function createHiddenPlayer() {
    */
   const prepare = (meeting: PlayableMeeting) => {
     if (current) return;
-    playerFor(meeting.youtubeId).load(meeting.youtubeId);
+    playerFor(meeting.youtubeId).load();
   };
 
   const pause = () => {
