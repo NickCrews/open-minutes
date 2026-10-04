@@ -139,8 +139,8 @@ switching traffic, and replies with the result.
 
 We don't roll back; we only roll forward. `production` only moves forward along
 `main`, so to undo a bad deploy, fix it or revert the PR on `main` and deploy
-that. Migrations must be backward-compatible, since old code briefly runs on
-the new schema.
+that. Migrations needn't be backward-compatible: old code briefly runs on the
+new schema, and the site may break for those few seconds.
 
 See [docs/contributing/deploy.md](docs/contributing/deploy.md) for the details
 and one-time setup.

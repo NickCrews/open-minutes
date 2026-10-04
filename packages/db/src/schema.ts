@@ -75,29 +75,6 @@ export const bodiesTable = pgTable(
   ],
 );
 
-/**
- * @deprecated Replaced by `bodies.meeting_source`, and no longer read or
- * written. Kept only so the code deployed before it briefly runs on the new
- * schema (see docs/contributing/db.md); drop it in a later migration.
- */
-export const videoSourcesTable = pgTable("video_sources", {
-  id: serial().primaryKey(),
-  body_id: integer()
-    .notNull()
-    .references(() => bodiesTable.id),
-  kind: varchar().$type<"channel" | "playlist">().notNull(),
-  // A YouTube channel id (UC...) or playlist id (PL...), per `kind`.
-  youtube_id: varchar().notNull(),
-  url: varchar().generatedAlwaysAs(
-    (): SQL =>
-      sql`CASE ${videoSourcesTable.kind}
-            WHEN 'channel' THEN 'https://www.youtube.com/channel/' || ${videoSourcesTable.youtube_id}
-            WHEN 'playlist' THEN 'https://www.youtube.com/playlist?list=' || ${videoSourcesTable.youtube_id}
-          END`,
-  ),
-  created_at: timestamp().notNull().defaultNow(),
-});
-
 export const meetingsTable = pgTable(
   "meetings",
   {
@@ -129,18 +106,6 @@ export const meetingsTable = pgTable(
             WHEN 'akleg' THEN 'https://www.akleg.gov/basis/Meeting/Detail?Meeting=' || replace(replace(${meetingsTable.site_id}, '&', '%26'), ' ', '%20')
           END`,
       ),
-    /**
-     * @deprecated Replaced by `site` and `site_id`, and no longer read or
-     * written. Kept, with `youtube_url`, only so the code deployed before it
-     * briefly runs on the new schema (see docs/contributing/db.md); drop both
-     * in a later migration.
-     */
-    youtube_id: varchar().unique(),
-    /** @deprecated See `youtube_id`. */
-    youtube_url: varchar().generatedAlwaysAs(
-      (): SQL =>
-        sql`CASE WHEN ${meetingsTable.youtube_id} != '' THEN 'https://www.youtube.com/watch?v=' || ${meetingsTable.youtube_id} ELSE '' END`,
-    ),
     title: varchar().notNull().default(""),
     // Free text from the meeting's site, copied verbatim at ingest: the YouTube
     // video description, or the room for akleg.gov meetings. Written by the
@@ -368,7 +333,6 @@ export const relations = defineRelations(
   {
     jurisdictionsTable,
     bodiesTable,
-    videoSourcesTable,
     meetingsTable,
     peopleTable,
     segmentsTable,
@@ -388,20 +352,9 @@ export const relations = defineRelations(
         to: r.jurisdictionsTable.id,
         optional: false,
       }),
-      videoSources: r.many.videoSourcesTable({
-        from: r.bodiesTable.id,
-        to: r.videoSourcesTable.body_id,
-      }),
       meetings: r.many.meetingsTable({
         from: r.bodiesTable.id,
         to: r.meetingsTable.body_id,
-      }),
-    },
-    videoSourcesTable: {
-      body: r.one.bodiesTable({
-        from: r.videoSourcesTable.body_id,
-        to: r.bodiesTable.id,
-        optional: false,
       }),
     },
     meetingsTable: {

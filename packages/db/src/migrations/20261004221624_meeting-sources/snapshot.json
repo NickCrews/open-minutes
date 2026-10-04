@@ -49,12 +49,6 @@
       "schema": "public"
     },
     {
-      "isRlsEnabled": false,
-      "name": "video_sources",
-      "entityType": "tables",
-      "schema": "public"
-    },
-    {
       "type": "serial",
       "typeSchema": null,
       "notNull": true,
@@ -515,35 +509,6 @@
     {
       "type": "varchar",
       "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "youtube_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "meetings"
-    },
-    {
-      "type": "varchar",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": {
-        "as": "CASE WHEN \"meetings\".\"youtube_id\" != '' THEN 'https://www.youtube.com/watch?v=' || \"meetings\".\"youtube_id\" ELSE '' END",
-        "type": "stored"
-      },
-      "identity": null,
-      "name": "youtube_url",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "meetings"
-    },
-    {
-      "type": "varchar",
-      "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
       "default": "''",
@@ -840,87 +805,6 @@
       "table": "segments"
     },
     {
-      "type": "serial",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "video_sources"
-    },
-    {
-      "type": "integer",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "body_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "video_sources"
-    },
-    {
-      "type": "varchar",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "kind",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "video_sources"
-    },
-    {
-      "type": "varchar",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "youtube_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "video_sources"
-    },
-    {
-      "type": "varchar",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": {
-        "as": "CASE \"video_sources\".\"kind\"\n            WHEN 'channel' THEN 'https://www.youtube.com/channel/' || \"video_sources\".\"youtube_id\"\n            WHEN 'playlist' THEN 'https://www.youtube.com/playlist?list=' || \"video_sources\".\"youtube_id\"\n          END",
-        "type": "stored"
-      },
-      "identity": null,
-      "name": "url",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "video_sources"
-    },
-    {
-      "type": "timestamp",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "video_sources"
-    },
-    {
       "nameExplicit": true,
       "columns": [
         {
@@ -1077,23 +961,6 @@
       "table": "segments"
     },
     {
-      "nameExplicit": false,
-      "columns": [
-        "body_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "bodies",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "NO ACTION",
-      "name": "video_sources_body_id_bodies_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "video_sources"
-    },
-    {
       "columns": [
         "id"
       ],
@@ -1164,16 +1031,6 @@
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
-      "name": "video_sources_pkey",
-      "schema": "public",
-      "table": "video_sources",
-      "entityType": "pks"
-    },
-    {
       "nameExplicit": false,
       "columns": [
         "id",
@@ -1204,17 +1061,6 @@
       ],
       "nullsNotDistinct": false,
       "name": "meetings_slug_key",
-      "schema": "public",
-      "table": "meetings",
-      "entityType": "uniques"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "youtube_id"
-      ],
-      "nullsNotDistinct": false,
-      "name": "meetings_youtube_id_key",
       "schema": "public",
       "table": "meetings",
       "entityType": "uniques"

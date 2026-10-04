@@ -78,8 +78,7 @@ Things to know:
 - **Where a meeting was published**: `site` is `youtube` or `akleg` (the
   Alaska Legislature's akleg.gov), `site_id` is its ID there (a YouTube video
   ID, or an akleg.gov meeting ID like `HRES 2018-09-10 14:00:00`), and `url`
-  is its page there. Ignore `youtube_id` and `youtube_url`, which are on their
-  way out and empty for newer meetings.
+  is its page there.
 - **Times within a meeting** (`start_secs`, `end_secs`, `duration_secs`) are
   `INTERVAL`s from the start of its recording. `epoch(start_secs)` gives
   seconds as a number.

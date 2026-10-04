@@ -67,6 +67,16 @@ describe(MIGRATION, () => {
         url: "https://www.youtube.com/watch?v=vid-pzc",
       },
     ]);
+
+    // What they replace is gone.
+    expect(
+      await sql`SELECT table_name FROM information_schema.tables
+        WHERE table_name = 'video_sources'`,
+    ).toEqual([]);
+    const columns = await sql`
+      SELECT column_name FROM information_schema.columns
+      WHERE table_name = 'meetings' AND column_name LIKE 'youtube%'`;
+    expect(columns).toEqual([]);
   });
 
   test("gives akleg.gov meetings their page as url, and checks sources", async ({
@@ -75,20 +85,17 @@ describe(MIGRATION, () => {
     const sql = testDb.client;
     await testDb.migrateTo(MIGRATION);
 
-    // New meetings leave the deprecated youtube_id null, and several may.
     const rows = await sql`
       INSERT INTO meetings (body_id, site, site_id) VALUES
         (2, 'akleg', 'SL&C 2026-02-03 13:30:00'),
         (2, 'akleg', 'HRES 2018-09-10 14:00:00')
-      RETURNING url, youtube_id`;
+      RETURNING url`;
     expect(rows).toEqual([
       {
         url: "https://www.akleg.gov/basis/Meeting/Detail?Meeting=SL%26C%202026-02-03%2013:30:00",
-        youtube_id: null,
       },
       {
         url: "https://www.akleg.gov/basis/Meeting/Detail?Meeting=HRES%202018-09-10%2014:00:00",
-        youtube_id: null,
       },
     ]);
 
