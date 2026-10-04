@@ -10,6 +10,7 @@ export default defineConfig({
       "./packages/pipeline/vitest.config.ts",
       "./packages/tools/vitest.config.ts",
       "./packages/youtube/vitest.config.ts",
+      "./packages/akleg/vitest.config.ts",
       "./packages/web/vitest.config.ts",
     ],
   },
