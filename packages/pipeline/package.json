@@ -7,7 +7,8 @@
     "om": "./src/om/cli.ts"
   },
   "exports": {
-    "./om": "./src/om/index.ts"
+    "./om": "./src/om/index.ts",
+    "./audio": "./src/audio.ts"
   },
   "scripts": {
     "om": "tsx src/om/cli.ts",

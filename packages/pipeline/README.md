@@ -28,3 +28,13 @@ the last completed stage; to fully reprocess a meeting, delete its DB row and
 its work directory. The CLI is a thin wrapper over the exported API
 (`listIngested`, `listAvailable`, `ingestVideo` from
 `@open-minutes/pipeline/om`), so scripts and tests reuse the same logic.
+
+## Audio for the agent tools
+
+`src/audio.ts`, exported as `@open-minutes/pipeline/audio`, is what the audio
+tools in `@open-minutes/tools` need: a meeting's cached audio, plus the model
+calls from `@open-minutes/audio` that they use. Those are speech runs from
+Silero VAD (`detectSpeech` in `speech-runs.ts`, with pauses down to 0.2 s where
+the transcriber cuts at 0.5 s), and `transcribeRange`, which decodes one
+stretch with two seconds of audio either side for context and returns only
+the words that start inside it.

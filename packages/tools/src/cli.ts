@@ -6,15 +6,22 @@
 //   pnpm tools <tool> '<json>'          call it; input may also come on stdin
 //   pnpm tools --describe               every tool with its schema, as JSON
 //
-// Results are JSON on stdout. A refused call prints {"error": "..."} and
-// exits 1. The database is chosen as everywhere else: --db, else $DB, else
-// your branch's local database.
+// Results are JSON on stdout; progress goes to stderr. A refused call prints
+// {"error": "..."} and exits 1. The database is chosen as everywhere else:
+// --db, else $DB, else your branch's local database. It's only opened for a
+// tool that needs it: the audio tools on a golden fixture don't.
 
 import { readFileSync } from "node:fs";
+import { loadRootDotEnv } from "@open-minutes/core/dotenv";
 import { getDb, resolveDatabaseUrl } from "@open-minutes/db";
 import { prepareDatabase } from "@open-minutes/db/ensure";
+import { goldenRefs } from "./audio/meeting";
+import { toolContext } from "./context";
 import { callTool, parametersOf, ToolError } from "./tool";
 import { tools } from "./tools";
+
+// The audio tools read OBJECT_STORE_PUBLIC_URL to download a meeting's audio.
+loadRootDotEnv();
 
 const args = process.argv.slice(2);
 const dbAt = args.indexOf("--db");
@@ -35,6 +42,7 @@ if (flags.has("--describe")) {
 }
 if (!name) {
   for (const t of tools) console.log(`${t.name}\t${t.description}`);
+  console.log(`\nGolden meetings: ${goldenRefs().join(" ")}`);
   process.exit(0);
 }
 const tool = tools.find((t) => t.name === name);
@@ -56,15 +64,20 @@ try {
   process.exit(1);
 }
 
-const url = resolveDatabaseUrl(target);
-await prepareDatabase(url);
-const { db, client } = getDb(url);
+let client: { end(): Promise<void> } | null = null;
+const ctx = toolContext(async () => {
+  const url = resolveDatabaseUrl(target);
+  await prepareDatabase(url);
+  const opened = getDb(url);
+  client = opened.client;
+  return opened.db;
+});
 try {
-  print(await callTool(db, tool, input));
+  print(await callTool(ctx, tool, input));
 } catch (err) {
   if (!(err instanceof ToolError)) throw err;
   print({ error: err.message });
   process.exitCode = 1;
 } finally {
-  await client.end();
+  await (client as { end(): Promise<void> } | null)?.end();
 }

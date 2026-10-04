@@ -1,7 +1,14 @@
 import { describe, expect, test as plainTest } from "vitest";
 import { dbTest } from "@open-minutes/db/testing/vitest";
 import { devData } from "@open-minutes/fixtures/dev-data";
-import { callTool, parametersOf, toAgentTool, ToolError } from "./tool";
+import { toolContext } from "./context";
+import {
+  callTool,
+  type Db,
+  parametersOf,
+  toAgentTool,
+  ToolError,
+} from "./tool";
 import {
   checkMeetingTool,
   findPeople,
@@ -20,19 +27,19 @@ import {
 
 const test = dbTest({ data: devData });
 /** The March 23, 2026 GBOS golden meeting, the one with chapters. */
-async function gbosId(db: Parameters<typeof callTool>[0]) {
-  const meetings = await callTool(db, listMeetings, {});
+async function gbosId(db: Db) {
+  const meetings = await callTool(toolContext(db), listMeetings, {});
   return meetings.find((m) => m.youtubeId === "9HoIM5INxpI")!.id;
 }
 
-async function personId(db: Parameters<typeof callTool>[0], slug: string) {
-  const [p] = await callTool(db, findPeople, { query: slug });
+async function personId(db: Db, slug: string) {
+  const [p] = await callTool(toolContext(db), findPeople, { query: slug });
   return p!.id;
 }
 
 /** Brian Burnett's "This is Brian Burnett chiming in" segment. */
-async function brianSegment(db: Parameters<typeof callTool>[0]) {
-  const segments = await callTool(db, getTranscript, {
+async function brianSegment(db: Db) {
+  const segments = await callTool(toolContext(db), getTranscript, {
     meetingId: await gbosId(db),
   });
   return segments.find((s) => s.text.includes("Burnett chiming"))!;
@@ -41,7 +48,7 @@ async function brianSegment(db: Parameters<typeof callTool>[0]) {
 describe("reading", () => {
   test("lists meetings with their sizes", async ({ db }) => {
     const MEETING = await gbosId(db);
-    const meetings = await callTool(db, listMeetings, {});
+    const meetings = await callTool(toolContext(db), listMeetings, {});
     const gbos = meetings.find((m) => m.id === MEETING);
     expect(gbos).toMatchObject({ body: "GBOS", chapters: 34 });
     expect(gbos!.segments).toBeGreaterThan(200);
@@ -49,7 +56,7 @@ describe("reading", () => {
 
   test("reads part of a transcript, with words on request", async ({ db }) => {
     const MEETING = await gbosId(db);
-    const part = await callTool(db, getTranscript, {
+    const part = await callTool(toolContext(db), getTranscript, {
       meetingId: MEETING,
       from: 600,
       to: 700,
@@ -65,7 +72,9 @@ describe("reading", () => {
 
   test("tallies speakers, longest first", async ({ db }) => {
     const MEETING = await gbosId(db);
-    const speakers = await callTool(db, listSpeakers, { meetingId: MEETING });
+    const speakers = await callTool(toolContext(db), listSpeakers, {
+      meetingId: MEETING,
+    });
     expect(speakers[0]!.speaker).toMatchObject({ slug: "mike-edgington" });
     expect(speakers[0]!.secs).toBeGreaterThan(speakers[1]!.secs);
   });
@@ -73,16 +82,16 @@ describe("reading", () => {
   test("a clean meeting has no issues", async ({ db }) => {
     const MEETING = await gbosId(db);
     expect(
-      await callTool(db, checkMeetingTool, { meetingId: MEETING }),
+      await callTool(toolContext(db), checkMeetingTool, { meetingId: MEETING }),
     ).toEqual([]);
   });
 
   test("refuses bad input with a readable message", async ({ db }) => {
     await expect(
-      callTool(db, getTranscript, { meetingId: "one" }),
+      callTool(toolContext(db), getTranscript, { meetingId: "one" }),
     ).rejects.toThrow(/Invalid input for get_transcript[\s\S]*meetingId/);
     await expect(
-      callTool(db, checkMeetingTool, { meetingId: 999 }),
+      callTool(toolContext(db), checkMeetingTool, { meetingId: 999 }),
     ).rejects.toThrow(ToolError);
   });
 });
@@ -91,7 +100,7 @@ describe("relabel_segments", () => {
   test("a dry run saves nothing", async ({ db }) => {
     const seg = await brianSegment(db);
     const mike = await personId(db, "mike-edgington");
-    const out = await callTool(db, relabelSegments, {
+    const out = await callTool(toolContext(db), relabelSegments, {
       segmentIds: [seg.id],
       speaker: { personId: mike },
       dryRun: true,
@@ -105,7 +114,7 @@ describe("relabel_segments", () => {
 
   test("saves, and can make speech unattributed", async ({ db }) => {
     const seg = await brianSegment(db);
-    const out = await callTool(db, relabelSegments, {
+    const out = await callTool(toolContext(db), relabelSegments, {
       segmentIds: [seg.id],
       speaker: {},
     });
@@ -118,13 +127,15 @@ describe("split_segment and merge_segments", () => {
   test("split then merge restores the segment", async ({ db }) => {
     const MEETING = await gbosId(db);
     const seg = await brianSegment(db);
-    const split = await callTool(db, splitSegment, {
+    const split = await callTool(toolContext(db), splitSegment, {
       segmentId: seg.id,
       atWord: 3,
       speaker: { speakerNumber: 42 },
     });
     expect(split.applied).toBe(true);
-    const after = await callTool(db, getTranscript, { meetingId: MEETING });
+    const after = await callTool(toolContext(db), getTranscript, {
+      meetingId: MEETING,
+    });
     const i = after.findIndex((s) => s.id === seg.id);
     expect(after[i]!.text).toBe("I have I");
     expect(after[i + 1]).toMatchObject({
@@ -132,7 +143,7 @@ describe("split_segment and merge_segments", () => {
       speaker: { speakerNumber: 42 },
     });
 
-    const merged = await callTool(db, mergeSegments, {
+    const merged = await callTool(toolContext(db), mergeSegments, {
       segmentIds: [split.result.newSegmentId, seg.id],
     });
     expect(merged.applied).toBe(true);
@@ -141,16 +152,21 @@ describe("split_segment and merge_segments", () => {
 
   test("refuses segments that aren't next to each other", async ({ db }) => {
     const MEETING = await gbosId(db);
-    const [a, , c] = await callTool(db, getTranscript, { meetingId: MEETING });
+    const [a, , c] = await callTool(toolContext(db), getTranscript, {
+      meetingId: MEETING,
+    });
     await expect(
-      callTool(db, mergeSegments, { segmentIds: [a!.id, c!.id] }),
+      callTool(toolContext(db), mergeSegments, { segmentIds: [a!.id, c!.id] }),
     ).rejects.toThrow(/consecutive/);
   });
 
   test("refuses a split point outside the segment", async ({ db }) => {
     const seg = await brianSegment(db);
     await expect(
-      callTool(db, splitSegment, { segmentId: seg.id, atWord: 999 }),
+      callTool(toolContext(db), splitSegment, {
+        segmentId: seg.id,
+        atWord: 999,
+      }),
     ).rejects.toThrow(/atWord must be/);
   });
 });
@@ -160,7 +176,7 @@ describe("people", () => {
     db,
   }) => {
     const id = await personId(db, "bray-keefer");
-    const out = await callTool(db, updatePerson, {
+    const out = await callTool(toolContext(db), updatePerson, {
       personId: id,
       bio: "Landscape architect.",
     });
@@ -169,17 +185,26 @@ describe("people", () => {
       bio: "Landscape architect.",
     });
     await expect(
-      callTool(db, updatePerson, { personId: id, slug: "kyle-kelley" }),
+      callTool(toolContext(db), updatePerson, {
+        personId: id,
+        slug: "kyle-kelley",
+      }),
     ).rejects.toThrow(/unique|duplicate/i);
   });
 
   test("refuses an en or em dash in a name or bio", async ({ db }) => {
     const id = await personId(db, "bray-keefer");
     await expect(
-      callTool(db, updatePerson, { personId: id, bio: "Planner 2019–2022." }),
+      callTool(toolContext(db), updatePerson, {
+        personId: id,
+        bio: "Planner 2019–2022.",
+      }),
     ).rejects.toThrow(/plain hyphen/);
     await expect(
-      callTool(db, updatePerson, { personId: id, name: "Bray — Keefer" }),
+      callTool(toolContext(db), updatePerson, {
+        personId: id,
+        name: "Bray — Keefer",
+      }),
     ).rejects.toThrow(/plain hyphen/);
   });
 
@@ -187,19 +212,23 @@ describe("people", () => {
     const MEETING = await gbosId(db);
     const keep = await personId(db, "kellie-okonek");
     const merge = await personId(db, "brianna-sullivan");
-    const before = await callTool(db, listSpeakers, { meetingId: MEETING });
+    const before = await callTool(toolContext(db), listSpeakers, {
+      meetingId: MEETING,
+    });
     const segs = (slug: string) =>
       before.find(
         (s) => s.speaker && "slug" in s.speaker && s.speaker.slug === slug,
       )!.segments;
     const expected = segs("kellie-okonek") + segs("brianna-sullivan");
 
-    const out = await callTool(db, mergePeople, {
+    const out = await callTool(toolContext(db), mergePeople, {
       keepId: keep,
       mergeId: merge,
     });
     expect(out.applied).toBe(true);
-    const after = await callTool(db, listSpeakers, { meetingId: MEETING });
+    const after = await callTool(toolContext(db), listSpeakers, {
+      meetingId: MEETING,
+    });
     expect(
       after.find(
         (s) =>
@@ -208,7 +237,9 @@ describe("people", () => {
           s.speaker.slug === "kellie-okonek",
       )!.segments,
     ).toBe(expected);
-    expect(await callTool(db, findPeople, { query: "brianna" })).toEqual([]);
+    expect(
+      await callTool(toolContext(db), findPeople, { query: "brianna" }),
+    ).toEqual([]);
   });
 });
 
@@ -222,7 +253,7 @@ describe("replace_chapters", () => {
 
   test("replaces the chapters as a new generation", async ({ db }) => {
     const MEETING = await gbosId(db);
-    const out = await callTool(db, replaceChapters, {
+    const out = await callTool(toolContext(db), replaceChapters, {
       meetingId: MEETING,
       model: "human",
       reviewedByHuman: true,
@@ -233,9 +264,9 @@ describe("replace_chapters", () => {
     });
     expect(out.applied).toBe(true);
     expect(
-      (await callTool(db, getChapters, { meetingId: MEETING })).map(
-        (c) => c.title,
-      ),
+      (
+        await callTool(toolContext(db), getChapters, { meetingId: MEETING })
+      ).map((c) => c.title),
     ).toEqual(["First half", "Second half"]);
     // Two 80-minute chapters break the size convention: warned, still saved.
     expect(out.issues.every((i) => i.severity === "warning")).toBe(true);
@@ -246,7 +277,7 @@ describe("replace_chapters", () => {
   }) => {
     const MEETING = await gbosId(db);
     await expect(
-      callTool(db, replaceChapters, {
+      callTool(toolContext(db), replaceChapters, {
         meetingId: MEETING,
         model: "human",
         chapters: [chapter(0, 100), chapter(50, 200)],
@@ -258,8 +289,10 @@ describe("replace_chapters", () => {
 
   test("rolls back a change that introduces an error", async ({ db }) => {
     const MEETING = await gbosId(db);
-    const before = await callTool(db, getChapters, { meetingId: MEETING });
-    const out = await callTool(db, replaceChapters, {
+    const before = await callTool(toolContext(db), getChapters, {
+      meetingId: MEETING,
+    });
+    const out = await callTool(toolContext(db), replaceChapters, {
       meetingId: MEETING,
       model: "human",
       chapters: [chapter(0, 99_999, "Runs past the end")],
@@ -270,9 +303,9 @@ describe("replace_chapters", () => {
         message: expect.stringMatching(/ends after the meeting does/),
       }),
     ]);
-    expect(await callTool(db, getChapters, { meetingId: MEETING })).toEqual(
-      before,
-    );
+    expect(
+      await callTool(toolContext(db), getChapters, { meetingId: MEETING }),
+    ).toEqual(before);
   });
 });
 
@@ -287,7 +320,7 @@ describe("tool definitions", () => {
   });
 
   test("adapt to pi's AgentTool shape", async ({ db }) => {
-    const agentTool = toAgentTool(listMeetings, db);
+    const agentTool = toAgentTool(listMeetings, toolContext(db));
     expect(agentTool).toMatchObject({
       name: "list_meetings",
       label: "List meetings",
