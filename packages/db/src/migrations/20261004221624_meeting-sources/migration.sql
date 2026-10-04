@@ -29,6 +29,7 @@ ALTER TABLE "meetings" ADD COLUMN "url" varchar GENERATED ALWAYS AS (CASE "meeti
           END) STORED NOT NULL;--> statement-breakpoint
 ALTER TABLE "meetings" ADD CONSTRAINT "meetings_site_site_id_unique" UNIQUE("site","site_id");--> statement-breakpoint
 ALTER TABLE "meetings" ADD CONSTRAINT "meetings_site_known" CHECK ("site" IN ('youtube', 'akleg'));--> statement-breakpoint
--- youtube_id is deprecated: new meetings leave it null.
-ALTER TABLE "meetings" ALTER COLUMN "youtube_id" DROP DEFAULT;--> statement-breakpoint
-ALTER TABLE "meetings" ALTER COLUMN "youtube_id" DROP NOT NULL;
+ALTER TABLE "meetings" DROP COLUMN "youtube_url";--> statement-breakpoint
+ALTER TABLE "meetings" DROP CONSTRAINT "meetings_youtube_id_key";--> statement-breakpoint
+ALTER TABLE "meetings" DROP COLUMN "youtube_id";--> statement-breakpoint
+DROP TABLE "video_sources";

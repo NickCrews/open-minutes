@@ -124,8 +124,9 @@ instead: see [the open-minutes-data skill](../../skills/open-minutes-data/SKILL.
 
 Deploys migrate prod just before switching the Worker to the new code, so new
 code never runs on an old schema. Old code does briefly run on the new schema,
-so migrations must be backward-compatible: add first, deploy, remove later.
-See [deploy.md](deploy.md).
+which may break the site for a few seconds. That's accepted, so migrations
+needn't be backward-compatible: change the schema and the code that uses it
+in one step. See [deploy.md](deploy.md).
 
 ## Neon branches
 

@@ -48,9 +48,10 @@ So everything that can fail without touching the database fails before step 3.
 If step 4 fails, production is migrated but serving the previous version; the
 script prints the command to retry it.
 
-Between steps 3 and 4, old code briefly runs on the new schema, so migrations
-must be backward-compatible: add a column in one deploy, use it in the next,
-and drop columns only once no deployed code reads them.
+Between steps 3 and 4, old code briefly runs on the new schema. Migrations
+don't have to be backward-compatible: a migration can rename or drop what the
+old code uses, in one step with the code that stops using it. The site may
+break for the few seconds between the two steps, and that's accepted.
 
 `pnpm deploy:prod` runs the same script after building, for deploying from a
 laptop (with `DATABASE_URL_PROD` in `.env.local` and `wrangler login`).

@@ -2,7 +2,8 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { meetingsTable, segmentsTable } from "@open-minutes/db";
+import { bodiesTable, meetingsTable, segmentsTable } from "@open-minutes/db";
+import { eq } from "drizzle-orm";
 import type { VideoMetadata } from "@open-minutes/core/audio-provider";
 import type { SpeechSegment } from "@open-minutes/core/transcription";
 import { N_DIMENSIONS } from "@open-minutes/core/voice_embeddings";
@@ -166,7 +167,6 @@ describe("ingestMeeting", () => {
       site: "youtube",
       site_id: VIDEO_ID,
       url: `https://www.youtube.com/watch?v=${VIDEO_ID}`,
-      youtube_id: null,
       title: METADATA.title,
       description: METADATA.description,
       date: null,
@@ -265,11 +265,11 @@ describe("which body a meeting belongs to", () => {
   };
 
   test("an akleg.gov meeting is its committee's", async ({ db, workRoot }) => {
-    const hres = await insertBody(db, {
-      name: "House Resources Committee",
-      name_short: "HRES",
-      source: { type: "akleg_committee", committee: "HRES" },
-    });
+    // The golden HRES body's meeting source is the committee.
+    const [hres] = await db
+      .select({ id: bodiesTable.id })
+      .from(bodiesTable)
+      .where(eq(bodiesTable.name_short, "HRES"));
     await seedWorkDir(workRoot, "hres_HRES-2018-09-10-14-00-00");
 
     // A URL names it too; YouTube is never asked.
@@ -293,7 +293,7 @@ describe("which body a meeting belongs to", () => {
     });
     const [meeting] = await db.select().from(meetingsTable);
     expect(meeting).toMatchObject({
-      body_id: hres,
+      body_id: hres!.id,
       site: "akleg",
       site_id: AKLEG_ID,
       url: "https://www.akleg.gov/basis/Meeting/Detail?Meeting=HRES%202018-09-10%2014:00:00",
