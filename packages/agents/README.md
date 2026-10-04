@@ -58,6 +58,33 @@ the models in `@open-minutes/audio` directly, and get a meeting's audio from
 - `transcribe_range`: recognize one short stretch on its own, next to what the
   transcript has there.
 
+Four more compare voices: who a stretch of audio sounds like, by CAM++
+voiceprint, the model diarization uses.
+
+- `voice_timeline`: up to five minutes in passages, cut at each new segment
+  and each change of voice, each with its median pitch and the label its
+  voice is most like, and at each cut how alike the voice is either side.
+  `findings` lists where the voice and the labels disagree.
+- `match_voice`: the labels and segments one segment's voice is most like.
+- `audit_speaker`: whether one label is one voice, and which of its segments
+  sound like someone else.
+- `compare_speakers`: label pairs that sound alike.
+
+They are layered so each part can be tested on its own:
+
+- `vectors.ts`: cosine similarity, centroids and 2-means on voiceprints.
+- `voiceprints.ts`: `VoiceGrid`, a voiceprint for each 2 s window of the
+  audio, one every 0.5 s. Every voice tool reads voiceprints off this one
+  grid, whether of a moment, a segment or a whole label. A window is embedded
+  the first time something needs it and cached beside the audio, so a fresh
+  meeting costs only what's asked of it.
+- `pitch.ts`: pitch by YIN, for stretches too short to voiceprint.
+- `speakers.ts` and `timeline.ts`: the analyses, over a grid, with no I/O.
+- `voice-tools.ts`: the tools, which only shape those results for a model.
+
+`testdata/fake-voices.ts` builds a grid over made-up voices, so the analyses
+are tested against a known ground truth without the model.
+
 `src/audio/audio.test.ts` runs them on a checked-in minute of real meeting
 audio (`src/audio/testdata/`), and `src/audio/audio.bench.ts` times the
 models on it. Because the clip is one minute long, `pnpm bench` reports each

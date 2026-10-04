@@ -16,6 +16,7 @@ import { formatClock } from "./clock";
 import { defineTool } from "../tool";
 import { checkRange, meetingRef, time } from "./inputs";
 import type { AudioMeeting, LabeledSegment } from "./meeting";
+import { voiceTools } from "./voice-tools";
 
 // Tools that listen to a meeting's audio, for what the transcript's text can't
 // show: two people folded under one label, or speech the recognizer skipped.
@@ -211,4 +212,5 @@ export const audioTools = [
   speechActivity,
   findUntranscribedSpeech,
   transcribeRangeTool,
+  ...voiceTools,
 ];
