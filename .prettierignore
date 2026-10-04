@@ -1,4 +1,2 @@
 pnpm-lock.yaml
 packages/db/src/migrations/
-# Verbatim akleg.gov pages: the parsers read them as served.
-packages/akleg/src/fixtures/
