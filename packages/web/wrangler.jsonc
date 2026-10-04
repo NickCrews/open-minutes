@@ -8,4 +8,12 @@
   "compatibility_flags": ["nodejs_compat"],
   "main": "@tanstack/solid-start/server-entry",
   "observability": { "enabled": true },
+  // Plain (non-secret) configuration, the same in dev, previews and
+  // production; secrets like DATABASE_URL are set elsewhere. The app reads
+  // both from process.env in src/server/config.ts.
+  "vars": {
+    // The object store's public base URL; the pipeline's
+    // OBJECT_STORE_PUBLIC_URL. Excerpts play audio from it.
+    "OBJECT_STORE_PUBLIC_URL": "https://pub-ac21478ae97547c5a797c710cdc9df3d.r2.dev",
+  },
 }

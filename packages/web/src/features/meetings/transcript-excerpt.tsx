@@ -1,4 +1,11 @@
-import { createMemo, createSignal, For, type JSX, Show } from "solid-js";
+import {
+  createMemo,
+  createSignal,
+  For,
+  type JSX,
+  onMount,
+  Show,
+} from "solid-js";
 import { LAST_WORD_DURATION_SEC } from "@open-minutes/core/transcription";
 import { Button } from "~/components/button";
 import { PauseIcon, PlayIcon } from "~/components/icons";
@@ -134,6 +141,12 @@ export function TranscriptExcerpt(props: {
       shouldStop,
     );
   const canPlay = () => props.youtubeId !== "";
+  // Get the audio loading while the reader looks for something to play.
+  onMount(() => {
+    if (canPlay()) {
+      props.player.prepare({ id: props.meetingId, youtubeId: props.youtubeId });
+    }
+  });
 
   const SegmentRow = (row: { index: number }) => {
     const segment = props.segments[row.index]!;
@@ -150,8 +163,8 @@ export function TranscriptExcerpt(props: {
             onClick={() => {
               if (playing()) props.player.pause();
               // Paused partway through: pick up where it left off.
-              else if (active()) void playFrom(props.player.currentTime());
-              else void playFrom(segmentStart(segment));
+              else if (active()) playFrom(props.player.currentTime());
+              else playFrom(segmentStart(segment));
             }}
           >
             <Show when={playing()} fallback={<PlayIcon />}>
@@ -168,7 +181,7 @@ export function TranscriptExcerpt(props: {
             status={() => (active() ? "active" : "past")}
             currentTime={props.player.currentTime}
             onSeek={(secs) => {
-              if (canPlay()) void playFrom(secs);
+              if (canPlay()) playFrom(secs);
             }}
             matches={() => matches().get(row.index) ?? []}
           />
