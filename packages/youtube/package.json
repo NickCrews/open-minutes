@@ -4,7 +4,8 @@
   "description": "Open Minutes' YouTube source: list a channel's or playlist's videos, read their metadata and get their audio as WAV",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./store": "./src/store.ts"
   },
   "scripts": {
     "test": "vitest run",
