@@ -23,6 +23,13 @@ export const Route = createRootRoute({
       // that don't support SVG icons (notably Safari).
       { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
       { rel: "icon", type: "image/png", href: "/favicon.png" },
+      // For AI agents: what the site covers and which URLs to fetch.
+      {
+        rel: "alternate",
+        type: "text/markdown",
+        title: "Open Minutes for AI agents",
+        href: "/llms.txt",
+      },
     ],
   }),
   // The browser's share of the app's configuration (see ~/server/config).
