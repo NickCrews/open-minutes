@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 // The `om` CLI: composable meeting-ingestion commands, model downloads, and the
-// data-editing tools. A thin wrapper over the exported APIs of
+// meeting-cleanup tools. A thin wrapper over the exported APIs of
 // @open-minutes/ingest/om, @open-minutes/audio and ../tools — commands only
 // parse arguments and wire stdio.
 // Unix conventions: machine-readable results on stdout, human progress/logs on
@@ -22,8 +22,8 @@ import { prepareDatabase } from "@open-minutes/db/ensure";
 import type { IngestedMeeting } from "@open-minutes/ingest/om";
 import { runTools } from "./tools";
 
-// Ingestion and the models pull in sherpa-onnx's native module, so they are
-// imported only by the commands that need them; `om tools` stays light.
+// Ingestion and the model downloads are heavy, so they are imported only by
+// the commands that need them.
 const ingestApi = () => import("@open-minutes/ingest/om");
 const audioModels = () => import("@open-minutes/audio/models");
 
@@ -187,7 +187,7 @@ const toolsCommand = defineCommand({
   meta: {
     name: "tools",
     description:
-      "The data-editing tools as a JSON CLI: no arguments lists them, " +
+      "The meeting-cleanup tools (data and audio) as a JSON CLI: no arguments lists them, " +
       "`<tool> --schema` prints a tool's input, `<tool> '<json>'` calls it " +
       "(input may also come on stdin), and --describe prints every tool " +
       "with its schema. --db <name> picks the database.",

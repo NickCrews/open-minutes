@@ -147,6 +147,7 @@ pnpm check       # typecheck + format:check + lint + test (run this before commi
 pnpm test        # fast tests only
 pnpm test:slow   # only the tests tagged `slow`
 pnpm test:all    # everything, including slow tests
+pnpm bench       # time the audio models per minute of audio (*.bench.ts)
 pnpm format      # prettier --write over the repo
 ```
 

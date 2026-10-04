@@ -4,7 +4,8 @@
   "description": "Open Minutes meeting ingestion: download a meeting, run it through @open-minutes/audio, identify speakers and write it to the database",
   "type": "module",
   "exports": {
-    "./om": "./src/om/index.ts"
+    "./om": "./src/om/index.ts",
+    "./audio": "./src/audio.ts"
   },
   "scripts": {
     "test": "vitest run",
