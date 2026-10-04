@@ -8,7 +8,8 @@
 # this when a file is missing and poll for it; they decode the Opus themselves,
 # so nothing else is stored. YouTube's original audio isn't kept. If every
 # download attempt fails, youtube/<video id>/error.json is written instead, so
-# clients stop waiting.
+# clients stop waiting. Readers find these files with
+# packages/youtube/src/store.ts, so keep its layout in step with this one.
 #
 # Trigger it by hand with `gh workflow run fetch-youtube-audio.yml -f video_id=<id>`.
 #

@@ -17,9 +17,9 @@ import { createServerFn } from "@tanstack/solid-start";
 export type PublicConfig = {
   /**
    * The object store's public base URL, which excerpts play audio from (see
-   * `~/lib/audio-store`), or null if it isn't configured.
+   * `@open-minutes/youtube/store`). Always set: wrangler.jsonc has it.
    */
-  objectStorePublicUrl: string | null;
+  objectStorePublicUrl: string;
 };
 
 /**
@@ -28,6 +28,13 @@ export type PublicConfig = {
  */
 export const fetchPublicConfig = createServerFn({ method: "GET" }).handler(
   (): PublicConfig => ({
-    objectStorePublicUrl: process.env.OBJECT_STORE_PUBLIC_URL || null,
+    objectStorePublicUrl: required("OBJECT_STORE_PUBLIC_URL"),
   }),
 );
+
+/** The environment variable `name`, which wrangler.jsonc always sets. */
+function required(name: string): string {
+  const value = process.env[name];
+  if (!value) throw new Error(`${name} isn't set; see wrangler.jsonc`);
+  return value;
+}

@@ -8,6 +8,7 @@ import type {
 } from "@open-minutes/core/audio-provider";
 import type { ListedVideo, VideoLister } from "@open-minutes/core/video-lister";
 import { webmOpusToWav } from "./opus";
+import { type StoredYoutubeFile, storedYoutubeFileUrl } from "./store";
 
 export type {
   AudioProvider,
@@ -217,24 +218,7 @@ const FETCH_YOUTUBE_AUDIO_POLL_MS = 5_000;
 const FETCH_YOUTUBE_AUDIO_TIMEOUT_MS = 20 * 60_000;
 
 /**
- * Where a video's files live in the object store, as
- * `youtube/<video id>/<name>`:
- * - `info.json`: yt-dlp's metadata for the video
- * - `speech.webm`: YouTube's Opus audio re-encoded to 16 kHz mono Opus at
- *   24 kbps (~11 MB per hour), plenty for the models, which take 16 kHz mono
- * - `error.json`: written instead when the workflow fails, so clients stop
- *   waiting
- *
- * Keyed by video ID, so a video edited in place on YouTube (trimmed, or audio
- * muted over a copyright claim) keeps its old audio here. That's rare for
- * meetings, and the golden fixtures' sha256 checks would catch it.
- */
-function storeKey(id: string, name: string) {
-  return `youtube/${id}/${name}`;
-}
-
-/**
- * One of a video's files from the object store (see {@link storeKey}), or
+ * One of a video's files from the object store (see `./store`), or
  * null if the store isn't configured or can't supply it.
  *
  * The object store is the project's S3-compatible bucket of blobs, publicly
@@ -249,11 +233,11 @@ function storeKey(id: string, name: string) {
 async function fetchStored(
   config: YouTubeConfig,
   id: string,
-  name: string,
+  name: StoredYoutubeFile,
 ): Promise<Uint8Array | null> {
-  const base = config.objectStoreUrl?.replace(/\/$/, "");
+  const base = config.objectStoreUrl;
   if (!base) return null;
-  const url = `${base}/${storeKey(id, name)}`;
+  const url = storedYoutubeFileUrl(base, id, name);
   const first = await download(url);
   if (first) return first;
 
@@ -274,7 +258,7 @@ async function fetchStored(
     const stored = await download(`${url}?t=${Date.now()}`);
     if (stored) return stored;
     const failure = await fetch(
-      `${base}/${storeKey(id, "error.json")}?t=${Date.now()}`,
+      `${storedYoutubeFileUrl(base, id, "error.json")}?t=${Date.now()}`,
     );
     if (failure.ok) {
       const { failed_at, error, run_url } = (await failure.json()) as {

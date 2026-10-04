@@ -1,6 +1,6 @@
 import { getRouteApi } from "@tanstack/solid-router";
 import { createSignal, onCleanup } from "solid-js";
-import { storedAudioUrl } from "~/lib/audio-store";
+import { storedYoutubeAudioUrl } from "@open-minutes/youtube/store";
 import type { AudioPlayer } from "./audio-player";
 import { createStoredAudioPlayer } from "./stored-audio-player";
 import { createYouTubeAudioPlayers } from "./youtube-audio-player";
@@ -15,8 +15,8 @@ export type PlayableMeeting = { id: number; youtubeId: string };
  * It plays each meeting through a player of its own, of one of two kinds, and is what the page
  * sees: which meeting is playing, where, and whether it's playing.
  * - The object store's copy of the audio (`createStoredAudioPlayer`) where
- *   there is one and the browser can play it: it starts in well under a
- *   second.
+ *   there is one and the browser can play WebM Opus (not Safari before 17,
+ *   eg): it starts in well under a second.
  * - A hidden YouTube embed (`createYouTubeAudioPlayer`) otherwise, including
  *   when the store turns out not to have the meeting, mid-play or not.
  * `prepare` gets the right one loading before the first click.
@@ -58,15 +58,17 @@ export function createHiddenPlayer() {
     },
   });
 
-  /** `youtubeId`'s player: from the store where it has the audio, else YouTube. */
+  /**
+   * `youtubeId`'s player: from the store if this browser can play it (the
+   * store may still turn out not to have the meeting), else YouTube.
+   */
   const playerFor = (youtubeId: string): AudioPlayer => {
     let player = players.get(youtubeId);
     if (player) return player;
-    const url = storedAudioUrl(config().objectStorePublicUrl, youtubeId);
-    player = url
+    player = canPlayWebmOpus()
       ? createStoredAudioPlayer({
           ...reportsFor(youtubeId),
-          url,
+          url: storedYoutubeAudioUrl(config().objectStorePublicUrl, youtubeId),
           onUnavailable: () => fallBack(youtubeId),
         })
       : youtube.player({ ...reportsFor(youtubeId), youtubeId });
@@ -160,3 +162,11 @@ export function createHiddenPlayer() {
 }
 
 export type HiddenPlayer = ReturnType<typeof createHiddenPlayer>;
+
+let webmOpus: boolean | undefined;
+
+/** Whether `<audio>` can play the store's audio, Opus in WebM. */
+function canPlayWebmOpus(): boolean {
+  webmOpus ??= new Audio().canPlayType('audio/webm; codecs="opus"') !== "";
+  return webmOpus;
+}
