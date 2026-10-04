@@ -7,7 +7,7 @@ import { dbTest } from "@open-minutes/db/testing/vitest";
 import type { TranscriptWord } from "@open-minutes/core/transcription";
 import { getMeetingData } from "@open-minutes/fixtures/test-data";
 import type { GoldenSegment } from "@open-minutes/fixtures/psv";
-import { compareTranscripts } from "../test-utils/wer";
+import { compareTranscripts } from "@open-minutes/core/transcription";
 import { goldenMeetingsData } from "../seed/golden-meetings-data";
 import { GOLDEN_GBOS, fakeYouTube } from "./testing";
 import { ingestVideo } from "./ingest";

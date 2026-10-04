@@ -62,8 +62,9 @@ export const VAD_MODEL_SPEC = {
 // run longer than 5 min (preferring the last silence) so no run alone exceeds it.
 const VAD_THRESHOLD = 0.5; // speech-probability threshold
 // Pause length that ends a speech run (the cut points). Exported because
-// align.ts's MAX_WORD_SEC must stay below it — a derived word end that could
-// span a pause this long would reach into the next speaker's turn.
+// MAX_WORD_SEC (in core's transcription/align.ts) must stay below it — a
+// derived word end that could span a pause this long would reach into the next
+// speaker's turn.
 export const VAD_MIN_SILENCE_SEC = 0.5;
 const VAD_MIN_SPEECH_SEC = 0.25; // discard speech blips shorter than this
 const VAD_MAX_SPEECH_SEC = 300; // force-split runs longer than this (stays under Parakeet's ~400s cap)
@@ -388,7 +389,7 @@ export function ensureModelFiles() {
 // Only the word's onset (its first token's timestamp) is kept: Parakeet reports
 // no durations, so any per-word end would be an estimate. Word ends are instead
 // derived from the run structure where needed — see TranscriptWord in
-// @open-minutes/core and deriveTimedWords in align.ts.
+// @open-minutes/core and deriveTimedWords in its transcription/align.ts.
 export function tokensToWords(
   tokens: string[],
   timestamps: number[],

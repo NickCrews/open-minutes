@@ -2,10 +2,16 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { mkdir, access, readFile, rm } from "node:fs/promises";
 import { dirname } from "node:path";
-import type { AudioProvider, VideoMetadata } from "../audio-provider";
+import type {
+  AudioProvider,
+  VideoMetadata,
+} from "@open-minutes/core/audio-provider";
 import { webmOpusToWav } from "./opus";
 
-export type { AudioProvider, VideoMetadata } from "../audio-provider";
+export type {
+  AudioProvider,
+  VideoMetadata,
+} from "@open-minutes/core/audio-provider";
 
 const execFileAsync = promisify(execFile);
 

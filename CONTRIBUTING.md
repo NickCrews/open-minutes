@@ -22,8 +22,10 @@ A [pnpm](https://pnpm.io) workspace with six packages. Each depends only on
 the ones listed above it:
 
 - **[`packages/core`](packages/core)** (`@open-minutes/core`): shared domain
-  code with no database or I/O: transcript and timeline types, voice-embedding
-  constants, body slugs, and `.env.local` loading.
+  code with no database or I/O: transcript and timeline types, transcript
+  cleaning and speaker alignment, word error rate, chapter rules, reading a
+  meeting's date from its title and transcript, the interface a video site
+  implements, voice-embedding constants, body slugs, and `.env.local` loading.
 - **[`packages/db`](packages/db)** (`@open-minutes/db`): the
   [Drizzle](https://orm.drizzle.team) schema and migrations, the `pnpm db` CLI,
   and the per-test database helpers (`@open-minutes/db/testing/vitest`).

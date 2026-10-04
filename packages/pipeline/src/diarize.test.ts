@@ -7,7 +7,10 @@ import sherpa_onnx from "sherpa-onnx-node";
 
 import { computeSpeakerEmbeddings } from "./embed";
 import { diarizeAudio } from "./diarize";
-import { alignSpeakers, segmentsToSpeechRuns } from "./align";
+import {
+  alignSpeakers,
+  segmentsToSpeechRuns,
+} from "@open-minutes/core/transcription";
 import {
   parsePsv,
   serializePsv,
