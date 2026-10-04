@@ -51,13 +51,15 @@ the ones listed above it:
   meeting's metadata and audio, decoding its MP3 to WAV. Not yet used by the
   pipeline. See the [akleg README](packages/akleg/README.md).
 - **[`packages/ingest`](packages/ingest)** (`@open-minutes/ingest`): the
-  offline ingestion pipeline and the `om` CLI. It gets a meeting's audio from
+  offline ingestion pipeline. It gets a meeting's audio from
   `@open-minutes/youtube`, runs it through `@open-minutes/audio`, aligns turns to words, recognizes speakers
   against known voiceprints, and writes the meeting to the database. See the
   [ingest README](packages/ingest/README.md).
-- **[`packages/tools`](packages/tools)** (`@open-minutes/tools`): tools
-  for editing the data (speaker labels, people, chapters), as typed tool
-  definitions for agent loops and as the `pnpm tools` JSON CLI.
+- **[`packages/agents`](packages/agents)** (`@open-minutes/agents`): the
+  interface for agents and people. Tools for editing the data (speaker
+  labels, people, chapters) as typed tool definitions for agent loops, and
+  the `om` CLI: `om ingest` and friends over `@open-minutes/ingest`,
+  `om models`, and `om tools`, the tools as a JSON CLI.
 - **[`packages/web`](packages/web)** (`@open-minutes/web`): the public
   transcript browser, built with [SolidJS](https://www.solidjs.com) +
   [TanStack Start](https://tanstack.com/start), Kobalte and Tailwind, deployed
@@ -217,9 +219,10 @@ waits for it; without it, a missing video is downloaded with yt-dlp, which
 works from a home connection. See [`.env.example`](.env.example) and
 [docs/research/youtube-in-ci.md](docs/research/youtube-in-ci.md).
 
-`om` writes to the same database as everything else (`DB=prod pnpm om ingest <id>`
-to ingest into production). See
-[`packages/ingest/README.md`](packages/ingest/README.md) for details.
+`om` (in [`packages/agents`](packages/agents/src/cli/om.ts)) writes to the
+same database as everything else (`DB=prod pnpm om ingest <id>` to ingest
+into production). See [`packages/ingest/README.md`](packages/ingest/README.md)
+for details.
 
 ## Working with the data directly
 
@@ -237,9 +240,9 @@ ORDER BY m.start_time, s.start_secs;
 ```
 
 To change the data, agents (and people) use the tools in
-[`packages/tools`](packages/tools/src/tools.ts) rather than raw SQL: `pnpm
-tools` lists them, and `pnpm tools <tool> '<json>'` calls one and prints JSON.
-The same tools are exported from `@open-minutes/tools`, with `toAgentTool` to
+[`packages/agents`](packages/agents/src/tools.ts) rather than raw SQL: `pnpm om
+tools` lists them, and `pnpm om tools <tool> '<json>'` calls one and prints
+JSON. The same tools are exported from `@open-minutes/agents`, with `toAgentTool` to
 hand them to an agent loop such as pi. Every write re-checks the meetings it
 touched and rolls back if it introduced an error. Guidance for agents doing
 this work is in

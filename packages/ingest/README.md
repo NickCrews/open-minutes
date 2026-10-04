@@ -4,8 +4,8 @@ The offline processing pipeline that turns raw meeting audio into speaker-attrib
 
 ## The `om` CLI
 
-This package ships an `om` CLI with three composable commands. Run it as
-`pnpm om <command>` from anywhere in the repository. Machine-readable results
+The `om` CLI, in `@open-minutes/agents`, has three composable commands over
+this package. Run it as `pnpm om <command>` from anywhere in the repository. Machine-readable results
 go to stdout and all human progress/logs go to stderr, so results can be piped:
 
 ```sh
