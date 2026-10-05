@@ -328,3 +328,130 @@ The implementation spec, to be written from this doc, covers:
 - the merge and apply step,
 - the format of human corrections, flags and follow-ups,
 - scheduling, and the observability setup.
+
+## Left out: ideas to sort
+
+These came up while working this out and didn't make it into the sections
+above, either because they're implementation detail or because no decision
+was made on them. Move each one into a section above, save it for the
+implementation spec, or delete it.
+
+### Safety and limits
+
+- **Blast-radius limits.** Cap each run's meetings, edits, tokens and wall
+  time. A run that wants to relabel 400 segments should stop and ask a human
+  rather than propose them.
+- **Credentials.** The agent's database role can only read. Only the apply
+  step holds production write credentials.
+- **Prompt injection is concrete.** Someone can say "ignore previous
+  instructions" during public comment, and it will be in the transcript word
+  for word. Scope, read-only access and the reviewer are the defence, not the
+  prompt.
+- **Risk tiers.** For example:
+  - _Apply without review:_ fixing a misheard place name, or a split confirmed
+    by a roll call.
+  - _Needs the reviewer agent:_ relabelling to an existing person, or
+    replacing chapters.
+  - _Needs a human:_ merging people, naming a person for the first time,
+    editing a bio.
+
+  A tier for edits applied without review only makes sense once acceptance
+  rates show it's safe.
+
+- **Human decisions win.** An agent never overwrites a human correction. It
+  can only flag a disagreement for a person to settle. Conviction 7 says the
+  agent "upholds the intent" of a human correction; this would make the rule
+  stricter.
+
+### Divergence
+
+- **Claiming a meeting.** A row with an expiry time, so two runs, or a run and
+  a human, don't work on the same meeting at once. The three-way merge
+  already keeps the data correct without it; claiming only saves wasted
+  work.
+- **A revision number per meeting.** A `meetings.revision` column that goes up
+  on every write, with apply refusing when it has changed. It's simpler than
+  a three-way merge but coarser: any change anywhere in the meeting causes a
+  conflict.
+- **Re-ingesting moves onsets.** Re-transcription shifts word onsets, which
+  changes every PSV line. So a proposal made before a re-ingest will always
+  conflict, and human corrections can't be replayed line by line afterwards.
+  That's the reason conviction 7 hands them to an agent to reinterpret,
+  rather than replaying them mechanically.
+
+### Edit format
+
+- **Address edits by word, not segment id.** A word reference is its onset
+  plus its text, eg `{ at: "0:41:12.30", text: "Brian" }`, and a span is two
+  of them. Segment ids change with every split and merge, and differ between
+  databases.
+- **Four edits cover the transcript.** Attributing a span to a speaker,
+  splitting at a word, joining at a word, and replacing a span of words cover
+  every transcript edit in [What the files must be able to
+  express](#what-the-files-must-be-able-to-express). Each edit can carry an
+  `expect` field (what it should find there first) as its check against
+  divergence.
+- **Turning a diff into typed edits.** Every word has an onset, so a PSV diff
+  can be translated automatically into those four edits. The agent keeps
+  free-form file editing, and the apply step still gets checked, typed edits.
+- **Escape hatch.** Allow a `sql_patch` edit that always needs a human. Log
+  every "I needed an edit that doesn't exist" from agents, so we build the
+  next tool on demand rather than guessing.
+- **Requesting reprocessing.** Some problems need the pipeline, not an edit
+  (re-transcribe this stretch, re-diarize this meeting). The agent should be
+  able to ask for that as an output.
+- **Voiceprints when merging people.** Keep the surviving person's
+  voiceprint, or recompute it from both people's segments? Today
+  `merge_people` keeps it.
+
+### Review
+
+- **The reviewer keeps its context across rounds**, so it can check its
+  requests were addressed. The author can reply, but it can't argue
+  indefinitely.
+- **Renderer details.** Drop segment numbers from the rendered transcript,
+  since a split renumbers every later segment and makes the diff noisy. Show
+  names next to slugs. Put the people diff next to the transcript diff.
+- **The PR as the proposal.** Each proposal could be a pull request: its edits
+  committed as files, a summary of the changes in the body, the reviewer
+  agent's verdict as a PR review, and merging triggers the apply step.
+  `pr-preview.yml` already gives each PR a Neon branch and a preview of the
+  website, so a person could look at the cleaned meeting before merging.
+  This gives review, discussion and history for free. The cost is a PR for
+  every proposal.
+
+### Learning from runs
+
+- **Rerunning has a cost.** Rerunning the agent costs money on every meeting,
+  and because it's nondeterministic it can change meetings that were already
+  fine. Rerun a meeting only when one of its inputs changed: ingestion, human
+  corrections, or the skill.
+- **Record what was looked at and left alone, keyed by skill version.** Then a
+  daily run skips what it has already judged, until the skill changes.
+- **Closing the loop:**
+  - Rejected edits and human reverts become candidate eval cases.
+  - Well-cleaned meetings become new golden meetings.
+  - Evals run the agent on golden meetings with their labels removed and
+    score it against the golden transcript.
+- **Metrics to watch, per skill version:**
+  - how often the reviewer accepts an agent's edits,
+  - how often humans revert them,
+  - how many problems `check_meeting` reports per meeting.
+
+### Harness
+
+- **Headless Claude Code is one option.** Run `claude -p` with the
+  repository's skills, a separate settings file for this job that allows only
+  the cleanup commands, and a PreToolUse hook to enforce scope. The other
+  options discussed: pi, Cloudflare, or a just-bash sandbox with read, write,
+  CRUD tools and `queryDb`.
+- **Traces.** Claude Code can export OpenTelemetry. Keep the transcripts of
+  both agents, the diff, the reviewer's verdicts and the result of applying,
+  all keyed by run.
+- **No database branch needed.** The agent never writes to a database, so
+  it can read production, or a replica or snapshot, directly. A Neon branch
+  only helps if the agent needs to run checks that exist only in SQL.
+- **Context budget.** A golden transcript is about 24k lines. The agent should
+  use `render`, `grep` and `get_transcript` ranges, not read the whole file.
+- **Reads can use DuckDB.** The nightly DuckDB export is fine for broad
+  exploratory queries that don't need today's data.
