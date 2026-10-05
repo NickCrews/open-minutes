@@ -210,7 +210,7 @@ jobs:
               body = `Production (${commit(OLD)}) already includes ${commit(SHA)}. Nothing to do.`;
             } else if (DEPLOY_RESULT === "success") {
               body =
-                `🚀 Deployed to [production](https://open-minutes.nicholas-b-crews.workers.dev/): ` +
+                `🚀 Deployed to [production](https://open-minutes.nickcrews.workers.dev/): ` +
                 `${change()}.`;
             } else {
               body =

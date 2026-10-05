@@ -5,7 +5,7 @@ description: Answer questions about what was said at local government meetings i
 
 # Open Minutes data
 
-[Open Minutes](https://open-minutes.nicholas-b-crews.workers.dev/) turns
+[Open Minutes](https://open-minutes.nickcrews.workers.dev/) turns
 recordings of local government meetings into searchable transcripts that show
 who said what, and when. All of its data is public and in one file, which you
 can query with SQL:
@@ -100,11 +100,11 @@ Things to know:
 Always give the person a way to check what you tell them:
 
 - On Open Minutes, at that moment:
-  `https://open-minutes.nicholas-b-crews.workers.dev/meetings/<meeting id>?t=<seconds>`
+  `https://open-minutes.nickcrews.workers.dev/meetings/<meeting id>?t=<seconds>`
 - Where it was published: the meeting's `url`. For a YouTube meeting, add
   `&t=<seconds>s` to it to start at that moment.
 - A person's page, with everything they said:
-  `https://open-minutes.nicholas-b-crews.workers.dev/people/<person id>`
+  `https://open-minutes.nickcrews.workers.dev/people/<person id>`
 
 ## Be honest about the data's limits
 
