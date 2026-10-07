@@ -9,7 +9,7 @@ import {
   meetingBodiesTable,
   meetingsTable,
 } from "@open-minutes/db";
-import { bodySlug, jointBodiesInTitle } from "@open-minutes/core/bodies";
+import { bodySlug } from "@open-minutes/core/bodies";
 import { type SiteKind, siteKindOf } from "@open-minutes/core/meeting-source";
 import {
   alignSpeakers,
@@ -160,27 +160,6 @@ export async function ingestMeeting(
     bodyArg,
   );
 
-  // The meeting's bodies: the one found above, and for a joint meeting the
-  // others its title names: "Girdwood Board of Supervisors and Girdwood Land
-  // Use Committee Joint Meeting". Fix a wrong guess with the
-  // update_meeting tool.
-  const named = jointBodiesInTitle(
-    metadata.title,
-    await db
-      .select({
-        id: bodiesTable.id,
-        name: bodiesTable.name,
-        name_short: bodiesTable.name_short,
-      })
-      .from(bodiesTable)
-      .where(eq(bodiesTable.jurisdiction_id, body.jurisdiction_id)),
-  );
-  const bodies = [body, ...named.filter((b) => b.id !== body.id)];
-  if (bodies.length > 1)
-    console.error(
-      `${tag} joint meeting of ${bodies.map((b) => b.name_short).join(", ")}`,
-    );
-
   const workDir = join(workRoot, workDirName(bodySlug(body), siteId));
   await mkdir(workDir, { recursive: true });
 
@@ -271,9 +250,11 @@ export async function ingestMeeting(
             : sql`make_interval(secs => ${metadata.durationSecs})`,
       })
       .returning({ id: meetingsTable.id });
+    // Only the body found above. A joint meeting's other bodies are added
+    // afterwards, eg with the update_meeting tool.
     await tx
       .insert(meetingBodiesTable)
-      .values(bodies.map((b) => ({ meeting_id: meeting!.id, body_id: b.id })));
+      .values({ meeting_id: meeting!.id, body_id: body.id });
     await identifyAndInsertSegments(
       tx,
       meeting!.id,
@@ -340,7 +321,6 @@ async function resolveBody(
   const bodies = await db
     .select({
       id: bodiesTable.id,
-      jurisdiction_id: bodiesTable.jurisdiction_id,
       name: bodiesTable.name,
       name_short: bodiesTable.name_short,
       timezone: bodiesTable.timezone,
