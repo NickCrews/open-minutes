@@ -67,6 +67,12 @@ export const bodiesTable = pgTable(
     created_at: timestamp().notNull().defaultNow(),
   },
   (table) => [
+    // AT TIME ZONE raises on a name Postgres doesn't recognize, so this rejects
+    // typos like "America/Anchorge" at write time.
+    check(
+      "bodies_timezone_valid",
+      sql`(now() AT TIME ZONE ${table.timezone}) IS NOT NULL`,
+    ),
     check(
       "bodies_meeting_source_valid",
       sql`${table.meeting_source} IS NULL OR coalesce(CASE ${table.meeting_source}->>'type'
