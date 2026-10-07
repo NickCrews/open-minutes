@@ -76,7 +76,7 @@ Docker via [`docker-compose.yml`](docker-compose.yml). Production is on
 committee) that is scanned for new meetings. **Meetings** are held by one or
 more bodies (`meeting_bodies`), all equal: a **joint meeting**, held by several,
 counts as a meeting of each. Ingestion reads a joint meeting's bodies from a
-title that says "joint", and the `set_meeting_bodies` tool corrects them.
+title that says "joint", and the `update_meeting` tool corrects them.
 Meetings record their timezone, the site they were published on (YouTube or
 akleg.gov), and each meeting's
 transcript is a sequence of **segments** (a run of words by one speaker, with

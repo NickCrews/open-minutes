@@ -20,7 +20,7 @@ import {
   mergeSegments,
   relabelSegments,
   replaceChapters,
-  setMeetingBodies,
+  updateMeeting,
   splitSegment,
   tools,
   updatePerson,
@@ -253,7 +253,7 @@ describe("people", () => {
   });
 });
 
-describe("set_meeting_bodies", () => {
+describe("update_meeting", () => {
   test("makes a meeting joint, and back", async ({ db }) => {
     const ctx = toolContext(db);
     const bodiesOf = async () =>
@@ -261,29 +261,58 @@ describe("set_meeting_bodies", () => {
         .bodies;
     expect(await bodiesOf()).toEqual(["GBOS"]);
 
-    const result = await callTool(ctx, setMeetingBodies, {
+    const result = await callTool(ctx, updateMeeting, {
       meeting: GBOS,
       bodies: ["gbos", "LUC", "luc"],
     });
     expect(result.applied).toBe(true);
-    expect(result.result.bodies).toMatchObject([
-      { name: "Girdwood Board of Supervisors" },
-      { name: "Girdwood Land Use Committee" },
-    ]);
+    expect(result.result.bodies).toEqual(["GBOS", "LUC"]);
     expect(await bodiesOf()).toEqual(["GBOS", "LUC"]);
 
-    await callTool(ctx, setMeetingBodies, { meeting: GBOS, bodies: ["gbos"] });
+    await callTool(ctx, updateMeeting, { meeting: GBOS, bodies: ["gbos"] });
     expect(await bodiesOf()).toEqual(["GBOS"]);
   });
 
-  test("refuses no bodies and unknown bodies", async ({ db }) => {
+  test("sets the fields given and leaves the rest", async ({ db }) => {
     const ctx = toolContext(db);
-    await expect(
-      callTool(ctx, setMeetingBodies, { meeting: GBOS, bodies: [] }),
-    ).rejects.toThrow();
-    await expect(
-      callTool(ctx, setMeetingBodies, { meeting: GBOS, bodies: ["nope"] }),
-    ).rejects.toThrow(/No body with slug "nope"/);
+    const before = (await callTool(ctx, listMeetings, {})).find(
+      (m) => m.slug === GBOS,
+    )!;
+    const { result } = await callTool(ctx, updateMeeting, {
+      meeting: GBOS,
+      title: "Renamed",
+      time: "19:00",
+      timezone: "America/Juneau",
+    });
+    expect(result).toMatchObject({
+      title: "Renamed",
+      date: before.date,
+      time: "19:00:00",
+      timezone: "America/Juneau",
+      bodies: ["GBOS"],
+    });
+
+    // Clearing the date clears the time with it.
+    const cleared = await callTool(ctx, updateMeeting, {
+      meeting: GBOS,
+      date: null,
+    });
+    expect(cleared.result).toMatchObject({ date: null, time: null });
+  });
+
+  test("refuses bad values", async ({ db }) => {
+    const ctx = toolContext(db);
+    const refuses = (input: object, error?: RegExp) =>
+      expect(
+        callTool(ctx, updateMeeting, { meeting: GBOS, ...input }),
+      ).rejects.toThrow(error);
+    await refuses({}, /Nothing to change/);
+    await refuses({ bodies: [] });
+    await refuses({ bodies: ["nope"] }, /No body with slug "nope"/);
+    await refuses({ date: "June 15" });
+    await refuses({ time: "7pm" });
+    await refuses({ timezone: "Mars/Olympus" });
+    await refuses({ date: null, time: "19:00" }, /needs a date/);
   });
 });
 

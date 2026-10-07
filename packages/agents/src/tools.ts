@@ -11,6 +11,10 @@ import {
 } from "@open-minutes/db";
 import { bodySlug } from "@open-minutes/core/bodies";
 import { chapterErrors } from "@open-minutes/core/chapters";
+import {
+  parseMeetingDate,
+  parseMeetingTime,
+} from "@open-minutes/core/meeting-date";
 import { hasTypographicDash } from "@open-minutes/core/text";
 import { transcriptFingerprint } from "@open-minutes/core/transcript-fingerprint";
 import { LAST_WORD_DURATION_SEC } from "@open-minutes/core/transcription";
@@ -169,49 +173,106 @@ export const listMeetings = defineTool({
   },
 });
 
-export const setMeetingBodies = defineTool({
-  name: "set_meeting_bodies",
-  label: "Set meeting bodies",
+const meetingDate = z
+  .string()
+  .refine((v) => parseMeetingDate(v) !== null, "a date, YYYY-MM-DD")
+  .transform((v) => parseMeetingDate(v)!);
+const meetingTime = z
+  .string()
+  .refine((v) => parseMeetingTime(v) !== null, "a time, HH:MM or HH:MM:SS")
+  .transform((v) => parseMeetingTime(v)!);
+const timeZone = z.string().refine((zone) => {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: zone });
+    return true;
+  } catch {
+    return false;
+  }
+}, 'an IANA timezone, eg "America/Anchorage"');
+
+export const updateMeeting = defineTool({
+  name: "update_meeting",
+  label: "Update meeting",
   description:
-    'Set the bodies that held a meeting, replacing those already set: one for most meetings, several for a joint meeting. Bodies go by slug, eg ["gbos", "luc"]. Ingestion guesses a joint meeting\'s bodies from a title that says "joint"; fix its guess here.',
+    'Set any of a meeting\'s title, description, date, time, timezone and bodies; fields left out stay as they are. date ("YYYY-MM-DD") and time ("HH:MM") are the wall clock where the meeting was held, in its timezone (eg "America/Anchorage"); null makes either unknown, and clearing the date clears the time. bodies replaces the bodies that held it, by slug: one for most meetings, several for a joint meeting, eg ["gbos", "luc"]. Ingestion guesses a joint meeting\'s bodies from a title that says "joint"; fix its guess here.',
   input: z.object({
     meeting: meetingRef,
+    title: z.string().trim().optional(),
+    description: z.string().optional(),
+    date: meetingDate.nullable().optional(),
+    time: meetingTime.nullable().optional(),
+    timezone: timeZone.optional(),
     bodies: z
       .array(z.string().trim().min(1))
       .min(1)
+      .optional()
       .describe('Body slugs, eg ["gbos", "luc"].'),
     dryRun,
   }),
-  run: async (ctx, input) => {
+  run: async (ctx, { meeting: ref, bodies: slugs, dryRun: dry, ...fields }) => {
     const db = await ctx.db();
-    const meeting = await findMeeting(db, input.meeting);
-    const all = await db
-      .select({
-        id: bodiesTable.id,
-        name: bodiesTable.name,
-        name_short: bodiesTable.name_short,
-      })
-      .from(bodiesTable);
-    const wanted = [...new Set(input.bodies.map((s) => s.toLowerCase()))];
-    const bodies = wanted.map((slug) => {
-      const body = all.find((b) => bodySlug(b) === slug);
-      if (!body)
-        throw new ToolError(
-          `No body with slug "${slug}"; bodies are ${all.map(bodySlug).join(", ")}`,
-        );
-      return body;
-    });
-    return applyEdit(db, [meeting.id], input.dryRun, async (tx) => {
-      await tx
-        .delete(meetingBodiesTable)
-        .where(eq(meetingBodiesTable.meeting_id, meeting.id));
-      await tx
-        .insert(meetingBodiesTable)
-        .values(bodies.map((b) => ({ meeting_id: meeting.id, body_id: b.id })));
-      return {
-        meetingId: meeting.id,
-        bodies: bodies.map((b) => ({ id: b.id, name: b.name })),
-      };
+    const meeting = await findMeeting(db, ref);
+    if (Object.keys(fields).length === 0 && slugs === undefined)
+      throw new ToolError("Nothing to change");
+    if (fields.date === null) {
+      if (fields.time) throw new ToolError("A time needs a date");
+      fields.time = null;
+    }
+
+    let bodies: { id: number; name: string; name_short: string }[] | undefined;
+    if (slugs !== undefined) {
+      const all = await db
+        .select({
+          id: bodiesTable.id,
+          name: bodiesTable.name,
+          name_short: bodiesTable.name_short,
+        })
+        .from(bodiesTable);
+      bodies = [...new Set(slugs.map((s) => s.toLowerCase()))].map((slug) => {
+        const body = all.find((b) => bodySlug(b) === slug);
+        if (!body)
+          throw new ToolError(
+            `No body with slug "${slug}"; bodies are ${all.map(bodySlug).join(", ")}`,
+          );
+        return body;
+      });
+    }
+
+    return applyEdit(db, [meeting.id], dry, async (tx) => {
+      if (Object.keys(fields).length > 0)
+        await tx
+          .update(meetingsTable)
+          .set(fields)
+          .where(eq(meetingsTable.id, meeting.id));
+      if (bodies) {
+        await tx
+          .delete(meetingBodiesTable)
+          .where(eq(meetingBodiesTable.meeting_id, meeting.id));
+        await tx
+          .insert(meetingBodiesTable)
+          .values(
+            bodies.map((b) => ({ meeting_id: meeting.id, body_id: b.id })),
+          );
+      }
+      const [row] = await tx
+        .select({
+          id: meetingsTable.id,
+          slug: meetingsTable.slug,
+          title: meetingsTable.title,
+          description: meetingsTable.description,
+          date: meetingsTable.date,
+          time: meetingsTable.time,
+          timezone: meetingsTable.timezone,
+        })
+        .from(meetingsTable)
+        .where(eq(meetingsTable.id, meeting.id));
+      const held = await tx
+        .select({ name_short: bodiesTable.name_short })
+        .from(meetingBodiesTable)
+        .innerJoin(bodiesTable, eq(bodiesTable.id, meetingBodiesTable.body_id))
+        .where(eq(meetingBodiesTable.meeting_id, meeting.id))
+        .orderBy(asc(bodiesTable.name_short));
+      return { ...row!, bodies: held.map((b) => b.name_short) };
     });
   },
 });
@@ -671,7 +732,7 @@ export const tools: Tool[] = [
   mergeSegments,
   updatePerson,
   mergePeople,
-  setMeetingBodies,
+  updateMeeting,
   getChapters,
   replaceChapters,
   ...audioTools,
