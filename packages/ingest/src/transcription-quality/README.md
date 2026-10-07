@@ -21,8 +21,8 @@ the way it is. The tests here form a hierarchy:
 
 3. **Unit tests next to the code** (`packages/audio/src/transcribe.test.ts`
    and friends): that the implementation does what it says, eg that
-   `findDroppedSpeech` finds a run with no words. They support the design of
-   the day and change with it.
+   `tokensToWords` joins the recognizer's tokens into words. They support the
+   design of the day and change with it.
 
 Everything here is tagged `slow`: it needs the meetings' audio and the
 models. Run it with `pnpm test:slow transcription-quality`, or just the north

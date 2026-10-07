@@ -181,7 +181,7 @@ describe("Parakeet (characterization, not requirements)", () => {
       // ending the window earlier, or decoding the stretch on its own, does.
       // So what drops a stretch is the rest of the window (the encoder
       // attends to all of it), not the stretch, and no window length is
-      // safe. transcribeAudio's fillDroppedSpeech decodes such holes again.
+      // safe: the holes have to be found and decoded again on their own.
       const inHole = (ws: TranscriptWord[]) =>
         ws.filter((w) => w.start >= 49 && w.start < 57.5);
       for (const start of [15, 20.9, 30, 40])
@@ -203,7 +203,7 @@ describe("Parakeet (characterization, not requirements)", () => {
       // their edges, long ones drop whole stretches (see above), and 30-60 s
       // does best, fastest too. transcribeAudio merges VAD runs into 120 s
       // windows; whether smaller ones beat that once cuts fall at silences
-      // and fillDroppedSpeech repairs holes is for the north star to say.
+      // is for the north star to say.
       const recallAt = async (length: number) => {
         const recall = new Recall();
         for (const region of regions.slice(0, 6))
