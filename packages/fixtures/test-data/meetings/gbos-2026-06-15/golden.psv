@@ -337,7 +337,7 @@ start_sec|event_type|event_data
 0:03:01.76|text|Did
 0:03:02.16|text|we
 0:03:02.48|text|have
-0:03:04.21|text|Any
+0:03:04.21|text|any
 0:03:04.61|text|change
 0:03:05.09|text|on
 0:03:05.25|text|that?
@@ -4019,7 +4019,7 @@ start_sec|event_type|event_data
 0:28:00.46|text|go
 0:28:00.62|text|under
 0:28:00.94|text|issues,
-0:28:01.37|text|There's
+0:28:01.37|text|there's
 0:28:01.53|text|an
 0:28:01.69|text|LNG
 0:28:02.25|text|page,
@@ -11842,7 +11842,7 @@ start_sec|event_type|event_data
 1:15:33.01|text|two
 1:15:33.25|text|by
 1:15:33.41|text|four.
-1:15:34.44|text|to
+1:15:34.44|text|To
 1:15:34.92|text|any
 1:15:35.16|text|feedback
 1:15:35.48|text|you
@@ -17995,7 +17995,7 @@ start_sec|event_type|event_data
 2:00:39.05|text|I
 2:00:39.69|text|take
 2:00:40.09|text|up
-2:00:40.45|text|Comments
+2:00:40.45|text|comments
 2:00:40.77|text|on
 2:00:40.93|text|this?
 2:00:41.41|meta|{"begin_speaker":"identified:nick-crews"}
@@ -22184,7 +22184,7 @@ start_sec|event_type|event_data
 2:33:43.98|text|to
 2:33:44.22|text|DHEC
 2:33:45.26|text|to
-2:33:45.59|text|Right
+2:33:45.59|text|right
 2:33:45.91|text|to
 2:33:46.07|text|discuss.
 2:33:46.63|meta|{"begin_speaker":"identified:amanda-tuttle"}

@@ -2682,7 +2682,7 @@ start_sec|event_type|event_data
 0:34:39.10|text|It
 0:34:39.26|text|goes
 0:34:39.42|text|back
-0:34:39.67|text|Quite
+0:34:39.67|text|quite
 0:34:39.91|text|a
 0:34:40.07|text|ways,
 0:34:40.39|text|and
@@ -22205,7 +22205,6 @@ start_sec|event_type|event_data
 2:57:45.16|text|Yes.
 2:57:48.92|meta|{"begin_speaker":"identified:christopher-constant"}
 2:57:48.92|text|A
-2:57:49.08|text|vote
 2:57:49.49|text|vote
 2:57:49.65|text|of
 2:57:49.73|text|11
