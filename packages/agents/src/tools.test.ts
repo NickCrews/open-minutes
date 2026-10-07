@@ -311,7 +311,8 @@ describe("update_meeting", () => {
     await refuses({ bodies: ["nope"] }, /No body with slug "nope"/);
     await refuses({ date: "June 15" });
     await refuses({ time: "7pm" });
-    await refuses({ timezone: "Mars/Olympus" });
+    await refuses({ timezone: "Mars/Olympus" }, /not a known time zone/);
+    await refuses({ timezone: "UTC" }, /not an IANA time zone name/);
     await refuses({ date: null, time: "19:00" }, /needs a date/);
   });
 });

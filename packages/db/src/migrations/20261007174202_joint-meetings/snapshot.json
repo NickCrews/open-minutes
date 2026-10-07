@@ -1,9 +1,9 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "c52e7a4b-0d6a-47ea-be0d-1d49b8ad6988",
+  "id": "7ebdeddb-a895-4d4a-93d1-9bc30ac46c07",
   "prevIds": [
-    "1529dc43-c0f2-4c21-9703-007d4dce9037"
+    "27bc3121-bcbc-4e98-aaea-823ff629cd9b"
   ],
   "ddl": [
     {
@@ -1158,6 +1158,13 @@
       "entityType": "uniques"
     },
     {
+      "value": "iana_timezone_error(\"timezone\") IS NULL",
+      "name": "bodies_timezone_valid",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "bodies"
+    },
+    {
       "value": "\"meeting_source\" IS NULL OR coalesce(CASE \"meeting_source\"->>'type'\n      WHEN 'youtube_channel' THEN jsonb_typeof(\"meeting_source\"->'channel_id') = 'string'\n      WHEN 'youtube_playlist' THEN jsonb_typeof(\"meeting_source\"->'playlist_id') = 'string'\n      WHEN 'akleg_committee' THEN jsonb_typeof(\"meeting_source\"->'committee') = 'string'\n      ELSE false END, false)",
       "name": "bodies_meeting_source_valid",
       "entityType": "checks",
@@ -1198,6 +1205,13 @@
       "entityType": "checks",
       "schema": "public",
       "table": "chapters"
+    },
+    {
+      "value": "iana_timezone_error(\"timezone\") IS NULL",
+      "name": "meetings_timezone_valid",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "meetings"
     },
     {
       "value": "\"time\" IS NULL OR \"date\" IS NOT NULL",

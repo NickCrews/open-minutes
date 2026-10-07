@@ -4,6 +4,7 @@ import {
   bodiesTable,
   chapterGenerationsTable,
   chaptersTable,
+  ianaTimezoneError,
   meetingBodiesTable,
   meetingsTable,
   peopleTable,
@@ -181,14 +182,6 @@ const meetingTime = z
   .string()
   .refine((v) => parseMeetingTime(v) !== null, "a time, HH:MM or HH:MM:SS")
   .transform((v) => parseMeetingTime(v)!);
-const timeZone = z.string().refine((zone) => {
-  try {
-    new Intl.DateTimeFormat("en-US", { timeZone: zone });
-    return true;
-  } catch {
-    return false;
-  }
-}, 'an IANA timezone, eg "America/Anchorage"');
 
 export const updateMeeting = defineTool({
   name: "update_meeting",
@@ -201,7 +194,11 @@ export const updateMeeting = defineTool({
     description: z.string().optional(),
     date: meetingDate.nullable().optional(),
     time: meetingTime.nullable().optional(),
-    timezone: timeZone.optional(),
+    timezone: z
+      .string()
+      .trim()
+      .optional()
+      .describe('An IANA zone of a place, eg "America/Anchorage".'),
     bodies: z
       .array(z.string().trim().min(1))
       .min(1)
@@ -217,6 +214,10 @@ export const updateMeeting = defineTool({
     if (fields.date === null) {
       if (fields.time) throw new ToolError("A time needs a date");
       fields.time = null;
+    }
+    if (fields.timezone !== undefined) {
+      const error = await ianaTimezoneError(db, fields.timezone);
+      if (error) throw new ToolError(error);
     }
 
     let bodies: { id: number; name: string; name_short: string }[] | undefined;
