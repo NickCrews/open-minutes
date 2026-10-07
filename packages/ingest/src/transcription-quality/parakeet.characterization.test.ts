@@ -1,17 +1,14 @@
 // What the Parakeet recognizer does, measured on a real meeting.
 //
-// THESE TESTS ARE NOT REQUIREMENTS. They pin down facts about the model that
-// transcribeAudio's design leans on (or that we checked and found don't
-// matter), so the next person changing it can see what was measured instead
-// of re-measuring it, and notices when a model upgrade changes one. The
-// numbers that matter are north-star.test.ts's WER and runtime; see README.md
-// in this directory. If a change makes the north star better and one of these
-// worse, the change wins: update or delete the test here.
+// THESE TESTS ARE NOT REQUIREMENTS (see README.md in this directory). They
+// pin down how the model behaves, so nobody has to measure it again, and so
+// a model upgrade that changes something is noticed. They are about the
+// model alone, not about any code that uses it.
 //
-// Every test decodes stretches of gbos-2026-06-15 with transcribeRange (one
-// pass, no VAD) and scores them against the hand-corrected golden, logging
-// the measurements it asserts loosely on. Bounds are wide on purpose: a test
-// here fails when the model's behaviour changes in kind, not by a point.
+// Every test decodes stretches of gbos-2026-06-15, each in one Parakeet
+// pass, and scores them against the hand-corrected golden, logging what it
+// measures. Bounds are wide on purpose: a test here fails when the model's
+// behaviour changes in kind, not by a point.
 
 import { beforeAll, describe, expect, it } from "vitest";
 import { transcribeRange } from "@open-minutes/audio/transcribe";
@@ -109,9 +106,8 @@ describe("Parakeet (characterization, not requirements)", () => {
       // and that alone rewrites about one word in twenty, as many as the
       // model gets wrong against the golden. Measured 2026-10 over 12
       // regions: 10 ms 4.6%, 100 ms 5.9%, 250 ms 6.9%, 1 s 7.7%, 2 s 5.2%,
-      // and every region changed at every shift. So comparing two decodes
-      // of slightly different windows mostly measures this noise: judge a
-      // windowing change by the north star, never by a diff of transcripts.
+      // and every region changed at every shift. So two decodes of slightly
+      // different windows differ this much from framing alone.
       const wers: number[] = [];
       for (const start of regions) {
         // Compare only the middle 40 s, away from either window's edges.
@@ -141,8 +137,7 @@ describe("Parakeet (characterization, not requirements)", () => {
       // the first 0.25 s, 0.90 to 0.5 s, then ~0.94 like the middle; from
       // the end, 0.26 in the last 0.25 s (a word cut off mid-way), ~0.85 to
       // 1 s, then ~0.94. So a window needs no seconds-long warm-up, but its
-      // last second is unreliable: decode a second or two past what you
-      // keep (transcribeRange's RANGE_CONTEXT_SEC), or cut at silences (VAD).
+      // last second is unreliable.
       const near = 0.25;
       const startEdge = new Recall();
       const endEdge = new Recall();
@@ -174,14 +169,13 @@ describe("Parakeet (characterization, not requirements)", () => {
     { tags: ["slow"] },
     async () => {
       // The chair reads the Open Meetings Act notice at 0:49-0:57. Decoded
-      // as part of [20.9, 123.9) (one of transcribeAudio's 120 s windows) the
-      // model predicts blanks straight through it, and the next word out is
-      // "Supervisors.310", the end of a statute number glued to the word
-      // before the hole. Moving the window's start doesn't bring it back;
+      // as part of [20.9, 123.9), the model predicts blanks straight through
+      // it, and the next word out is "Supervisors.310", the end of a statute
+      // number glued to the word before the hole. Moving the window's start doesn't bring it back;
       // ending the window earlier, or decoding the stretch on its own, does.
       // So what drops a stretch is the rest of the window (the encoder
       // attends to all of it), not the stretch, and no window length is
-      // safe: the holes have to be found and decoded again on their own.
+      // safe from it.
       const inHole = (ws: TranscriptWord[]) =>
         ws.filter((w) => w.start >= 49 && w.start < 57.5);
       for (const start of [15, 20.9, 30, 40])
@@ -201,9 +195,7 @@ describe("Parakeet (characterization, not requirements)", () => {
       // decode time: 10 s 0.921/4/109 s, 20 s 0.938/2/97 s, 30 s 0.948/2/81 s,
       // 60 s 0.947/5/110 s, 120 s 0.925/9/144 s. Short windows lose words at
       // their edges, long ones drop whole stretches (see above), and 30-60 s
-      // does best, fastest too. transcribeAudio merges VAD runs into 120 s
-      // windows; whether smaller ones beat that once cuts fall at silences
-      // is for the north star to say.
+      // does best, fastest too.
       const recallAt = async (length: number) => {
         const recall = new Recall();
         for (const region of regions.slice(0, 6))
@@ -224,7 +216,6 @@ describe("Parakeet (characterization, not requirements)", () => {
   it("decodes at most 400 s in one pass", { tags: ["slow"] }, async () => {
     // The encoder's positional table has 5000 entries at 12.5 frames/s.
     // Past that, onnxruntime throws (a catchable error, not a crash).
-    // transcribeAudio's windows stay well under it.
     expect((await decode(1000, 1400)).length).toBeGreaterThan(0);
     await expect(decode(1000, 1420)).rejects.toThrow(/broadcast/);
   });
