@@ -23,3 +23,5 @@ dist/
 .DS_Store
 .tanstack
 .wrangler
+# Python (docs/research notebooks)
+__pycache__/
