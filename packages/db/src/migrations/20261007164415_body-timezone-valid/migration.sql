@@ -1,0 +1,1 @@
+ALTER TABLE "bodies" ADD CONSTRAINT "bodies_timezone_valid" CHECK ((now() AT TIME ZONE "timezone") IS NOT NULL);
