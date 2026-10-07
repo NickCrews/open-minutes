@@ -9,7 +9,8 @@
     "./golden-data": "./src/seed/golden-data.ts",
     "./dev-data": "./src/seed/dev-data.ts",
     "./map": "./src/seed/map.ts",
-    "./clean": "./src/clean.ts"
+    "./clean": "./src/clean.ts",
+    "./check": "./src/check.ts"
   },
   "scripts": {
     "check": "tsx src/check-cli.ts",

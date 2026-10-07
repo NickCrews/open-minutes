@@ -26,9 +26,13 @@ const lint = (content: string) =>
   );
 
 describe("all fixtures", () => {
-  it("pass every check", () => {
+  it("have no errors", () => {
     // Fix these at the file:line given, or run `pnpm fixtures:check`.
-    expect(checkFixtures().map((i) => formatIssue(i))).toEqual([]);
+    expect(
+      checkFixtures()
+        .filter((i) => i.severity === "error")
+        .map((i) => formatIssue(i)),
+    ).toEqual([]);
   });
 
   it("include chapters for at least one golden meeting", () => {
@@ -125,7 +129,7 @@ describe("checkPsv", () => {
         ),
       ),
     ).toEqual([
-      '4: warning: speaker change at 0:00:04.84 splits a sentence; the pause at 0:00:04.68 is longer (3.68s vs 0.16s), so "I" may belong to the other speaker. Move the marker to the sentence edge where the voice changes',
+      '4: warning: speaker change at 0:00:04.84 splits a sentence; the pause at 0:00:04.68 is longer (3.68s vs 0.16s), so "I" may belong to the other speaker. Move the boundary to the sentence edge where the voice changes',
     ]);
   });
 

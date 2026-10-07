@@ -55,7 +55,7 @@ if (hook) {
       [
         `Fixture check found ${lines.length} problem(s) in ${dirs.map((d) => d.split(sep).at(-1)).join(", ")}:`,
         ...lines,
-        "Fix them before moving on; warnings are usually real mistakes too.",
+        "Fix the errors before moving on. Look at each warning: it is usually a real mistake, but may be right as it is.",
       ].join("\n"),
     );
     process.exit(2);

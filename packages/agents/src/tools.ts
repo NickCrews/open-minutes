@@ -404,7 +404,7 @@ export const checkMeetingTool = defineTool({
   name: "check_meeting",
   label: "Check meeting",
   description:
-    "List problems in a meeting's data. Errors: words or segments out of time order, invalid chapters. Warnings: speech no chapter covers, chapters outside the size conventions. Every write tool also returns this after its change.",
+    "List problems in a meeting's data, by the same rules as the golden fixtures. Errors (a write that introduces one is rolled back): no bodies, an empty segment, words or segments out of time order, a filler or stutter the clean stage removes, an invalid chapter. Warnings (probably wrong, or a broken convention): a speaker change inside a sentence near a longer pause, a chapter outside the size conventions, speech no chapter covers. Every write tool also returns this after its change.",
   input: z.object({ meeting: meetingRef }),
   run: async (ctx, input) => {
     const db = await ctx.db();

@@ -1,22 +1,22 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import {
-  chapterErrors,
-  chapterWarnings,
-  uncoveredSpeech,
-} from "@open-minutes/core/chapters";
+  type CheckedMeeting,
+  type CheckedSegment,
+  checkChapters as checkChapterRules,
+  checkMeeting,
+  checkTranscript,
+  type MeetingIssue,
+} from "@open-minutes/core/meeting-check";
 import {
-  LAST_WORD_DURATION_SEC,
-  splitSentences,
-} from "@open-minutes/core/transcription";
-import { cleanGoldenSegments } from "./clean";
-import {
+  formatSpeaker,
   formatTimestamp,
+  type GoldenSegment,
   parsePsv,
   parseTimestamp,
-  sameSpeakerLabel,
 } from "./psv";
 import {
+  type GoldenMeeting,
   getMeetingData,
   parseGoldenChapters,
   TEST_DATA_ROOT,
@@ -24,9 +24,11 @@ import {
 
 // Checks over the hand-edited fixture files, reported against file and line
 // so whoever made an edit (often an agent) can go straight to the mistake.
-// Errors are data that is wrong; warnings are data that is probably wrong, or
-// breaks a convention, and wants a look. The fixture tests fail on either, and
-// `pnpm fixtures:check` prints both.
+// A meeting's data follows the rules in @open-minutes/core/meeting-check, the
+// same ones the database is checked against; this adds the rules for the
+// files themselves (PSV syntax, where a speaker marker goes, the directory
+// name). Errors fail the fixture tests and `pnpm fixtures:check`; warnings are
+// printed and want a look.
 
 export type Severity = "error" | "warning";
 
@@ -71,38 +73,49 @@ export function checkMeetingDir(dir: string): Issue[] {
   const psvPath = ["golden.psv", "transcript.psv"]
     .map((f) => join(dir, f))
     .find((p) => existsSync(p));
-  if (psvPath) {
-    issues.push(...checkPsv(readFileSync(psvPath, "utf8"), psvPath));
-  }
+  const psv = psvPath
+    ? readPsv(readFileSync(psvPath, "utf8"), psvPath)
+    : undefined;
+  if (psv) issues.push(...psv.issues);
   // Whatever the loader itself refuses (meeting.json, PSV syntax, the shape
   // of chapters.json), reported once rather than cascading.
-  let segments: ReturnType<typeof parsePsv> | undefined;
+  let meeting: ReturnType<typeof getMeetingData>;
   try {
-    const meeting = getMeetingData(
-      dir.split(/[\\/]/).at(-1)!,
-      resolve(dir, "../.."),
-    );
-    segments = meeting.segments;
-    const slugIssue = checkMeetingSlug(meeting);
-    if (slugIssue)
-      issues.push({ file: dir, severity: "warning", message: slugIssue });
+    meeting = getMeetingData(dir.split(/[\\/]/).at(-1)!, resolve(dir, "../.."));
   } catch (err) {
     const message = (err as Error).message;
     if (!issues.some((i) => i.severity === "error"))
       issues.push({ file: dir, severity: "error", message });
     return issues;
   }
+  const slugIssue = checkMeetingSlug(meeting);
+  if (slugIssue)
+    issues.push({ file: dir, severity: "warning", message: slugIssue });
+
   const chaptersPath = join(dir, "chapters.json");
-  if (existsSync(chaptersPath)) {
-    issues.push(
-      ...checkChapters(
-        readFileSync(chaptersPath, "utf8"),
-        chaptersPath,
-        segments,
-      ),
-    );
-  }
-  return issues;
+  const chapterLines = meeting.chapters
+    ? chapterStartLines(readFileSync(chaptersPath, "utf8"))
+    : [];
+  const chapters = meeting.chapters?.chapters ?? null;
+  const placed = checkMeeting(checkedMeeting(meeting)).map((i) =>
+    i.segment !== undefined
+      ? atPsvLine(i, psvPath!, psv!.lines)
+      : i.code === "no-bodies"
+        ? {
+            file: join(dir, "meeting.json"),
+            severity: i.severity,
+            message: i.message,
+          }
+        : atChapterLine(i, chaptersPath, chapterLines, chapters ?? []),
+  );
+  issues.push(...placed);
+  return issues.sort((a, b) =>
+    a.file === b.file
+      ? (a.line ?? 0) - (b.line ?? 0)
+      : a.file < b.file
+        ? -1
+        : 1,
+  );
 }
 
 /**
@@ -133,36 +146,39 @@ export function checkMeetingSlug(meeting: {
   return `Meeting directory "${meeting.slug}" should be named "${want}" (<body>-<date>): it's the meeting's slug in the database`;
 }
 
-/**
- * Lint a PSV transcript. Errors: lines the parser refuses, words out of time
- * order, a speaker marker not on the same onset as the word after it (the
- * usual sign of a marker inserted a line off), a speaker marker with no
- * words, and disfluencies the pipeline's clean stage would have removed
- * ("um", "the the"; see clean.ts). Warnings: a speaker change inside a
- * sentence, a few words from a clearly longer pause (see turn-edges.ts).
- */
-export function checkPsv(content: string, file: string): Issue[] {
-  const issues: Issue[] = [];
-  const issue = (line: number, severity: Severity, message: string) =>
-    issues.push({ file, line, severity, message });
+/** Where each segment's marker and words are in a PSV file, by 1-based line. */
+interface PsvLines {
+  markers: number[];
+  words: number[][];
+}
 
-  let segments: ReturnType<typeof parsePsv>;
+/**
+ * Parse a PSV file and check what only a file can get wrong: its syntax, and
+ * a speaker marker not on the same onset as the word after it (the usual sign
+ * of a marker inserted a line off).
+ */
+function readPsv(
+  content: string,
+  file: string,
+): { issues: Issue[]; segments?: GoldenSegment[]; lines: PsvLines } {
+  const issues: Issue[] = [];
+  const lines: PsvLines = { markers: [], words: [] };
+  let segments: GoldenSegment[];
   try {
     segments = parsePsv(content);
   } catch (err) {
     const message = (err as Error).message;
     const line = /line (\d+)/.exec(message)?.[1];
-    issue(line ? Number(line) : 1, "error", message);
-    return issues;
+    issues.push({
+      file,
+      line: line ? Number(line) : 1,
+      severity: "error",
+      message,
+    });
+    return { issues, lines };
   }
 
   let pendingMeta: { line: number; start: number } | undefined;
-  let lastOnset = -Infinity;
-  // The line of each word onset, to place the disfluency errors. By onset
-  // alone: a cleaning rule may report a word after an earlier rule recased it.
-  const wordLines = new Map<number, number>();
-  // The line of each speaker marker; the n-th opens the n-th segment.
-  const metaLines: number[] = [];
   content.split("\n").forEach((raw, i) => {
     const line = i + 1;
     const [startField, type] = raw.trim().split("|");
@@ -170,71 +186,113 @@ export function checkPsv(content: string, file: string): Issue[] {
       return;
     const start = parseTimestamp(startField!);
     if (type === "meta") {
-      metaLines.push(line);
-      if (pendingMeta)
-        issue(
-          pendingMeta.line,
-          "error",
-          "speaker marker with no words after it",
-        );
+      lines.markers.push(line);
+      lines.words.push([]);
       pendingMeta = { line, start };
     } else if (type === "text") {
-      if (!wordLines.has(start)) wordLines.set(start, line);
-      if (start < lastOnset)
-        issue(
-          line,
-          "error",
-          `word onset ${startField} is before the previous word's (${formatTimestamp(lastOnset)}); words must be in time order`,
-        );
-      lastOnset = start;
+      lines.words.at(-1)!.push(line);
       if (pendingMeta && pendingMeta.start !== start)
-        issue(
-          pendingMeta.line,
-          "error",
-          `speaker marker at ${formatTimestamp(pendingMeta.start)} but its first word starts at ${startField}; a marker goes on the line just before its first word, with the same onset`,
-        );
+        issues.push({
+          file,
+          line: pendingMeta.line,
+          severity: "error",
+          message: `speaker marker at ${formatTimestamp(pendingMeta.start)} but its first word starts at ${startField}; a marker goes on the line just before its first word, with the same onset`,
+        });
       pendingMeta = undefined;
     }
   });
-  if (pendingMeta)
-    issue(pendingMeta.line, "error", "speaker marker with no words after it");
+  return { issues, segments, lines };
+}
 
-  for (const c of cleanGoldenSegments(segments).changes) {
-    if (c.after !== null) continue; // a knock-on fix, eg a passed-on capital
-    issue(
-      wordLines.get(c.start) ?? 1,
-      "error",
-      `${c.rule} ${JSON.stringify(c.before)} should not be in a transcript; run \`pnpm fixtures:clean\``,
-    );
-  }
+/** A golden meeting as the meeting rules take it. */
+export function checkedMeeting(meeting: GoldenMeeting): CheckedMeeting {
+  return {
+    bodyCount: meeting.body_ids.length,
+    durationSecs: meeting.duration_secs,
+    segments: checkedSegments(meeting.segments),
+    chapters: meeting.chapters?.chapters ?? null,
+  };
+}
 
-  for (const split of splitSentences(segments)) {
-    const seg = segments[split.segment]!;
-    if (sameSpeakerLabel(segments[split.segment - 1]!.speaker, seg.speaker))
-      continue;
-    const moved = split.misplaced.map((w) => w.text).join(" ");
-    issue(
-      metaLines[split.segment]!,
-      "warning",
-      `speaker change at ${formatTimestamp(split.start)} splits a sentence; the pause at ${formatTimestamp(split.edgeStart)} is longer (${split.edgePause}s vs ${split.pause}s), so ${JSON.stringify(moved)} may belong to the other speaker. Move the marker to the sentence edge where the voice changes`,
-    );
-  }
-  issues.sort((a, b) => (a.line ?? 0) - (b.line ?? 0));
-  return issues;
+/** Golden segments as the meeting rules take them. */
+function checkedSegments(segments: readonly GoldenSegment[]): CheckedSegment[] {
+  return segments.map((s) => ({
+    speaker: s.speaker.kind === "unlabeled" ? null : formatSpeaker(s.speaker),
+    words: s.words,
+  }));
+}
+
+/** A transcript issue at its line in the PSV file, worded for that file. */
+function atPsvLine(issue: MeetingIssue, file: string, lines: PsvLines): Issue {
+  const s = issue.segment!;
+  const line =
+    issue.word !== undefined && issue.word >= 0
+      ? lines.words[s]![issue.word]
+      : lines.markers[s];
+  const message =
+    issue.code === "empty-segment"
+      ? "speaker marker with no words after it"
+      : issue.code === "unclean-word"
+        ? `${issue.message}; run \`pnpm fixtures:clean\``
+        : issue.message;
+  return { file, line, severity: issue.severity, message };
+}
+
+/** The line of each chapter's `"start":` key in a chapters.json. */
+function chapterStartLines(content: string): number[] {
+  const lines: number[] = [];
+  content.split("\n").forEach((l, i) => {
+    if (/^\s*"start"\s*:/.test(l)) lines.push(i + 1);
+  });
+  return lines;
 }
 
 /**
- * Check a chapters.json against its meeting's transcript, with the rules in
- * @open-minutes/core/chapters: errors for chapters that are out of order,
- * overlapping or outside the meeting; warnings for broken size conventions
- * and for speech no chapter covers.
+ * A chapter issue at its chapter's line; uncovered speech at the chapter
+ * before it.
+ */
+function atChapterLine(
+  issue: MeetingIssue,
+  file: string,
+  lines: readonly number[],
+  chapters: readonly { end: number }[],
+): Issue {
+  const chapter =
+    issue.chapter ??
+    Math.max(0, chapters.filter((c) => c.end <= issue.at!).length - 1);
+  return {
+    file,
+    line: lines[chapter],
+    severity: issue.severity,
+    message: issue.message,
+  };
+}
+
+/**
+ * Check a PSV transcript on its own: the file's syntax and speaker markers,
+ * and the transcript rules in @open-minutes/core/meeting-check.
+ */
+export function checkPsv(content: string, file: string): Issue[] {
+  const { issues, segments, lines } = readPsv(content, file);
+  if (segments)
+    issues.push(
+      ...checkTranscript(checkedSegments(segments)).map((i) =>
+        atPsvLine(i, file, lines),
+      ),
+    );
+  return issues.sort((a, b) => (a.line ?? 0) - (b.line ?? 0));
+}
+
+/**
+ * Check a chapters.json against its meeting's transcript, with the chapter
+ * rules in @open-minutes/core/meeting-check.
  */
 export function checkChapters(
   content: string,
   file: string,
-  segments: ReturnType<typeof parsePsv>,
+  segments: readonly GoldenSegment[],
+  durationSecs?: number,
 ): Issue[] {
-  const issues: Issue[] = [];
   let raw: unknown;
   try {
     raw = JSON.parse(content);
@@ -253,40 +311,8 @@ export function checkChapters(
     return [{ file, severity: "error", message: (err as Error).message }];
   }
   const { chapters } = parsed;
-
-  // The n-th `"start":` key is the n-th chapter's.
-  const chapterLines: number[] = [];
-  content.split("\n").forEach((l, i) => {
-    if (/^\s*"start"\s*:/.test(l)) chapterLines.push(i + 1);
-  });
-  const at = (c: number, severity: Severity, message: string) =>
-    issues.push({
-      file,
-      line: chapterLines[c],
-      severity,
-      message: `chapter ${c + 1} ("${chapters[c]?.title}") ${message}`,
-    });
-
-  const speech = segments
-    .filter((s) => s.words.length > 0)
-    .map((s) => ({
-      start: s.words[0]!.start,
-      end: s.words.at(-1)!.start + LAST_WORD_DURATION_SEC,
-    }));
-  const speechEnd = Math.max(0, ...speech.map((s) => s.end));
-
-  for (const e of chapterErrors(chapters, speechEnd))
-    at(e.chapter, "error", e.message);
-  for (const w of chapterWarnings(chapters))
-    at(w.chapter, "warning", w.message);
-  for (const gap of uncoveredSpeech(speech, chapters)) {
-    const before = chapters.filter((c) => c.end <= gap.start).length - 1;
-    issues.push({
-      file,
-      line: chapterLines[Math.max(0, before)],
-      severity: "warning",
-      message: `speech from ${formatTimestamp(gap.start)} to ${formatTimestamp(gap.end)} is in no chapter; extend a neighbouring chapter or add one`,
-    });
-  }
-  return issues;
+  const lines = chapterStartLines(content);
+  return checkChapterRules(chapters, checkedSegments(segments), durationSecs)
+    .map((i) => atChapterLine(i, file, lines, chapters))
+    .sort((a, b) => (a.line ?? 0) - (b.line ?? 0));
 }
