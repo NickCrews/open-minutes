@@ -8,6 +8,7 @@ import {
   chapterGenerationsTable,
   chaptersTable,
   jurisdictionsTable,
+  meetingCohostsTable,
   meetingsTable,
   peopleTable,
   segmentsTable,
@@ -17,7 +18,7 @@ import { LAST_WORD_DURATION_SEC } from "@open-minutes/core/transcription";
 import { transcriptFingerprint } from "@open-minutes/core/transcript-fingerprint";
 import { N_DIMENSIONS as VOICE_N_DIMENSIONS } from "@open-minutes/core/voice_embeddings";
 import { TEST_DATA_ROOT, loadAllTestData, type TestData } from "../test-data";
-import { mapSnapshot } from "./map";
+import { mapSnapshot, meetingBodyIds } from "./map";
 import { advanceIdSequences } from "./sequences";
 
 // The "dev" dataset `pnpm dev` seeds: the golden fixtures, plus the golden
@@ -30,11 +31,13 @@ import { advanceIdSequences } from "./sequences";
 // Bump when the seeder's behavior changes in a way the fixture files don't
 // capture.
 // 2: seeds chapters; 3: seeds meeting slugs; 4: bodies' meeting sources
-// replace video_sources, and meetings are on sites
-const DEV_SEED_VERSION = 4;
+// replace video_sources, and meetings are on sites; 5: seeds joint meetings'
+// co-hosts
+const DEV_SEED_VERSION = 5;
 
-// Every table the dev seeder owns. Truncated together (children would cascade
-// anyway); listing them keeps the footprint visible.
+// Every table the dev seeder owns with an id sequence. Truncated together
+// (children would cascade anyway, as meeting_cohosts, which the seeder also
+// fills, does); listing them keeps the footprint visible.
 const DEV_TABLES = [
   chaptersTable,
   chapterGenerationsTable,
@@ -86,10 +89,11 @@ export async function seedDevDatabase(db: DB): Promise<DevSeedSummary> {
     voice_embedding: placeholderVoiceprint(slug),
   }));
 
+  const cohosts: (typeof meetingCohostsTable.$inferInsert)[] = [];
   const meetings = snapshot.meetings.map((m, i) => {
-    const bodyId = mapped.bodyIdByKey.get(m.body_id);
-    if (bodyId === undefined)
-      throw new Error(`Meeting ${m.slug} has unknown body "${m.body_id}"`);
+    const { bodyId, cohostIds } = meetingBodyIds(m, mapped.bodyIdByKey);
+    for (const body_id of cohostIds)
+      cohosts.push({ meeting_id: i + 1, body_id });
     const lastWord = m.segments.flatMap((s) => s.words).at(-1);
     return {
       id: i + 1,
@@ -158,6 +162,7 @@ export async function seedDevDatabase(db: DB): Promise<DevSeedSummary> {
     await tx.insert(bodiesTable).values(mapped.bodies);
     await tx.insert(peopleTable).values(people);
     await tx.insert(meetingsTable).values(meetings);
+    if (cohosts.length) await tx.insert(meetingCohostsTable).values(cohosts);
     for (let i = 0; i < segments.length; i += INSERT_CHUNK) {
       await tx
         .insert(segmentsTable)
@@ -173,6 +178,7 @@ export async function seedDevDatabase(db: DB): Promise<DevSeedSummary> {
       bodies: mapped.bodies.length,
       people: people.length,
       meetings: meetings.length,
+      meeting_cohosts: cohosts.length,
       segments: segments.length,
       chapter_generations: chapterGenerations.length,
       chapters: chapters.length,

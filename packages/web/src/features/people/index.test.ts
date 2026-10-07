@@ -2,6 +2,7 @@ import {
   bodiesTable,
   type DB,
   jurisdictionsTable,
+  meetingCohostsTable,
   meetingsTable,
   peopleTable,
   segmentsTable,
@@ -49,6 +50,7 @@ async function insertMeeting(
   date: string | null,
   personId: number | null,
   segments = 1,
+  cohosts: number[] = [],
 ) {
   const [meeting] = await db
     .insert(meetingsTable)
@@ -59,6 +61,10 @@ async function insertMeeting(
       date,
     })
     .returning({ id: meetingsTable.id });
+  if (cohosts.length)
+    await db
+      .insert(meetingCohostsTable)
+      .values(cohosts.map((body_id) => ({ meeting_id: meeting!.id, body_id })));
   for (let i = 0; i < segments; i++) {
     await db.insert(segmentsTable).values({
       meeting_id: meeting!.id,
@@ -100,6 +106,20 @@ describe("getAllPeople attendance", () => {
     expect(person!.attendance.map((a) => [a.body, a.meetings])).toEqual([
       ["Assembly", 2],
       ["GBOS", 1],
+    ]);
+  });
+
+  test("counts a joint meeting for each body that held it", async ({ db }) => {
+    const gbos = await insertBody(db, "GBOS");
+    const luc = await insertBody(db, "LUC");
+    const alice = await insertPerson(db, "Alice");
+    await insertMeeting(db, gbos, "2022-01-01", alice);
+    await insertMeeting(db, gbos, "2022-08-30", alice, 2, [luc]);
+
+    const [person] = await getAllPeople(db);
+    expect(person!.attendance).toEqual([
+      { body: "GBOS", meetings: 2, first: "2022-01-01", last: "2022-08-30" },
+      { body: "LUC", meetings: 1, first: "2022-08-30", last: "2022-08-30" },
     ]);
   });
 

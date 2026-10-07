@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useRouter } from "@tanstack/solid-router";
+import { createFileRoute, useRouter } from "@tanstack/solid-router";
 import { createServerFn } from "@tanstack/solid-start";
 import { createEffect, createSignal, on, Show } from "solid-js";
 import { Button } from "~/components/button";
@@ -12,6 +12,7 @@ import {
   MeetingPane,
   type MeetingPaneTab,
 } from "~/features/meetings/meeting-pane";
+import { MeetingBodies } from "~/features/meetings/meeting-bodies";
 import { MeetingDateTime } from "~/features/meetings/meeting-date-time";
 import { Transcript } from "~/features/meetings/transcript";
 import { intervalToSecs } from "~/lib/format";
@@ -160,13 +161,7 @@ function MeetingPage() {
               here, and a browser closes an open <p> the moment it meets flow
               content, which would split this line in two during hydration. */}
           <div class="text-muted-foreground text-xs lg:text-sm">
-            <Link
-              to="/bodies/$id"
-              params={{ id: String(meeting().body.id) }}
-              class="hover:underline"
-            >
-              {meeting().body.name}
-            </Link>
+            <MeetingBodies meeting={meeting()} class="hover:underline" />
             <MeetingDateTime
               meetingId={meeting().id}
               date={meeting().date}

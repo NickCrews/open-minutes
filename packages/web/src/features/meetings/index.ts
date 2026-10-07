@@ -3,9 +3,15 @@ import type { MeetingWhen } from "@open-minutes/core/meeting-date";
 import { eq } from "drizzle-orm";
 import { intervalToSecs } from "~/lib/format";
 
+/** A joint meeting's other bodies: what a page needs to name and link them. */
+const cohosts = {
+  columns: { id: true, name: true, name_short: true },
+  orderBy: { name: "asc" },
+} as const;
+
 export function getAllMeetings(db: DB) {
   return db.query.meetingsTable.findMany({
-    with: { body: { with: { jurisdiction: true } } },
+    with: { body: { with: { jurisdiction: true } }, cohosts },
     orderBy: { date: "desc", time: "desc" },
   });
 }
@@ -35,6 +41,7 @@ export function getMeetingById(db: DB, meetingId: number) {
       where: { id: meetingId },
       with: {
         body: { with: { jurisdiction: true } },
+        cohosts,
         segments: {
           // The transcript renders word-by-word synced to video playback, so
           // ship the word-level timestamps and skip the derived text column.

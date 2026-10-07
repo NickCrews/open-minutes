@@ -3,8 +3,13 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { and, eq, sql } from "drizzle-orm";
-import { type DB, bodiesTable, meetingsTable } from "@open-minutes/db";
-import { bodySlug } from "@open-minutes/core/bodies";
+import {
+  type DB,
+  bodiesTable,
+  meetingCohostsTable,
+  meetingsTable,
+} from "@open-minutes/db";
+import { bodySlug, cohostsInTitle } from "@open-minutes/core/bodies";
 import { type SiteKind, siteKindOf } from "@open-minutes/core/meeting-source";
 import {
   alignSpeakers,
@@ -155,6 +160,26 @@ export async function ingestMeeting(
     bodyArg,
   );
 
+  // A joint meeting is published by one of its bodies, and its title names
+  // the others: "Girdwood Board of Supervisors and Girdwood Land Use Committee
+  // Joint Meeting". Fix a wrong guess with the set_meeting_cohosts tool.
+  const cohosts = cohostsInTitle(
+    metadata.title,
+    body.id,
+    await db
+      .select({
+        id: bodiesTable.id,
+        name: bodiesTable.name,
+        name_short: bodiesTable.name_short,
+      })
+      .from(bodiesTable)
+      .where(eq(bodiesTable.jurisdiction_id, body.jurisdiction_id)),
+  );
+  if (cohosts.length > 0)
+    console.error(
+      `${tag} joint meeting of ${[body, ...cohosts].map((b) => b.name_short).join(", ")}`,
+    );
+
   const workDir = join(workRoot, workDirName(bodySlug(body), siteId));
   await mkdir(workDir, { recursive: true });
 
@@ -243,6 +268,12 @@ export async function ingestMeeting(
             : sql`make_interval(secs => ${metadata.durationSecs})`,
       })
       .returning({ id: meetingsTable.id });
+    if (cohosts.length > 0)
+      await tx
+        .insert(meetingCohostsTable)
+        .values(
+          cohosts.map((b) => ({ meeting_id: meeting!.id, body_id: b.id })),
+        );
     await identifyAndInsertSegments(
       tx,
       meeting!.id,
@@ -309,6 +340,7 @@ async function resolveBody(
   const bodies = await db
     .select({
       id: bodiesTable.id,
+      jurisdiction_id: bodiesTable.jurisdiction_id,
       name: bodiesTable.name,
       name_short: bodiesTable.name_short,
       meeting_source: bodiesTable.meeting_source,

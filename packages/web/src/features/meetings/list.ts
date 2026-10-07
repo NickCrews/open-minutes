@@ -9,10 +9,31 @@ import {
   type MeetingWhen,
 } from "@open-minutes/core/meeting-date";
 
+/** A body as the meetings list names it. */
+export interface ListedBody {
+  id: number;
+  name: string;
+}
+
 /** The fields of a meeting row the list needs to place and filter it. */
 export interface ListedMeeting extends MeetingWhen {
   title: string;
-  body: { id: number; name: string };
+  /** The host body, which published the meeting. */
+  body: ListedBody;
+  /** A joint meeting's other bodies; empty for most meetings. */
+  cohosts: ListedBody[];
+}
+
+/**
+ * Every body that held a meeting: its host first, then any co-hosts. A joint
+ * meeting is a meeting of each of them, so it's listed, counted and found
+ * under each.
+ */
+export function meetingBodies<B extends ListedBody>(meeting: {
+  body: B;
+  cohosts: B[];
+}): B[] {
+  return [meeting.body, ...meeting.cohosts];
 }
 
 /**
@@ -57,8 +78,9 @@ export interface MeetingFilters {
 }
 
 /**
- * The meetings matching `filters`. Search is case-insensitive and matches each
- * word against the title or the body's name, so "budget gbos" finds the
+ * The meetings matching `filters`. A joint meeting matches a filter on any of
+ * its bodies. Search is case-insensitive and matches each word against the
+ * title or a body's name, so "budget gbos" finds the
  * borough assembly's budget sessions without typing either one out in full.
  */
 export function filterMeetings<M extends ListedMeeting>(
@@ -68,9 +90,12 @@ export function filterMeetings<M extends ListedMeeting>(
   const words = (filters.q ?? "").toLowerCase().split(/\s+/).filter(Boolean);
   const bodies = new Set(filters.bodies ?? []);
   return meetings.filter((m) => {
-    if (bodies.size && !bodies.has(m.body.id)) return false;
+    const held = meetingBodies(m);
+    if (bodies.size && !held.some((b) => bodies.has(b.id))) return false;
     if (!words.length) return true;
-    const haystack = `${m.title} ${m.body.name}`.toLowerCase();
+    const haystack = [m.title, ...held.map((b) => b.name)]
+      .join(" ")
+      .toLowerCase();
     return words.every((w) => haystack.includes(w));
   });
 }

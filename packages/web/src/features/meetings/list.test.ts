@@ -10,12 +10,14 @@ import {
 
 const GBOS = { id: 1, name: "Borough Assembly" };
 const PLAN = { id: 2, name: "Planning Commission" };
+const LUC = { id: 3, name: "Land Use Committee" };
 
 function meeting(
   title: string,
   date: string | null,
   body = GBOS,
   time: string | null = null,
+  cohosts: ListedMeeting["cohosts"] = [],
 ): ListedMeeting & { id: string } {
   return {
     id: title,
@@ -23,6 +25,7 @@ function meeting(
     date,
     time,
     body,
+    cohosts,
   };
 }
 
@@ -54,9 +57,17 @@ describe("filterMeetings", () => {
     meeting("Budget Work Session", "2026-02-10", GBOS),
     meeting("Regular Meeting", "2026-03-10", PLAN),
   ];
+  const joint = meeting("Joint Meeting", "2026-04-10", GBOS, null, [LUC]);
 
   it("keeps everything with no filters", () => {
     expect(filterMeetings(all, {})).toHaveLength(3);
+  });
+
+  it("finds a joint meeting under each of its bodies", () => {
+    const withJoint = [...all, joint];
+    expect(filterMeetings(withJoint, { bodies: [LUC.id] })).toEqual([joint]);
+    expect(filterMeetings(withJoint, { bodies: [GBOS.id] })).toContain(joint);
+    expect(filterMeetings(withJoint, { q: "land use" })).toEqual([joint]);
   });
 
   it("matches every word against the title or body name", () => {
