@@ -35,9 +35,9 @@ import { advanceIdSequences } from "./sequences";
 // meeting_bodies, and meetings have timezones
 const DEV_SEED_VERSION = 5;
 
-// Every table the dev seeder owns with an id sequence. Truncated together
-// (children would cascade anyway, as meeting_bodies, which the seeder also
-// fills, does); listing them keeps the footprint visible.
+// Every table the dev seeder owns. Truncated together (children would cascade
+// anyway); listing them keeps the footprint visible. Not meeting_bodies, which
+// has no id sequence for advanceIdSequences, and goes with its meetings.
 const DEV_TABLES = [
   chaptersTable,
   chapterGenerationsTable,
@@ -89,10 +89,7 @@ export async function seedDevDatabase(db: DB): Promise<DevSeedSummary> {
     voice_embedding: placeholderVoiceprint(slug),
   }));
 
-  const meetingBodies: (typeof meetingBodiesTable.$inferInsert)[] = [];
   const meetings = snapshot.meetings.map((m, i) => {
-    for (const body_id of meetingBodyIds(m, mapped.bodyIdByKey))
-      meetingBodies.push({ meeting_id: i + 1, body_id });
     const lastWord = m.segments.flatMap((s) => s.words).at(-1);
     return {
       id: i + 1,
@@ -108,6 +105,13 @@ export async function seedDevDatabase(db: DB): Promise<DevSeedSummary> {
         : null,
     };
   });
+
+  const meetingBodies = snapshot.meetings.flatMap((m, i) =>
+    meetingBodyIds(m, mapped.bodyIdByKey).map((body_id) => ({
+      meeting_id: i + 1,
+      body_id,
+    })),
+  );
 
   const segments = snapshot.meetings.flatMap((m, i) =>
     m.segments
