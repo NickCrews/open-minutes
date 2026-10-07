@@ -1,11 +1,9 @@
 import { eq } from "drizzle-orm";
 import { meetingBodiesTable, meetingsTable } from "@open-minutes/db";
 import {
-  chapterErrors,
-  chapterWarnings,
-  uncoveredSpeech,
-} from "@open-minutes/core/chapters";
-import { LAST_WORD_DURATION_SEC } from "@open-minutes/core/transcription";
+  checkMeeting as checkMeetingData,
+  type IssueCode,
+} from "@open-minutes/core/meeting-check";
 import { type Db, ToolError } from "./tool";
 import { intervalSecs, loadChapters, loadSegments } from "./load";
 
@@ -13,6 +11,7 @@ import { intervalSecs, loadChapters, loadSegments } from "./load";
 export interface Issue {
   /** error: the data is wrong. warning: probably wrong, or a broken convention. */
   severity: "error" | "warning";
+  code: IssueCode;
   message: string;
   segmentId?: number;
   chapterId?: number;
@@ -21,9 +20,8 @@ export interface Issue {
 }
 
 /**
- * Check a meeting's bodies, transcript and chapters: it has a body, and,
- * against the rules in @open-minutes/core, words in time order, segments not
- * interleaved, chapters valid, and every stretch of speech in a chapter.
+ * Check a meeting's bodies, transcript and chapters against the rules in
+ * @open-minutes/core/meeting-check, the same ones the golden fixtures follow.
  */
 export async function checkMeeting(
   db: Db,
@@ -36,67 +34,31 @@ export async function checkMeeting(
   if (!meeting) throw new ToolError(`No meeting ${meetingId}`);
   const segments = await loadSegments(db, meetingId);
   const chapters = await loadChapters(db, meetingId);
-  const issues: Issue[] = [];
-
   const bodies = await db
     .select({ id: meetingBodiesTable.body_id })
     .from(meetingBodiesTable)
     .where(eq(meetingBodiesTable.meeting_id, meetingId));
-  if (bodies.length === 0)
-    issues.push({ severity: "error", message: "the meeting has no bodies" });
 
-  let prevLast = -Infinity;
-  let prevId: number | undefined;
-  for (const seg of segments) {
-    const onsets = seg.words.map((w) => w.start);
-    if (onsets.some((t, i) => i > 0 && t < onsets[i - 1]!))
-      issues.push({
-        severity: "error",
-        message: "words are out of time order within the segment",
-        segmentId: seg.id,
-        at: onsets[0],
-      });
-    if (onsets[0]! < prevLast)
-      issues.push({
-        severity: "error",
-        message: `starts before segment ${prevId} has finished speaking; the two interleave`,
-        segmentId: seg.id,
-        at: onsets[0],
-      });
-    prevLast = Math.max(prevLast, onsets.at(-1)!);
-    prevId = seg.id;
-  }
-
-  const speech = segments.map((s) => ({
-    start: s.words[0]!.start,
-    end: s.words.at(-1)!.start + LAST_WORD_DURATION_SEC,
-  }));
-  const duration = Math.max(
-    meeting.duration ? (intervalSecs(meeting.duration) ?? 0) : 0,
-    ...speech.map((s) => s.end),
-  );
-  const at = (i: number) => ({
-    chapterId: chapters[i]!.id,
-    at: chapters[i]!.start,
+  const issues = checkMeetingData({
+    bodyCount: bodies.length,
+    durationSecs: meeting.duration ? intervalSecs(meeting.duration) : null,
+    segments: segments.map((s) => ({
+      speaker:
+        s.person_id != null
+          ? `person:${s.person_id}`
+          : s.speaker_number != null
+            ? `speaker:${s.speaker_number}`
+            : null,
+      words: s.words,
+    })),
+    chapters,
   });
-  for (const e of chapterErrors(chapters, duration))
-    issues.push({
-      severity: "error",
-      message: `chapter "${chapters[e.chapter]!.title}" ${e.message}`,
-      ...at(e.chapter),
-    });
-  for (const w of chapterWarnings(chapters))
-    issues.push({
-      severity: "warning",
-      message: `chapter "${chapters[w.chapter]!.title}" ${w.message}`,
-      ...at(w.chapter),
-    });
-  if (chapters.length)
-    for (const gap of uncoveredSpeech(speech, chapters))
-      issues.push({
-        severity: "warning",
-        message: `speech from ${gap.start.toFixed(2)}s to ${gap.end.toFixed(2)}s is in no chapter`,
-        at: gap.start,
-      });
-  return issues;
+  return issues.map(({ code, severity, message, segment, chapter, at }) => ({
+    severity,
+    code,
+    message,
+    ...(segment !== undefined && { segmentId: segments[segment]!.id }),
+    ...(chapter !== undefined && { chapterId: chapters[chapter]!.id }),
+    ...(at !== undefined && { at }),
+  }));
 }

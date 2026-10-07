@@ -36,6 +36,7 @@
 
 import { readFileSync, writeFileSync } from "node:fs";
 
+import { formatClock } from "@open-minutes/core/clock";
 import type {
   SpeechSegment,
   TranscriptSegment,
@@ -100,16 +101,7 @@ type PsvEvent =
 const COLUMN_HEADER = "start_sec|event_type|event_data";
 
 /** Format seconds as `H:MM:SS.ss` (rounded to the nearest hundredth). */
-export function formatTimestamp(sec: number): string {
-  const totalCs = Math.round(sec * 100);
-  const cs = totalCs % 100;
-  const totalSec = Math.floor(totalCs / 100);
-  const s = totalSec % 60;
-  const totalMin = Math.floor(totalSec / 60);
-  const m = totalMin % 60;
-  const h = Math.floor(totalMin / 60);
-  return `${h}:${pad2(m)}:${pad2(s)}.${pad2(cs)}`;
-}
+export const formatTimestamp = formatClock;
 
 /** Parse a `H:MM:SS.ss` timestamp into seconds. */
 export function parseTimestamp(str: string): number {
@@ -127,10 +119,6 @@ export function parseTimestamp(str: string): number {
   // The format stores centisecond precision; round away float-summation noise
   // (e.g. 60 + 14.96 -> 74.96000000000001) so round-trips compare exactly.
   return Math.round(seconds * 100) / 100;
-}
-
-function pad2(n: number): string {
-  return n.toString().padStart(2, "0");
 }
 
 function parseSpeaker(label: string): SpeakerLabel {
@@ -155,7 +143,7 @@ function parseSpeaker(label: string): SpeakerLabel {
   throw new Error(`Unknown speaker label: ${JSON.stringify(label)}`);
 }
 
-function formatSpeaker(speaker: SpeakerLabel): string {
+export function formatSpeaker(speaker: SpeakerLabel): string {
   switch (speaker.kind) {
     case "unlabeled":
       return "unlabeled";

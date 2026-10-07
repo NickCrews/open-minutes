@@ -1,6 +1,12 @@
 import { describe, expect, test as plainTest } from "vitest";
 import { dbTest } from "@open-minutes/db/testing/vitest";
+import { eq } from "drizzle-orm";
+import { checkMeeting as checkMeetingData } from "@open-minutes/core/meeting-check";
+import { segmentsTable } from "@open-minutes/db";
+import { checkedMeeting } from "@open-minutes/fixtures/check";
 import { devData } from "@open-minutes/fixtures/dev-data";
+import { loadAllTestData } from "@open-minutes/fixtures/test-data";
+import { checkMeeting } from "./check";
 import { toolContext } from "./context";
 import {
   callTool,
@@ -78,6 +84,45 @@ describe("reading", () => {
     expect(
       await callTool(toolContext(db), checkMeetingTool, { meeting: GBOS }),
     ).toEqual([]);
+  });
+
+  test("checks every golden by the same rules as its files", async ({ db }) => {
+    const meetings = await callTool(toolContext(db), listMeetings, {});
+    for (const golden of loadAllTestData().meetings) {
+      const { id } = meetings.find((m) => m.slug === golden.slug)!;
+      const summary = (i: {
+        severity: string;
+        code: string;
+        message: string;
+      }) => `${golden.slug}: ${i.severity} ${i.code}: ${i.message}`;
+      expect((await checkMeeting(db, id)).map(summary)).toEqual(
+        checkMeetingData(checkedMeeting(golden)).map(summary),
+      );
+    }
+  });
+
+  test("reports a filler as an error", async ({ db }) => {
+    const { id } = await brianSegment(db);
+    const [row] = await db
+      .select({ words: segmentsTable.words })
+      .from(segmentsTable)
+      .where(eq(segmentsTable.id, id));
+    const [first, ...rest] = row!.words;
+    await db
+      .update(segmentsTable)
+      .set({
+        words: [{ text: "Um,", start: first!.start - 0.1 }, first!, ...rest],
+      })
+      .where(eq(segmentsTable.id, id));
+    expect(
+      await callTool(toolContext(db), checkMeetingTool, { meeting: GBOS }),
+    ).toEqual([
+      expect.objectContaining({
+        severity: "error",
+        code: "unclean-word",
+        segmentId: id,
+      }),
+    ]);
   });
 
   test("takes a meeting by slug or by id", async ({ db }) => {

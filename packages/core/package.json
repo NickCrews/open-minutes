@@ -13,6 +13,8 @@
     "./transcription": "./src/transcription/index.ts",
     "./voice_embeddings": "./src/voice_embeddings/index.ts",
     "./chapters": "./src/chapters.ts",
+    "./clock": "./src/clock.ts",
+    "./meeting-check": "./src/meeting-check.ts",
     "./transcript-fingerprint": "./src/transcript-fingerprint.ts",
     "./text": "./src/text.ts",
     "./timezone": "./src/timezone.ts"

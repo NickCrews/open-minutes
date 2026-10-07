@@ -20,7 +20,9 @@ if the change introduces an error. Read the issues each time. Pass
 `"dryRun": true` to preview a change.
 
 Golden fixtures (`packages/fixtures/test-data/`) are files. Check them with
-`pnpm fixtures:check`. In a PSV file, a speaker marker goes on the line just
+`pnpm fixtures:check`, which holds them to the same rules as `check_meeting`
+plus the rules of the file format. Fix every error; read every warning and
+fix it unless the data is right as it is. In a PSV file, a speaker marker goes on the line just
 before its first word, with the same onset. Transcripts carry no fillers
 ("um", "uh") or stutters ("the the"): `pnpm fixtures:clean` removes them, so
 never type one back in.
@@ -85,9 +87,9 @@ are `H:MM:SS.ss`, as psvtool prints them.
    word where the speaker changes, then relabel each part. Edges are usually
    off by one to five words, most often with the next segment starting on the
    previous speaker's last words ("Thank | you."), so check the first and last
-   words of every segment. `fixtures:check` warns about a marker inside a
-   sentence near a longer pause; the pause hints which way to move it, but
-   read the words to decide who said them.
+   words of every segment. `check_meeting` and `fixtures:check` warn about a
+   speaker change inside a sentence near a longer pause; the pause hints
+   which way to move it, but read the words to decide who said them.
 4. **Give every voice change its own segment.** The diarizer often folds
    short turns into the chair's segment: roll-call answers, "So moved." and
    "Second.", one-line questions inside a presentation, and the clerk reading
