@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import {
   type DB,
+  meetingCohostsTable,
   meetingsTable,
   peopleTable,
   segmentsTable,
@@ -29,12 +30,15 @@ import { getMeetingAudio } from "../test-utils/audio-cache";
  * Seed one golden meeting. Returns the seeded `slug → person_id` map so callers
  * can score a later meeting's identifications against it.
  *
+ * `bodyId` and `cohostIds` are the database ids of its host body and of a
+ * joint meeting's other bodies (see `meetingBodyIds`).
+ *
  * `peopleBySlug` supplies display names (from people.jsonl) for identified
  * speakers; a slug with no entry is still seeded, just with a null name.
  */
 export async function seedGoldenMeeting(
   db: DB,
-  bodyId: number,
+  { bodyId, cohostIds }: { bodyId: number; cohostIds: number[] },
   meeting: GoldenMeeting,
   peopleBySlug: ReadonlyMap<string, GoldenPerson>,
 ): Promise<Map<string, number>> {
@@ -67,6 +71,10 @@ export async function seedGoldenMeeting(
     })
     .returning({ id: meetingsTable.id });
   const meetingId = meetingRow!.id;
+  if (cohostIds.length)
+    await db
+      .insert(meetingCohostsTable)
+      .values(cohostIds.map((body_id) => ({ meeting_id: meetingId, body_id })));
 
   // 3. Insert segments, resolving identified speakers to their seeded person_id
   //    and preserving the anonymous cluster number for segmented ones.

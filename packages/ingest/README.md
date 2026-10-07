@@ -29,6 +29,15 @@ body, it uses the one whose meeting source is the meeting's YouTube channel or
 akleg.gov committee; a meeting from a playlist needs its body named with
 `--body <slug>`, since a video doesn't say which playlists it's on.
 
+That body is the meeting's host. A joint meeting, held by several bodies
+together, is published by one of them, and its title names the rest: for
+"Girdwood Board of Supervisors and Girdwood Land Use Committee Joint Meeting",
+ingested as a GBOS meeting, the Land Use Committee is recorded as a co-host in
+`meeting_cohosts`. Only a title that says "joint" is read this way, and only
+bodies in the host's jurisdiction, named in full or by short name, are
+matched. Fix a wrong guess with `pnpm om tools set_meeting_cohosts
+'{"meeting":12,"cohosts":["luc"]}'`.
+
 To scan a new body, set its source, eg:
 
 ```sql

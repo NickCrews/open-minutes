@@ -6,6 +6,7 @@ import {
   segmentsTable,
 } from "@open-minutes/db";
 import { countDistinct, desc, eq, isNotNull, max, min } from "drizzle-orm";
+import { heldMeetings } from "../bodies";
 
 /** One body a person has spoken before, and the span over which they did. */
 export type Attendance = {
@@ -35,7 +36,7 @@ export async function getAllPeople(db: DB) {
 
 /**
  * How many meetings of each body every person has spoken in, and when the first
- * and last of those were.
+ * and last of those were. A joint meeting counts for each body that held it.
  *
  * Aggregated in SQL rather than by loading segments: a prolific speaker has
  * thousands of them, and this feeds a one-line summary per person.
@@ -43,6 +44,7 @@ export async function getAllPeople(db: DB) {
 async function getAttendanceByPerson(
   db: DB,
 ): Promise<Map<number, Attendance[]>> {
+  const held = heldMeetings(db);
   const rows = await db
     .select({
       person_id: segmentsTable.person_id,
@@ -54,7 +56,8 @@ async function getAttendanceByPerson(
     })
     .from(segmentsTable)
     .innerJoin(meetingsTable, eq(segmentsTable.meeting_id, meetingsTable.id))
-    .innerJoin(bodiesTable, eq(meetingsTable.body_id, bodiesTable.id))
+    .innerJoin(held, eq(held.meeting_id, meetingsTable.id))
+    .innerJoin(bodiesTable, eq(held.body_id, bodiesTable.id))
     // Unidentified segments belong to no one; they'd otherwise group as a person.
     .where(isNotNull(segmentsTable.person_id))
     .groupBy(segmentsTable.person_id, bodiesTable.id)

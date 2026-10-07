@@ -11,7 +11,7 @@ import {
 } from "@open-minutes/fixtures/test-data";
 import { goldenData } from "@open-minutes/fixtures/golden-data";
 import { seedGoldenMeeting } from "./golden-meeting";
-import { mapSnapshot } from "@open-minutes/fixtures/map";
+import { mapSnapshot, meetingBodyIds } from "@open-minutes/fixtures/map";
 
 // The golden dataset plus some golden meetings seeded as established history:
 // transcripts, speaker-attributed segments, and a *real* voiceprint per
@@ -20,7 +20,8 @@ import { mapSnapshot } from "@open-minutes/fixtures/map";
 
 // Bump when seedGoldenMeeting's behavior changes in a way the inputs hashed
 // below don't capture.
-const VERSION = 1;
+// 2: seeds joint meetings' co-hosts
+const VERSION = 2;
 
 /** Golden rows + the given golden meetings, with real voiceprints. */
 export function goldenMeetingsData(meetingSlugs: readonly string[]): DataState {
@@ -37,13 +38,12 @@ export function goldenMeetingsData(meetingSlugs: readonly string[]): DataState {
       const peopleBySlug = new Map(loadPeople().map((p) => [p.slug, p]));
       for (const slug of meetingSlugs) {
         const meeting = getMeetingData(slug);
-        const bodyId = bodyIdByKey.get(meeting.body_id);
-        if (bodyId === undefined) {
-          throw new Error(
-            `Meeting ${slug} has unknown body ${meeting.body_id}`,
-          );
-        }
-        await seedGoldenMeeting(db, bodyId, meeting, peopleBySlug);
+        await seedGoldenMeeting(
+          db,
+          meetingBodyIds(meeting, bodyIdByKey),
+          meeting,
+          peopleBySlug,
+        );
       }
     },
   };

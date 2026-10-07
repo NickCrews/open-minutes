@@ -2,7 +2,12 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { bodiesTable, meetingsTable, segmentsTable } from "@open-minutes/db";
+import {
+  bodiesTable,
+  meetingCohostsTable,
+  meetingsTable,
+  segmentsTable,
+} from "@open-minutes/db";
 import { eq } from "drizzle-orm";
 import type { VideoMetadata } from "@open-minutes/core/audio-provider";
 import type { SpeechSegment } from "@open-minutes/core/transcription";
@@ -298,6 +303,30 @@ describe("which body a meeting belongs to", () => {
       site_id: AKLEG_ID,
       url: "https://www.akleg.gov/basis/Meeting/Detail?Meeting=HRES%202018-09-10%2014:00:00",
     });
+  });
+
+  test("a joint meeting's title names its co-hosts", async ({
+    db,
+    workRoot,
+  }) => {
+    await seedWorkDir(workRoot, `gbos_${VIDEO_ID}`);
+    const youtube = fakeSite({
+      getMetadata: async () => ({
+        ...METADATA,
+        title:
+          "Girdwood Board of Supervisors and Girdwood Land Use Committee Joint Meeting August 30, 2022",
+      }),
+    });
+
+    await ingestMeeting(db, VIDEO_ID, { sites: { youtube }, workRoot });
+    const [meeting] = await db.select().from(meetingsTable);
+    expect(meeting!.body_id).toBe(await goldenGbosId(db));
+    const cohosts = await db
+      .select({ name_short: bodiesTable.name_short })
+      .from(meetingCohostsTable)
+      .innerJoin(bodiesTable, eq(bodiesTable.id, meetingCohostsTable.body_id))
+      .where(eq(meetingCohostsTable.meeting_id, meeting!.id));
+    expect(cohosts).toEqual([{ name_short: "LUC" }]);
   });
 
   test("a playlist's meeting needs its body named", async ({

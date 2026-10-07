@@ -1,4 +1,5 @@
 {"id": "gbos", "jurisdiction_id": "moa", "name":"Girdwood Board of Supervisors","name_short":"GBOS","timezone":"America/Anchorage","meeting_source":{"type":"youtube_channel","channel_id":"UCOUlNInprZEjhbpVPiJOlEA"}}
+{"id": "luc", "jurisdiction_id": "moa", "name":"Girdwood Land Use Committee","name_short":"LUC","timezone":"America/Anchorage"}
 {"id": "assembly", "jurisdiction_id": "moa", "name":"Anchorage Assembly","name_short":"Assembly","timezone":"America/Anchorage","meeting_source":{"type":"youtube_playlist","playlist_id":"PLylc7U989XcZBYK7ZGZOevaH9XgQcxh9Q"}}
 {"id": "pzc", "jurisdiction_id": "moa", "name":"Anchorage Planning and Zoning Commission","name_short":"PZC","timezone":"America/Anchorage","meeting_source":{"type":"youtube_playlist","playlist_id":"PLylc7U989Xcaf_jtcVa9aZkLEa2UUhgxO"}}
 {"id": "ced", "jurisdiction_id": "moa", "name":"Anchorage Assembly Community and Economic Development Committee","name_short":"CED","timezone":"America/Anchorage","meeting_source":{"type":"youtube_playlist","playlist_id":"PLylc7U989XcbGShAA47zVdmWVNAi8lMwj"}}

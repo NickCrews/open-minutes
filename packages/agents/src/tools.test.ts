@@ -20,6 +20,7 @@ import {
   mergeSegments,
   relabelSegments,
   replaceChapters,
+  setMeetingCohosts,
   splitSegment,
   tools,
   updatePerson,
@@ -46,7 +47,7 @@ describe("reading", () => {
   test("lists meetings with their sizes", async ({ db }) => {
     const meetings = await callTool(toolContext(db), listMeetings, {});
     const gbos = meetings.find((m) => m.slug === GBOS);
-    expect(gbos).toMatchObject({ body: "GBOS", chapters: 34 });
+    expect(gbos).toMatchObject({ body: "GBOS", cohosts: [], chapters: 34 });
     expect(gbos!.segments).toBeGreaterThan(200);
   });
 
@@ -249,6 +250,38 @@ describe("people", () => {
     expect(
       await callTool(toolContext(db), findPeople, { query: "brianna" }),
     ).toEqual([]);
+  });
+});
+
+describe("set_meeting_cohosts", () => {
+  test("makes a meeting joint, and back", async ({ db }) => {
+    const ctx = toolContext(db);
+    const cohostsOf = async () =>
+      (await callTool(ctx, listMeetings, {})).find((m) => m.slug === GBOS)!
+        .cohosts;
+
+    const result = await callTool(ctx, setMeetingCohosts, {
+      meeting: GBOS,
+      cohosts: ["LUC", "luc"],
+    });
+    expect(result.applied).toBe(true);
+    expect(result.result.cohosts).toMatchObject([
+      { name: "Girdwood Land Use Committee" },
+    ]);
+    expect(await cohostsOf()).toEqual(["LUC"]);
+
+    await callTool(ctx, setMeetingCohosts, { meeting: GBOS, cohosts: [] });
+    expect(await cohostsOf()).toEqual([]);
+  });
+
+  test("refuses the host body and unknown bodies", async ({ db }) => {
+    const ctx = toolContext(db);
+    await expect(
+      callTool(ctx, setMeetingCohosts, { meeting: GBOS, cohosts: ["gbos"] }),
+    ).rejects.toThrow(/host body/);
+    await expect(
+      callTool(ctx, setMeetingCohosts, { meeting: GBOS, cohosts: ["nope"] }),
+    ).rejects.toThrow(/No body with slug "nope"/);
   });
 });
 
