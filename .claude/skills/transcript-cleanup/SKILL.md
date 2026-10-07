@@ -55,9 +55,9 @@ are `H:MM:SS.ss`, as psvtool prints them.
 - `speech_activity` shows the pauses in a stretch, which is where a turn
   can change.
 
-Running `transcribe.test.ts` with `SNAPSHOT_UPDATE=1` rewrites a golden's
-words from fresh recognition and keeps only its speaker layer, which discards
-every hand-corrected word.
+Running `transcription-quality/north-star.test.ts` with `SNAPSHOT_UPDATE=1`
+rewrites a golden's words from fresh recognition and keeps only its speaker
+layer, which discards every hand-corrected word.
 
 ## Rules
 

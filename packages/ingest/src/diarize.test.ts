@@ -23,8 +23,8 @@ import { getMeetingAudio } from "./test-utils/audio-cache";
 const HERE = dirname(fileURLToPath(import.meta.url));
 const RUNS_DIR = join(HERE, "..", "test-runs");
 
-// golden.psv is shared with transcribe.test.ts: that test owns the transcription
-// (words + timings), this one owns the diarization (speaker labels). Under
+// golden.psv is shared with transcription-quality/north-star.test.ts: that
+// test owns the transcription (words + timings), this one owns the diarization (speaker labels). Under
 // SNAPSHOT_UPDATE we keep the golden's existing words and only rewrite the
 // speaker grouping, so neither test clobbers the other's slice — or your manual
 // tweaks. Generate the first pass with SNAPSHOT_UPDATE=1, then refine by hand.
