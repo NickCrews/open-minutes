@@ -1,6 +1,7 @@
 import {
   bodiesTable,
   jurisdictionsTable,
+  meetingBodiesTable,
   meetingsTable,
 } from "@open-minutes/db";
 import { test } from "@open-minutes/db/testing/vitest";
@@ -76,22 +77,28 @@ describe("getLlmsTxtData", () => {
         timezone: "America/Anchorage",
       })
       .returning({ id: bodiesTable.id });
-    await db.insert(meetingsTable).values([
-      {
-        body_id: gbos!.id,
-        site_kind: "youtube",
-        site_id: "a",
-        date: "2026-03-23",
-        created_at: new Date("2026-09-01T12:00:00Z"),
-      },
-      {
-        body_id: gbos!.id,
-        site_kind: "youtube",
-        site_id: "b",
-        date: "2025-01-06",
-        created_at: new Date("2026-10-02T12:00:00Z"),
-      },
-    ]);
+    const meetings = await db
+      .insert(meetingsTable)
+      .values([
+        {
+          timezone: "America/Anchorage",
+          site_kind: "youtube",
+          site_id: "a",
+          date: "2026-03-23",
+          created_at: new Date("2026-09-01T12:00:00Z"),
+        },
+        {
+          timezone: "America/Anchorage",
+          site_kind: "youtube",
+          site_id: "b",
+          date: "2025-01-06",
+          created_at: new Date("2026-10-02T12:00:00Z"),
+        },
+      ])
+      .returning({ id: meetingsTable.id });
+    await db
+      .insert(meetingBodiesTable)
+      .values(meetings.map((m) => ({ meeting_id: m.id, body_id: gbos!.id })));
 
     expect(await getLlmsTxtData(db)).toEqual({
       bodies: [

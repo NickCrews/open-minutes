@@ -62,21 +62,17 @@ export function mapSnapshot(data: TestData): MappedRows {
 }
 
 /**
- * A golden meeting's host body and co-hosts as database ids, resolved through
- * {@link MappedRows.bodyIdByKey}. Throws on a body bodies.jsonl doesn't have.
+ * The database ids of a golden meeting's bodies, from their snapshot ids.
+ * Throws on one bodies.jsonl doesn't have.
  */
 export function meetingBodyIds(
-  meeting: Pick<GoldenMeeting, "slug" | "body_id" | "cohost_body_ids">,
+  meeting: Pick<GoldenMeeting, "slug" | "body_ids">,
   bodyIdByKey: ReadonlyMap<string, number>,
-): { bodyId: number; cohostIds: number[] } {
-  const resolve = (key: string) => {
+): number[] {
+  return meeting.body_ids.map((key) => {
     const id = bodyIdByKey.get(key);
     if (id === undefined)
       throw new Error(`Meeting ${meeting.slug} has unknown body "${key}"`);
     return id;
-  };
-  return {
-    bodyId: resolve(meeting.body_id),
-    cohostIds: meeting.cohost_body_ids.map(resolve),
-  };
+  });
 }

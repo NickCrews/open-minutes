@@ -18,22 +18,11 @@ export interface ListedBody {
 /** The fields of a meeting row the list needs to place and filter it. */
 export interface ListedMeeting extends MeetingWhen {
   title: string;
-  /** The host body, which published the meeting. */
-  body: ListedBody;
-  /** A joint meeting's other bodies; empty for most meetings. */
-  cohosts: ListedBody[];
-}
-
-/**
- * Every body that held a meeting: its host first, then any co-hosts. A joint
- * meeting is a meeting of each of them, so it's listed, counted and found
- * under each.
- */
-export function meetingBodies<B extends ListedBody>(meeting: {
-  body: B;
-  cohosts: B[];
-}): B[] {
-  return [meeting.body, ...meeting.cohosts];
+  /**
+   * The bodies that held it: one for most meetings, several for a joint
+   * meeting, which is listed, counted and found under each.
+   */
+  bodies: ListedBody[];
 }
 
 /**
@@ -50,7 +39,7 @@ export interface MeetingMonth {
 
 /**
  * The month a meeting fell in, or null if its date isn't known. The date is
- * already the body's local wall-clock date, so no timezone conversion.
+ * already the meeting's local wall-clock date, so no timezone conversion.
  */
 export function meetingMonth(meeting: ListedMeeting): MeetingMonth | null {
   if (!meeting.date) return null;
@@ -90,10 +79,9 @@ export function filterMeetings<M extends ListedMeeting>(
   const words = (filters.q ?? "").toLowerCase().split(/\s+/).filter(Boolean);
   const bodies = new Set(filters.bodies ?? []);
   return meetings.filter((m) => {
-    const held = meetingBodies(m);
-    if (bodies.size && !held.some((b) => bodies.has(b.id))) return false;
+    if (bodies.size && !m.bodies.some((b) => bodies.has(b.id))) return false;
     if (!words.length) return true;
-    const haystack = [m.title, ...held.map((b) => b.name)]
+    const haystack = [m.title, ...m.bodies.map((b) => b.name)]
       .join(" ")
       .toLowerCase();
     return words.every((w) => haystack.includes(w));

@@ -36,16 +36,8 @@ One gathering of one body, or of several in a joint meeting, recorded as one vid
 _Avoid_: session, hearing, event, recording, video
 
 **Joint meeting**:
-A meeting held by several bodies together, such as the Girdwood Board of Supervisors and the Girdwood Land Use Committee. It counts as a meeting of each of them.
-_Avoid_: combined meeting, shared meeting
-
-**Host body**:
-The body whose meeting source published a meeting, and in whose timezone its meeting date reads. Every meeting has exactly one.
-_Avoid_: owner, primary body, main body
-
-**Co-host**:
-A body holding a joint meeting besides its host body.
-_Avoid_: guest body, secondary body, participant
+A meeting held by several bodies together, such as the Girdwood Board of Supervisors and the Girdwood Land Use Committee. It counts as a meeting of each of them, and none of them comes first.
+_Avoid_: combined meeting, shared meeting, host body, co-host, primary body
 
 **Meeting slug**:
 A golden fixture meeting's stable, unique handle, such as `gbos-2026-03-23` (its fixture directory's name), that names it in every database; other meetings have none and go by their id.
@@ -56,7 +48,7 @@ The YouTube recording of a meeting, from which its audio comes. An akleg.gov mee
 _Avoid_: stream, clip, media
 
 **Meeting date**:
-The local calendar day a meeting took place, in its host body's timezone. May be unknown.
+The local calendar day a meeting took place, in the meeting's own timezone. May be unknown.
 _Avoid_: start time, timestamp
 
 **Meeting time**:

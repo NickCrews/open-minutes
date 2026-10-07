@@ -5,6 +5,7 @@ import {
   type DB,
   bodiesTable,
   jurisdictionsTable,
+  meetingBodiesTable,
   meetingsTable,
 } from "@open-minutes/db";
 import { eq } from "drizzle-orm";
@@ -80,8 +81,16 @@ export async function insertMeeting(
 ): Promise<number> {
   const [row] = await db
     .insert(meetingsTable)
-    .values({ body_id: bodyId, site_kind: siteKind, site_id: siteId, date })
+    .values({
+      site_kind: siteKind,
+      site_id: siteId,
+      timezone: "America/Anchorage",
+      date,
+    })
     .returning({ id: meetingsTable.id });
+  await db
+    .insert(meetingBodiesTable)
+    .values({ meeting_id: row!.id, body_id: bodyId });
   return row!.id;
 }
 

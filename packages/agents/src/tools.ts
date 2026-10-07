@@ -4,7 +4,7 @@ import {
   bodiesTable,
   chapterGenerationsTable,
   chaptersTable,
-  meetingCohostsTable,
+  meetingBodiesTable,
   meetingsTable,
   peopleTable,
   segmentsTable,
@@ -123,7 +123,7 @@ export const listMeetings = defineTool({
   name: "list_meetings",
   label: "List meetings",
   description:
-    "List every meeting with its id, slug, body, date, and how many segments and chapters it has. Start here to find a meeting: other tools take its slug or its id. A joint meeting lists its other bodies under cohosts.",
+    "List every meeting with its id, slug, bodies (several for a joint meeting), date, and how many segments and chapters it has. Start here to find a meeting: other tools take its slug or its id.",
   input: z.object({}),
   run: async (ctx) => {
     const db = await ctx.db();
@@ -132,12 +132,10 @@ export const listMeetings = defineTool({
         id: meetingsTable.id,
         slug: meetingsTable.slug,
         title: meetingsTable.title,
-        body: bodiesTable.name_short,
         date: meetingsTable.date,
         url: meetingsTable.url,
       })
       .from(meetingsTable)
-      .innerJoin(bodiesTable, eq(bodiesTable.id, meetingsTable.body_id))
       .orderBy(asc(meetingsTable.id));
     const counts = async (table: typeof segmentsTable | typeof chaptersTable) =>
       new Map(
@@ -152,71 +150,67 @@ export const listMeetings = defineTool({
       await counts(segmentsTable),
       await counts(chaptersTable),
     ];
-    const cohosts = new Map<number, string[]>();
+    const bodies = new Map<number, string[]>();
     for (const r of await db
       .select({
-        m: meetingCohostsTable.meeting_id,
+        m: meetingBodiesTable.meeting_id,
         body: bodiesTable.name_short,
       })
-      .from(meetingCohostsTable)
-      .innerJoin(bodiesTable, eq(bodiesTable.id, meetingCohostsTable.body_id))
+      .from(meetingBodiesTable)
+      .innerJoin(bodiesTable, eq(bodiesTable.id, meetingBodiesTable.body_id))
       .orderBy(asc(bodiesTable.name_short)))
-      cohosts.set(r.m, [...(cohosts.get(r.m) ?? []), r.body]);
+      bodies.set(r.m, [...(bodies.get(r.m) ?? []), r.body]);
     return meetings.map((m) => ({
       ...m,
-      cohosts: cohosts.get(m.id) ?? [],
+      bodies: bodies.get(m.id) ?? [],
       segments: segments.get(m.id) ?? 0,
       chapters: chapters.get(m.id) ?? 0,
     }));
   },
 });
 
-export const setMeetingCohosts = defineTool({
-  name: "set_meeting_cohosts",
-  label: "Set meeting co-hosts",
+export const setMeetingBodies = defineTool({
+  name: "set_meeting_bodies",
+  label: "Set meeting bodies",
   description:
-    'Set the other bodies holding a joint meeting together with its host body (the one that published it), replacing any already set; [] makes it a meeting of its host alone. Bodies go by slug, eg "luc". Ingestion guesses these from a title that says "joint"; fix its guess here.',
+    'Set the bodies that held a meeting, replacing those already set: one for most meetings, several for a joint meeting. Bodies go by slug, eg ["gbos", "luc"]. Ingestion guesses a joint meeting\'s bodies from a title that says "joint"; fix its guess here.',
   input: z.object({
     meeting: meetingRef,
-    cohosts: z
+    bodies: z
       .array(z.string().trim().min(1))
-      .describe('Body slugs, eg ["luc"].'),
+      .min(1)
+      .describe('Body slugs, eg ["gbos", "luc"].'),
     dryRun,
   }),
   run: async (ctx, input) => {
     const db = await ctx.db();
     const meeting = await findMeeting(db, input.meeting);
-    const bodies = await db
+    const all = await db
       .select({
         id: bodiesTable.id,
         name: bodiesTable.name,
         name_short: bodiesTable.name_short,
       })
       .from(bodiesTable);
-    const wanted = [...new Set(input.cohosts.map((s) => s.toLowerCase()))];
-    const cohosts = wanted.map((slug) => {
-      const body = bodies.find((b) => bodySlug(b) === slug);
+    const wanted = [...new Set(input.bodies.map((s) => s.toLowerCase()))];
+    const bodies = wanted.map((slug) => {
+      const body = all.find((b) => bodySlug(b) === slug);
       if (!body)
         throw new ToolError(
-          `No body with slug "${slug}"; bodies are ${bodies.map(bodySlug).join(", ")}`,
+          `No body with slug "${slug}"; bodies are ${all.map(bodySlug).join(", ")}`,
         );
-      if (body.id === meeting.body_id)
-        throw new ToolError(`${body.name_short} is this meeting's host body`);
       return body;
     });
     return applyEdit(db, [meeting.id], input.dryRun, async (tx) => {
       await tx
-        .delete(meetingCohostsTable)
-        .where(eq(meetingCohostsTable.meeting_id, meeting.id));
-      if (cohosts.length)
-        await tx
-          .insert(meetingCohostsTable)
-          .values(
-            cohosts.map((b) => ({ meeting_id: meeting.id, body_id: b.id })),
-          );
+        .delete(meetingBodiesTable)
+        .where(eq(meetingBodiesTable.meeting_id, meeting.id));
+      await tx
+        .insert(meetingBodiesTable)
+        .values(bodies.map((b) => ({ meeting_id: meeting.id, body_id: b.id })));
       return {
         meetingId: meeting.id,
-        cohosts: cohosts.map((b) => ({ id: b.id, name: b.name })),
+        bodies: bodies.map((b) => ({ id: b.id, name: b.name })),
       };
     });
   },
@@ -677,7 +671,7 @@ export const tools: Tool[] = [
   mergeSegments,
   updatePerson,
   mergePeople,
-  setMeetingCohosts,
+  setMeetingBodies,
   getChapters,
   replaceChapters,
   ...audioTools,

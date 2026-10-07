@@ -20,7 +20,7 @@ import {
   mergeSegments,
   relabelSegments,
   replaceChapters,
-  setMeetingCohosts,
+  setMeetingBodies,
   splitSegment,
   tools,
   updatePerson,
@@ -47,7 +47,7 @@ describe("reading", () => {
   test("lists meetings with their sizes", async ({ db }) => {
     const meetings = await callTool(toolContext(db), listMeetings, {});
     const gbos = meetings.find((m) => m.slug === GBOS);
-    expect(gbos).toMatchObject({ body: "GBOS", cohosts: [], chapters: 34 });
+    expect(gbos).toMatchObject({ bodies: ["GBOS"], chapters: 34 });
     expect(gbos!.segments).toBeGreaterThan(200);
   });
 
@@ -253,34 +253,36 @@ describe("people", () => {
   });
 });
 
-describe("set_meeting_cohosts", () => {
+describe("set_meeting_bodies", () => {
   test("makes a meeting joint, and back", async ({ db }) => {
     const ctx = toolContext(db);
-    const cohostsOf = async () =>
+    const bodiesOf = async () =>
       (await callTool(ctx, listMeetings, {})).find((m) => m.slug === GBOS)!
-        .cohosts;
+        .bodies;
+    expect(await bodiesOf()).toEqual(["GBOS"]);
 
-    const result = await callTool(ctx, setMeetingCohosts, {
+    const result = await callTool(ctx, setMeetingBodies, {
       meeting: GBOS,
-      cohosts: ["LUC", "luc"],
+      bodies: ["gbos", "LUC", "luc"],
     });
     expect(result.applied).toBe(true);
-    expect(result.result.cohosts).toMatchObject([
+    expect(result.result.bodies).toMatchObject([
+      { name: "Girdwood Board of Supervisors" },
       { name: "Girdwood Land Use Committee" },
     ]);
-    expect(await cohostsOf()).toEqual(["LUC"]);
+    expect(await bodiesOf()).toEqual(["GBOS", "LUC"]);
 
-    await callTool(ctx, setMeetingCohosts, { meeting: GBOS, cohosts: [] });
-    expect(await cohostsOf()).toEqual([]);
+    await callTool(ctx, setMeetingBodies, { meeting: GBOS, bodies: ["gbos"] });
+    expect(await bodiesOf()).toEqual(["GBOS"]);
   });
 
-  test("refuses the host body and unknown bodies", async ({ db }) => {
+  test("refuses no bodies and unknown bodies", async ({ db }) => {
     const ctx = toolContext(db);
     await expect(
-      callTool(ctx, setMeetingCohosts, { meeting: GBOS, cohosts: ["gbos"] }),
-    ).rejects.toThrow(/host body/);
+      callTool(ctx, setMeetingBodies, { meeting: GBOS, bodies: [] }),
+    ).rejects.toThrow();
     await expect(
-      callTool(ctx, setMeetingCohosts, { meeting: GBOS, cohosts: ["nope"] }),
+      callTool(ctx, setMeetingBodies, { meeting: GBOS, bodies: ["nope"] }),
     ).rejects.toThrow(/No body with slug "nope"/);
   });
 });

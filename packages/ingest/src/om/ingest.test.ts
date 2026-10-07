@@ -3,12 +3,13 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  type DB,
   bodiesTable,
-  meetingCohostsTable,
+  meetingBodiesTable,
   meetingsTable,
   segmentsTable,
 } from "@open-minutes/db";
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import type { VideoMetadata } from "@open-minutes/core/audio-provider";
 import type { SpeechSegment } from "@open-minutes/core/transcription";
 import { N_DIMENSIONS } from "@open-minutes/core/voice_embeddings";
@@ -26,6 +27,17 @@ import {
 import { getMeetingAudio } from "../test-utils/audio-cache";
 
 const VIDEO_ID = "test-video-1";
+
+/** The short names of the bodies that held a meeting, alphabetical. */
+async function bodiesOf(db: DB, meetingId: number): Promise<string[]> {
+  const rows = await db
+    .select({ name_short: bodiesTable.name_short })
+    .from(meetingBodiesTable)
+    .innerJoin(bodiesTable, eq(bodiesTable.id, meetingBodiesTable.body_id))
+    .where(eq(meetingBodiesTable.meeting_id, meetingId))
+    .orderBy(asc(bodiesTable.name_short));
+  return rows.map((r) => r.name_short);
+}
 
 const METADATA: VideoMetadata = {
   id: VIDEO_ID,
@@ -271,10 +283,6 @@ describe("which body a meeting belongs to", () => {
 
   test("an akleg.gov meeting is its committee's", async ({ db, workRoot }) => {
     // The golden HRES body's meeting source is the committee.
-    const [hres] = await db
-      .select({ id: bodiesTable.id })
-      .from(bodiesTable)
-      .where(eq(bodiesTable.name_short, "HRES"));
     await seedWorkDir(workRoot, "hres_HRES-2018-09-10-14-00-00");
 
     // A URL names it too; YouTube is never asked.
@@ -298,14 +306,16 @@ describe("which body a meeting belongs to", () => {
     });
     const [meeting] = await db.select().from(meetingsTable);
     expect(meeting).toMatchObject({
-      body_id: hres!.id,
       site_kind: "akleg",
+      // The committee's, not GBOS's.
+      timezone: "America/Juneau",
       site_id: AKLEG_ID,
       url: "https://www.akleg.gov/basis/Meeting/Detail?Meeting=HRES%202018-09-10%2014:00:00",
     });
+    expect(await bodiesOf(db, meeting!.id)).toEqual(["HRES"]);
   });
 
-  test("a joint meeting's title names its co-hosts", async ({
+  test("a joint meeting's title names its other bodies", async ({
     db,
     workRoot,
   }) => {
@@ -320,20 +330,14 @@ describe("which body a meeting belongs to", () => {
 
     await ingestMeeting(db, VIDEO_ID, { sites: { youtube }, workRoot });
     const [meeting] = await db.select().from(meetingsTable);
-    expect(meeting!.body_id).toBe(await goldenGbosId(db));
-    const cohosts = await db
-      .select({ name_short: bodiesTable.name_short })
-      .from(meetingCohostsTable)
-      .innerJoin(bodiesTable, eq(bodiesTable.id, meetingCohostsTable.body_id))
-      .where(eq(meetingCohostsTable.meeting_id, meeting!.id));
-    expect(cohosts).toEqual([{ name_short: "LUC" }]);
+    expect(await bodiesOf(db, meeting!.id)).toEqual(["GBOS", "LUC"]);
   });
 
   test("a playlist's meeting needs its body named", async ({
     db,
     workRoot,
   }) => {
-    const council = await insertBody(db, {
+    await insertBody(db, {
       name: "Town Council",
       name_short: "TC",
       source: { type: "youtube_playlist", playlist_id: "PL_COUNCIL" },
@@ -354,7 +358,7 @@ describe("which body a meeting belongs to", () => {
     );
     expect(result.status).toBe("ingested");
     const [meeting] = await db.select().from(meetingsTable);
-    expect(meeting!.body_id).toBe(council);
+    expect(await bodiesOf(db, meeting!.id)).toEqual(["TC"]);
   });
 
   test("a named body must publish on the meeting's site", async ({
@@ -447,7 +451,7 @@ describe("listIngested", () => {
     const all = await listIngested(db);
     expect(all.map((m) => m.siteId)).toEqual([VIDEO_ID, "older-video"]);
     expect(all[0]).toMatchObject({
-      body: "gbos",
+      bodies: ["gbos"],
       title: METADATA.title,
       segmentCount: 2,
       durationSecs: "01:00:00",

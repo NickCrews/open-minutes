@@ -1,19 +1,19 @@
 import {
   bodiesTable,
   type DB,
+  meetingBodiesTable,
   meetingsTable,
   peopleTable,
   segmentsTable,
 } from "@open-minutes/db";
 import { countDistinct, desc, eq, isNotNull, max, min } from "drizzle-orm";
-import { heldMeetings } from "../bodies";
 
 /** One body a person has spoken before, and the span over which they did. */
 export type Attendance = {
   body: string;
   meetings: number;
   /**
-   * Dates ("YYYY-MM-DD", the body's wall clock) of the first and last of those
+   * Dates ("YYYY-MM-DD", each meeting's wall clock) of the first and last of those
    * meetings. Null when none of them has a known date.
    */
   first: string | null;
@@ -44,7 +44,6 @@ export async function getAllPeople(db: DB) {
 async function getAttendanceByPerson(
   db: DB,
 ): Promise<Map<number, Attendance[]>> {
-  const held = heldMeetings(db);
   const rows = await db
     .select({
       person_id: segmentsTable.person_id,
@@ -56,8 +55,11 @@ async function getAttendanceByPerson(
     })
     .from(segmentsTable)
     .innerJoin(meetingsTable, eq(segmentsTable.meeting_id, meetingsTable.id))
-    .innerJoin(held, eq(held.meeting_id, meetingsTable.id))
-    .innerJoin(bodiesTable, eq(held.body_id, bodiesTable.id))
+    .innerJoin(
+      meetingBodiesTable,
+      eq(meetingBodiesTable.meeting_id, meetingsTable.id),
+    )
+    .innerJoin(bodiesTable, eq(meetingBodiesTable.body_id, bodiesTable.id))
     // Unidentified segments belong to no one; they'd otherwise group as a person.
     .where(isNotNull(segmentsTable.person_id))
     .groupBy(segmentsTable.person_id, bodiesTable.id)

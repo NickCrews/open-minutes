@@ -73,11 +73,12 @@ Docker via [`docker-compose.yml`](docker-compose.yml). Production is on
 
 **Data model:** **jurisdictions** contain **bodies**, each with at most one
 **meeting source** (a YouTube channel or playlist, or an akleg.gov
-committee) that is scanned for new meetings. **Meetings** belong to a body,
-their host, whose source published them; a **joint meeting** is held with
-other bodies too, its co-hosts (`meeting_cohosts`), and counts as a meeting of
-each. Ingestion reads co-hosts from a title that says "joint", and the
-`set_meeting_cohosts` tool corrects them. Meetings record the site they were published on (YouTube or akleg.gov), and each meeting's
+committee) that is scanned for new meetings. **Meetings** are held by one or
+more bodies (`meeting_bodies`), all equal: a **joint meeting**, held by several,
+counts as a meeting of each. Ingestion reads a joint meeting's bodies from a
+title that says "joint", and the `set_meeting_bodies` tool corrects them.
+Meetings record their timezone, the site they were published on (YouTube or
+akleg.gov), and each meeting's
 transcript is a sequence of **segments** (a run of words by one speaker, with
 word-level onsets). Segments are attributed to **people**, who carry a
 voiceprint so they can be recognized in later meetings. A meeting may also have

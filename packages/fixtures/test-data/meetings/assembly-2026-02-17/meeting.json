@@ -1,5 +1,6 @@
 {
-  "body_id": "assembly",
+  "body_ids": ["assembly"],
+  "timezone": "America/Anchorage",
   "youtube_id": "SGNnYNW26aQ",
   "title": "Assembly Regular - February 17, 2026 - 2026-02-17 17:00:00",
   "date": "2026-02-17",

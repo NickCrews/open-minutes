@@ -38,8 +38,11 @@ describe("all fixtures", () => {
 });
 
 describe("checkMeetingSlug", () => {
-  const ok = (slug: string, date: string | null = "2026-03-23") =>
-    checkMeetingSlug({ slug, body_id: "gbos", date }) === null;
+  const ok = (
+    slug: string,
+    date: string | null = "2026-03-23",
+    body_ids = ["gbos"],
+  ) => checkMeetingSlug({ slug, body_ids, date }) === null;
 
   it("wants <body>-<date>, with an optional suffix", () => {
     expect(ok("gbos-2026-03-23")).toBe(true);
@@ -48,6 +51,12 @@ describe("checkMeetingSlug", () => {
     expect(ok("gbos_9HoIM5INxpI")).toBe(false);
     expect(ok("pzc-2026-03-23")).toBe(false);
     expect(ok("gbos-2026-03-23x")).toBe(false);
+  });
+
+  it("lets a joint meeting go by any of its bodies", () => {
+    expect(ok("gbos-2026-03-23", "2026-03-23", ["gbos", "luc"])).toBe(true);
+    expect(ok("luc-2026-03-23", "2026-03-23", ["gbos", "luc"])).toBe(true);
+    expect(ok("pzc-2026-03-23", "2026-03-23", ["gbos", "luc"])).toBe(false);
   });
 
   it("wants <body>-<suffix> when the date is unknown", () => {

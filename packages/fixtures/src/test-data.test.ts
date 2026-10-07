@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { hasTypographicDash } from "@open-minutes/core/text";
 import { meetingBodyIds } from "./seed/map";
-import { loadPeople, parseGoldenCohosts, parseGoldenWhen } from "./test-data";
+import { loadPeople, parseGoldenBodies, parseGoldenWhen } from "./test-data";
 
 describe("people.jsonl", () => {
   it("uses a plain hyphen, not an en or em dash, in names and bios", () => {
@@ -43,35 +43,27 @@ describe("parseGoldenWhen", () => {
   });
 });
 
-describe("parseGoldenCohosts", () => {
-  it("treats an absent list as no co-hosts", () => {
-    expect(parseGoldenCohosts({ body_id: "gbos" }, "m.json")).toEqual([]);
+describe("parseGoldenBodies", () => {
+  it("keeps one body, or a joint meeting's several", () => {
+    expect(parseGoldenBodies({ body_ids: ["gbos"] }, "m.json")).toEqual([
+      "gbos",
+    ]);
+    expect(parseGoldenBodies({ body_ids: ["gbos", "luc"] }, "m.json")).toEqual([
+      "gbos",
+      "luc",
+    ]);
   });
 
-  it("keeps a joint meeting's other bodies", () => {
-    expect(
-      parseGoldenCohosts(
-        { body_id: "gbos", cohost_body_ids: ["luc"] },
-        "m.json",
-      ),
-    ).toEqual(["luc"]);
-  });
-
-  it("rejects a non-list, the host, and duplicates", () => {
+  it("rejects a missing or non-list, no bodies, and duplicates", () => {
+    expect(() => parseGoldenBodies({}, "m.json")).toThrow(/array of strings/);
+    expect(() => parseGoldenBodies({ body_ids: "gbos" }, "m.json")).toThrow(
+      /array of strings/,
+    );
+    expect(() => parseGoldenBodies({ body_ids: [] }, "m.json")).toThrow(
+      /empty/,
+    );
     expect(() =>
-      parseGoldenCohosts({ body_id: "gbos", cohost_body_ids: "luc" }, "m.json"),
-    ).toThrow(/array of strings/);
-    expect(() =>
-      parseGoldenCohosts(
-        { body_id: "gbos", cohost_body_ids: ["gbos"] },
-        "m.json",
-      ),
-    ).toThrow(/host body/);
-    expect(() =>
-      parseGoldenCohosts(
-        { body_id: "gbos", cohost_body_ids: ["luc", "luc"] },
-        "m.json",
-      ),
+      parseGoldenBodies({ body_ids: ["luc", "luc"] }, "m.json"),
     ).toThrow(/duplicates/);
   });
 });
@@ -82,21 +74,15 @@ describe("meetingBodyIds", () => {
     ["luc", 2],
   ]);
 
-  it("resolves the host and co-hosts to database ids", () => {
+  it("resolves the bodies to database ids", () => {
     expect(
-      meetingBodyIds(
-        { slug: "m", body_id: "gbos", cohost_body_ids: ["luc"] },
-        ids,
-      ),
-    ).toEqual({ bodyId: 1, cohostIds: [2] });
+      meetingBodyIds({ slug: "m", body_ids: ["gbos", "luc"] }, ids),
+    ).toEqual([1, 2]);
   });
 
   it("refuses a body bodies.jsonl doesn't have", () => {
     expect(() =>
-      meetingBodyIds(
-        { slug: "m", body_id: "gbos", cohost_body_ids: ["nope"] },
-        ids,
-      ),
+      meetingBodyIds({ slug: "m", body_ids: ["gbos", "nope"] }, ids),
     ).toThrow(/unknown body "nope"/);
   });
 });

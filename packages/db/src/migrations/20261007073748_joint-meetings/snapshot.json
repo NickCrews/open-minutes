@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "ee4fe5e5-27c7-45f4-bcda-ecb21b4b3f07",
+  "id": "c52e7a4b-0d6a-47ea-be0d-1d49b8ad6988",
   "prevIds": [
     "1529dc43-c0f2-4c21-9703-007d4dce9037"
   ],
@@ -32,7 +32,7 @@
     },
     {
       "isRlsEnabled": false,
-      "name": "meeting_cohosts",
+      "name": "meeting_bodies",
       "entityType": "tables",
       "schema": "public"
     },
@@ -442,7 +442,7 @@
       "name": "meeting_id",
       "entityType": "columns",
       "schema": "public",
-      "table": "meeting_cohosts"
+      "table": "meeting_bodies"
     },
     {
       "type": "integer",
@@ -455,7 +455,7 @@
       "name": "body_id",
       "entityType": "columns",
       "schema": "public",
-      "table": "meeting_cohosts"
+      "table": "meeting_bodies"
     },
     {
       "type": "serial",
@@ -479,19 +479,6 @@
       "generated": null,
       "identity": null,
       "name": "slug",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "meetings"
-    },
-    {
-      "type": "integer",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "body_id",
       "entityType": "columns",
       "schema": "public",
       "table": "meetings"
@@ -560,6 +547,19 @@
       "generated": null,
       "identity": null,
       "name": "description",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "meetings"
+    },
+    {
+      "type": "varchar",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "timezone",
       "entityType": "columns",
       "schema": "public",
       "table": "meetings"
@@ -880,10 +880,10 @@
       "with": "",
       "method": "btree",
       "concurrently": false,
-      "name": "idx_meeting_cohosts_body",
+      "name": "idx_meeting_bodies_body",
       "entityType": "indexes",
       "schema": "public",
-      "table": "meeting_cohosts"
+      "table": "meeting_bodies"
     },
     {
       "nameExplicit": true,
@@ -974,10 +974,10 @@
       ],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
-      "name": "meeting_cohosts_meeting_id_meetings_id_fkey",
+      "name": "meeting_bodies_meeting_id_meetings_id_fkey",
       "entityType": "fks",
       "schema": "public",
-      "table": "meeting_cohosts"
+      "table": "meeting_bodies"
     },
     {
       "nameExplicit": false,
@@ -991,27 +991,10 @@
       ],
       "onUpdate": "NO ACTION",
       "onDelete": "NO ACTION",
-      "name": "meeting_cohosts_body_id_bodies_id_fkey",
+      "name": "meeting_bodies_body_id_bodies_id_fkey",
       "entityType": "fks",
       "schema": "public",
-      "table": "meeting_cohosts"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "body_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "bodies",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "NO ACTION",
-      "name": "meetings_body_id_bodies_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "meetings"
+      "table": "meeting_bodies"
     },
     {
       "nameExplicit": false,
@@ -1053,10 +1036,10 @@
         "body_id"
       ],
       "nameExplicit": false,
-      "name": "meeting_cohosts_pkey",
+      "name": "meeting_bodies_pkey",
       "entityType": "pks",
       "schema": "public",
-      "table": "meeting_cohosts"
+      "table": "meeting_bodies"
     },
     {
       "columns": [

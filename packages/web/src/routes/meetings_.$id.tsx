@@ -166,7 +166,7 @@ function MeetingPage() {
               meetingId={meeting().id}
               date={meeting().date}
               time={meeting().time}
-              timezone={meeting().body.timezone}
+              timezone={meeting().timezone}
               prefix=" — "
               onSaved={() => void router.invalidate()}
             />
