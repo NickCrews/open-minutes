@@ -6,11 +6,12 @@ import {
   segmentsToSpeechRuns,
   segmentsToTurns,
 } from "./align";
-import type {
-  DiarizationTurn,
-  SpeechSegment,
-  TranscriptSegment,
-  TranscriptWord,
+import {
+  MUSIC_MARKER,
+  type DiarizationTurn,
+  type SpeechSegment,
+  type TranscriptSegment,
+  type TranscriptWord,
 } from "./types";
 
 /** The text of each segment, in order — the shape a reader actually sees. */
@@ -60,6 +61,28 @@ describe("alignSpeakers", () => {
     const segments = alignSpeakers(speech, []);
     expect(segments).toHaveLength(1);
     expect(segments[0]!.speakerNum).toBeNull();
+  });
+
+  it("gives music its own segment, with no speaker", () => {
+    // The diarizer clusters music like a voice, here as speaker 0, the same
+    // speaker either side of it.
+    const speech = [
+      run([w("a", 0.0), w("b", 0.3)], 0.5),
+      { start: 1.0, end: 30.0, words: [w(MUSIC_MARKER, 1.0)] },
+      run([w("c", 30.5)], 30.8),
+    ];
+    const turns: DiarizationTurn[] = [{ start: 0, end: 31, speakerNum: 0 }];
+    const segments = alignSpeakers(speech, turns);
+    expect(texts(segments)).toEqual(["a b", MUSIC_MARKER, "c"]);
+    expect(segments.map((s) => s.speakerNum)).toEqual([0, null, 0]);
+  });
+
+  it("gives music its own segment when there are no turns", () => {
+    const speech = [
+      { start: 0, end: 20, words: [w(MUSIC_MARKER, 0)] },
+      run([w("a", 20.5), w("b", 20.8)], 21),
+    ];
+    expect(texts(alignSpeakers(speech, []))).toEqual([MUSIC_MARKER, "a b"]);
   });
 
   // The bug this file was written for. In production transcripts ~30% of

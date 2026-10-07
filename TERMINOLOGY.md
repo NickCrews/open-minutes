@@ -71,6 +71,10 @@ _Avoid_: timestamp, start time
 A run of consecutive words spoken by one speaker.
 _Avoid_: utterance, turn, block, paragraph, line, clip
 
+**Music marker**:
+The word `[music]`, standing for a stretch of music in place of whatever recognition heard in it, at the music's onset. It is an unattributed segment of its own.
+_Avoid_: music tag, music event
+
 **Speaking time**:
 The total duration of a speaker's segments within one meeting.
 _Avoid_: talk time, airtime

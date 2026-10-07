@@ -60,7 +60,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
 
-      # The pipeline's ONNX models are ~650MB. Fetch them in their own step,
+      # The pipeline's ONNX models are ~680MB. Fetch them in their own step,
       # so no test pays for (or times out on) the download. The cache key is
       # the models' specs (URLs and files), so only a change to a model busts
       # it. Restore and save are separate so a cache miss is saved even when

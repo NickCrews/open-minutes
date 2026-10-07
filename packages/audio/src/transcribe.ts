@@ -4,6 +4,8 @@ import { fileURLToPath } from "node:url";
 import { availableParallelism } from "node:os";
 import { ensureDownloaded, ModelSpec } from "./model.js";
 import { EXPECTED_SAMPLE_RATE } from "./embed.js";
+import { detectMusic } from "./music.js";
+import type { Span } from "./speech-runs.js";
 
 import sherpa_onnx, {
   type OfflineRecognizer,
@@ -11,9 +13,10 @@ import sherpa_onnx, {
   type Vad,
   type WaveForm,
 } from "sherpa-onnx-node";
-import type {
-  SpeechSegment,
-  TranscriptWord,
+import {
+  MUSIC_MARKER,
+  type SpeechSegment,
+  type TranscriptWord,
 } from "@open-minutes/core/transcription";
 
 export const TRANSCRIPTION_MODEL_SPEC = {
@@ -118,8 +121,11 @@ export interface TranscribeOptions {
  * (never mid-word); consecutive runs are merged into windows of up to
  * MERGE_WINDOW_SEC that are each decoded in one pass (so the model gets context),
  * then each window's words are redistributed back to the VAD runs they fall in.
- * The result is one {@link SpeechSegment} per VAD run, with absolute word
- * timestamps, in time order. Returns [] for silence. Input must be 16 kHz mono.
+ * Music (see music.ts) isn't decoded: each stretch of it becomes one segment
+ * holding a single MUSIC_MARKER word, and no window reaches into it.
+ * The result is one {@link SpeechSegment} per VAD run or stretch of music, with
+ * absolute word timestamps, in time order. Returns [] for silence. Input must
+ * be 16 kHz mono.
  */
 export async function transcribeAudio(
   audio: string | WaveForm,
@@ -131,11 +137,16 @@ export async function transcribeAudio(
   const duration = wave.samples.length / wave.sampleRate;
   const { tracing } = options;
 
-  const speechRuns = detectSpeechRuns(wave);
-  const windows = mergeRuns(speechRuns, wave.sampleRate);
+  const music = detectMusic(wave);
+  const speechRuns = withoutSpans(
+    detectSpeechRuns(wave),
+    music,
+    wave.sampleRate,
+  );
+  const windows = mergeRuns(speechRuns, music, wave.sampleRate);
   // Progress goes to stderr so callers' stdout stays machine-readable.
   console.error(
-    `Transcribing ${typeof audio === "string" ? audio : "<waveform>"} (${duration.toFixed(1)}s) in ${windows.length} window(s) merged from ${speechRuns.length} VAD run(s)...`,
+    `Transcribing ${typeof audio === "string" ? audio : "<waveform>"} (${duration.toFixed(1)}s) in ${windows.length} window(s) merged from ${speechRuns.length} VAD run(s), skipping ${music.length} stretch(es) of music...`,
   );
 
   const windowSegments = await mapWithConcurrency(
@@ -177,7 +188,14 @@ export async function transcribeAudio(
     `Done: ${duration.toFixed(1)}s audio in ${elapsed.toFixed(1)}s (RTF=${(elapsed / duration).toFixed(2)})`,
   );
 
-  return windowSegments.flat();
+  const musicSegments: SpeechSegment[] = music.map(({ start, end }) => ({
+    start,
+    end,
+    words: [{ text: MUSIC_MARKER, start }],
+  }));
+  return [...windowSegments.flat(), ...musicSegments].sort(
+    (a, b) => a.start - b.start,
+  );
 }
 
 /**
@@ -230,20 +248,60 @@ interface SpeechWindow {
 }
 
 /**
+ * The parts of `runs` outside every span of `spans` (in seconds), dropping any
+ * part shorter than VAD_MIN_SPEECH_SEC, as VAD would have.
+ */
+function withoutSpans(
+  runs: readonly SpeechRun[],
+  spans: readonly Span[],
+  sampleRate: number,
+): SpeechRun[] {
+  const minSamples = VAD_MIN_SPEECH_SEC * sampleRate;
+  const out: SpeechRun[] = [];
+  for (const run of runs) {
+    let startSample = run.startSample;
+    for (const span of spans) {
+      const spanStart = Math.round(span.start * sampleRate);
+      const spanEnd = Math.round(span.end * sampleRate);
+      if (spanEnd <= startSample || spanStart >= run.endSample) continue;
+      if (spanStart - startSample >= minSamples)
+        out.push({ startSample, endSample: spanStart });
+      startSample = Math.max(startSample, spanEnd);
+    }
+    if (run.endSample - startSample >= minSamples)
+      out.push({ startSample, endSample: run.endSample });
+  }
+  return out;
+}
+
+/**
  * Coalesce consecutive VAD runs into windows of up to MERGE_WINDOW_SEC. A run is
  * appended to the current window while the window's total span stays within the
- * cap; otherwise it opens a new window. A single run longer than the cap (up to
- * VAD_MAX_SPEECH_SEC) becomes its own window — still under Parakeet's ~400s limit.
+ * cap and holds none of `music` (in seconds); otherwise it opens a new window. A
+ * single run longer than the cap (up to VAD_MAX_SPEECH_SEC) becomes its own
+ * window — still under Parakeet's ~400s limit.
  */
 function mergeRuns(
   runs: readonly SpeechRun[],
+  music: readonly Span[],
   sampleRate: number,
 ): SpeechWindow[] {
   const maxSamples = MERGE_WINDOW_SEC * sampleRate;
   const windows: SpeechWindow[] = [];
   for (const run of runs) {
     const last = windows.at(-1);
-    if (last && run.endSample - last.startSample <= maxSamples) {
+    const musicBetween =
+      last !== undefined &&
+      music.some(
+        (span) =>
+          span.start * sampleRate < run.startSample &&
+          span.end * sampleRate > last.endSample,
+      );
+    if (
+      last &&
+      !musicBetween &&
+      run.endSample - last.startSample <= maxSamples
+    ) {
       last.endSample = run.endSample;
       last.runs.push(run);
     } else {

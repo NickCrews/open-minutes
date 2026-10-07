@@ -8,6 +8,7 @@
     "./diarize": "./src/diarize.ts",
     "./embed": "./src/embed.ts",
     "./models": "./src/all-models.ts",
+    "./music": "./src/music.ts",
     "./speech-runs": "./src/speech-runs.ts",
     "./wav": "./src/wav.ts"
   },

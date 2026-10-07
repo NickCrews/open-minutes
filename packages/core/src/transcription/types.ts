@@ -12,6 +12,18 @@ export interface TranscriptWord {
 }
 
 /**
+ * The text of a word that stands for a stretch of music rather than speech. It
+ * takes the place of whatever the recognizer would have heard there (singing
+ * comes out as lyrics), its onset is where the music starts, and it is a
+ * segment of its own, with no speaker.
+ */
+export const MUSIC_MARKER = "[music]";
+
+export function isMusicMarker(word: TranscriptWord): boolean {
+  return word.text === MUSIC_MARKER;
+}
+
+/**
  * Assumed duration of a segment's final word when approximating the segment's
  * end from word onsets alone. Mirrored in the SQL function `words_end_secs`
  * (see the drop-word-end-timestamps migration) — keep the two in sync.

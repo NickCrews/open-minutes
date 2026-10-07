@@ -31,6 +31,8 @@
 //                                what lets cross-meeting speaker recognition be
 //                                tested end to end (seed people + voiceprints from
 //                                two goldens, then recognize them in a third).
+//   - A stretch of music is an "unlabeled" segment holding the one word
+//     `[music]` (MUSIC_MARKER in @open-minutes/core), at the music's onset.
 //   - Timestamps are `H:MM:SS.ss` (hours:minutes:seconds.hundredths).
 //   - event_data is the final field, so it may itself contain `|`.
 

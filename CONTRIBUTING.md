@@ -36,7 +36,8 @@ the ones listed above it:
 - **[`packages/audio`](packages/audio)** (`@open-minutes/audio`): speech
   processing, run locally with
   [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx). It transcribes a WAV
-  (NeMo Parakeet ASR + Silero VAD) and diarizes it into speaker turns (pyannote
+  (NeMo Parakeet ASR + Silero VAD, with music marked as `[music]` by a CED
+  audio tagger) and diarizes it into speaker turns (pyannote
   segmentation + CAM++ voice embeddings). No GPU or external API is needed;
   models are downloaded on first use (or all at once with `pnpm om models`).
   See the [audio README](packages/audio/README.md).
@@ -211,7 +212,7 @@ tests, then run `pnpm fixtures:clean` and review the golden diff.
 pnpm om status          # meetings already ingested
 pnpm om available       # meetings not yet ingested, on bodies' meeting sources
 pnpm om ingest <id>     # run the full pipeline for a meeting
-pnpm om models          # download every ML model up front (~650MB)
+pnpm om models          # download every ML model up front (~680MB)
 ```
 
 From a server or CI runner, YouTube answers yt-dlp with "sign in to confirm

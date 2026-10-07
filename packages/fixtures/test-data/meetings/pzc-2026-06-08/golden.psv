@@ -7565,3 +7565,5 @@ start_sec|event_type|event_data
 1:01:32.82|text|We
 1:01:32.98|text|are
 1:01:33.14|text|adjourned.
+1:01:50.00|meta|{"begin_speaker":"unlabeled"}
+1:01:50.00|text|[music]
