@@ -4,7 +4,9 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import sherpa_onnx from "sherpa-onnx-node";
 import {
+  DROPPED_SPEECH_SEC,
   ensureModelFiles,
+  findDroppedSpeech,
   loadTranscriptionModels,
   MERGE_WINDOW_SEC,
   tokensToWords,
@@ -92,6 +94,47 @@ describe("tokensToWords", () => {
 
   it("returns no words for no tokens", () => {
     expect(tokensToWords([], [])).toEqual([]);
+  });
+});
+
+describe("findDroppedSpeech", () => {
+  // Runs in samples at 1 Hz, so a run's bounds read as seconds.
+  const run = (start: number, end: number) => ({
+    startSample: start,
+    endSample: end,
+  });
+  const at = (...onsets: number[]) =>
+    onsets.map((start) => ({ text: "w", start }));
+  const gap = DROPPED_SPEECH_SEC;
+
+  it("finds nothing in steady speech", () => {
+    expect(findDroppedSpeech([run(0, 4)], at(0.1, 1, 2, 3), 1)).toEqual([]);
+  });
+
+  it("finds a stretch with no onsets, from the word before to the word after", () => {
+    expect(
+      findDroppedSpeech([run(0, gap + 3)], at(0.1, 1, 1 + gap, 2 + gap), 1),
+    ).toEqual([[1, 1 + gap]]);
+  });
+
+  it("finds a run's silent start and end, and a run with no words at all", () => {
+    expect(
+      findDroppedSpeech(
+        [run(0, 10), run(20, 20 + gap)],
+        at(gap + 1, gap + 2),
+        1,
+      ),
+    ).toEqual([
+      [0, gap + 1],
+      [gap + 2, 10],
+      [20, 20 + gap],
+    ]);
+  });
+
+  it("joins stretches that share a word", () => {
+    expect(
+      findDroppedSpeech([run(0, 3 * gap)], at(0, gap, 2 * gap, 3 * gap), 1),
+    ).toEqual([[0, 3 * gap]]);
   });
 });
 

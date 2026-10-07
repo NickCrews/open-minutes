@@ -11,9 +11,10 @@ import sherpa_onnx, {
   type Vad,
   type WaveForm,
 } from "sherpa-onnx-node";
-import type {
-  SpeechSegment,
-  TranscriptWord,
+import {
+  LAST_WORD_DURATION_SEC,
+  type SpeechSegment,
+  type TranscriptWord,
 } from "@open-minutes/core/transcription";
 
 export const TRANSCRIPTION_MODEL_SPEC = {
@@ -113,7 +114,9 @@ export interface TranscribeOptions {
  * Transcribe audio into speech segments. Silero VAD splits the audio at silences
  * (never mid-word); consecutive runs are merged into windows of up to
  * MERGE_WINDOW_SEC that are each decoded in one pass (so the model gets context),
- * then each window's words are redistributed back to the VAD runs they fall in.
+ * any speech the pass dropped is decoded again on its own (see
+ * fillDroppedSpeech), then each window's words are redistributed back to the
+ * VAD runs they fall in.
  * The result is one {@link SpeechSegment} per VAD run, with absolute word
  * timestamps, in time order. Returns [] for silence. Input must be 16 kHz mono.
  */
@@ -160,10 +163,13 @@ export async function transcribeAudio(
         wallEndMs: Date.now(),
       });
 
-      const words = tokensToWords(
-        result.tokens ?? [],
-        result.timestamps ?? [],
-      ).map((w) => ({ ...w, start: w.start + start }));
+      const words = await fillDroppedSpeech(
+        wave,
+        win.runs,
+        tokensToWords(result.tokens ?? [], result.timestamps ?? []).map(
+          (w) => ({ ...w, start: w.start + start }),
+        ),
+      );
       return splitWordsIntoRuns(win.runs, words, wave.sampleRate);
     },
   );
@@ -212,8 +218,87 @@ export async function transcribeRange(
     .filter((w) => w.start >= start && w.start < end);
 }
 
+/**
+ * The longest stretch of a VAD run that can pass without a word onset before
+ * fillDroppedSpeech decodes it again. Speech has an onset every second or so,
+ * and a run holds no pause of VAD_MIN_SILENCE_SEC, so a stretch this long with
+ * none is the recognizer having dropped it (or music, applause or crosstalk,
+ * which cost a short re-decode that finds nothing).
+ */
+export const DROPPED_SPEECH_SEC = 3;
+
+/**
+ * Decoding a whole window in one pass, Parakeet sometimes emits nothing for
+ * seconds of plain speech: it predicts blanks straight through a sentence, then
+ * picks up again, sometimes mid-word ("Board of Supervisors.310", where "310"
+ * ends a statute number it skipped). Which stretches it drops depends on where
+ * the window falls, not on how long it is, so a smaller window doesn't fix it
+ * (60 s windows dropped more than 120 s ones), but a short decode of just the
+ * stretch recovers the words. So: find each stretch of a run at least
+ * DROPPED_SPEECH_SEC long with no word onset, decode it again on its own with
+ * RANGE_CONTEXT_SEC of context either side, and take that decode's words for
+ * the stretch if it found more than the window did. `words` are the window's,
+ * with absolute onsets, in time order.
+ */
+async function fillDroppedSpeech(
+  wave: WaveForm,
+  runs: readonly SpeechRun[],
+  words: TranscriptWord[],
+): Promise<TranscriptWord[]> {
+  for (const [from, to] of findDroppedSpeech(runs, words, wave.sampleRate)) {
+    // The words either side of the stretch are re-decoded too, since the one
+    // the recognizer resumed on may hold the tail of what it skipped. The
+    // stretch's new words run to halfway to the next word kept either side, so
+    // a word the two decodes place slightly differently is neither lost nor
+    // doubled.
+    const first = words.findIndex((w) => w.start >= from);
+    const end = words.findIndex((w) => w.start > to);
+    const last = end === -1 ? words.length : end;
+    const before = words[first === -1 ? words.length - 1 : first - 1];
+    const after = words[last];
+    const lo = before && before.start < from ? (before.start + from) / 2 : from;
+    const hi = after ? (to + after.start) / 2 : to + LAST_WORD_DURATION_SEC;
+    const redone = await transcribeRange(wave, lo, hi);
+    const old = first === -1 ? 0 : last - first;
+    if (redone.length > old)
+      words.splice(first === -1 ? words.length : first, old, ...redone);
+  }
+  return words;
+}
+
+/**
+ * Each stretch, [from, to] in seconds, that fillDroppedSpeech decodes again:
+ * a gap of at least DROPPED_SPEECH_SEC between a run's start, its words'
+ * onsets and its end, widened to the onsets of the words either side so they
+ * are decoded again with it. Stretches that touch are joined.
+ */
+export function findDroppedSpeech(
+  runs: readonly SpeechRun[],
+  words: readonly TranscriptWord[],
+  sampleRate: number,
+): [number, number][] {
+  const stretches: [number, number][] = [];
+  let wi = 0;
+  for (const run of runs) {
+    const runStart = run.startSample / sampleRate;
+    const runEnd = run.endSample / sampleRate;
+    while (wi < words.length && words[wi]!.start < runStart) wi++;
+    const marks = [runStart];
+    for (; wi < words.length && words[wi]!.start <= runEnd; wi++)
+      marks.push(words[wi]!.start);
+    marks.push(runEnd);
+    for (let i = 1; i < marks.length; i++) {
+      if (marks[i]! - marks[i - 1]! < DROPPED_SPEECH_SEC) continue;
+      const last = stretches.at(-1);
+      if (last && marks[i - 1]! <= last[1]) last[1] = marks[i]!;
+      else stretches.push([marks[i - 1]!, marks[i]!]);
+    }
+  }
+  return stretches;
+}
+
 /** A speech run as half-open sample-index bounds into the source waveform. */
-interface SpeechRun {
+export interface SpeechRun {
   startSample: number;
   endSample: number;
 }
