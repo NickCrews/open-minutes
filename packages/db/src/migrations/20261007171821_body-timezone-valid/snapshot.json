@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "12aeab84-4f9b-4eb6-8c5b-ddcb918e50da",
+  "id": "c10a83dc-2088-4c37-a360-34d4434024ad",
   "prevIds": [
     "1529dc43-c0f2-4c21-9703-007d4dce9037"
   ],
@@ -1077,15 +1077,8 @@
       "entityType": "uniques"
     },
     {
-      "value": "(now() AT TIME ZONE \"timezone\") IS NOT NULL",
+      "value": "is_iana_timezone(\"timezone\")",
       "name": "bodies_timezone_valid",
-      "entityType": "checks",
-      "schema": "public",
-      "table": "bodies"
-    },
-    {
-      "value": "\"timezone\" ~ '^[A-Za-z_]+(/[A-Za-z_-]+)+$' AND \"timezone\" NOT LIKE 'Etc/%'",
-      "name": "bodies_timezone_iana",
       "entityType": "checks",
       "schema": "public",
       "table": "bodies"
