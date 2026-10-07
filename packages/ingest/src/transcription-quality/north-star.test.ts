@@ -3,11 +3,7 @@ import { existsSync, mkdirSync, readdirSync, symlinkSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { transcribeAudio } from "@open-minutes/audio/transcribe";
-import {
-  reapplySpeakerLayer,
-  serializePsv,
-  serializeVadRunsPsv,
-} from "@open-minutes/fixtures/psv";
+import { serializeVadRunsPsv } from "@open-minutes/fixtures/psv";
 import { getMeetingData } from "@open-minutes/fixtures/test-data";
 import { getMeetingAudio } from "../test-utils/audio-cache";
 import {
@@ -69,22 +65,6 @@ describe("transcribe", () => {
         serializeVadRunsPsv(speechSegments, {
           path: join(runDir, "transcribed.gen.psv"),
         });
-        if (process.env.SNAPSHOT_UPDATE === "1") {
-          // golden.psv is shared with diarize.test.ts. This test owns only the
-          // transcription, so preserve the existing speaker layer (the diarization
-          // clusters AND any hand-assigned identified people) instead of
-          // overwriting it: redistribute the freshly transcribed words back into
-          // the golden's existing speaker segments by time.
-          const merged = reapplySpeakerLayer(
-            transcribedWords,
-            meeting.segments,
-          );
-          serializePsv(merged, {
-            path: join(meeting.meetingDir, "golden.psv"),
-          });
-          return;
-        }
-
         const refWords = meeting.segments.flatMap((s) => s.words);
         const cmp = compareTranscripts(refWords, transcribedWords);
         console.log(

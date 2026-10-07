@@ -23,11 +23,9 @@ import { getMeetingAudio } from "./test-utils/audio-cache";
 const HERE = dirname(fileURLToPath(import.meta.url));
 const RUNS_DIR = join(HERE, "..", "test-runs");
 
-// golden.psv is shared with transcription-quality/north-star.test.ts: that
-// test owns the transcription (words + timings), this one owns the diarization (speaker labels). Under
-// SNAPSHOT_UPDATE we keep the golden's existing words and only rewrite the
-// speaker grouping, so neither test clobbers the other's slice — or your manual
-// tweaks. Generate the first pass with SNAPSHOT_UPDATE=1, then refine by hand.
+// Never writes a golden: goldens are corrected by hand, a piece at a time
+// (see the transcript-cleanup skill). The diarized transcript goes to
+// test-runs/ for inspection.
 describe("diarize", () => {
   const meetingSlugs = ["gbos-2026-03-23", "gbos-2026-05-18"];
   for (const slug of meetingSlugs) {
@@ -53,13 +51,6 @@ describe("diarize", () => {
       // (segmented:spk-N). A human relabels the recurring ones to identified:<slug>.
       const goldenSegments = aligned.map(toGoldenSegment);
       serializePsv(goldenSegments, { path: join(runDir, "diarized.gen.psv") });
-
-      if (process.env.SNAPSHOT_UPDATE === "1") {
-        serializePsv(goldenSegments, {
-          path: join(meeting.meetingDir, "golden.psv"),
-        });
-        return;
-      }
 
       // A board meeting has multiple speakers, in order, within the recording.
       const duration = wave.samples.length / wave.sampleRate;
