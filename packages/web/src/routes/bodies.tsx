@@ -18,7 +18,7 @@ export const Route = createFileRoute("/bodies")({
 
 /**
  * How much of a body's record we hold, eg "42 meetings · Mar 2019 – Sep 2026".
- * Dates are wall-clock dates in the body's timezone, and a span within one month
+ * Dates are wall-clock dates in each meeting's timezone, and a span within one month
  * collapses to that month so a lone meeting doesn't read "Mar 2019 – Mar 2019".
  */
 function formatCoverage(c: Coverage): string {

@@ -8,7 +8,7 @@ import {
   chapterGenerationsTable,
   chaptersTable,
   jurisdictionsTable,
-  meetingCohostsTable,
+  meetingBodiesTable,
   meetingsTable,
   peopleTable,
   segmentsTable,
@@ -31,12 +31,12 @@ import { advanceIdSequences } from "./sequences";
 // Bump when the seeder's behavior changes in a way the fixture files don't
 // capture.
 // 2: seeds chapters; 3: seeds meeting slugs; 4: bodies' meeting sources
-// replace video_sources, and meetings are on sites; 5: seeds joint meetings'
-// co-hosts
+// replace video_sources, and meetings are on sites; 5: meetings' bodies go in
+// meeting_bodies, and meetings have timezones
 const DEV_SEED_VERSION = 5;
 
 // Every table the dev seeder owns with an id sequence. Truncated together
-// (children would cascade anyway, as meeting_cohosts, which the seeder also
+// (children would cascade anyway, as meeting_bodies, which the seeder also
 // fills, does); listing them keeps the footprint visible.
 const DEV_TABLES = [
   chaptersTable,
@@ -89,16 +89,15 @@ export async function seedDevDatabase(db: DB): Promise<DevSeedSummary> {
     voice_embedding: placeholderVoiceprint(slug),
   }));
 
-  const cohosts: (typeof meetingCohostsTable.$inferInsert)[] = [];
+  const meetingBodies: (typeof meetingBodiesTable.$inferInsert)[] = [];
   const meetings = snapshot.meetings.map((m, i) => {
-    const { bodyId, cohostIds } = meetingBodyIds(m, mapped.bodyIdByKey);
-    for (const body_id of cohostIds)
-      cohosts.push({ meeting_id: i + 1, body_id });
+    for (const body_id of meetingBodyIds(m, mapped.bodyIdByKey))
+      meetingBodies.push({ meeting_id: i + 1, body_id });
     const lastWord = m.segments.flatMap((s) => s.words).at(-1);
     return {
       id: i + 1,
       slug: m.slug,
-      body_id: bodyId,
+      timezone: m.timezone,
       site_kind: "youtube" as const,
       site_id: m.youtube_id,
       title: m.title,
@@ -162,7 +161,7 @@ export async function seedDevDatabase(db: DB): Promise<DevSeedSummary> {
     await tx.insert(bodiesTable).values(mapped.bodies);
     await tx.insert(peopleTable).values(people);
     await tx.insert(meetingsTable).values(meetings);
-    if (cohosts.length) await tx.insert(meetingCohostsTable).values(cohosts);
+    await tx.insert(meetingBodiesTable).values(meetingBodies);
     for (let i = 0; i < segments.length; i += INSERT_CHUNK) {
       await tx
         .insert(segmentsTable)
@@ -178,7 +177,7 @@ export async function seedDevDatabase(db: DB): Promise<DevSeedSummary> {
       bodies: mapped.bodies.length,
       people: people.length,
       meetings: meetings.length,
-      meeting_cohosts: cohosts.length,
+      meeting_bodies: meetingBodies.length,
       segments: segments.length,
       chapter_generations: chapterGenerations.length,
       chapters: chapters.length,

@@ -2,16 +2,11 @@ import { type DB, meetingsTable } from "@open-minutes/db";
 import type { MeetingWhen } from "@open-minutes/core/meeting-date";
 import { eq } from "drizzle-orm";
 import { intervalToSecs } from "~/lib/format";
-
-/** A joint meeting's other bodies: what a page needs to name and link them. */
-const cohosts = {
-  columns: { id: true, name: true, name_short: true },
-  orderBy: { name: "asc" },
-} as const;
+import { meetingBodiesColumns } from "./bodies";
 
 export function getAllMeetings(db: DB) {
   return db.query.meetingsTable.findMany({
-    with: { body: { with: { jurisdiction: true } }, cohosts },
+    with: { bodies: meetingBodiesColumns },
     orderBy: { date: "desc", time: "desc" },
   });
 }
@@ -21,7 +16,7 @@ export function getAllMeetings(db: DB) {
  * derive this — YouTube's publish and stream times don't reliably match when
  * the body actually gavelled in — so it arrives from a human (or a parser)
  * reading the video or agenda. `date` ("YYYY-MM-DD") and `time` ("HH:MM:SS")
- * are wall-clock readings in the body's timezone; a null `time` means the day
+ * are wall-clock readings in the meeting's timezone; a null `time` means the day
  * is known but the hour isn't. A time without a date is refused by the database.
  */
 export function updateMeetingDate(
@@ -40,8 +35,7 @@ export function getMeetingById(db: DB, meetingId: number) {
     .findFirst({
       where: { id: meetingId },
       with: {
-        body: { with: { jurisdiction: true } },
-        cohosts,
+        bodies: meetingBodiesColumns,
         segments: {
           // The transcript renders word-by-word synced to video playback, so
           // ship the word-level timestamps and skip the derived text column.

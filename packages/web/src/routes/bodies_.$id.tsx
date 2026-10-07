@@ -76,7 +76,7 @@ function BodyPage() {
                   )}
                 </Show>
                 {/* A joint meeting names everyone who held it. */}
-                <Show when={meeting.cohosts.length > 0}>
+                <Show when={meeting.bodies.length > 1}>
                   <p class="text-muted-foreground text-sm">
                     Joint meeting of{" "}
                     <MeetingBodies meeting={meeting} class="hover:underline" />

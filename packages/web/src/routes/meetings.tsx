@@ -29,7 +29,6 @@ import { Duration } from "~/features/meetings/duration";
 import {
   filterMeetings,
   groupByMonth,
-  meetingBodies,
   sortMeetings,
   summarizeMeetings,
 } from "~/features/meetings/list";
@@ -72,7 +71,7 @@ type Meeting = Awaited<ReturnType<typeof getAllMeetings>>[number];
  * A body in the filter menu, with how many meetings it has, joint meetings
  * included.
  */
-type BodyOption = { body: Meeting["cohosts"][number]; count: number };
+type BodyOption = { body: Meeting["bodies"][number]; count: number };
 
 function MeetingsPage() {
   const meetings = Route.useLoaderData();
@@ -102,7 +101,7 @@ function MeetingsPage() {
   const bodies = createMemo(() => {
     const byId = new Map<number, BodyOption>();
     for (const m of meetings()) {
-      for (const body of meetingBodies(m)) {
+      for (const body of m.bodies) {
         const entry = byId.get(body.id) ?? { body, count: 0 };
         entry.count++;
         byId.set(body.id, entry);
@@ -257,7 +256,7 @@ function MeetingCard(props: { meeting: Meeting; onSaved: () => void }) {
               meetingId={props.meeting.id}
               date={props.meeting.date}
               time={props.meeting.time}
-              timezone={props.meeting.body.timezone}
+              timezone={props.meeting.timezone}
               onSaved={props.onSaved}
             />
             <Duration durationSecs={props.meeting.duration_secs} />

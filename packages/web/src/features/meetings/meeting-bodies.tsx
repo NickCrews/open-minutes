@@ -1,17 +1,17 @@
 import { Link } from "@tanstack/solid-router";
 import { For } from "solid-js";
-import { type ListedBody, meetingBodies } from "./list";
+import type { ListedBody } from "./list";
 
 /**
  * The bodies that held a meeting, each linking to its page: "Girdwood Board of
  * Supervisors", or for a joint meeting "Girdwood Board of Supervisors and
- * Girdwood Land Use Committee". The host comes first.
+ * Girdwood Land Use Committee".
  */
 export function MeetingBodies(props: {
-  meeting: { body: ListedBody; cohosts: ListedBody[] };
+  meeting: { bodies: ListedBody[] };
   class?: string;
 }) {
-  const bodies = () => meetingBodies(props.meeting);
+  const bodies = () => props.meeting.bodies;
   return (
     <For each={bodies()}>
       {(body, i) => (

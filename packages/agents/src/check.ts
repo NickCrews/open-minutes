@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { meetingsTable } from "@open-minutes/db";
+import { meetingBodiesTable, meetingsTable } from "@open-minutes/db";
 import {
   chapterErrors,
   chapterWarnings,
@@ -21,9 +21,9 @@ export interface Issue {
 }
 
 /**
- * Check a meeting's transcript and chapters against the rules in
- * @open-minutes/core: words in time order, segments not interleaved, chapters
- * valid, and every stretch of speech in a chapter.
+ * Check a meeting's bodies, transcript and chapters: it has a body, and,
+ * against the rules in @open-minutes/core, words in time order, segments not
+ * interleaved, chapters valid, and every stretch of speech in a chapter.
  */
 export async function checkMeeting(
   db: Db,
@@ -37,6 +37,13 @@ export async function checkMeeting(
   const segments = await loadSegments(db, meetingId);
   const chapters = await loadChapters(db, meetingId);
   const issues: Issue[] = [];
+
+  const bodies = await db
+    .select({ id: meetingBodiesTable.body_id })
+    .from(meetingBodiesTable)
+    .where(eq(meetingBodiesTable.meeting_id, meetingId));
+  if (bodies.length === 0)
+    issues.push({ severity: "error", message: "the meeting has no bodies" });
 
   let prevLast = -Infinity;
   let prevId: number | undefined;

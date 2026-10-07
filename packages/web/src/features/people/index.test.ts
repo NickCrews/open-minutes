@@ -2,7 +2,7 @@ import {
   bodiesTable,
   type DB,
   jurisdictionsTable,
-  meetingCohostsTable,
+  meetingBodiesTable,
   meetingsTable,
   peopleTable,
   segmentsTable,
@@ -43,28 +43,26 @@ async function insertPerson(db: DB, name: string): Promise<number> {
 /** A meeting's site_kind and site_id are unique, so meetings need distinct IDs. */
 let nextSiteId = 0;
 
-/** A meeting of `bodyId` on `date`, with `segments` segments by `personId`. */
+/** A meeting of `bodyIds` on `date`, with `segments` segments by `personId`. */
 async function insertMeeting(
   db: DB,
-  bodyId: number,
+  bodyIds: number[],
   date: string | null,
   personId: number | null,
   segments = 1,
-  cohosts: number[] = [],
 ) {
   const [meeting] = await db
     .insert(meetingsTable)
     .values({
-      body_id: bodyId,
       site_kind: "youtube",
       site_id: `vid${nextSiteId++}`,
+      timezone: "America/Anchorage",
       date,
     })
     .returning({ id: meetingsTable.id });
-  if (cohosts.length)
-    await db
-      .insert(meetingCohostsTable)
-      .values(cohosts.map((body_id) => ({ meeting_id: meeting!.id, body_id })));
+  await db
+    .insert(meetingBodiesTable)
+    .values(bodyIds.map((body_id) => ({ meeting_id: meeting!.id, body_id })));
   for (let i = 0; i < segments; i++) {
     await db.insert(segmentsTable).values({
       meeting_id: meeting!.id,
@@ -80,8 +78,8 @@ describe("getAllPeople attendance", () => {
   }) => {
     const gbos = await insertBody(db, "GBOS");
     const alice = await insertPerson(db, "Alice");
-    await insertMeeting(db, gbos, "2023-04-10", alice, 5);
-    await insertMeeting(db, gbos, "2026-02-03", alice, 3);
+    await insertMeeting(db, [gbos], "2023-04-10", alice, 5);
+    await insertMeeting(db, [gbos], "2026-02-03", alice, 3);
 
     const [person] = await getAllPeople(db);
     expect(person!.attendance).toEqual([
@@ -98,9 +96,9 @@ describe("getAllPeople attendance", () => {
     const gbos = await insertBody(db, "GBOS");
     const assembly = await insertBody(db, "Assembly");
     const alice = await insertPerson(db, "Alice");
-    await insertMeeting(db, gbos, "2023-04-10", alice);
-    await insertMeeting(db, assembly, "2024-01-10", alice);
-    await insertMeeting(db, assembly, "2024-06-10", alice);
+    await insertMeeting(db, [gbos], "2023-04-10", alice);
+    await insertMeeting(db, [assembly], "2024-01-10", alice);
+    await insertMeeting(db, [assembly], "2024-06-10", alice);
 
     const [person] = await getAllPeople(db);
     expect(person!.attendance.map((a) => [a.body, a.meetings])).toEqual([
@@ -113,8 +111,8 @@ describe("getAllPeople attendance", () => {
     const gbos = await insertBody(db, "GBOS");
     const luc = await insertBody(db, "LUC");
     const alice = await insertPerson(db, "Alice");
-    await insertMeeting(db, gbos, "2022-01-01", alice);
-    await insertMeeting(db, gbos, "2022-08-30", alice, 2, [luc]);
+    await insertMeeting(db, [gbos], "2022-01-01", alice);
+    await insertMeeting(db, [gbos, luc], "2022-08-30", alice, 2);
 
     const [person] = await getAllPeople(db);
     expect(person!.attendance).toEqual([
@@ -134,7 +132,7 @@ describe("getAllPeople attendance", () => {
   }) => {
     const gbos = await insertBody(db, "GBOS");
     const alice = await insertPerson(db, "Alice");
-    await insertMeeting(db, gbos, "2023-04-10", null);
+    await insertMeeting(db, [gbos], "2023-04-10", null);
 
     const people = await getAllPeople(db);
     expect(people).toHaveLength(1);
@@ -145,7 +143,7 @@ describe("getAllPeople attendance", () => {
   test("still counts meetings whose date is unknown", async ({ db }) => {
     const gbos = await insertBody(db, "GBOS");
     const alice = await insertPerson(db, "Alice");
-    await insertMeeting(db, gbos, null, alice);
+    await insertMeeting(db, [gbos], null, alice);
 
     const [person] = await getAllPeople(db);
     expect(person!.attendance).toEqual([

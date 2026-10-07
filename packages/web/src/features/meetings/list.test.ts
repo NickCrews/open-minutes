@@ -15,23 +15,21 @@ const LUC = { id: 3, name: "Land Use Committee" };
 function meeting(
   title: string,
   date: string | null,
-  body = GBOS,
+  bodies: ListedMeeting["bodies"] = [GBOS],
   time: string | null = null,
-  cohosts: ListedMeeting["cohosts"] = [],
 ): ListedMeeting & { id: string } {
   return {
     id: title,
     title,
     date,
     time,
-    body,
-    cohosts,
+    bodies,
   };
 }
 
 describe("meetingMonth", () => {
   it("reads the month from the local date", () => {
-    const m = meetingMonth(meeting("a", "2026-06-30", GBOS, "18:00:00"));
+    const m = meetingMonth(meeting("a", "2026-06-30", [GBOS], "18:00:00"));
     expect(m).toEqual({ key: "2026-06", long: "June 2026", short: "Jun 2026" });
   });
 
@@ -53,11 +51,11 @@ describe("sortMeetings", () => {
 
 describe("filterMeetings", () => {
   const all = [
-    meeting("Regular Meeting", "2026-01-10", GBOS),
-    meeting("Budget Work Session", "2026-02-10", GBOS),
-    meeting("Regular Meeting", "2026-03-10", PLAN),
+    meeting("Regular Meeting", "2026-01-10", [GBOS]),
+    meeting("Budget Work Session", "2026-02-10", [GBOS]),
+    meeting("Regular Meeting", "2026-03-10", [PLAN]),
   ];
-  const joint = meeting("Joint Meeting", "2026-04-10", GBOS, null, [LUC]);
+  const joint = meeting("Joint Meeting", "2026-04-10", [GBOS, LUC]);
 
   it("keeps everything with no filters", () => {
     expect(filterMeetings(all, {})).toHaveLength(3);

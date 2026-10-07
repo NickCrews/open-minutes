@@ -6,10 +6,10 @@ import { and, eq, sql } from "drizzle-orm";
 import {
   type DB,
   bodiesTable,
-  meetingCohostsTable,
+  meetingBodiesTable,
   meetingsTable,
 } from "@open-minutes/db";
-import { bodySlug, cohostsInTitle } from "@open-minutes/core/bodies";
+import { bodySlug, jointBodiesInTitle } from "@open-minutes/core/bodies";
 import { type SiteKind, siteKindOf } from "@open-minutes/core/meeting-source";
 import {
   alignSpeakers,
@@ -160,12 +160,12 @@ export async function ingestMeeting(
     bodyArg,
   );
 
-  // A joint meeting is published by one of its bodies, and its title names
-  // the others: "Girdwood Board of Supervisors and Girdwood Land Use Committee
-  // Joint Meeting". Fix a wrong guess with the set_meeting_cohosts tool.
-  const cohosts = cohostsInTitle(
+  // The meeting's bodies: the one found above, and for a joint meeting the
+  // others its title names: "Girdwood Board of Supervisors and Girdwood Land
+  // Use Committee Joint Meeting". Fix a wrong guess with the
+  // set_meeting_bodies tool.
+  const named = jointBodiesInTitle(
     metadata.title,
-    body.id,
     await db
       .select({
         id: bodiesTable.id,
@@ -175,9 +175,10 @@ export async function ingestMeeting(
       .from(bodiesTable)
       .where(eq(bodiesTable.jurisdiction_id, body.jurisdiction_id)),
   );
-  if (cohosts.length > 0)
+  const bodies = [body, ...named.filter((b) => b.id !== body.id)];
+  if (bodies.length > 1)
     console.error(
-      `${tag} joint meeting of ${[body, ...cohosts].map((b) => b.name_short).join(", ")}`,
+      `${tag} joint meeting of ${bodies.map((b) => b.name_short).join(", ")}`,
     );
 
   const workDir = join(workRoot, workDirName(bodySlug(body), siteId));
@@ -252,11 +253,13 @@ export async function ingestMeeting(
     const [meeting] = await tx
       .insert(meetingsTable)
       .values({
-        body_id: body.id,
         site_kind: siteKind,
         site_id: siteId,
         title: metadata.title,
         description: metadata.description,
+        // Where the body meets; ingestion can't tell if this meeting was
+        // somewhere else.
+        timezone: body.timezone,
         // Parsed from the title and the chair's gavel-in (see @open-minutes/core/meeting-date),
         // not the site's publish/stream times, which don't reliably reflect when
         // the meeting happened. A time without a date is meaningless.
@@ -268,12 +271,9 @@ export async function ingestMeeting(
             : sql`make_interval(secs => ${metadata.durationSecs})`,
       })
       .returning({ id: meetingsTable.id });
-    if (cohosts.length > 0)
-      await tx
-        .insert(meetingCohostsTable)
-        .values(
-          cohosts.map((b) => ({ meeting_id: meeting!.id, body_id: b.id })),
-        );
+    await tx
+      .insert(meetingBodiesTable)
+      .values(bodies.map((b) => ({ meeting_id: meeting!.id, body_id: b.id })));
     await identifyAndInsertSegments(
       tx,
       meeting!.id,
@@ -327,7 +327,7 @@ function describeError(error: unknown): string {
 }
 
 /**
- * The body a meeting belongs to: the one with slug `slug` if given, else the
+ * A body that held a meeting: the one with slug `slug` if given, else the
  * one whose meeting source is the meeting's channel (a YouTube channel ID, or
  * an akleg.gov committee: see VideoMetadata.channelId).
  */
@@ -343,6 +343,7 @@ async function resolveBody(
       jurisdiction_id: bodiesTable.jurisdiction_id,
       name: bodiesTable.name,
       name_short: bodiesTable.name_short,
+      timezone: bodiesTable.timezone,
       meeting_source: bodiesTable.meeting_source,
     })
     .from(bodiesTable);

@@ -3,6 +3,11 @@
 Date: 2026-09-26
 Status: Accepted
 
+Amended 2026-10-07: a meeting can be held by several bodies (a joint meeting),
+so the zone moved from `bodies.timezone` to the meeting's own
+`meetings.timezone`. Read "the body's `timezone`" below as that. The decision
+is otherwise unchanged.
+
 ## Context
 
 A meeting used to have a single `start_time timestamptz`: a UTC instant, rendered

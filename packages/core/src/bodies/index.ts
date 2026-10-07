@@ -6,7 +6,7 @@ export function bodySlug(body: { name_short: string }): string {
   return body.name_short.toLowerCase();
 }
 
-/** The fields of a body {@link cohostsInTitle} reads. */
+/** The fields of a body {@link jointBodiesInTitle} reads. */
 export interface NamedBody {
   id: number;
   name: string;
@@ -14,23 +14,22 @@ export interface NamedBody {
 }
 
 /**
- * The other bodies a joint meeting's title names, besides its host: for
- * "Girdwood Board of Supervisors and Girdwood Land Use Committee Joint
- * Meeting", hosted by the Board, the Land Use Committee.
+ * The bodies a joint meeting's title names: for "Girdwood Board of Supervisors
+ * and Girdwood Land Use Committee Joint Meeting", the Board and the Land Use
+ * Committee.
  *
- * Only a title that says "joint" names co-hosts, since a regular meeting's
+ * Only a title that says "joint" names any bodies, since a regular meeting's
  * title can mention another body ("GBOS to hear Land Use Committee report"). A
  * body is named by its full name, in any case, or by its short name as a whole
  * word, in its own case ("GBOS/LUC Joint Meeting"). Longer names are matched
  * first and their text used up, so "Anchorage Assembly Community and Economic
  * Development Committee" doesn't also name the Anchorage Assembly.
  *
- * `candidates` should be the bodies that could plausibly meet with the host,
- * eg those in its jurisdiction; the host among them is ignored.
+ * `candidates` should be the bodies that could plausibly have held the
+ * meeting, eg those in one jurisdiction.
  */
-export function cohostsInTitle<B extends NamedBody>(
+export function jointBodiesInTitle<B extends NamedBody>(
   title: string,
-  hostId: number,
   candidates: readonly B[],
 ): B[] {
   if (!/\bjoint\b/i.test(title)) return [];
@@ -51,7 +50,7 @@ export function cohostsInTitle<B extends NamedBody>(
     named.add(body);
     rest = rest.replace(re, "\0");
   }
-  return candidates.filter((b) => b.id !== hostId && named.has(b));
+  return candidates.filter((b) => named.has(b));
 }
 
 function escapeRegExp(text: string): string {

@@ -2,29 +2,16 @@ import { describe, expect } from "vitest";
 import { eq } from "drizzle-orm";
 import { test } from "./testing/vitest";
 import type { DB } from "./index";
-import {
-  bodiesTable,
-  jurisdictionsTable,
-  meetingsTable,
-  segmentsTable,
-} from "./schema";
+import { meetingsTable, segmentsTable } from "./schema";
 
 async function insertMeeting(db: DB): Promise<number> {
-  const [jurisdiction] = await db
-    .insert(jurisdictionsTable)
-    .values({ name: "Testville" })
-    .returning({ id: jurisdictionsTable.id });
-  const [body] = await db
-    .insert(bodiesTable)
-    .values({
-      name: "Testville Council",
-      jurisdiction_id: jurisdiction!.id,
-      timezone: "America/Anchorage",
-    })
-    .returning({ id: bodiesTable.id });
   const [meeting] = await db
     .insert(meetingsTable)
-    .values({ body_id: body!.id, site_kind: "youtube", site_id: "test-video" })
+    .values({
+      site_kind: "youtube",
+      site_id: "test-video",
+      timezone: "America/Anchorage",
+    })
     .returning({ id: meetingsTable.id });
   return meeting!.id;
 }

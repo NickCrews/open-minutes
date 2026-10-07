@@ -4,11 +4,11 @@ import { test } from "./testing/vitest";
 import {
   bodiesTable,
   jurisdictionsTable,
-  meetingCohostsTable,
+  meetingBodiesTable,
   meetingsTable,
 } from "./schema";
 
-describe("meeting_cohosts", () => {
+describe("meeting_bodies", () => {
   test("goes with its meeting when the meeting is deleted", async ({ db }) => {
     const [jurisdiction] = await db
       .insert(jurisdictionsTable)
@@ -26,16 +26,22 @@ describe("meeting_cohosts", () => {
       .returning({ id: bodiesTable.id });
     const [meeting] = await db
       .insert(meetingsTable)
-      .values({ body_id: gbos!.id, site_kind: "youtube", site_id: "joint" })
+      .values({
+        site_kind: "youtube",
+        site_id: "joint",
+        timezone: "America/Anchorage",
+      })
       .returning({ id: meetingsTable.id });
     await db
-      .insert(meetingCohostsTable)
-      .values({ meeting_id: meeting!.id, body_id: luc!.id });
+      .insert(meetingBodiesTable)
+      .values(
+        [gbos!, luc!].map((b) => ({ meeting_id: meeting!.id, body_id: b.id })),
+      );
 
     await db.delete(meetingsTable).where(eq(meetingsTable.id, meeting!.id));
 
-    expect(await db.select().from(meetingCohostsTable)).toEqual([]);
-    // The body itself stays.
+    expect(await db.select().from(meetingBodiesTable)).toEqual([]);
+    // The bodies themselves stay.
     expect(await db.select().from(bodiesTable)).toHaveLength(2);
   });
 });

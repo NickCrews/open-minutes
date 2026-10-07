@@ -108,22 +108,28 @@ export function checkMeetingDir(dir: string): Issue[] {
 /**
  * A meeting's slug (its directory name) is `<body>-<date>`, eg
  * "gbos-2026-03-23", plus a "-<suffix>" to tell apart two meetings of one
- * body on one day; just `<body>-<suffix>` when the date is unknown.
+ * body on one day; just `<body>-<suffix>` when the date is unknown. A joint
+ * meeting can go by any of its bodies.
  */
 export function checkMeetingSlug(meeting: {
   slug: string;
-  body_id: string;
+  body_ids: string[];
   date: string | null;
 }): string | null {
-  const stem = meeting.date
-    ? `${meeting.body_id}-${meeting.date}`
-    : meeting.body_id;
-  const rest = meeting.slug.startsWith(stem)
-    ? meeting.slug.slice(stem.length)
-    : null;
-  if (rest !== null && (/^-[a-z0-9-]+$/.test(rest) || (meeting.date && !rest)))
-    return null;
-  const want = meeting.date ? stem : `${stem}-<suffix>`;
+  const stems = meeting.body_ids.map((body) =>
+    meeting.date ? `${body}-${meeting.date}` : body,
+  );
+  for (const stem of stems) {
+    const rest = meeting.slug.startsWith(stem)
+      ? meeting.slug.slice(stem.length)
+      : null;
+    if (
+      rest !== null &&
+      (/^-[a-z0-9-]+$/.test(rest) || (meeting.date && !rest))
+    )
+      return null;
+  }
+  const want = meeting.date ? stems[0]! : `${stems[0]!}-<suffix>`;
   return `Meeting directory "${meeting.slug}" should be named "${want}" (<body>-<date>): it's the meeting's slug in the database`;
 }
 

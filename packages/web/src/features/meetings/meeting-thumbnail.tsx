@@ -14,15 +14,20 @@ export type ThumbnailMeeting = {
   id: number;
   site_kind: string;
   site_id: string;
-  body: ThumbnailBody;
+  /** Alphabetical, as `meetingBodiesColumns` gives them. */
+  bodies: ThumbnailBody[];
 };
 
 /**
- * Seeds for a meeting's artwork: its body's palette and label, so a body's
- * meetings look related, with a layout of its own.
+ * Seeds for a meeting's artwork: its first body's palette and label, so a
+ * body's meetings look related, with a layout of its own. A joint meeting
+ * takes after whichever of its bodies sorts first.
  */
 export function meetingSeeds(meeting: ThumbnailMeeting): ArtworkSeeds {
-  return { ...bodySeeds(meeting.body), layout: `meeting:${meeting.id}` };
+  const body = meeting.bodies[0];
+  const layout = `meeting:${meeting.id}`;
+  if (!body) return { palette: layout, layout, label: "" };
+  return { ...bodySeeds(body), layout };
 }
 
 /**

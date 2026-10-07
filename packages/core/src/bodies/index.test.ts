@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { cohostsInTitle } from ".";
+import { jointBodiesInTitle } from ".";
 
 const gbos = {
   id: 1,
@@ -15,34 +15,33 @@ const ced = {
 };
 const bodies = [gbos, luc, assembly, ced];
 
-describe("cohostsInTitle", () => {
-  test("finds the other body a joint meeting's title names", () => {
+describe("jointBodiesInTitle", () => {
+  test("finds the bodies a joint meeting's title names", () => {
     expect(
-      cohostsInTitle(
+      jointBodiesInTitle(
         "Girdwood Board of Supervisors and Girdwood Land Use Committee Joint Meeting August 30, 2022",
-        gbos.id,
         bodies,
       ),
-    ).toEqual([luc]);
+    ).toEqual([gbos, luc]);
   });
 
   test("matches short names as whole words, in their own case", () => {
-    expect(cohostsInTitle("GBOS/LUC joint meeting", gbos.id, bodies)).toEqual([
+    expect(jointBodiesInTitle("GBOS/LUC joint meeting", bodies)).toEqual([
+      gbos,
       luc,
     ]);
-    expect(cohostsInTitle("GBOS/luc joint meeting", gbos.id, bodies)).toEqual(
-      [],
-    );
-    expect(cohostsInTitle("GBOS/LUCK joint meeting", gbos.id, bodies)).toEqual(
-      [],
-    );
+    expect(jointBodiesInTitle("GBOS/luc joint meeting", bodies)).toEqual([
+      gbos,
+    ]);
+    expect(jointBodiesInTitle("GBOS/LUCK joint meeting", bodies)).toEqual([
+      gbos,
+    ]);
   });
 
   test("names nobody unless the title says joint", () => {
     expect(
-      cohostsInTitle(
+      jointBodiesInTitle(
         "Girdwood Board of Supervisors hears Girdwood Land Use Committee report",
-        gbos.id,
         bodies,
       ),
     ).toEqual([]);
@@ -50,21 +49,16 @@ describe("cohostsInTitle", () => {
 
   test("a longer name uses up the shorter name inside it", () => {
     expect(
-      cohostsInTitle(
+      jointBodiesInTitle(
         "Anchorage Assembly Community and Economic Development Committee and Girdwood Land Use Committee Joint Meeting",
-        ced.id,
         bodies,
       ),
-    ).toEqual([luc]);
+    ).toEqual([luc, ced]);
   });
 
-  test("finds several co-hosts", () => {
+  test("finds several bodies", () => {
     expect(
-      cohostsInTitle(
-        "Joint Meeting of the Assembly, GBOS and LUC",
-        ced.id,
-        bodies,
-      ),
+      jointBodiesInTitle("Joint Meeting of the Assembly, GBOS and LUC", bodies),
     ).toEqual([gbos, luc, assembly]);
   });
 });

@@ -80,12 +80,12 @@ function printStatusTable(meetings: IngestedMeeting[]): void {
   const rows = meetings.map((m) => [
     m.siteKind,
     m.siteId,
-    m.body,
+    m.bodies.join(","),
     m.date ?? "",
     String(m.segmentCount),
     m.title,
   ]);
-  const header = ["SITE", "ID", "BODY", "DATE", "SEGMENTS", "TITLE"];
+  const header = ["SITE", "ID", "BODIES", "DATE", "SEGMENTS", "TITLE"];
   const widths = header.map((h, col) =>
     Math.max(h.length, ...rows.map((r) => r[col]!.length)),
   );
@@ -94,7 +94,7 @@ function printStatusTable(meetings: IngestedMeeting[]): void {
   }
 
   const totalSegments = meetings.reduce((n, m) => n + m.segmentCount, 0);
-  const bodies = new Set(meetings.map((m) => m.body));
+  const bodies = new Set(meetings.flatMap((m) => m.bodies));
   console.log(
     `\n${meetings.length} meeting(s), ${totalSegments} segment(s), ${bodies.size} body(ies)`,
   );

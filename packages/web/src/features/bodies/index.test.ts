@@ -2,7 +2,7 @@ import {
   bodiesTable,
   type DB,
   jurisdictionsTable,
-  meetingCohostsTable,
+  meetingBodiesTable,
   meetingsTable,
 } from "@open-minutes/db";
 import { test } from "@open-minutes/db/testing/vitest";
@@ -31,23 +31,21 @@ let nextSiteId = 0;
 
 async function insertMeeting(
   db: DB,
-  bodyId: number,
+  bodyIds: number[],
   date: string | null,
-  cohosts: number[] = [],
 ): Promise<number> {
   const [meeting] = await db
     .insert(meetingsTable)
     .values({
-      body_id: bodyId,
       site_kind: "youtube",
       site_id: `vid${nextSiteId++}`,
+      timezone: "America/Anchorage",
       date,
     })
     .returning({ id: meetingsTable.id });
-  if (cohosts.length)
-    await db
-      .insert(meetingCohostsTable)
-      .values(cohosts.map((body_id) => ({ meeting_id: meeting!.id, body_id })));
+  await db
+    .insert(meetingBodiesTable)
+    .values(bodyIds.map((body_id) => ({ meeting_id: meeting!.id, body_id })));
   return meeting!.id;
 }
 
@@ -57,10 +55,10 @@ describe("getAllBodies coverage", () => {
   }) => {
     const assembly = await insertBody(db, "Assembly");
     const gbos = await insertBody(db, "GBOS");
-    await insertMeeting(db, gbos, "2026-02-03");
-    await insertMeeting(db, gbos, "2023-04-10");
-    await insertMeeting(db, gbos, null);
-    await insertMeeting(db, assembly, "2024-01-10");
+    await insertMeeting(db, [gbos], "2026-02-03");
+    await insertMeeting(db, [gbos], "2023-04-10");
+    await insertMeeting(db, [gbos], null);
+    await insertMeeting(db, [assembly], "2024-01-10");
 
     const bodies = await getAllBodies(db);
     expect(bodies.map((b) => [b.id, b.coverage])).toEqual([
@@ -87,8 +85,8 @@ describe("getAllBodies coverage", () => {
   test("counts a joint meeting for every body that held it", async ({ db }) => {
     const gbos = await insertBody(db, "GBOS");
     const luc = await insertBody(db, "LUC");
-    await insertMeeting(db, gbos, "2022-01-01");
-    await insertMeeting(db, gbos, "2022-08-30", [luc]);
+    await insertMeeting(db, [gbos], "2022-01-01");
+    await insertMeeting(db, [gbos, luc], "2022-08-30");
 
     const coverage = new Map(
       (await getAllBodies(db)).map((b) => [b.id, b.coverage]),
@@ -113,34 +111,33 @@ describe("getAllBodies coverage", () => {
 
   test("leaves the span unknown when no meeting has a date", async ({ db }) => {
     const gbos = await insertBody(db, "GBOS");
-    await insertMeeting(db, gbos, null);
+    await insertMeeting(db, [gbos], null);
     const [body] = await getAllBodies(db);
     expect(body!.coverage).toEqual({ meetings: 1, first: null, last: null });
   });
 });
 
 describe("getBodyById", () => {
-  test("lists the body's own meetings and its joint ones, newest first", async ({
+  test("lists the body's meetings, joint ones included, newest first", async ({
     db,
   }) => {
     const gbos = await insertBody(db, "GBOS");
     const luc = await insertBody(db, "LUC");
     const assembly = await insertBody(db, "Assembly");
-    const own = await insertMeeting(db, luc, "2022-01-01");
-    const joint = await insertMeeting(db, gbos, "2022-08-30", [luc]);
-    await insertMeeting(db, gbos, "2022-09-01");
-    await insertMeeting(db, assembly, "2022-09-01");
+    const own = await insertMeeting(db, [luc], "2022-01-01");
+    const joint = await insertMeeting(db, [gbos, luc], "2022-08-30");
+    await insertMeeting(db, [gbos], "2022-09-01");
+    await insertMeeting(db, [assembly], "2022-09-01");
 
     const body = await getBodyById(db, luc);
     expect(
       body.meetings.map((m) => ({
         id: m.id,
-        host: m.body.id,
-        cohosts: m.cohosts.map((c) => c.id),
+        bodies: m.bodies.map((b) => b.id),
       })),
     ).toEqual([
-      { id: joint, host: gbos, cohosts: [luc] },
-      { id: own, host: luc, cohosts: [] },
+      { id: joint, bodies: [gbos, luc] },
+      { id: own, bodies: [luc] },
     ]);
   });
 });

@@ -20,7 +20,7 @@ import { mapSnapshot, meetingBodyIds } from "@open-minutes/fixtures/map";
 
 // Bump when seedGoldenMeeting's behavior changes in a way the inputs hashed
 // below don't capture.
-// 2: seeds joint meetings' co-hosts
+// 2: seeds meeting_bodies and meetings' timezones
 const VERSION = 2;
 
 /** Golden rows + the given golden meetings, with real voiceprints. */
