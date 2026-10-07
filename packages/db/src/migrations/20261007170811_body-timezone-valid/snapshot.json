@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "97d85e5f-a4d7-420a-b74a-a66a69c2c67d",
+  "id": "6171ad00-80a7-4763-975b-056af07a5908",
   "prevIds": [
     "1529dc43-c0f2-4c21-9703-007d4dce9037"
   ],
@@ -1079,6 +1079,13 @@
     {
       "value": "(now() AT TIME ZONE \"timezone\") IS NOT NULL",
       "name": "bodies_timezone_valid",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "bodies"
+    },
+    {
+      "value": "\"timezone\" = 'UTC'\n      OR \"timezone\" ~ '^[A-Za-z_]+(/[A-Za-z_-]+)+$'\n      OR \"timezone\" ~ '^Etc/GMT[+-][0-9]{1,2}$'",
+      "name": "bodies_timezone_iana",
       "entityType": "checks",
       "schema": "public",
       "table": "bodies"
