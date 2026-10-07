@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "c10a83dc-2088-4c37-a360-34d4434024ad",
+  "id": "27bc3121-bcbc-4e98-aaea-823ff629cd9b",
   "prevIds": [
     "1529dc43-c0f2-4c21-9703-007d4dce9037"
   ],
@@ -1077,7 +1077,7 @@
       "entityType": "uniques"
     },
     {
-      "value": "is_iana_timezone(\"timezone\")",
+      "value": "iana_timezone_error(\"timezone\") IS NULL",
       "name": "bodies_timezone_valid",
       "entityType": "checks",
       "schema": "public",
