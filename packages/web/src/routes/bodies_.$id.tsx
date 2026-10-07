@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/solid-router";
 import { createServerFn } from "@tanstack/solid-start";
 import { For, Show } from "solid-js";
 import { getBodyById } from "~/features/bodies";
+import { MeetingBodies } from "~/features/meetings/meeting-bodies";
 import { MeetingThumbnail } from "~/features/meetings/meeting-thumbnail";
 import { formatMeetingDate } from "@open-minutes/core/meeting-date";
 import {
@@ -59,7 +60,7 @@ function BodyPage() {
                 tabIndex={-1}
                 class="w-24 shrink-0 sm:w-32"
               >
-                <MeetingThumbnail meeting={{ ...meeting, body: body() }} />
+                <MeetingThumbnail meeting={meeting} />
               </Link>
               <div class="min-w-0">
                 <Link
@@ -73,6 +74,13 @@ function BodyPage() {
                   {(when) => (
                     <p class="text-muted-foreground text-sm">{when()}</p>
                   )}
+                </Show>
+                {/* A joint meeting names everyone who held it. */}
+                <Show when={meeting.cohosts.length > 0}>
+                  <p class="text-muted-foreground text-sm">
+                    Joint meeting of{" "}
+                    <MeetingBodies meeting={meeting} class="hover:underline" />
+                  </p>
                 </Show>
               </div>
             </li>

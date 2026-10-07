@@ -15,6 +15,7 @@ import {
   check,
   foreignKey,
   pgView,
+  primaryKey,
   unique,
 } from "drizzle-orm/pg-core";
 import { N_DIMENSIONS as VOICE_N_DIMENSIONS } from "@open-minutes/core/voice_embeddings";
@@ -94,6 +95,9 @@ export const meetingsTable = pgTable(
     // for meetings that aren't fixtures. Never all digits, so a reference that
     // is all digits is unambiguously an `id`.
     slug: varchar().unique(),
+    // The host body: the one whose meeting source published the meeting, and in
+    // whose timezone its `date` and `time` read. A joint meeting's other bodies
+    // are in `meeting_cohosts`.
     body_id: integer()
       .notNull()
       .references(() => bodiesTable.id),
@@ -145,6 +149,30 @@ export const meetingsTable = pgTable(
       table.site_kind,
       table.site_id,
     ),
+  ],
+);
+
+/**
+ * The other bodies holding a joint meeting, besides its host (`meetings.body_id`):
+ * eg the Girdwood Land Use Committee, meeting together with the Board of
+ * Supervisors on the Board's channel. A joint meeting counts as a meeting of
+ * every body that held it. Most meetings have no rows here.
+ */
+export const meetingCohostsTable = pgTable(
+  "meeting_cohosts",
+  {
+    // A row says nothing without its meeting, so deleting the meeting (eg to
+    // re-ingest it) takes its co-hosts with it.
+    meeting_id: integer()
+      .notNull()
+      .references(() => meetingsTable.id, { onDelete: "cascade" }),
+    body_id: integer()
+      .notNull()
+      .references(() => bodiesTable.id),
+  },
+  (table) => [
+    primaryKey({ columns: [table.meeting_id, table.body_id] }),
+    index("idx_meeting_cohosts_body").on(table.body_id),
   ],
 );
 
@@ -347,6 +375,7 @@ export const relations = defineRelations(
     jurisdictionsTable,
     bodiesTable,
     meetingsTable,
+    meetingCohostsTable,
     peopleTable,
     segmentsTable,
     chapterGenerationsTable,
@@ -365,9 +394,15 @@ export const relations = defineRelations(
         to: r.jurisdictionsTable.id,
         optional: false,
       }),
+      // Only the meetings this body hosted; see `cohostedMeetings` for the
+      // joint meetings another body hosted.
       meetings: r.many.meetingsTable({
         from: r.bodiesTable.id,
         to: r.meetingsTable.body_id,
+      }),
+      cohostedMeetings: r.many.meetingsTable({
+        from: r.bodiesTable.id.through(r.meetingCohostsTable.body_id),
+        to: r.meetingsTable.id.through(r.meetingCohostsTable.meeting_id),
       }),
     },
     meetingsTable: {
@@ -375,6 +410,10 @@ export const relations = defineRelations(
         from: r.meetingsTable.body_id,
         to: r.bodiesTable.id,
         optional: false,
+      }),
+      cohosts: r.many.bodiesTable({
+        from: r.meetingsTable.id.through(r.meetingCohostsTable.meeting_id),
+        to: r.bodiesTable.id.through(r.meetingCohostsTable.body_id),
       }),
       segments: r.many.segmentsTable({
         from: r.meetingsTable.id,

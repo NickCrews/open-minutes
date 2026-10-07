@@ -44,7 +44,14 @@ export interface GoldenPerson {
 export interface GoldenMeeting {
   /** The fixture's directory name, eg "gbos-2026-03-23": `meetings.slug`. */
   slug: string;
+  /** Snapshot id of the host body, the one that published it (eg "gbos"). */
   body_id: string;
+  /**
+   * Snapshot ids of a joint meeting's other bodies (eg ["luc"]), as in
+   * `meeting_cohosts`. Optional in meeting.json (absent means none); always
+   * present once loaded.
+   */
+  cohost_body_ids: string[];
   /** Every fixture meeting is a YouTube video: `meetings.site_id`. */
   youtube_id: string;
   title: string;
@@ -171,6 +178,7 @@ export function getMeetingData(
     throw new Error(`Meeting file not found: ${meetingPath}`);
   const meeting = parseJson<GoldenMeeting>(meetingPath);
   const when = parseGoldenWhen(meeting, meetingPath);
+  const cohost_body_ids = parseGoldenCohosts(meeting, meetingPath);
 
   // Golden fixtures are verified (golden.psv); dev fixtures aren't (transcript.psv).
   const psvPath = ["golden.psv", "transcript.psv"]
@@ -188,11 +196,33 @@ export function getMeetingData(
   return {
     ...meeting,
     ...when,
+    cohost_body_ids,
     slug: meetingSlug,
     meetingDir,
     segments,
     chapters,
   };
+}
+
+/**
+ * Validate a meeting.json's `cohost_body_ids` (optional; absent means none):
+ * distinct body ids other than the host's. Whether each names a body in
+ * bodies.jsonl is checked where they're resolved (see `meetingBodyIds`).
+ */
+export function parseGoldenCohosts(
+  raw: { body_id: string; cohost_body_ids?: unknown },
+  source: string,
+): string[] {
+  const ids = raw.cohost_body_ids ?? [];
+  if (!Array.isArray(ids) || !ids.every((id) => typeof id === "string"))
+    throw new Error(`${source}: cohost_body_ids must be an array of strings`);
+  if (ids.includes(raw.body_id))
+    throw new Error(
+      `${source}: cohost_body_ids lists the host body "${raw.body_id}"`,
+    );
+  if (new Set(ids).size !== ids.length)
+    throw new Error(`${source}: cohost_body_ids has duplicates`);
+  return ids;
 }
 
 /**

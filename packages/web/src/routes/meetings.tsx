@@ -29,9 +29,11 @@ import { Duration } from "~/features/meetings/duration";
 import {
   filterMeetings,
   groupByMonth,
+  meetingBodies,
   sortMeetings,
   summarizeMeetings,
 } from "~/features/meetings/list";
+import { MeetingBodies } from "~/features/meetings/meeting-bodies";
 import { MonthBadge } from "~/features/meetings/month-badge";
 import { MeetingDateTime } from "~/features/meetings/meeting-date-time";
 import { MeetingThumbnail } from "~/features/meetings/meeting-thumbnail";
@@ -66,8 +68,11 @@ export const Route = createFileRoute("/meetings")({
 });
 
 type Meeting = Awaited<ReturnType<typeof getAllMeetings>>[number];
-/** A body in the filter menu, with how many meetings it has. */
-type BodyOption = { body: Meeting["body"]; count: number };
+/**
+ * A body in the filter menu, with how many meetings it has, joint meetings
+ * included.
+ */
+type BodyOption = { body: Meeting["cohosts"][number]; count: number };
 
 function MeetingsPage() {
   const meetings = Route.useLoaderData();
@@ -97,9 +102,11 @@ function MeetingsPage() {
   const bodies = createMemo(() => {
     const byId = new Map<number, BodyOption>();
     for (const m of meetings()) {
-      const entry = byId.get(m.body.id) ?? { body: m.body, count: 0 };
-      entry.count++;
-      byId.set(m.body.id, entry);
+      for (const body of meetingBodies(m)) {
+        const entry = byId.get(body.id) ?? { body, count: 0 };
+        entry.count++;
+        byId.set(body.id, entry);
+      }
     }
     return [...byId.values()].sort((a, b) =>
       a.body.name.localeCompare(b.body.name),
@@ -256,14 +263,8 @@ function MeetingCard(props: { meeting: Meeting; onSaved: () => void }) {
             <Duration durationSecs={props.meeting.duration_secs} />
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <Link
-            to="/bodies/$id"
-            params={{ id: String(props.meeting.body.id) }}
-            class="text-muted-foreground text-sm hover:underline"
-          >
-            {props.meeting.body.name}
-          </Link>
+        <CardContent class="text-muted-foreground text-sm">
+          <MeetingBodies meeting={props.meeting} class="hover:underline" />
         </CardContent>
       </div>
     </Card>

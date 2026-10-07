@@ -55,6 +55,7 @@ If a download is blocked, tell the person which website needs to be allowed:
 | `jurisdictions`    | government, e.g. the Municipality of Anchorage                  | `name`, `state`                                                               |
 | `bodies`           | group that holds meetings, e.g. the Anchorage Assembly          | `jurisdiction_id`, `name`, `name_short`, `timezone`                           |
 | `meetings`         | recorded meeting                                                | `body_id`, `title`, `date`, `time`, `url`, `duration_secs`                    |
+| `meeting_cohosts`  | other body holding a joint meeting                              | `meeting_id`, `body_id`                                                       |
 | `segments`         | stretch of one person talking                                   | `meeting_id`, `person_id`, `speaker_number`, `text`, `start_secs`, `end_secs` |
 | `people`           | person who speaks in meetings                                   | `name`, `bio`, `voice_embedding`                                              |
 | `chapters`         | section of a meeting, usually one agenda item or public comment | `meeting_id`, `start_secs`, `end_secs`, `title`, `summary`, `bullets`         |
@@ -62,16 +63,24 @@ If a download is blocked, tell the person which website needs to be allowed:
 | `export_info`      | (one row) when the file was made                                | `exported_at`                                                                 |
 
 Joins: `meetings.body_id → bodies.id`, `bodies.jurisdiction_id →
-jurisdictions.id`, and `segments.meeting_id`/`chapters.meeting_id →
-meetings.id`, `segments.person_id → people.id`.
+jurisdictions.id`, `meeting_cohosts.meeting_id → meetings.id`,
+`meeting_cohosts.body_id → bodies.id`, and
+`segments.meeting_id`/`chapters.meeting_id → meetings.id`,
+`segments.person_id → people.id`.
 
 There's also `chapter_generations`, which you'll rarely need.
 
 Things to know:
 
+- **Joint meetings**: some meetings are held by several bodies together, eg
+  the Girdwood Board of Supervisors and the Girdwood Land Use Committee.
+  `meetings.body_id` is the body that published it (the host); the others are
+  in `meeting_cohosts`. A joint meeting is a meeting of each of them, so to
+  find a body's meetings, match either:
+  `WHERE m.body_id = 3 OR m.id IN (SELECT meeting_id FROM meeting_cohosts WHERE body_id = 3)`.
 - **Which meetings are covered** changes as more are added. Check with
   `SELECT b.name, count(*), min(date), max(date) FROM meetings m JOIN bodies b ON b.id = m.body_id GROUP BY ALL`
-  rather than assuming.
+  (which counts joint meetings under their host only) rather than assuming.
 - **Dates** are local to where the meeting was held. `time` is null when the
   start time isn't known, and `date` can be null too. Fall back on the
   meeting's `title`, which usually has the date in it.
