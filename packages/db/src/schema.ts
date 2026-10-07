@@ -73,6 +73,15 @@ export const bodiesTable = pgTable(
       "bodies_timezone_valid",
       sql`(now() AT TIME ZONE ${table.timezone}) IS NOT NULL`,
     ),
+    // Postgres also recognizes abbreviations ("PST") and POSIX offsets
+    // ("Foo+3", "Foo/Bar+3"); require an IANA Area/Location name, or UTC.
+    // Only Etc/GMT±N names have digits or a sign.
+    check(
+      "bodies_timezone_iana",
+      sql`${table.timezone} = 'UTC'
+      OR ${table.timezone} ~ '^[A-Za-z_]+(/[A-Za-z_-]+)+$'
+      OR ${table.timezone} ~ '^Etc/GMT[+-][0-9]{1,2}$'`,
+    ),
     check(
       "bodies_meeting_source_valid",
       sql`${table.meeting_source} IS NULL OR coalesce(CASE ${table.meeting_source}->>'type'
