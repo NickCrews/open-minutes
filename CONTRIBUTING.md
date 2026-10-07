@@ -75,8 +75,8 @@ Docker via [`docker-compose.yml`](docker-compose.yml). Production is on
 **meeting source** (a YouTube channel or playlist, or an akleg.gov
 committee) that is scanned for new meetings. **Meetings** are held by one or
 more bodies (`meeting_bodies`), all equal: a **joint meeting**, held by several,
-counts as a meeting of each. Ingestion reads a joint meeting's bodies from a
-title that says "joint", and the `update_meeting` tool corrects them.
+counts as a meeting of each. Ingestion records the one body whose source
+published a meeting; the `update_meeting` tool sets a joint meeting's bodies.
 Meetings record their timezone, the site they were published on (YouTube or
 akleg.gov), and each meeting's
 transcript is a sequence of **segments** (a run of words by one speaker, with

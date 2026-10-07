@@ -315,11 +315,13 @@ describe("which body a meeting belongs to", () => {
     expect(await bodiesOf(db, meeting!.id)).toEqual(["HRES"]);
   });
 
-  test("a joint meeting's title names its other bodies", async ({
+  test("records only the body it was found through", async ({
     db,
     workRoot,
   }) => {
     await seedWorkDir(workRoot, `gbos_${VIDEO_ID}`);
+    // Even a title naming another body adds nothing: an agent sets a joint
+    // meeting's bodies afterwards.
     const youtube = fakeSite({
       getMetadata: async () => ({
         ...METADATA,
@@ -330,7 +332,7 @@ describe("which body a meeting belongs to", () => {
 
     await ingestMeeting(db, VIDEO_ID, { sites: { youtube }, workRoot });
     const [meeting] = await db.select().from(meetingsTable);
-    expect(await bodiesOf(db, meeting!.id)).toEqual(["GBOS", "LUC"]);
+    expect(await bodiesOf(db, meeting!.id)).toEqual(["GBOS"]);
   });
 
   test("a playlist's meeting needs its body named", async ({

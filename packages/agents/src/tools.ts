@@ -187,7 +187,7 @@ export const updateMeeting = defineTool({
   name: "update_meeting",
   label: "Update meeting",
   description:
-    'Set any of a meeting\'s title, description, date, time, timezone and bodies; fields left out stay as they are. date ("YYYY-MM-DD") and time ("HH:MM") are the wall clock where the meeting was held, in its timezone (eg "America/Anchorage"); null makes either unknown, and clearing the date clears the time. bodies replaces the bodies that held it, by slug: one for most meetings, several for a joint meeting, eg ["gbos", "luc"]. Ingestion guesses a joint meeting\'s bodies from a title that says "joint"; fix its guess here.',
+    'Set any of a meeting\'s title, description, date, time, timezone and bodies; fields left out stay as they are. date ("YYYY-MM-DD") and time ("HH:MM") are the wall clock where the meeting was held, in its timezone (eg "America/Anchorage"); null makes either unknown, and clearing the date clears the time. bodies replaces the bodies that held it, by slug: one for most meetings, several for a joint meeting, eg ["gbos", "luc"]. Ingestion records only the body whose source published the meeting; add a joint meeting\'s other bodies here.',
   input: z.object({
     meeting: meetingRef,
     title: z.string().trim().optional(),
