@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "6171ad00-80a7-4763-975b-056af07a5908",
+  "id": "12aeab84-4f9b-4eb6-8c5b-ddcb918e50da",
   "prevIds": [
     "1529dc43-c0f2-4c21-9703-007d4dce9037"
   ],
@@ -1084,7 +1084,7 @@
       "table": "bodies"
     },
     {
-      "value": "\"timezone\" = 'UTC'\n      OR \"timezone\" ~ '^[A-Za-z_]+(/[A-Za-z_-]+)+$'\n      OR \"timezone\" ~ '^Etc/GMT[+-][0-9]{1,2}$'",
+      "value": "\"timezone\" ~ '^[A-Za-z_]+(/[A-Za-z_-]+)+$' AND \"timezone\" NOT LIKE 'Etc/%'",
       "name": "bodies_timezone_iana",
       "entityType": "checks",
       "schema": "public",
