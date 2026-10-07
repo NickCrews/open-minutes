@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "7ebdeddb-a895-4d4a-93d1-9bc30ac46c07",
+  "id": "91767938-2b5e-42f7-9ade-42fbe7cf2775",
   "prevIds": [
     "27bc3121-bcbc-4e98-aaea-823ff629cd9b"
   ],
@@ -990,7 +990,7 @@
         "id"
       ],
       "onUpdate": "NO ACTION",
-      "onDelete": "NO ACTION",
+      "onDelete": "CASCADE",
       "name": "meeting_bodies_body_id_bodies_id_fkey",
       "entityType": "fks",
       "schema": "public",
