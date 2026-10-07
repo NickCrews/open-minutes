@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { randomVoice } from "./testdata/fake-voices";
+import { sampledVoices } from "./testdata/voices";
 import { centroid, normalize, similarity, twoMeans } from "./vectors";
 
 const v = (...xs: number[]) => Float32Array.from(xs);
@@ -43,39 +43,44 @@ describe("centroid", () => {
 });
 
 describe("twoMeans", () => {
-  const alice = randomVoice(1);
-  const bob = randomVoice(2);
-  /** `voice` nudged a little toward a random direction. */
-  const near = (voice: Float32Array, seed: number) =>
-    centroid([voice, randomVoice(seed)], [3, 1])!;
+  // Two real people's voices.
+  const [aliceWindows, bobWindows] = sampledVoices().map((v) => v.windows);
+  const alice = centroid(aliceWindows!)!;
+  const bob = centroid(bobWindows!)!;
+  /**
+   * The voiceprint of a 6 s segment of `windows`, the nth: 4 windows spread
+   * through it, as auditLabel takes them.
+   */
+  const segment = (windows: Float32Array[] | undefined, n: number) =>
+    centroid([0, 3, 6, 9].map((k) => windows![n * 12 + k]!))!;
 
   it("separates two voices, the heavier one as group 0", () => {
     const items = [
-      { voiceprint: near(alice, 10), weight: 5 },
-      { voiceprint: near(bob, 11), weight: 1 },
-      { voiceprint: near(alice, 12), weight: 4 },
-      { voiceprint: near(bob, 13), weight: 2 },
-      { voiceprint: near(alice, 14), weight: 3 },
+      { voiceprint: segment(aliceWindows, 0), weight: 5 },
+      { voiceprint: segment(bobWindows, 1), weight: 1 },
+      { voiceprint: segment(aliceWindows, 2), weight: 4 },
+      { voiceprint: segment(bobWindows, 3), weight: 2 },
+      { voiceprint: segment(aliceWindows, 4), weight: 3 },
     ];
     const split = twoMeans(items)!;
     expect(split.groups).toEqual([0, 1, 0, 1, 0]);
-    expect(similarity(split.centroids[0], alice)).toBeGreaterThan(0.9);
-    expect(similarity(split.centroids[1], bob)).toBeGreaterThan(0.9);
+    expect(similarity(split.centroids[0], alice)).toBeGreaterThan(0.8);
+    expect(similarity(split.centroids[1], bob)).toBeGreaterThan(0.8);
   });
 
   it("puts the heavier group first even when it has fewer items", () => {
     const split = twoMeans([
-      { voiceprint: near(alice, 10), weight: 1 },
-      { voiceprint: near(alice, 11), weight: 1 },
-      { voiceprint: near(bob, 12), weight: 10 },
+      { voiceprint: segment(aliceWindows, 0), weight: 1 },
+      { voiceprint: segment(aliceWindows, 1), weight: 1 },
+      { voiceprint: segment(bobWindows, 2), weight: 10 },
     ])!;
     expect(split.groups).toEqual([1, 1, 0]);
   });
 
   it("splits one voice into two alike halves", () => {
     const split = twoMeans(
-      [10, 11, 12, 13].map((seed) => ({
-        voiceprint: near(alice, seed),
+      [0, 1, 2, 3].map((n) => ({
+        voiceprint: segment(aliceWindows, n),
         weight: 1,
       })),
     )!;

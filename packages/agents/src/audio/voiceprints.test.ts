@@ -2,7 +2,7 @@ import { mkdtempSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { fakeGrid, type Turn } from "./testdata/fake-voices";
+import { fakeGrid, type Turn } from "./testdata/voices";
 import { similarity } from "./vectors";
 import { HOP_SEC, speechIn, VoiceGrid, WINDOW_SEC } from "./voiceprints";
 
@@ -70,9 +70,18 @@ describe("VoiceGrid", () => {
     const before = a.grid.windows(0, 30);
     expect(readdirSync(join(cacheDir, "voiceprints-v1"))).toEqual(["0.f32"]);
 
-    const b = fakeGrid(turns, 30, { cacheDir, seed: 99 });
-    const after = b.grid.windows(0, 30);
-    expect(b.counter.embedded).toBe(0);
+    const b = new VoiceGrid({
+      durationSecs: 30,
+      speech: [
+        { start: 0, end: 10 },
+        { start: 13, end: 30 },
+      ],
+      cacheDir,
+      embed: () => {
+        throw new Error("embedded a cached window");
+      },
+    });
+    const after = b.windows(0, 30);
     expect(after.map((w) => w.voiceprint && [...w.voiceprint])).toEqual(
       before.map((w) => w.voiceprint && [...w.voiceprint]),
     );
@@ -108,7 +117,7 @@ describe("VoiceGrid", () => {
       expect(alice.sampledSecs).toBe(10);
       expect(
         similarity(alice.voiceprint, voices.get("alice")!),
-      ).toBeGreaterThan(0.95);
+      ).toBeGreaterThan(0.8);
     });
 
     it("takes at most maxWindows, spread evenly through the spans", () => {

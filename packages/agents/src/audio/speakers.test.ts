@@ -9,7 +9,7 @@ import {
   referencesWithout,
   SAME_PERSON,
 } from "./speakers";
-import { fakeGrid, type Turn } from "./testdata/fake-voices";
+import { fakeGrid, type Turn } from "./testdata/voices";
 import { similarity } from "./vectors";
 
 /** A segment of one word every 0.4 s from `start` to `end`. */
@@ -120,8 +120,9 @@ describe("alikePairs", () => {
     const { grid } = world();
     const pairs = alikePairs(labelVoices(grid, segments), 0.7);
     expect(pairs).toEqual([
-      { a: "B", b: "spk-2", similarity: expect.closeTo(1, 1) },
+      { a: "B", b: "spk-2", similarity: expect.any(Number) as number },
     ]);
+    expect(pairs[0]!.similarity).toBeGreaterThan(SAME_PERSON);
   });
 });
 

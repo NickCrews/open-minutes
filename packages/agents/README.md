@@ -83,8 +83,13 @@ They are layered so each part can be tested on its own:
 - `speakers.ts` and `timeline.ts`: the analyses, over a grid, with no I/O.
 - `voice-tools.ts`: the tools, which only shape those results for a model.
 
-`testdata/fake-voices.ts` builds a grid over made-up voices, so the analyses
-are tested against a known ground truth without the model.
+`testdata/voices.ts` builds a grid that replays real voices over made-up
+turns, so the analyses are tested against a known ground truth and real
+voiceprints without the model: `testdata/voice-samples.json` holds a minute
+of CAM++ window voiceprints for each of six people in a golden meeting.
+`testdata/sample-voices-cli.ts` writes it, keeping only stretches that sound
+like the rest of their person's speech, so a mislabel in the golden can't
+slip in.
 
 `src/audio/audio.test.ts` runs them on a checked-in minute of real meeting
 audio (`src/audio/testdata/`), and `src/audio/audio.bench.ts` times the

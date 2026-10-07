@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { LabeledSegment } from "./meeting";
-import { fakeGrid, type Turn } from "./testdata/fake-voices";
+import { fakeGrid, type Turn } from "./testdata/voices";
 import {
   buildTimeline,
   changePoints,
@@ -269,26 +269,35 @@ describe("buildTimeline", () => {
   });
 });
 
+// Two real windows of one person, 2 s apart, can be as unlike as two
+// people's, so changePoints proposes a change wherever one dips, and
+// buildTimeline keeps only those the voice either side confirms.
 describe("changePoints", () => {
-  it("finds the one moment the voice changes", () => {
+  it("finds the moment the voice changes, as its strongest", () => {
     const { grid } = fakeGrid(turns, 45);
     const changes = changePoints(grid.windows(0, 24));
-    expect(changes.map((c) => c.at)).toEqual([10]);
+    const strongest = changes.sort((a, b) => a.similarity - b.similarity)[0]!;
+    expect(strongest.at).toBe(10);
   });
 
-  it("finds a change across a pause once", () => {
+  it("finds a change across a pause", () => {
     const { grid } = fakeGrid(turns, 45);
     const changes = changePoints(grid.windows(18, 31));
-    expect(changes).toHaveLength(1);
     // Bob stops at 24 and carol starts at 25, but a 2 s window only places
     // a change to within a second or so.
-    expect(changes[0]!.at).toBeGreaterThanOrEqual(23);
-    expect(changes[0]!.at).toBeLessThanOrEqual(26);
+    expect(changes.filter((c) => c.at >= 23 && c.at <= 26)).not.toEqual([]);
   });
 
-  it("finds none in one voice", () => {
+  it("proposes no change in one voice that the timeline keeps", () => {
     const { grid } = fakeGrid(turns, 45);
-    expect(changePoints(grid.windows(0, 8))).toEqual([]);
+    const { items } = buildTimeline({
+      from: 0,
+      to: 10,
+      segments: [segment(0, "A", 0, 10)],
+      grid,
+      pitch: () => null,
+    });
+    expect(items.map((i) => i.type)).toEqual(["passage"]);
   });
 });
 
@@ -296,7 +305,7 @@ describe("voiceAcross", () => {
   it("bridges a pause, but not silence beyond reach", () => {
     const { grid } = fakeGrid(turns, 45);
     const windows = grid.windows(0, 45);
-    expect(voiceAcross(windows, 5)!).toBeGreaterThan(SAME_VOICE);
+    expect(voiceAcross(windows, 5)!).toBeGreaterThan(VOICE_CHANGE);
     expect(voiceAcross(windows, 24.5)!).toBeLessThan(VOICE_CHANGE);
     expect(voiceAcross(grid.windows(0, 45), 60)).toBeNull();
   });
