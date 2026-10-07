@@ -14,7 +14,7 @@ import type { DB } from "./index";
  * check("x_timezone_valid", sql`iana_timezone_error(${table.timezone}) IS NULL`)
  */
 export async function ianaTimezoneError(
-  db: DB,
+  db: Pick<DB, "execute">,
   name: string,
 ): Promise<string | null> {
   const [row] = (await db.execute(

@@ -5,7 +5,7 @@ import { dbTest } from "../testing/vitest";
 // See split-munis-into-jurisdictions-and-bodies.test.ts for how migration
 // tests work.
 
-const BEFORE = "meeting-sources";
+const BEFORE = "body-timezone-valid";
 const MIGRATION = "joint-meetings";
 
 const test = dbTest({

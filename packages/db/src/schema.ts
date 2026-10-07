@@ -135,6 +135,10 @@ export const meetingsTable = pgTable(
   },
   (table) => [
     check(
+      "meetings_timezone_valid",
+      sql`iana_timezone_error(${table.timezone}) IS NULL`,
+    ),
+    check(
       "meetings_time_requires_date",
       sql`${table.time} IS NULL OR ${table.date} IS NOT NULL`,
     ),

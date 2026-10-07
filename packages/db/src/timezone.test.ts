@@ -1,6 +1,6 @@
 import { describe, expect } from "vitest";
 import { test } from "./testing/vitest";
-import { bodiesTable, jurisdictionsTable } from "./schema";
+import { bodiesTable, jurisdictionsTable, meetingsTable } from "./schema";
 import { ianaTimezoneError } from "./timezone";
 
 describe("ianaTimezoneError", () => {
@@ -43,6 +43,18 @@ describe("bodies.timezone", () => {
       db.insert(bodiesTable).values({
         jurisdiction_id: jurisdiction!.id,
         timezone: "UTC",
+      }),
+    ).rejects.toThrow();
+  });
+});
+
+describe("meetings.timezone", () => {
+  test("rejects what ianaTimezoneError rejects", async ({ db }) => {
+    await expect(
+      db.insert(meetingsTable).values({
+        site_kind: "youtube",
+        site_id: "x",
+        timezone: "Etc/GMT+9",
       }),
     ).rejects.toThrow();
   });
