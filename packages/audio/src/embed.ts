@@ -79,7 +79,8 @@ export function speakerCentroid(
   return computeCentroid(embeddings, extractor.dim);
 }
 
-function extractEmbedding(
+/** The voiceprint of [startSec, endSec) of `wave` (at most its last MAX_EMBEDDING_SECONDS), unnormalized. */
+export function extractEmbedding(
   extractor: SpeakerEmbeddingExtractor,
   wave: WaveForm,
   startSec: number,

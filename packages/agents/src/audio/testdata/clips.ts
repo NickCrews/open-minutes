@@ -6,7 +6,12 @@ import { readWave, type WaveForm } from "@open-minutes/audio/wav";
 import { type GoldenSegment, parsePsv } from "@open-minutes/fixtures/psv";
 import { toolContext } from "../../context";
 import type { ToolContext } from "../../tool";
-import { type AudioMeeting, type LabeledSegment, toLabeled } from "../meeting";
+import {
+  type AudioMeeting,
+  type LabeledSegment,
+  NOT_A_SPEAKER,
+  toLabeled,
+} from "../meeting";
 
 // Short stretches of real meeting audio, checked in so the audio tools can be
 // tested (and timed) without downloading a meeting. Each is a 16 kHz mono
@@ -71,7 +76,7 @@ function labelGoldenSegments(
           ? `identified:${seg.speaker.person}`
           : seg.speaker.kind === "segmented"
             ? `segmented:spk-${seg.speaker.cluster}`
-            : "unlabeled";
+            : NOT_A_SPEAKER;
       return toLabeled(id, label, seg.words);
     });
 }

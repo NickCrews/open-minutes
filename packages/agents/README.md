@@ -58,6 +58,39 @@ the models in `@open-minutes/audio` directly, and get a meeting's audio from
 - `transcribe_range`: recognize one short stretch on its own, next to what the
   transcript has there.
 
+Two more compare voices: who a stretch of audio sounds like, by CAM++
+voiceprint, the model diarization uses. One looks closely at a few minutes,
+the other at each label across the meeting.
+
+- `voice_timeline`: up to five minutes in passages, cut at each new segment
+  and each change of voice, each with its median pitch and the labels its
+  voice is most like (its own label sampled without its segment, so a wrong
+  label can't vouch for itself), and at each cut how alike the voice is
+  either side. `findings` lists where the voice and the labels disagree.
+- `speaker_voices`: every label, with whether it is one voice and the label
+  pairs that sound alike; given a label, which of its segments sound like
+  someone else.
+
+They are layered so each part can be tested on its own:
+
+- `vectors.ts`: cosine similarity, centroids and 2-means on voiceprints.
+- `voiceprints.ts`: `VoiceGrid`, a voiceprint for each 2 s window of the
+  audio, one every 0.5 s. Every voice tool reads voiceprints off this one
+  grid, whether of a moment, a segment or a whole label. A window is embedded
+  the first time something needs it and cached beside the audio, so a fresh
+  meeting costs only what's asked of it.
+- `pitch.ts`: pitch by YIN, for stretches too short to voiceprint.
+- `speakers.ts` and `timeline.ts`: the analyses, over a grid, with no I/O.
+- `voice-tools.ts`: the tools, which only shape those results for a model.
+
+`testdata/voices.ts` builds a grid that replays real voices over made-up
+turns, so the analyses are tested against a known ground truth and real
+voiceprints without the model: `testdata/voice-samples.json` holds a minute
+of CAM++ window voiceprints for each of six people in a golden meeting.
+`testdata/sample-voices-cli.ts` writes it, keeping only stretches that sound
+like the rest of their person's speech, so a mislabel in the golden can't
+slip in.
+
 `src/audio/audio.test.ts` runs them on a checked-in minute of real meeting
 audio (`src/audio/testdata/`), and `src/audio/audio.bench.ts` times the
 models on it. Because the clip is one minute long, `pnpm bench` reports each

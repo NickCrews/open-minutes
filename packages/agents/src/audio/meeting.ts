@@ -13,6 +13,9 @@ import { youtubeIdOf } from "@open-minutes/core/meeting-source";
 import { findMeeting, type MeetingRef } from "../meeting-ref";
 import { type Db, ToolError } from "../tool";
 
+/** The label of a segment no speaker is attributed to. */
+export const NOT_A_SPEAKER = "unattributed";
+
 /**
  * A run of words by one speaker, as the audio tools see it: the same shape
  * whether it came from the database or a test clip's PSV.
@@ -22,8 +25,8 @@ export interface LabeledSegment {
   id: number;
   /**
    * Who it's attributed to: "person:<slug>" (or "person:<id>" for an
-   * anonymous person), "speaker:<n>", or "unattributed". (A test clip's: its
-   * PSV label, eg "identified:kellie-okonek".)
+   * anonymous person), "speaker:<n>", or {@link NOT_A_SPEAKER}. (A test
+   * clip's: its PSV label, eg "identified:kellie-okonek".)
    */
   label: string;
   /** Onset of the first word. */
@@ -96,7 +99,7 @@ async function loadFromDb(db: Db, ref: MeetingRef) {
         ? `person:${r.slug ?? r.personId}`
         : r.speakerNumber != null
           ? `speaker:${r.speakerNumber}`
-          : "unattributed";
+          : NOT_A_SPEAKER;
     return toLabeled(r.id, label, r.words);
   });
   return { youtubeId, segments };

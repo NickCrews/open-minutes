@@ -55,6 +55,27 @@ are `H:MM:SS.ss`, as psvtool prints them.
 - `speech_activity` shows the pauses in a stretch, which is where a turn
   can change.
 
+Two more compare voices, by the voiceprints diarization uses:
+
+- `speaker_voices` gives every label's voice across the meeting: whether it
+  is one voice, how many of its segments sound like someone else, and the
+  labels that sound alike, such as a speaker number that is really a named
+  person. Start here. Given a label, it lists that label's suspect segments.
+  Look at the labels with the most speech: the diarizer folds other people
+  into the chair and into busy members.
+- `voice_timeline` lays out up to five minutes in passages, cut at each new
+  segment and each change of voice, with each passage's pitch and the labels
+  its voice is most like, its own label sampled without its segment. Its
+  `findings` are where the voice and the labels disagree: a change of voice
+  inside one label (a missed turn: split there) or a new label where the
+  voice carries on. Run it before splitting, merging or relabelling.
+
+A similarity of 0.75 or more is very likely the same person, under 0.5
+different people. Each label's voice is sampled from its own segments, so a
+match is only as good as the label: trust one once `speaker_voices` says the
+label is one voice. A passage under 2 s is too short to voiceprint; its pitch
+still tells a low voice from a high one.
+
 Running `transcribe.test.ts` with `SNAPSHOT_UPDATE=1` rewrites a golden's
 words from fresh recognition and keeps only its speaker layer, which discards
 every hand-corrected word.
@@ -74,7 +95,10 @@ every hand-corrected word.
    - a roll call, including an unnamed answer placed by the body's fixed roll
      order or by elimination against the announced tally ("passes 4-1");
    - official minutes, which name movers, seconders, reporters and public
-     commenters (see [mishearings.md](mishearings.md) for where to find them).
+     commenters (see [mishearings.md](mishearings.md) for where to find them);
+   - the voice: `voice_timeline` puts the segment's passages at 0.75 or more
+     with a label that `speaker_voices` says is one voice, and clearly above
+     any other.
 
    Topic or tone is not evidence. Without evidence, leave the label alone and
    report it.
@@ -111,9 +135,10 @@ every hand-corrected word.
    rows are certainly the same voice. Leave a one-off speaker on a speaker
    number. In a golden, a split-out voice with no name gets a speaker number
    not yet used in that meeting.
-7. **Don't untangle what needs the audio.** If one label seems to cover two
-   voices and the text doesn't show which is which, fix only the segments with
-   evidence and report the rest.
+7. **Untangle merged voices with the audio, not guesses.** If one label
+   seems to cover two voices, run `speaker_voices` on it and relabel the
+   segments whose voice clearly matches another label. Report the ones the
+   voice leaves uncertain (0.5-0.75, or two close candidates).
 8. **Fix misheard words when the intended word is clear:** place names,
    bodies and acronyms, people's names (in the `people.jsonl` spelling), and
    plain mishearings ("low cloud" → "roll call"). Keep the fix local ("good

@@ -18,7 +18,10 @@ import {
   speechActivity,
   transcribeRangeTool,
 } from "./tools";
+import type { LabeledSegment } from "./meeting";
+import { VOICE_CHANGE } from "./timeline";
 import { clipContext, halfUntranscribedRollCallClip } from "./testdata/clips";
+import { speakerVoices, voiceTimeline } from "./voice-tools";
 
 // The audio tools on real meeting audio: Silero VAD and Parakeet run on a
 // checked-in clip (see testdata/clips.ts). activity.test.ts covers the span
@@ -217,6 +220,196 @@ describe("on the GBOS roll call, half missing from the transcript", () => {
           to: 200,
         }),
       ).rejects.toThrow(/at most 120 s/);
+    });
+  });
+
+  describe("the voice tools", () => {
+    const meeting = rollCall.meeting.ref;
+    const CHAIR = "identified:mike-edgington";
+    const BRIAN = "identified:brian-burnett";
+    /** A context where the transcript has `segments` instead. */
+    const relabelled = (segments: LabeledSegment[]) =>
+      clipContext({
+        ...rollCall,
+        meeting: { ...rollCall.meeting, segments },
+      });
+    const segment = (id: number) =>
+      rollCall.meeting.segments.find((s) => s.id === id)!;
+    /** Segment `id` cut in two at the word starting at `at`, the second half under `label`. */
+    function splitAt(id: number, at: number, label: string): LabeledSegment[] {
+      return rollCall.meeting.segments.flatMap((s) => {
+        if (s.id !== id) return [s];
+        const k = s.words.findIndex((w) => w.start >= at);
+        return [
+          { ...s, words: s.words.slice(0, k), end: s.words[k]!.start },
+          {
+            ...s,
+            id: 100,
+            label,
+            words: s.words.slice(k),
+            start: s.words[k]!.start,
+          },
+        ];
+      });
+    }
+
+    it(
+      "voice_timeline lays out a minute with pitch, voices and the missing roll call",
+      async () => {
+        const out = await callTool(clipContext(rollCall), voiceTimeline, {
+          meeting,
+          from: "0:00:00",
+          to: "0:01:00",
+        });
+        // The transcript's labels are right here, so the audio agrees.
+        expect(out.findings).toEqual([]);
+        const passage = (at: string) =>
+          out.items.find((i) => i.type === "passage" && i.at === at) as {
+            pitchHz: number | null;
+            soundsLike: string[];
+          };
+        // Brian's voice is higher than the chair's, and the clerk's higher still.
+        expect(passage("0:00:00.01").pitchHz).toBeGreaterThan(160);
+        expect(passage("0:00:06.73").pitchHz).toBeLessThan(150);
+        expect(passage("0:00:21.82").pitchHz).toBeGreaterThan(200);
+        // The chair's thanks sound like the rest of the chair's speech.
+        expect(passage("0:00:06.73").soundsLike[0]).toMatch(
+          /^identified:mike-edgington 0\.[789]/,
+        );
+        // Brian sounds nothing like the chair, the one label with enough
+        // speech here to match against.
+        const [, brian] = passage("0:00:00.01").soundsLike[0]!.split(" ");
+        expect(Number(brian)).toBeLessThan(0.5);
+        // The chair's long passage is most of his speech in this minute, so
+        // it can't vouch for him: without it, his label is too thin.
+        expect(passage("0:00:27.66").soundsLike).toEqual([]);
+        expect(out.tooThinToMatch).toContain(CHAIR);
+        // Brian and the chair are different people.
+        const handover = out.items.find(
+          (i) => i.type === "cut" && i.at === "0:00:06.73",
+        ) as { voiceSimilarity: number | null };
+        expect(handover.voiceSimilarity).toBeLessThan(VOICE_CHANGE);
+        // "Brian Burnett? Present. Brianna Sullivan? Present." has no words.
+        expect(out.items).toContainEqual(
+          expect.objectContaining({
+            type: "untranscribed",
+            from: expect.stringMatching(/^0:00:1[1-3]/) as string,
+          }),
+        );
+        // A minute is too little of the clerk to know her voice by.
+        expect(out.tooThinToMatch).toContain("identified:margaret-tyler");
+      },
+      DECODE_TIMEOUT,
+    );
+
+    it(
+      "voice_timeline finds the turn a segment hides",
+      async () => {
+        // As if the diarizer had run Brian's land acknowledgement and the
+        // chair's thanks together under the chair.
+        const merged = rollCall.meeting.segments
+          .filter((s) => s.id !== 1)
+          .map((s) =>
+            s.id === 0
+              ? {
+                  ...s,
+                  label: CHAIR,
+                  words: [...s.words, ...segment(1).words],
+                  end: segment(1).end,
+                }
+              : s,
+          );
+        const out = await callTool(relabelled(merged), voiceTimeline, {
+          meeting,
+          from: 0,
+          to: 20,
+        });
+        expect(out.findings).toEqual([
+          "0:00:06.73 inside segment 0: voice changes, label doesn't",
+        ]);
+      },
+      DECODE_TIMEOUT,
+    );
+
+    it(
+      "voice_timeline finds a new label where the voice carries on",
+      async () => {
+        const out = await callTool(
+          relabelled(splitAt(7, 40.6, "segmented:spk-99")),
+          voiceTimeline,
+          { meeting, from: 27, to: 55 },
+        );
+        expect(out.findings).toEqual([
+          "0:00:40.63 start of segment 100: label changes, voice doesn't",
+        ]);
+      },
+      DECODE_TIMEOUT,
+    );
+
+    it(
+      "speaker_voices finds Brian filed under the chair",
+      async () => {
+        const misfiled = rollCall.meeting.segments.map((s) =>
+          s.id === 0 ? { ...s, label: CHAIR } : s,
+        );
+        const overview = await callTool(relabelled(misfiled), speakerVoices, {
+          meeting,
+        });
+        expect(overview.labels![0]).toMatchObject({
+          label: CHAIR,
+          verdict: "more than one voice",
+          suspects: 1,
+        });
+        const out = await callTool(relabelled(misfiled), speakerVoices, {
+          meeting,
+          label: CHAIR,
+        });
+        expect(out.audit!.verdict).toBe("more than one voice");
+        expect(out.audit!.suspects).toEqual([
+          expect.objectContaining({
+            segment: 0,
+            group: 1,
+            text: expect.stringMatching(/^a wider community/) as string,
+          }),
+        ]);
+        const clean = await callTool(clipContext(rollCall), speakerVoices, {
+          meeting,
+          label: CHAIR,
+        });
+        expect(clean.audit!.verdict).toBe("one voice");
+        expect(clean.audit!.suspects).toEqual([]);
+      },
+      DECODE_TIMEOUT,
+    );
+
+    it(
+      "speaker_voices finds one voice under two labels",
+      async () => {
+        const out = await callTool(
+          relabelled(splitAt(7, 40.6, "segmented:spk-99")),
+          speakerVoices,
+          { meeting },
+        );
+        expect(out.alike).toEqual([
+          expect.stringMatching(
+            /^identified:mike-edgington ~ segmented:spk-99 0\.[789]/,
+          ),
+        ]);
+        expect(out.labels).toContainEqual(
+          expect.objectContaining({ label: BRIAN, tooThin: true }),
+        );
+      },
+      DECODE_TIMEOUT,
+    );
+
+    it("refuses a label the meeting doesn't have", async () => {
+      const ctx = clipContext(rollCall);
+      await expect(
+        callTool(ctx, speakerVoices, { meeting, label: "speaker:1" }),
+      ).rejects.toThrow(/No segments labelled "speaker:1"/);
+      await expect(
+        callTool(ctx, voiceTimeline, { meeting, from: 0, to: 400 }),
+      ).rejects.toThrow(/at most 300 s/);
     });
   });
 });
