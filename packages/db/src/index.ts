@@ -19,4 +19,4 @@ export type DB = ReturnType<typeof getDb>["db"];
 
 export { resolveDatabaseUrl } from "./resolve";
 export * from "./schema";
-export { isIanaTimezone } from "./timezone";
+export { ianaTimezoneError } from "./timezone";

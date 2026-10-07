@@ -67,9 +67,10 @@ export const bodiesTable = pgTable(
     created_at: timestamp().notNull().defaultNow(),
   },
   (table) => [
-    // is_iana_timezone() is created by hand in the migration that introduced
-    // it (drizzle-kit doesn't manage functions). See ./timezone.ts.
-    check("bodies_timezone_valid", sql`is_iana_timezone(${table.timezone})`),
+    check(
+      "bodies_timezone_valid",
+      sql`iana_timezone_error(${table.timezone}) IS NULL`,
+    ),
     check(
       "bodies_meeting_source_valid",
       sql`${table.meeting_source} IS NULL OR coalesce(CASE ${table.meeting_source}->>'type'
