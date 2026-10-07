@@ -23,9 +23,7 @@ import { getMeetingAudio } from "./test-utils/audio-cache";
 const HERE = dirname(fileURLToPath(import.meta.url));
 const RUNS_DIR = join(HERE, "..", "test-runs");
 
-// Never writes a golden: goldens are corrected by hand, a piece at a time
-// (see the transcript-cleanup skill). The diarized transcript goes to
-// test-runs/ for inspection.
+// Writes the diarized transcript to test-runs/ for inspection.
 describe("diarize", () => {
   const meetingSlugs = ["gbos-2026-03-23", "gbos-2026-05-18"];
   for (const slug of meetingSlugs) {
