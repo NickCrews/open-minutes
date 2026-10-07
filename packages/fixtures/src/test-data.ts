@@ -2,6 +2,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { type GoldenSegment, parsePsv, parseTimestamp } from "./psv";
 import type { MeetingSource } from "@open-minutes/core/meeting-source";
+import { ianaTimezoneError } from "@open-minutes/core/timezone";
 import {
   type MeetingWhen,
   parseMeetingDate,
@@ -178,8 +179,11 @@ export function getMeetingData(
   const meeting = parseJson<GoldenMeeting>(meetingPath);
   const when = parseGoldenWhen(meeting, meetingPath);
   const body_ids = parseGoldenBodies(meeting, meetingPath);
-  if (!isTimeZone(meeting.timezone))
-    throw new Error(`${meetingPath}: timezone must be an IANA zone name`);
+  const timezoneError =
+    typeof meeting.timezone === "string"
+      ? ianaTimezoneError(meeting.timezone)
+      : "timezone must be a string";
+  if (timezoneError) throw new Error(`${meetingPath}: ${timezoneError}`);
 
   // Golden fixtures are verified (golden.psv); dev fixtures aren't (transcript.psv).
   const psvPath = ["golden.psv", "transcript.psv"]
@@ -203,16 +207,6 @@ export function getMeetingData(
     segments,
     chapters,
   };
-}
-
-function isTimeZone(zone: unknown): boolean {
-  if (typeof zone !== "string" || !zone) return false;
-  try {
-    new Intl.DateTimeFormat("en-US", { timeZone: zone });
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 /**
