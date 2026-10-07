@@ -36,7 +36,6 @@
 
 import { readFileSync, writeFileSync } from "node:fs";
 
-import { LAST_WORD_DURATION_SEC } from "@open-minutes/core/transcription";
 import type {
   SpeechSegment,
   TranscriptSegment,
@@ -294,68 +293,6 @@ export function serializePsv(
     writeFileSync(options.path, content);
   }
   return content;
-}
-
-/**
- * Re-apply the speaker layer of an existing golden onto a freshly transcribed
- * word stream, preserving the golden's segment boundaries AND their speaker
- * labels (including hand-assigned `identified` people).
- *
- * This backs the transcription snapshot refresh: re-transcribing shifts word
- * text/timings slightly, but the diarization + identification layers are curated
- * by hand and must survive. So rather than re-diarizing, we keep the reference's
- * segments and redistribute the new words into them by time. Boundaries between
- * two adjacent same-speaker reference segments are preserved (words are bucketed
- * by segment index, not merged by label), so the refresh never collapses the
- * hand-curated structure. Words are placed into the reference segment whose
- * `[firstWord, lastWord + LAST_WORD_DURATION_SEC]` span contains them, or the
- * nearest by midpoint when none does. Empty segments are dropped.
- *
- * Unlike align.ts's `alignSpeakers`, this is golden-only and label-aware; the
- * live pipeline stays ignorant of the `identified` tier.
- */
-export function reapplySpeakerLayer(
-  words: readonly TranscriptWord[],
-  reference: readonly GoldenSegment[],
-): GoldenSegment[] {
-  const ref = reference.filter((s) => s.words.length > 0);
-  if (ref.length === 0) {
-    return words.length > 0
-      ? [{ speaker: { kind: "unlabeled" }, words: [...words] }]
-      : [];
-  }
-  const spans = ref.map((s) => ({
-    start: s.words[0]!.start,
-    end: s.words.at(-1)!.start + LAST_WORD_DURATION_SEC,
-  }));
-  const buckets: TranscriptWord[][] = ref.map(() => []);
-  for (const word of words) {
-    buckets[nearestSpanIndex(word.start, spans)]!.push(word);
-  }
-  return ref
-    .map((s, i) => ({ speaker: s.speaker, words: buckets[i]! }))
-    .filter((s) => s.words.length > 0);
-}
-
-/** Index of the span containing `t`, else the nearest span by midpoint. */
-function nearestSpanIndex(
-  t: number,
-  spans: readonly { start: number; end: number }[],
-): number {
-  for (let i = 0; i < spans.length; i++) {
-    if (t >= spans[i]!.start && t < spans[i]!.end) return i;
-  }
-  let best = 0;
-  let bestDist = Infinity;
-  for (let i = 0; i < spans.length; i++) {
-    const mid = (spans[i]!.start + spans[i]!.end) / 2;
-    const dist = Math.abs(t - mid);
-    if (dist < bestDist) {
-      bestDist = dist;
-      best = i;
-    }
-  }
-  return best;
 }
 
 /**
