@@ -67,20 +67,9 @@ export const bodiesTable = pgTable(
     created_at: timestamp().notNull().defaultNow(),
   },
   (table) => [
-    // AT TIME ZONE raises on a name Postgres doesn't recognize, so this rejects
-    // typos like "America/Anchorge" at write time.
-    check(
-      "bodies_timezone_valid",
-      sql`(now() AT TIME ZONE ${table.timezone}) IS NOT NULL`,
-    ),
-    // Postgres also recognizes abbreviations ("PST"), POSIX offsets ("Foo+3",
-    // "Foo/Bar+3") and fixed zones ("UTC", "Etc/GMT+9"). Require an IANA
-    // Area/Location name, which follows the place's legislated changes to its
-    // offset and DST rules.
-    check(
-      "bodies_timezone_iana",
-      sql`${table.timezone} ~ '^[A-Za-z_]+(/[A-Za-z_-]+)+$' AND ${table.timezone} NOT LIKE 'Etc/%'`,
-    ),
+    // is_iana_timezone() is created by hand in the migration that introduced
+    // it (drizzle-kit doesn't manage functions). See ./timezone.ts.
+    check("bodies_timezone_valid", sql`is_iana_timezone(${table.timezone})`),
     check(
       "bodies_meeting_source_valid",
       sql`${table.meeting_source} IS NULL OR coalesce(CASE ${table.meeting_source}->>'type'
