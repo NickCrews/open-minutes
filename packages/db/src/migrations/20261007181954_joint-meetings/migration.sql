@@ -16,4 +16,4 @@ ALTER TABLE "meetings" DROP CONSTRAINT "meetings_body_id_bodies_id_fkey";--> sta
 ALTER TABLE "meetings" DROP COLUMN "body_id";--> statement-breakpoint
 CREATE INDEX "idx_meeting_bodies_body" ON "meeting_bodies" ("body_id");--> statement-breakpoint
 ALTER TABLE "meeting_bodies" ADD CONSTRAINT "meeting_bodies_meeting_id_meetings_id_fkey" FOREIGN KEY ("meeting_id") REFERENCES "meetings"("id") ON DELETE CASCADE;--> statement-breakpoint
-ALTER TABLE "meeting_bodies" ADD CONSTRAINT "meeting_bodies_body_id_bodies_id_fkey" FOREIGN KEY ("body_id") REFERENCES "bodies"("id");
+ALTER TABLE "meeting_bodies" ADD CONSTRAINT "meeting_bodies_body_id_bodies_id_fkey" FOREIGN KEY ("body_id") REFERENCES "bodies"("id") ON DELETE CASCADE;

@@ -82,6 +82,7 @@ export const bodiesTable = pgTable(
   ],
 );
 
+/** A recorded meeting. The bodies that held it are in `meeting_bodies`. */
 export const meetingsTable = pgTable(
   "meetings",
   {
@@ -94,7 +95,6 @@ export const meetingsTable = pgTable(
     // for meetings that aren't fixtures. Never all digits, so a reference that
     // is all digits is unambiguously an `id`.
     slug: varchar().unique(),
-    // The bodies holding the meeting are in `meeting_bodies`.
     // The kind of site the meeting was published on, and its ID there: a YouTube
     // video ID, or an akleg.gov meeting ID ("HRES 2018-09-10 14:00:00"). The
     // audio we transcribed came from there, so transcript times are seconds
@@ -164,14 +164,14 @@ export const meetingsTable = pgTable(
 export const meetingBodiesTable = pgTable(
   "meeting_bodies",
   {
-    // A row says nothing without its meeting, so deleting the meeting (eg to
-    // re-ingest it) takes its rows with it.
+    // A row says nothing without its meeting or its body, so deleting either
+    // (eg a meeting, to re-ingest it) takes its rows with it.
     meeting_id: integer()
       .notNull()
       .references(() => meetingsTable.id, { onDelete: "cascade" }),
     body_id: integer()
       .notNull()
-      .references(() => bodiesTable.id),
+      .references(() => bodiesTable.id, { onDelete: "cascade" }),
   },
   (table) => [
     primaryKey({ columns: [table.meeting_id, table.body_id] }),
