@@ -163,7 +163,7 @@ export async function ingestMeeting(
   // The meeting's bodies: the one found above, and for a joint meeting the
   // others its title names: "Girdwood Board of Supervisors and Girdwood Land
   // Use Committee Joint Meeting". Fix a wrong guess with the
-  // set_meeting_bodies tool.
+  // update_meeting tool.
   const named = jointBodiesInTitle(
     metadata.title,
     await db

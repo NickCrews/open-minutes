@@ -36,7 +36,7 @@ together, is published by one of them, and its title names the rest: for
 found through GBOS's channel, both GBOS and the Land Use Committee are recorded.
 Only a title that says "joint" is read this way, and only bodies in the found
 body's jurisdiction, named in full or by short name, are matched. Fix a wrong
-guess with `pnpm om tools set_meeting_bodies
+guess with `pnpm om tools update_meeting
 '{"meeting":12,"bodies":["gbos","luc"]}'`.
 
 To scan a new body, set its source, eg:
