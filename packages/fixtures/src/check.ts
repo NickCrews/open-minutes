@@ -8,9 +8,9 @@ import {
   checkTranscript,
   type MeetingIssue,
 } from "@open-minutes/core/meeting-check";
+import { formatClock } from "@open-minutes/core/clock";
 import {
   formatSpeaker,
-  formatTimestamp,
   type GoldenSegment,
   parsePsv,
   parseTimestamp,
@@ -196,7 +196,7 @@ function readPsv(
           file,
           line: pendingMeta.line,
           severity: "error",
-          message: `speaker marker at ${formatTimestamp(pendingMeta.start)} but its first word starts at ${startField}; a marker goes on the line just before its first word, with the same onset`,
+          message: `speaker marker at ${formatClock(pendingMeta.start)} but its first word starts at ${startField}; a marker goes on the line just before its first word, with the same onset`,
         });
       pendingMeta = undefined;
     }

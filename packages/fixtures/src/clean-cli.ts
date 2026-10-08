@@ -15,7 +15,7 @@ import {
 } from "@open-minutes/core/transcription";
 import { meetingDirs } from "./check";
 import { cleanTranscriptFile } from "./clean";
-import { formatTimestamp } from "./psv";
+import { formatClock } from "@open-minutes/core/clock";
 
 // pnpm runs this from the package directory; paths are the caller's.
 const CWD = process.env.INIT_CWD ?? process.cwd();
@@ -54,7 +54,7 @@ for (const file of files) {
       const edit =
         c.after === null ? "removed" : `→ ${JSON.stringify(c.after)}`;
       console.log(
-        `  ${formatTimestamp(c.start)}  ${c.rule.padEnd(12)} ${JSON.stringify(c.before)} ${edit}`,
+        `  ${formatClock(c.start)}  ${c.rule.padEnd(12)} ${JSON.stringify(c.before)} ${edit}`,
       );
     }
   }
