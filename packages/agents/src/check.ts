@@ -2,22 +2,23 @@ import { eq } from "drizzle-orm";
 import { meetingBodiesTable, meetingsTable } from "@open-minutes/db";
 import {
   checkMeeting as checkMeetingData,
-  type IssueCode,
+  type MeetingIssue,
 } from "@open-minutes/core/meeting-check";
 import { type Db, ToolError } from "./tool";
 import { intervalSecs, loadChapters, loadSegments } from "./load";
 
-/** Something wrong, or probably wrong, with a meeting's data. */
-export interface Issue {
-  /** error: the data is wrong. warning: probably wrong, or a broken convention. */
-  severity: "error" | "warning";
-  code: IssueCode;
-  message: string;
-  segmentId?: number;
-  chapterId?: number;
-  /** Seconds into the meeting, where the problem is. */
-  at?: number;
-}
+/**
+ * Something wrong, or probably wrong, with a meeting's data: a result from
+ * @open-minutes/core/meeting-check with its severity, and with the segment
+ * and chapter it names given by row id.
+ */
+export type Issue = Located<MeetingIssue>;
+
+type Located<I> = I extends unknown
+  ? Omit<I, "segment" | "chapter"> &
+      (I extends { segment: number } ? { segmentId: number } : unknown) &
+      (I extends { chapter: number } ? { chapterId: number } : unknown)
+  : never;
 
 /**
  * Check a meeting's bodies, transcript and chapters against the rules in
@@ -39,7 +40,7 @@ export async function checkMeeting(
     .from(meetingBodiesTable)
     .where(eq(meetingBodiesTable.meeting_id, meetingId));
 
-  const issues = checkMeetingData({
+  const issues = await checkMeetingData({
     bodyCount: bodies.length,
     durationSecs: meeting.duration ? intervalSecs(meeting.duration) : null,
     segments: segments.map((s) => ({
@@ -53,12 +54,15 @@ export async function checkMeeting(
     })),
     chapters,
   });
-  return issues.map(({ code, severity, message, segment, chapter, at }) => ({
-    severity,
-    code,
-    message,
-    ...(segment !== undefined && { segmentId: segments[segment]!.id }),
-    ...(chapter !== undefined && { chapterId: chapters[chapter]!.id }),
-    ...(at !== undefined && { at }),
-  }));
+  return issues.map((issue) => {
+    const { segment, chapter, ...rest } = issue as MeetingIssue & {
+      segment?: number;
+      chapter?: number;
+    };
+    return {
+      ...rest,
+      ...(segment !== undefined && { segmentId: segments[segment]!.id }),
+      ...(chapter !== undefined && { chapterId: chapters[chapter]!.id }),
+    } as Issue;
+  });
 }

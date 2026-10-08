@@ -3,10 +3,10 @@ import { join, relative, resolve } from "node:path";
 import {
   type CheckedMeeting,
   type CheckedSegment,
-  checkChapters as checkChapterRules,
+  CHAPTER_CHECKERS,
   checkMeeting,
-  checkTranscript,
   type MeetingIssue,
+  TRANSCRIPT_CHECKERS,
 } from "@open-minutes/core/meeting-check";
 import { formatClock } from "@open-minutes/core/clock";
 import {
@@ -61,14 +61,14 @@ export function meetingDirs(
 }
 
 /** Check every fixture meeting: its transcript and its chapters. */
-export function checkFixtures(
+export async function checkFixtures(
   dirs: readonly string[] = meetingDirs(),
-): Issue[] {
-  return dirs.flatMap((dir) => checkMeetingDir(dir));
+): Promise<Issue[]> {
+  return (await Promise.all(dirs.map((dir) => checkMeetingDir(dir)))).flat();
 }
 
 /** Check one meeting directory. */
-export function checkMeetingDir(dir: string): Issue[] {
+export async function checkMeetingDir(dir: string): Promise<Issue[]> {
   const issues: Issue[] = [];
   const psvPath = ["golden.psv", "transcript.psv"]
     .map((f) => join(dir, f))
@@ -97,8 +97,8 @@ export function checkMeetingDir(dir: string): Issue[] {
     ? chapterStartLines(readFileSync(chaptersPath, "utf8"))
     : [];
   const chapters = meeting.chapters?.chapters ?? null;
-  const placed = checkMeeting(checkedMeeting(meeting)).map((i) =>
-    i.segment !== undefined
+  const placed = (await checkMeeting(checkedMeeting(meeting))).map((i) =>
+    "segment" in i
       ? atPsvLine(i, psvPath!, psv!.lines)
       : i.code === "no-bodies"
         ? {
@@ -223,10 +223,14 @@ function checkedSegments(segments: readonly GoldenSegment[]): CheckedSegment[] {
 }
 
 /** A transcript issue at its line in the PSV file, worded for that file. */
-function atPsvLine(issue: MeetingIssue, file: string, lines: PsvLines): Issue {
-  const s = issue.segment!;
+function atPsvLine(
+  issue: Extract<MeetingIssue, { segment: number }>,
+  file: string,
+  lines: PsvLines,
+): Issue {
+  const s = issue.segment;
   const line =
-    issue.word !== undefined && issue.word >= 0
+    "word" in issue && issue.word >= 0
       ? lines.words[s]![issue.word]
       : lines.markers[s];
   const message =
@@ -252,14 +256,15 @@ function chapterStartLines(content: string): number[] {
  * before it.
  */
 function atChapterLine(
-  issue: MeetingIssue,
+  issue: Extract<MeetingIssue, { at: number }>,
   file: string,
   lines: readonly number[],
   chapters: readonly { end: number }[],
 ): Issue {
   const chapter =
-    issue.chapter ??
-    Math.max(0, chapters.filter((c) => c.end <= issue.at!).length - 1);
+    "chapter" in issue
+      ? issue.chapter
+      : Math.max(0, chapters.filter((c) => c.end <= issue.at).length - 1);
   return {
     file,
     line: lines[chapter],
@@ -272,14 +277,17 @@ function atChapterLine(
  * Check a PSV transcript on its own: the file's syntax and speaker markers,
  * and the transcript rules in @open-minutes/core/meeting-check.
  */
-export function checkPsv(content: string, file: string): Issue[] {
+export async function checkPsv(
+  content: string,
+  file: string,
+): Promise<Issue[]> {
   const { issues, segments, lines } = readPsv(content, file);
   if (segments)
-    issues.push(
-      ...checkTranscript(checkedSegments(segments)).map((i) =>
-        atPsvLine(i, file, lines),
-      ),
-    );
+    for (const i of await checkMeeting(
+      { segments: checkedSegments(segments) },
+      TRANSCRIPT_CHECKERS,
+    ))
+      if ("segment" in i) issues.push(atPsvLine(i, file, lines));
   return issues.sort((a, b) => (a.line ?? 0) - (b.line ?? 0));
 }
 
@@ -287,12 +295,12 @@ export function checkPsv(content: string, file: string): Issue[] {
  * Check a chapters.json against its meeting's transcript, with the chapter
  * rules in @open-minutes/core/meeting-check.
  */
-export function checkChapters(
+export async function checkChapters(
   content: string,
   file: string,
   segments: readonly GoldenSegment[],
   durationSecs?: number,
-): Issue[] {
+): Promise<Issue[]> {
   let raw: unknown;
   try {
     raw = JSON.parse(content);
@@ -312,7 +320,13 @@ export function checkChapters(
   }
   const { chapters } = parsed;
   const lines = chapterStartLines(content);
-  return checkChapterRules(chapters, checkedSegments(segments), durationSecs)
-    .map((i) => atChapterLine(i, file, lines, chapters))
+  const found = await checkMeeting(
+    { segments: checkedSegments(segments), chapters, durationSecs },
+    CHAPTER_CHECKERS,
+  );
+  return found
+    .flatMap((i) =>
+      "at" in i ? [atChapterLine(i, file, lines, chapters)] : [],
+    )
     .sort((a, b) => (a.line ?? 0) - (b.line ?? 0));
 }
