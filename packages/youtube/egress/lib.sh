@@ -30,8 +30,8 @@ as_root() {
 
 warp() { "$root/bin/warp-cli" --accept-tos "$@"; }
 
-# Whether WARP may be started, re-registered and stopped here. A warp-svc not
-# started from $root is a system install (the WARP desktop app, say), and
+# Whether WARP may be started, re-registered and stopped here. A warp-svc that
+# up.sh didn't start from $root is a system install (the WARP desktop app, say), and
 # rotating would delete its registration.
 warp_allowed() {
   if [ ! -x "$root/bin/warp-svc" ]; then
@@ -39,8 +39,10 @@ warp_allowed() {
     return 1
   fi
   [ "${YOUTUBE_EGRESS_FORCE:-}" = 1 ] && return 0
-  local pid
+  local pid ours
+  ours=$(cat "$state/warp-svc.pid" 2> /dev/null || true)
   for pid in $(pgrep -x warp-svc); do
+    [ "$pid" = "$ours" ] && continue
     case "$(ps -o args= -p "$pid")" in
       "$root/bin/warp-svc"*) ;;
       *)

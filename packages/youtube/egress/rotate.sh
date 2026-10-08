@@ -5,7 +5,7 @@
 # Usage: rotate.sh warp|tor
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
-# shellcheck source=lib.sh
+# shellcheck source=lib.sh source-path=SCRIPTDIR
 . "$here/lib.sh"
 
 case "${1:-}" in

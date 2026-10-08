@@ -4,7 +4,7 @@
 # Usage: down.sh
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
-# shellcheck source=lib.sh
+# shellcheck source=lib.sh source-path=SCRIPTDIR
 . "$here/lib.sh"
 
 stop_tor
