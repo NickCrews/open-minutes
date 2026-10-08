@@ -57,7 +57,7 @@ _Avoid_: start time, timestamp
 
 **Transcript**:
 The ordered segments of one meeting: everything that was said, who said it, and when.
-_Avoid_: minutes, captions, notes, transcription (for the artifact)
+_Avoid_: minutes, captions, notes, transcription (that is the verb)
 
 **Word**:
 One recognized word and its onset; the smallest unit of a transcript.
@@ -69,6 +69,9 @@ _Avoid_: timestamp, start time
 
 **Segment**:
 A run of consecutive words spoken by one speaker.
+The speaker's identity could be resolved 
+No limit on length.
+If someone talks for 5 straight minutes, eg during a presentation, that is still one segment.
 _Avoid_: utterance, turn, block, paragraph, line, clip
 
 **Speaking time**:
@@ -143,10 +146,23 @@ A group of diarization turns believed to share one voice. Each cluster becomes a
 _Avoid_: speaker (inside the pipeline), group
 
 **Recognition**:
-Linking a speaker to the person whose voiceprint is nearest, or creating a new anonymous person when none is close enough.
+Linking an audio clip to a person.
+Can use voiceprints or context clues like "Thank you ms smith", doesn't rely just on audio.
+Two types: Partial and Full.
 _Avoid_: identification, matching, labeling
 
+**Partial Recognition**:
+We recognize this speaker as "speaker 4" in this meeting, and possibly that
+their name is "Bob", but we don't know the full identity of the person.
+
+**Full Recognition**:
+We recognize this speaker as an exact person, eg "Jennifer Wingard, the GBOS co-chair in 2026".
+
 ### Pipeline
+
+**Span**:
+A stretch of a meeting's audio, from start to end in seconds from the start of the file.
+_Avoid_: range, interval, from/to.
 
 **Ingestion**:
 Running one meeting's recording through transcription, diarization, alignment, and recognition, then storing the meeting and its segments all at once.
@@ -157,7 +173,9 @@ A meeting on a body's meeting source that hasn't been ingested yet.
 _Avoid_: available video, new video, pending video, backlog
 
 **Transcription**:
-The stage that turns audio into words with onsets. The process, not the artifact; that's the transcript.
+The process of turning audio into a Transcript.
+Relies on the larger context of the database, eg when identifying a speaker in audio,
+it should be able to look up the voiceprints of the speakers already in the database.
 _Avoid_: ASR, speech-to-text, captioning
 
 **Speech run**:
