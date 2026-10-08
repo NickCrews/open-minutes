@@ -58,7 +58,8 @@ async function applyEdit<T>(
 ): Promise<EditResult<T>> {
   const check = async (tx: Db) =>
     (await Promise.all(meetingIds.map((m) => checkMeeting(tx, m)))).flat();
-  const key = (i: Issue) => `${i.message}|${i.segmentId}|${i.chapterId}`;
+  const key = (i: Issue) =>
+    `${i.code}|${i.message}|${"segmentId" in i ? i.segmentId : ""}|${"chapterId" in i ? i.chapterId : ""}`;
   let out: EditResult<T> | undefined;
   try {
     await db.transaction(async (tx) => {

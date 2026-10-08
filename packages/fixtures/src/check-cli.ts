@@ -46,7 +46,7 @@ const dirs = files.length
   : hook
     ? []
     : meetingDirs();
-const issues = checkFixtures(dirs);
+const issues = await checkFixtures(dirs);
 const lines = issues.map((i) => formatIssue(i, CWD));
 
 if (hook) {

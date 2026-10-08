@@ -96,7 +96,7 @@ describe("reading", () => {
         message: string;
       }) => `${golden.slug}: ${i.severity} ${i.code}: ${i.message}`;
       expect((await checkMeeting(db, id)).map(summary)).toEqual(
-        checkMeetingData(checkedMeeting(golden)).map(summary),
+        (await checkMeetingData(checkedMeeting(golden))).map(summary),
       );
     }
   });
