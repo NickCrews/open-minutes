@@ -170,29 +170,14 @@ Shared test configuration is in `vitest.config.ts`, `vitest.shared.ts` and
 
 ### Checking hand-edited test data
 
-A meeting's data follows the same rules whether it is in the database or in
-golden fixture files: `checkMeeting` in
-[`packages/core/src/meeting-check.ts`](packages/core/src/meeting-check.ts)
-takes a meeting's bodies, segments and chapters and returns each problem with
-a severity, a code and the index of the segment, word or chapter at fault.
-Errors are data that is wrong, such as words out of time order, a filler the
-clean stage removes, or overlapping chapters. Warnings are data that breaks a
-convention or is probably wrong, such as a speaker change inside a sentence,
-a chapter outside the size conventions, or speech that no chapter covers.
+Meetings in the database and in golden fixture files follow the same rules,
+in [`packages/core/src/meeting-check.ts`](packages/core/src/meeting-check.ts).
 
-Each place that holds meetings puts those issues where its reader can act on
-them:
-
-- The database: `check_meeting` in `@open-minutes/agents` reports them by
-  segment and chapter id. Every write tool returns them and rolls back a
-  change that introduces an error.
-- Golden fixtures: `pnpm fixtures:check` checks the files in
-  `packages/fixtures/test-data/` and prints each problem as
-  `file:line: severity: message`. Pass file paths to check only the meetings
-  they belong to. It adds the rules for the files themselves, such as PSV
-  syntax and a speaker marker a line away from its first word. It exits 1 on
-  errors, and the test suite fails on them; warnings are printed and want a
-  look.
+- Database: `check_meeting` in `@open-minutes/agents`. Write tools roll back
+  a change that introduces an error.
+- Golden fixtures: `pnpm fixtures:check [file ...]` prints
+  `file:line: severity: message`, and also checks the file format. Errors
+  fail it and the test suite.
 
 [`.claude/settings.json`](.claude/settings.json) runs the same check as a
 Claude Code hook after every edit to those files, so an agent sees the
