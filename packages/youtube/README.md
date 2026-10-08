@@ -32,3 +32,30 @@ got through more often (see
 [docs/research/youtube-in-ci.md](../../docs/research/youtube-in-ci.md)).
 Sandboxed containers whose only egress is an HTTPS proxy can run neither
 (WARP needs UDP, Tor arbitrary TCP ports); they need the dispatch token.
+
+[`egress/`](egress/) has the scripts the
+[`fetch-youtube-audio`](../../.github/workflows/fetch-youtube-audio.yml)
+workflow uses to run both, which work outside Actions too:
+
+| Script                 | Does                                                                  |
+| ---------------------- | --------------------------------------------------------------------- |
+| `install.sh <deb dir>` | Unpacks WARP and Tor into `/opt/youtube-egress` (Linux with apt only) |
+| `up.sh [warp] [tor]`   | Starts them and prints one proxy URL per line, WARP's first           |
+| `rotate.sh warp\|tor`  | Gives one a new exit and prints its URL                               |
+| `down.sh`              | Stops what `up.sh` started                                            |
+
+On Linux:
+
+```sh
+packages/youtube/egress/install.sh ~/.cache/youtube-egress-debs
+export YOUTUBE_PROXY="$(packages/youtube/egress/up.sh | paste -sd,)"
+```
+
+Elsewhere, install Tor yourself (`up.sh tor` finds it on `PATH`) or run WARP
+in proxy mode and set `YOUTUBE_PROXY` by hand. `up.sh` leaves WARP alone if a
+WARP not started by it is running (the desktop app, say), since `rotate.sh
+warp` would delete that install's registration; `YOUTUBE_EGRESS_FORCE=1`
+overrides. Its Tor gets its own SOCKS port (9050, or the next free even port)
+and data directory, so it doesn't disturb a Tor already running. State and
+logs go to `$TMPDIR/youtube-egress`; see [`egress/lib.sh`](egress/lib.sh) for
+the variables that move them.

@@ -234,7 +234,11 @@ Where a home connection isn't available, yt-dlp can go out through Tor or
 Cloudflare WARP instead. Run Tor (`brew install tor && tor`, or
 `apt install tor`) or WARP in proxy mode, and list their SOCKS ports in
 `YOUTUBE_PROXY`, e.g. `socks5://127.0.0.1:40000,socks5://127.0.0.1:9050`;
-each is tried in turn when YouTube blocks the one before. Use `socks5://`, not
+each is tried in turn when YouTube blocks the one before. On Linux,
+[`packages/youtube/egress/`](packages/youtube/egress/) runs both the way the
+workflow does: run `install.sh`, then
+`export YOUTUBE_PROXY="$(packages/youtube/egress/up.sh | paste -sd,)"` (see
+[its README](packages/youtube/README.md#proxies)). Use `socks5://`, not
 `socks5h://`: IPv4 exits got through more often. Sandboxed containers whose
 only egress is an HTTPS proxy can run neither (WARP needs UDP, Tor arbitrary
 TCP ports), so they need `YOUTUBE_AUDIO_DISPATCH_TOKEN`.
