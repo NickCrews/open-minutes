@@ -97,8 +97,11 @@ are `H:MM:SS.ss`, as psvtool prints them.
    … Jennifer."). Long runs with no punctuation usually hide a turn change.
 5. **Check every segment of a cluster before labelling the whole cluster.**
    One `segmented:spk-N` can hold unrelated voices: a legislator and a police
-   chief, or a member, a staffer and a presenter. Music before a meeting or
-   during a break can also get its own cluster; leave it alone.
+   chief, or a member, a staffer and a presenter.
+   Music (before a meeting, during a break, after it adjourns) is one
+   `unlabeled` segment holding the single word `[music]`, at the music's
+   onset. If a golden has a stretch of lyrics where music played, replace it
+   with that.
 6. **Choose the right kind of label.** A known person has a slug, their
    stable ID across meetings, databases and fixtures. An anonymous
    person is a voice that recognition saw again. A speaker number is a voice

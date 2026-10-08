@@ -1,4 +1,5 @@
 import {
+  isMusicMarker,
   LAST_WORD_DURATION_SEC,
   type DiarizationTurn,
   type SpeechSegment,
@@ -74,7 +75,8 @@ function deriveTimedWords(speech: readonly SpeechSegment[]): TimedWord[] {
  * This function produces a sequence of "person 4 said 'foo bar' from 1:24 to 1:25".
  *
  * It does this by assigning each word to the diarization turn it overlaps most, and then
- * grouping consecutive words with the same speaker into segments. It also absorbs
+ * grouping consecutive words with the same speaker into segments. A music
+ * marker gets no speaker and a segment of its own. It also absorbs
  * spurious one-or-two-word speaker changes inside a single utterance, which can
  * happen due to clustering wobble in the diarization output.
  */
@@ -84,22 +86,22 @@ export function alignSpeakers(
 ): TranscriptSegment[] {
   const words = deriveTimedWords(speech);
   if (words.length === 0) return [];
-  if (turns.length === 0) {
-    return [{ speakerNum: null, words: words.map((t) => t.word) }];
-  }
 
   const segments: TimedSegment[] = [];
   let current: TimedSegment | null = null;
-  let currentSpeaker: number | null = null;
 
   for (const word of words) {
-    const speakerNum = assignSpeaker(word, turns);
-    if (current === null || speakerNum !== currentSpeaker) {
-      current = {
-        speakerNum: speakerNum,
-        words: [],
-      };
-      currentSpeaker = speakerNum;
+    // Music has no speaker, and is never part of a speaker's segment.
+    const music = isMusicMarker(word.word);
+    const speakerNum =
+      music || turns.length === 0 ? null : assignSpeaker(word, turns);
+    if (
+      current === null ||
+      music ||
+      isMusicSegment(current) ||
+      speakerNum !== current.speakerNum
+    ) {
+      current = { speakerNum, words: [] };
       segments.push(current);
     }
     current.words.push(word);
@@ -199,6 +201,7 @@ function absorbSlivers(segments: TimedSegment[]): TimedSegment[] {
       next !== undefined &&
       sameSpeaker(previous, next) &&
       !sameSpeaker(previous, sliver) &&
+      !isMusicSegment(sliver) &&
       isWobble(previous, sliver, next)
     ) {
       previous.words.push(...sliver.words, ...next.words);
@@ -236,6 +239,10 @@ function isWobble(
       return false;
   }
   return true;
+}
+
+function isMusicSegment(segment: TimedSegment): boolean {
+  return segment.words.some((t) => isMusicMarker(t.word));
 }
 
 function sameSpeaker(a: TimedSegment, b: TimedSegment): boolean {

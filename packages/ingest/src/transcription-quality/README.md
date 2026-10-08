@@ -19,7 +19,12 @@ the way it is. The tests here form a hierarchy:
    improves the north star and breaks one of these, update or delete the
    characterization.
 
-3. **Unit tests next to the code** (`packages/audio/src/transcribe.test.ts`
+3. **[music.test.ts](music.test.ts): where the music is.** That
+   `detectMusic` finds each stretch of music the goldens mark with
+   `[music]`, and no stretch of their speech, and that `transcribeAudio`
+   transcribes the songs before a meeting as `[music]`, not as lyrics.
+
+4. **Unit tests next to the code** (`packages/audio/src/transcribe.test.ts`
    and friends): that the implementation does what it says, eg that
    `tokensToWords` joins the recognizer's tokens into words. They support the
    design of the day and change with it.

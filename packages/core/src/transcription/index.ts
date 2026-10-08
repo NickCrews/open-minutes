@@ -4,7 +4,7 @@ export type {
   TranscriptSegment,
   TranscriptWord,
 } from "./types.ts";
-export { LAST_WORD_DURATION_SEC } from "./types";
+export { isMusicMarker, LAST_WORD_DURATION_SEC, MUSIC_MARKER } from "./types";
 export {
   CLEANING_RULES,
   type CleanChange,

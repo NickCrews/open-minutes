@@ -152,4 +152,36 @@ declare module "sherpa-onnx-node" {
     /** Flush the internal buffer, emitting any trailing speech as a final segment. */
     flush(): void;
   }
+
+  // --- Audio tagging (AudioSet sound-event classification) ---
+  // Inferred from sherpa-onnx-node's audio-tagg.js and types.js (v1.12.39).
+
+  export interface AudioTaggingConfig {
+    model: {
+      /** Path to a CED model file. */
+      ced?: string;
+      numThreads?: number;
+      provider?: string;
+      debug?: number;
+    };
+    /** Path to the model's class_labels_indices.csv. */
+    labels: string;
+    /** How many events compute() returns by default; must be >= 1. */
+    topK?: number;
+  }
+
+  /** One AudioSet class and its probability for a clip. */
+  export interface AudioEvent {
+    name: string;
+    /** In [0, 1]. Classes are independent, so probabilities don't sum to 1. */
+    prob: number;
+    index: number;
+  }
+
+  export class AudioTagging {
+    constructor(config: AudioTaggingConfig);
+    createStream(): Stream;
+    /** The `topK` most probable events, most probable first. */
+    compute(stream: Stream, topK?: number): AudioEvent[];
+  }
 }

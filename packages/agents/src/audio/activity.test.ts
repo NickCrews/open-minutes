@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import type { TranscriptWord } from "@open-minutes/core/transcription";
+import {
+  MUSIC_MARKER,
+  type TranscriptWord,
+} from "@open-minutes/core/transcription";
 import {
   mergeSpans,
   pauses,
@@ -92,6 +95,15 @@ describe("wordCoverage", () => {
     expect(covered).toHaveLength(2);
     expect(covered[0]!.end).toBeCloseTo(11.6);
     expect(covered[1]!.start).toBeCloseTo(19.85);
+  });
+
+  it("lets music run until the next word", () => {
+    const covered = wordCoverage([
+      segment("unattributed", [[0, MUSIC_MARKER]]),
+      segment("identified:chair", [[600, "Good"]]),
+    ]);
+    expect(covered).toHaveLength(1);
+    expect(covered[0]!.end).toBeCloseTo(601.2);
   });
 });
 

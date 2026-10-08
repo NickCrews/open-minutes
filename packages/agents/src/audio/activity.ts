@@ -5,6 +5,7 @@ import {
   type Span,
   SPEECH_RUNS_VERSION,
 } from "@open-minutes/audio/speech-runs";
+import { isMusicMarker } from "@open-minutes/core/transcription";
 import type { AudioMeeting, LabeledSegment } from "./meeting";
 
 // Where in a meeting someone is talking (Silero VAD, run by the pipeline's
@@ -71,15 +72,23 @@ const MAX_WORD_SEC = 1.2;
 /** A word's onset can be reported a little after its sound begins. */
 const WORD_LEAD_SEC = 0.15;
 
-/** The spans the transcript's words account for, merged. */
+/**
+ * The spans the transcript's words account for, merged. A music marker
+ * accounts for everything up to the next word: VAD hears singing as speech.
+ */
 export function wordCoverage(segments: readonly LabeledSegment[]): Span[] {
-  const onsets = segments
-    .flatMap((s) => s.words.map((w) => w.start))
-    .sort((a, b) => a - b);
-  const spans = onsets.map((start, i) => ({
-    start: start - WORD_LEAD_SEC,
-    end: Math.min(onsets[i + 1] ?? Infinity, start + MAX_WORD_SEC),
-  }));
+  const words = segments
+    .flatMap((s) => s.words)
+    .sort((a, b) => a.start - b.start);
+  const spans = words.map((word, i) => {
+    const next = words[i + 1]?.start ?? Infinity;
+    return {
+      start: word.start - WORD_LEAD_SEC,
+      end: isMusicMarker(word)
+        ? next
+        : Math.min(next, word.start + MAX_WORD_SEC),
+    };
+  });
   return mergeSpans(spans, 0);
 }
 
