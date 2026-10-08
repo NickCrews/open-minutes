@@ -12,7 +12,7 @@ import {
   totalSecs,
   untranscribedSpeech,
 } from "./activity";
-import { formatClock } from "./clock";
+import { formatClock } from "@open-minutes/core/clock";
 import { defineTool } from "../tool";
 import { checkRange, meetingRef, time } from "./inputs";
 import type { AudioMeeting, LabeledSegment } from "./meeting";
