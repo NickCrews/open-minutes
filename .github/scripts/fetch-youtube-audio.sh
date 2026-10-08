@@ -41,17 +41,17 @@ attempt() {
   return 1
 }
 
-# Tor takes ~10 s to bootstrap, so it starts in the background before WARP is
-# tried.
-"$egress/up.sh" tor > "$YOUTUBE_EGRESS_STATE/tor.url" 2> "$logs/up-tor.log" &
-tor_up=$!
-
-# up.sh registers WARP afresh, so the first attempt needs no rotate.
-if warp=$("$egress/up.sh" warp); then
+# up.sh starts Tor before WARP, so Tor's ~10 s bootstrap overlaps WARP's start,
+# and returns once both are ready. WARP comes up freshly registered, so the
+# first attempt needs no rotate.
+if proxies=$("$egress/up.sh" warp tor); then
+  warp=$(echo "$proxies" | sed -n 1p)
+  tor=$(echo "$proxies" | sed -n 2p)
   fresh=1
 else
-  echo "WARP did not come up"
+  echo "WARP or Tor did not come up"
   warp=socks5://127.0.0.1:40000
+  tor=$("$egress/up.sh" tor) || tor=
   fresh=0
 fi
 n=0
@@ -63,7 +63,7 @@ for _ in 1 2 3; do
   fresh=0
 done
 n=$((n + 1))
-wait "$tor_up" && attempt tor "$(cat "$YOUTUBE_EGRESS_STATE/tor.url")" "$n" && exit 0
+[ -n "$tor" ] && attempt tor "$tor" "$n" && exit 0
 for _ in 1 2; do
   n=$((n + 1))
   tor=$("$egress/rotate.sh" tor) && attempt tor "$tor" "$n" && exit 0
