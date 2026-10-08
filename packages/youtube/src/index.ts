@@ -1,5 +1,4 @@
 import { execFile } from "node:child_process";
-import { promisify } from "node:util";
 import { mkdir, access, readFile, rm } from "node:fs/promises";
 import { dirname } from "node:path";
 import type {
@@ -14,8 +13,6 @@ import {
   type YtDlpInfo,
   youtubeVideoFiles,
 } from "./store";
-
-const execFileAsync = promisify(execFile);
 
 /**
  * A channel (all its videos) or one playlist, as a body's meeting source.
@@ -68,15 +65,82 @@ export interface YouTubeConfig {
    * workflow; without it, yt-dlp fetches it locally.
    */
   dispatchToken?: string;
+  /**
+   * yt-dlp `--proxy` URLs (e.g. Tor's or Cloudflare WARP's SOCKS port), tried
+   * in order when YouTube blocks the one before. They apply only when yt-dlp
+   * fetches a video locally, not to the object store or the workflow.
+   */
+  proxies?: string[];
 }
 
-/** Runs yt-dlp. */
-function ytDlp(args: string[]) {
-  return execFileAsync(
-    "yt-dlp",
-    args,
-    // A busy channel's flat playlist runs to several MB.
-    { maxBuffer: 100 * 1024 * 1024 },
+/** Runs yt-dlp. A failure's error carries yt-dlp's stdout and stderr. */
+function ytDlp(args: string[]): Promise<{ stdout: string; stderr: string }> {
+  return new Promise((resolve, reject) => {
+    execFile(
+      "yt-dlp",
+      args,
+      // A busy channel's flat playlist runs to several MB.
+      { maxBuffer: 100 * 1024 * 1024 },
+      (error, stdout, stderr) => {
+        if (error) reject(Object.assign(error, { stdout, stderr }));
+        else resolve({ stdout, stderr });
+      },
+    );
+  });
+}
+
+/**
+ * yt-dlp's stderr when YouTube refused the proxy's exit IP, or the proxy
+ * itself couldn't be reached. Either way the next proxy may do better.
+ */
+const BLOCKED_EXIT =
+  /Sign in to confirm you.re not a bot|HTTP Error 429|HTTP Error 403|Connection refused|Unable to connect to proxy/;
+
+/** The last `ERROR:` line yt-dlp printed, or the error's message. */
+function ytDlpError(error: unknown): string {
+  const { stderr, message } = error as { stderr?: string; message?: string };
+  const lines = (stderr ?? "")
+    .split("\n")
+    .filter((l) => l.startsWith("ERROR:"));
+  return lines.at(-1) ?? message ?? String(error);
+}
+
+/**
+ * Runs yt-dlp through each of `proxies` in turn, moving on only when the
+ * failure looks like a blocked exit (see {@link BLOCKED_EXIT}); any other
+ * failure (a bad ID, a private video) is thrown at once. With no proxies, runs
+ * yt-dlp directly.
+ */
+async function ytDlpVia(
+  proxies: string[] | undefined,
+  args: string[],
+  {
+    proxiedArgs = [],
+    beforeAttempt,
+  }: {
+    /** Added to `args` when going through a proxy. */
+    proxiedArgs?: string[];
+    /** Runs before each attempt, e.g. to clear a partial download. */
+    beforeAttempt?: () => Promise<void>;
+  } = {},
+) {
+  if (!proxies?.length) {
+    await beforeAttempt?.();
+    return ytDlp(args);
+  }
+  const failures: string[] = [];
+  for (const proxy of proxies) {
+    await beforeAttempt?.();
+    try {
+      return await ytDlp(["--proxy", proxy, ...proxiedArgs, ...args]);
+    } catch (error) {
+      const stderr = (error as { stderr?: string }).stderr ?? "";
+      if (!BLOCKED_EXIT.test(stderr)) throw error;
+      failures.push(`${proxy}: ${ytDlpError(error)}`);
+    }
+  }
+  throw new Error(
+    `yt-dlp failed through every proxy:\n${failures.map((f) => `  ${f}`).join("\n")}`,
   );
 }
 
@@ -126,7 +190,13 @@ async function getMetadata(
   const raw =
     (await fetchStored(config, videoId(videoIdOrUrl), (f) => f.infoJson)) ??
     (JSON.parse(
-      (await ytDlp(["--skip-download", "-J", videoUrl(videoIdOrUrl)])).stdout,
+      (
+        await ytDlpVia(config.proxies, [
+          "--skip-download",
+          "-J",
+          videoUrl(videoIdOrUrl),
+        ])
+      ).stdout,
     ) as YtDlpInfo);
   return {
     id: raw.id,
@@ -179,20 +249,26 @@ async function ensureAudioDownloaded(
     return { downloaded: true };
   }
   const webm = `${path}.webm`;
+  const removeWebm = async () => {
+    await rm(webm, { force: true });
+    await rm(`${webm}.part`, { force: true });
+  };
   try {
     // The format the fetch-youtube-audio workflow re-encodes from. A single
     // format needs no ffmpeg to download.
-    await ytDlp([
-      "-f",
-      "bestaudio[ext=webm]",
-      "--no-playlist",
-      "-o",
-      webm,
-      url,
-    ]);
+    await ytDlpVia(
+      config.proxies,
+      ["-f", "bestaudio[ext=webm]", "--no-playlist", "-o", webm, url],
+      {
+        // yt-dlp retries a broken connection 10 times by default, about a
+        // minute; through a proxy, the next one is the better retry.
+        proxiedArgs: ["--retries", "2", "--fragment-retries", "2"],
+        beforeAttempt: removeWebm,
+      },
+    );
     await webmOpusToWav(await readFile(webm), path);
   } finally {
-    await rm(webm, { force: true });
+    await removeWebm();
   }
   return { downloaded: true };
 }
@@ -283,7 +359,8 @@ async function requestFetch(id: string, token: string) {
 export type YouTube = AudioProvider;
 
 /**
- * Lists the videos in `source` (via yt-dlp). Does no I/O until
+ * Lists the videos in `source` (via yt-dlp, never through a proxy: listing
+ * works from datacenter IPs). Does no I/O until
  * {@link VideoLister.listVideos} is called.
  */
 export function youtubeSource(source: YouTubeSource): VideoLister {
@@ -303,11 +380,17 @@ export function youtube(config: YouTubeConfig = {}): YouTube {
  * A {@link YouTubeConfig} from environment variables:
  * - OBJECT_STORE_PUBLIC_URL: {@link YouTubeConfig.objectStoreUrl}
  * - YOUTUBE_AUDIO_DISPATCH_TOKEN: {@link YouTubeConfig.dispatchToken}
+ * - YOUTUBE_PROXY: {@link YouTubeConfig.proxies}, comma-separated
  */
 export function youtubeConfigFromEnv(env = process.env): YouTubeConfig {
+  const proxies = (env.YOUTUBE_PROXY ?? "")
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean);
   return {
     objectStoreUrl: env.OBJECT_STORE_PUBLIC_URL || undefined,
     dispatchToken: env.YOUTUBE_AUDIO_DISPATCH_TOKEN || undefined,
+    proxies: proxies.length ? proxies : undefined,
   };
 }
 
