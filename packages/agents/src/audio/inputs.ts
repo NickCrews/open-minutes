@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { ToolError } from "../tool";
-import { formatClock, parseClock } from "./clock";
+import { formatClock, parseClock } from "@open-minutes/core/clock";
 
 // Inputs the audio tools share. The meeting is `meetingRef`, as for every tool.
 
