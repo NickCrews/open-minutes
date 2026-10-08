@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
+import { formatClock } from "@open-minutes/core/clock";
 import {
-  formatTimestamp,
   parseTimestamp,
   parsePsv,
   serializePsv,
@@ -10,16 +10,9 @@ import {
 import type { SpeechSegment } from "@open-minutes/core/transcription";
 
 describe("psv timestamps", () => {
-  it("formats seconds as H:MM:SS.ss", () => {
-    expect(formatTimestamp(0.08)).toBe("0:00:00.08");
-    expect(formatTimestamp(2)).toBe("0:00:02.00");
-    expect(formatTimestamp(2.56)).toBe("0:00:02.56");
-    expect(formatTimestamp(2 * 3600 + 45 * 60 + 21.28)).toBe("2:45:21.28");
-  });
-
   it("round-trips through parse/format", () => {
     for (const sec of [0, 0.08, 2.56, 65.4, 9921.28]) {
-      expect(parseTimestamp(formatTimestamp(sec))).toBeCloseTo(sec, 2);
+      expect(parseTimestamp(formatClock(sec))).toBeCloseTo(sec, 2);
     }
   });
 });

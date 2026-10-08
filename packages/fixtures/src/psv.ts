@@ -100,9 +100,6 @@ type PsvEvent =
 
 const COLUMN_HEADER = "start_sec|event_type|event_data";
 
-/** Format seconds as `H:MM:SS.ss` (rounded to the nearest hundredth). */
-export const formatTimestamp = formatClock;
-
 /** Parse a `H:MM:SS.ss` timestamp into seconds. */
 export function parseTimestamp(str: string): number {
   const parts = str.split(":");
@@ -270,10 +267,10 @@ export function serializePsv(
   for (const segment of segments) {
     const start = segment.words[0]?.start ?? 0;
     rows.push(
-      `${formatTimestamp(start)}|meta|${JSON.stringify({ begin_speaker: formatSpeaker(segment.speaker) })}`,
+      `${formatClock(start)}|meta|${JSON.stringify({ begin_speaker: formatSpeaker(segment.speaker) })}`,
     );
     for (const w of segment.words) {
-      rows.push(`${formatTimestamp(w.start)}|text|${w.text}`);
+      rows.push(`${formatClock(w.start)}|text|${w.text}`);
     }
   }
   const content = [COLUMN_HEADER, ...rows].join("\n") + "\n";
@@ -297,16 +294,16 @@ export function serializeVadRunsPsv(
 ): string {
   const rows: string[] = [];
   rows.push(
-    `${formatTimestamp(runs[0]?.start ?? 0)}|meta|${JSON.stringify({ begin_speaker: "unlabeled" })}`,
+    `${formatClock(runs[0]?.start ?? 0)}|meta|${JSON.stringify({ begin_speaker: "unlabeled" })}`,
   );
   runs.forEach((run, i) => {
     const data = {
       index: i,
       dur: Math.round((run.end - run.start) * 100) / 100,
     };
-    rows.push(`${formatTimestamp(run.start)}|vad|${JSON.stringify(data)}`);
+    rows.push(`${formatClock(run.start)}|vad|${JSON.stringify(data)}`);
     for (const w of run.words) {
-      rows.push(`${formatTimestamp(w.start)}|text|${w.text}`);
+      rows.push(`${formatClock(w.start)}|text|${w.text}`);
     }
   });
   const content = [COLUMN_HEADER, ...rows].join("\n") + "\n";
