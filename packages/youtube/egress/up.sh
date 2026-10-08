@@ -10,7 +10,7 @@
 # new exit; down.sh stops them. See lib.sh for the environment variables.
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
-# shellcheck source=lib.sh
+# shellcheck source=lib.sh source-path=SCRIPTDIR
 . "$here/lib.sh"
 
 want_warp=0 want_tor=0 optional_warp=0
