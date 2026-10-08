@@ -99,13 +99,9 @@ jobs:
         with:
           path: ${{ runner.temp }}/debs
           key: ${{ steps.debs.outputs.key }}
-      # The standalone binary bundles the JS challenge solver scripts; deno
-      # (above) runs them.
       - name: Install yt-dlp
         if: steps.stored.outputs.hit != 'true'
-        run: |
-          curl -fsSL https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux -o "$RUNNER_TEMP/yt-dlp"
-          sudo install -m 755 "$RUNNER_TEMP/yt-dlp" /usr/local/bin/yt-dlp
+        run: packages/youtube/install-ytdlp.sh
       - name: Install Cloudflare WARP and Tor
         if: steps.stored.outputs.hit != 'true'
         run: packages/youtube/egress/install.sh "$RUNNER_TEMP/debs"
