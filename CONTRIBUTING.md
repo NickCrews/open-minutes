@@ -230,6 +230,15 @@ waits for it; without it, a missing video is downloaded with yt-dlp, which
 works from a home connection. See [`.env.example`](.env.example) and
 [docs/research/youtube-in-ci.md](docs/research/youtube-in-ci.md).
 
+Where a home connection isn't available, yt-dlp can go out through Tor or
+Cloudflare WARP instead. Run Tor (`brew install tor && tor`, or
+`apt install tor`) or WARP in proxy mode, and list their SOCKS ports in
+`YOUTUBE_PROXY`, e.g. `socks5://127.0.0.1:40000,socks5://127.0.0.1:9050`;
+each is tried in turn when YouTube blocks the one before. Use `socks5://`, not
+`socks5h://`: IPv4 exits got through more often. Sandboxed containers whose
+only egress is an HTTPS proxy can run neither (WARP needs UDP, Tor arbitrary
+TCP ports), so they need `YOUTUBE_AUDIO_DISPATCH_TOKEN`.
+
 `om` (in [`packages/agents`](packages/agents/src/cli/om.ts)) writes to the
 same database as everything else (`DB=prod pnpm om ingest <id>` to ingest
 into production). See [`packages/ingest/README.md`](packages/ingest/README.md)
