@@ -1,8 +1,8 @@
 import { describe, expect, test } from "vitest";
 import {
   openingText,
+  parseDateFromTitle,
   parseDateTimeFromTranscript,
-  resolveMeetingDateTime,
 } from "@open-minutes/core/meeting-date";
 import { getMeetingData } from "./test-data";
 
@@ -43,68 +43,18 @@ describe("golden transcripts", () => {
   });
 
   test.each([
-    [
-      "gbos-2026-03-23",
-      { date: "2026-03-23", time: "19:00", dateSource: "title" },
-    ],
-    [
-      "gbos-2026-06-15",
-      { date: "2026-06-15", time: "19:00", dateSource: "title" },
-    ],
-    [
-      "gbos-2026-05-18",
-      { date: "2026-05-18", time: null, dateSource: "title", timeSource: null },
-    ],
+    ["gbos-2026-03-23", { date: "2026-03-23", time: null }],
+    ["gbos-2026-06-15", { date: "2026-06-15", time: null }],
+    ["gbos-2026-05-18", { date: "2026-05-18", time: null }],
     // MOA titles carry the scheduled start, eg "... - 2026-06-08 18:30:00".
-    [
-      "pzc-2026-06-08",
-      {
-        date: "2026-06-08",
-        time: "18:30",
-        dateSource: "title",
-        timeSource: "title",
-      },
-    ],
-    [
-      "assembly-2026-02-17",
-      {
-        date: "2026-02-17",
-        time: "17:00",
-        dateSource: "title",
-        timeSource: "title",
-      },
-    ],
-    [
-      "assembly-2026-03-03",
-      {
-        date: "2026-03-03",
-        time: "17:00",
-        dateSource: "title",
-        timeSource: "title",
-      },
-    ],
-    // The title has no date, and the chair's "Thursday, March 5th, 9 a.m."
-    // has no year; the upload on March 9, 2026 places it.
-    [
-      "ced-2026-03-05",
-      {
-        date: "2026-03-05",
-        time: "09:00",
-        dateSource: "transcript",
-        timeSource: "transcript",
-      },
-      "2026-03-09",
-    ],
-  ] as const)("resolve %s", (slug, expected, uploadDate?: string) => {
-    const meeting = getMeetingData(slug);
-    expect(
-      resolveMeetingDateTime(meeting.title, openingText(meeting.segments), {
-        uploadDate,
-      }),
-    ).toEqual({
-      timeSource: "transcript",
-      warnings: [],
-      ...expected,
-    });
+    ["pzc-2026-06-08", { date: "2026-06-08", time: "18:30" }],
+    ["assembly-2026-02-17", { date: "2026-02-17", time: "17:00" }],
+    ["assembly-2026-03-03", { date: "2026-03-03", time: "17:00" }],
+    // The title has no date; the chair states it (above).
+    ["ced-2026-03-05", null],
+  ] as const)("title of %s", (slug, expected) => {
+    const parsed = parseDateFromTitle(getMeetingData(slug).title);
+    if (expected === null) expect(parsed).toBeNull();
+    else expect(parsed).toMatchObject(expected);
   });
 });

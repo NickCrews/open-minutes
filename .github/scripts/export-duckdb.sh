@@ -25,9 +25,13 @@ ATTACH '${DATABASE_URL//\'/\'\'}' AS pg (TYPE postgres, READ_ONLY);
 -- keeps each column's min and max per row group), even read over HTTP.
 CREATE TABLE jurisdictions AS FROM pg.public.jurisdictions ORDER BY id;
 CREATE TABLE bodies AS FROM pg.public.bodies ORDER BY id;
-CREATE TABLE meetings AS FROM pg.public.meetings ORDER BY id;
+-- Only meetings with a transcript: one added but not yet transcribed has
+-- nothing to read.
+CREATE TABLE meetings AS
+  FROM pg.public.meetings WHERE transcribed_at IS NOT NULL ORDER BY id;
 CREATE TABLE meeting_bodies AS
-  FROM pg.public.meeting_bodies ORDER BY meeting_id, body_id;
+  FROM pg.public.meeting_bodies WHERE meeting_id IN (SELECT id FROM meetings)
+  ORDER BY meeting_id, body_id;
 -- DuckDB reads pgvector's vector as text, e.g. "[0.1,-0.2,...]".
 CREATE TABLE people AS
   SELECT * REPLACE (voice_embedding::FLOAT[] AS voice_embedding)

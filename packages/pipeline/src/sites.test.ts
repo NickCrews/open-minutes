@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { parseMeetingRef, workDirName } from "./sites";
+import { parseMeetingRef } from "./sites";
+import { workDirName } from "./work-dir";
 
 describe("parseMeetingRef", () => {
   it("reads akleg.gov meeting IDs and URLs", () => {
@@ -23,13 +24,15 @@ describe("parseMeetingRef", () => {
 });
 
 describe("workDirName", () => {
-  it("keeps YouTube IDs as they are, so existing work directories resume", () => {
-    expect(workDirName("gbos", "i_f44L7QpLs")).toBe("gbos_i_f44L7QpLs");
+  it("keeps YouTube IDs as they are", () => {
+    expect(workDirName({ siteKind: "youtube", siteId: "i_f44L7QpLs" })).toBe(
+      "youtube_i_f44L7QpLs",
+    );
   });
 
   it("makes akleg.gov IDs safe for a path", () => {
-    expect(workDirName("sl&c", "SL&C 2017-03-07 13:30:00")).toBe(
-      "sl&c_SL-C-2017-03-07-13-30-00",
-    );
+    expect(
+      workDirName({ siteKind: "akleg", siteId: "SL&C 2017-03-07 13:30:00" }),
+    ).toBe("akleg_SL-C-2017-03-07-13-30-00");
   });
 });

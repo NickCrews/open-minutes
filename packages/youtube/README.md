@@ -5,7 +5,7 @@ Where Open Minutes gets meetings published on YouTube. It implements
 the videos in it) and `AudioProvider` for a video (`youtube`: its metadata, and
 its audio as 16 kHz mono WAV).
 It knows nothing about the database or what happens to the audio next;
-`@open-minutes/ingest` does that.
+`@open-minutes/pipeline` does that.
 
 Metadata and audio come from yt-dlp (`install-ytdlp.sh` installs it, on Linux
 or macOS), or, where YouTube blocks yt-dlp (CI, servers), from the project's

@@ -58,12 +58,3 @@ export function parseMeetingRef(ref: string): SiteMeeting {
     siteId: /^https?:\/\//.test(ref) ? videoId(ref) : ref,
   };
 }
-
-/**
- * The name of a meeting's work directory under the work root: its body's slug
- * and its ID, with anything but letters, digits, `-` and `_` (an akleg.gov
- * ID's spaces and colons) replaced by `-`.
- */
-export function workDirName(bodySlug: string, siteId: string): string {
-  return `${bodySlug}_${siteId.replace(/[^A-Za-z0-9_-]+/g, "-")}`;
-}

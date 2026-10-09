@@ -48,7 +48,7 @@ export const VAD_MODEL_SPEC = {
 } as const satisfies ModelSpec;
 
 // How well this does is measured, and what the model does is written down, in
-// packages/ingest/src/transcription-quality/ (see its README.md). Judge a change
+// packages/pipeline/src/transcription-quality/ (see its README.md). Judge a change
 // here by the north star there: word error rate and runtime.
 
 // Both the recognizer and Silero VAD expect 16 kHz mono (EXPECTED_SAMPLE_RATE).

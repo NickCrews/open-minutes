@@ -68,7 +68,7 @@ export async function seedDevDatabase(db: DB): Promise<DevSeedSummary> {
   const mapped = mapSnapshot(snapshot);
 
   // People: everyone in people.jsonl, plus anyone a transcript identifies who
-  // isn't listed (seeded nameless, the way ingestion creates them).
+  // isn't listed (seeded nameless, the way saving a transcript creates them).
   const slugs = [...snapshot.people.map((p) => p.slug)];
   for (const meeting of snapshot.meetings) {
     for (const seg of meeting.segments) {
@@ -103,6 +103,7 @@ export async function seedDevDatabase(db: DB): Promise<DevSeedSummary> {
       duration_secs: lastWord
         ? sql`make_interval(secs => ${lastWord.start + LAST_WORD_DURATION_SEC})`
         : null,
+      transcribed_at: new Date(),
     };
   });
 

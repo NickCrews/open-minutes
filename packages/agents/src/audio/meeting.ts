@@ -4,7 +4,7 @@ import { readWave, type WaveForm } from "@open-minutes/audio/wav";
 import {
   getCachedAudio,
   meetingCacheDir,
-} from "@open-minutes/ingest/audio-cache";
+} from "@open-minutes/pipeline/audio-cache";
 import {
   LAST_WORD_DURATION_SEC,
   type TranscriptWord,

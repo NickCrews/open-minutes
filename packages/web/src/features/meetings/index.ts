@@ -1,4 +1,4 @@
-import { type DB, meetingsTable } from "@open-minutes/db";
+import { type DB, meetingsTable, transcribedWhere } from "@open-minutes/db";
 import type { MeetingWhen } from "@open-minutes/core/meeting-date";
 import { eq } from "drizzle-orm";
 import { intervalToSecs } from "~/lib/format";
@@ -6,16 +6,17 @@ import { meetingBodiesColumns } from "./bodies";
 
 export function getAllMeetings(db: DB) {
   return db.query.meetingsTable.findMany({
+    where: transcribedWhere,
     with: { bodies: meetingBodiesColumns },
     orderBy: { date: "desc", time: "desc" },
   });
 }
 
 /**
- * Sets when a meeting happened, or clears it back to unknown. Ingestion can't
- * derive this — YouTube's publish and stream times don't reliably match when
- * the body actually gavelled in — so it arrives from a human (or a parser)
- * reading the video or agenda. `date` ("YYYY-MM-DD") and `time` ("HH:MM:SS")
+ * Sets when a meeting happened, or clears it back to unknown. YouTube's
+ * publish and stream times don't reliably match when the body actually
+ * gavelled in, so it arrives from a human (or a parser) reading the title,
+ * the video or the agenda. `date` ("YYYY-MM-DD") and `time` ("HH:MM:SS")
  * are wall-clock readings in the meeting's timezone; a null `time` means the day
  * is known but the hour isn't. A time without a date is refused by the database.
  */
@@ -33,7 +34,7 @@ export function updateMeetingDate(
 export function getMeetingById(db: DB, meetingId: number) {
   return db.query.meetingsTable
     .findFirst({
-      where: { id: meetingId },
+      where: { id: meetingId, ...transcribedWhere },
       with: {
         bodies: meetingBodiesColumns,
         segments: {

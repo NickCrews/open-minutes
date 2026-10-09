@@ -20,14 +20,16 @@ import { hasTypographicDash } from "@open-minutes/core/text";
 import { transcriptFingerprint } from "@open-minutes/core/transcript-fingerprint";
 import { LAST_WORD_DURATION_SEC } from "@open-minutes/core/transcription";
 import { audioTools } from "./audio/tools";
+import { pipelineTools } from "./pipeline/tools";
 import { checkMeeting, type Issue } from "./check";
 import { loadChapters, loadSegments, round, speakerOf } from "./load";
 import { findMeeting, meetingRef } from "./meeting-ref";
 import { type Db, defineTool, type Tool, ToolError } from "./tool";
 
 // Tools for an agent cleaning up a meeting's data: reading the transcript,
-// fixing who said what, naming people, and replacing chapters; and, in
-// ./audio/tools.ts, listening to the audio. Every write
+// fixing who said what, naming people, and replacing chapters; in
+// ./audio/tools.ts, listening to the audio; and in ./pipeline/tools.ts, the
+// steps that add a meeting and transcribe it. Every write here
 // runs in a transaction, re-checks the meetings it touched, and rolls back if
 // it introduced an error; `dryRun` always rolls back, to preview a change.
 
@@ -129,7 +131,7 @@ export const listMeetings = defineTool({
   name: "list_meetings",
   label: "List meetings",
   description:
-    "List every meeting with its id, slug, bodies (several for a joint meeting), date, and how many segments and chapters it has. Start here to find a meeting: other tools take its slug or its id.",
+    "List every meeting with its id, slug, bodies (several for a joint meeting), date, whether it's transcribed, and how many segments and chapters it has. Start here to find a meeting: other tools take its slug or its id.",
   input: z.object({}),
   run: async (ctx) => {
     const db = await ctx.db();
@@ -140,6 +142,7 @@ export const listMeetings = defineTool({
         title: meetingsTable.title,
         date: meetingsTable.date,
         url: meetingsTable.url,
+        transcribedAt: meetingsTable.transcribed_at,
       })
       .from(meetingsTable)
       .orderBy(asc(meetingsTable.id));
@@ -166,8 +169,9 @@ export const listMeetings = defineTool({
       .innerJoin(bodiesTable, eq(bodiesTable.id, meetingBodiesTable.body_id))
       .orderBy(asc(bodiesTable.name_short)))
       bodies.set(r.m, [...(bodies.get(r.m) ?? []), r.body]);
-    return meetings.map((m) => ({
+    return meetings.map(({ transcribedAt, ...m }) => ({
       ...m,
+      transcribed: transcribedAt !== null,
       bodies: bodies.get(m.id) ?? [],
       segments: segments.get(m.id) ?? 0,
       chapters: chapters.get(m.id) ?? 0,
@@ -188,7 +192,7 @@ export const updateMeeting = defineTool({
   name: "update_meeting",
   label: "Update meeting",
   description:
-    'Set any of a meeting\'s title, description, date, time, timezone and bodies; fields left out stay as they are. date ("YYYY-MM-DD") and time ("HH:MM") are the wall clock where the meeting was held, in its timezone (eg "America/Anchorage"); null makes either unknown, and clearing the date clears the time. bodies replaces the bodies that held it, by slug: one for most meetings, several for a joint meeting, eg ["gbos", "luc"]. Ingestion records only the body whose source published the meeting; add a joint meeting\'s other bodies here.',
+    'Set any of a meeting\'s title, description, date, time, timezone and bodies; fields left out stay as they are. date ("YYYY-MM-DD") and time ("HH:MM") are the wall clock where the meeting was held, in its timezone (eg "America/Anchorage"); null makes either unknown, and clearing the date clears the time. bodies replaces the bodies that held it, by slug: one for most meetings, several for a joint meeting, eg ["gbos", "luc"].',
   input: z.object({
     meeting: meetingRef,
     title: z.string().trim().optional(),
@@ -738,4 +742,5 @@ export const tools: Tool[] = [
   getChapters,
   replaceChapters,
   ...audioTools,
+  ...pipelineTools,
 ] as Tool[];

@@ -13,9 +13,9 @@ code, comments, and commit messages.
 ## How it works
 
 ```
-YouTube ──yt-dlp──▶ pipeline (om ingest) ──▶ Postgres + pgvector ◀── web (Cloudflare Workers)
-                    transcribe / diarize /       (local Docker or Neon)
-                    align / recognize
+YouTube ──yt-dlp──▶ pipeline steps (om tools) ──▶ Postgres + pgvector ◀── web (Cloudflare Workers)
+                    add / transcribe / diarize /     (local Docker or Neon)
+                    align / recognize / save
 ```
 
 A [pnpm](https://pnpm.io) workspace with nine packages. Each depends only on
@@ -50,16 +50,18 @@ the ones listed above it:
   source. It lists a committee's recorded meetings and gets a meeting's
   metadata and audio, decoding its MP3 to WAV. See the
   [akleg README](packages/akleg/README.md).
-- **[`packages/ingest`](packages/ingest)** (`@open-minutes/ingest`): the
-  offline ingestion pipeline. It gets a meeting's audio from
-  `@open-minutes/youtube` or `@open-minutes/akleg`, runs it through `@open-minutes/audio`, aligns turns to words, recognizes speakers
-  against known voiceprints, and writes the meeting to the database. See the
-  [ingest README](packages/ingest/README.md).
+- **[`packages/pipeline`](packages/pipeline)** (`@open-minutes/pipeline`):
+  the pipeline's steps, each its own function. It discovers meetings on
+  bodies' meeting sources, adds one to the database, gets its audio from
+  `@open-minutes/youtube` or `@open-minutes/akleg`, runs it through
+  `@open-minutes/audio`, aligns turns to words, recognizes speakers against
+  known voiceprints, and saves the transcript. See the
+  [pipeline README](packages/pipeline/README.md).
 - **[`packages/agents`](packages/agents)** (`@open-minutes/agents`): the
-  interface for agents and people. Tools for editing the data (speaker
-  labels, people, chapters) as typed tool definitions for agent loops, and
-  the `om` CLI: `om ingest` and friends over `@open-minutes/ingest`,
-  `om models`, and `om tools`, the tools as a JSON CLI.
+  interface for agents and people. One tool per pipeline step, and tools for
+  editing the data (speaker labels, people, chapters), as typed tool
+  definitions for agent loops; and the `om` CLI: `om tools`, the tools as a
+  JSON CLI, and `om models`.
 - **[`packages/web`](packages/web)** (`@open-minutes/web`): the public
   transcript browser, built with [SolidJS](https://www.solidjs.com) +
   [TanStack Start](https://tanstack.com/start), Kobalte and Tailwind, deployed
@@ -75,10 +77,10 @@ Docker via [`docker-compose.yml`](docker-compose.yml). Production is on
 **meeting source** (a YouTube channel or playlist, or an akleg.gov
 committee) that is scanned for new meetings. **Meetings** are held by one or
 more bodies (`meeting_bodies`), all equal: a **joint meeting**, held by several,
-counts as a meeting of each. Ingestion records the one body whose source
-published a meeting; the `update_meeting` tool sets a joint meeting's bodies.
-Meetings record their timezone, the site they were published on (YouTube or
-akleg.gov), and each meeting's
+counts as a meeting of each. A meeting is added with its bodies before it's
+transcribed, and readers see it once its transcript is saved
+(`meetings.transcribed_at`). Meetings record their timezone, the site they
+were published on (YouTube or akleg.gov), and each meeting's
 transcript is a sequence of **segments** (a run of words by one speaker, with
 word-level onsets). Segments are attributed to **people**, who carry a
 voiceprint so they can be recognized in later meetings. A meeting may also have
@@ -185,13 +187,13 @@ problem on the turn it makes it.
 
 ### Transcript cleaning
 
-The recognizer transcribes verbatim, so `om ingest` runs a **clean** stage
-right after transcription that strips disfluencies: filler words ("um",
-"uh"), stuttered function words ("the the"), and abandoned word fragments
-("six- sixteen"). The rules live in
+The recognizer transcribes verbatim, so the `clean_transcription` step,
+after `transcribe`, strips disfluencies: filler words ("um", "uh"), stuttered
+function words ("the the"), and abandoned word fragments ("six- sixteen"). The
+rules live in
 [`packages/core/src/transcription/clean.ts`](packages/core/src/transcription/clean.ts);
-the cached `transcription.json` stays verbatim, so a rule change applies on
-the next run without re-transcribing.
+`transcription.json` stays verbatim, so a rule change applies by running
+`clean_transcription` again, without transcribing again.
 
 Golden transcripts must already be clean, or the pipeline's output would be
 scored against disfluencies it removed on purpose. `pnpm fixtures:check`
@@ -208,11 +210,17 @@ tests, then run `pnpm fixtures:clean` and review the golden diff.
 
 ## Running the pipeline
 
+Each step is a tool; an agent (or you) calls them in turn. See the
+[pipeline README](packages/pipeline/README.md) for what each reads and writes.
+
 ```sh
-pnpm om status          # meetings already ingested
-pnpm om available       # meetings not yet ingested, on bodies' meeting sources
-pnpm om ingest <id>     # run the full pipeline for a meeting
-pnpm om models          # download every ML model up front (~650MB)
+pnpm om tools discover_meetings '{"body":"gbos"}'   # meetings not in the database yet
+pnpm om tools add_meeting '{"id":"<video id>","bodies":["gbos"]}'
+pnpm om tools download_audio '{"meeting":12}'
+pnpm om tools transcribe '{"meeting":12}'            # then clean_transcription, diarize,
+                                                     # align_speakers, embed_speakers,
+                                                     # recognize_speakers, save_transcript
+pnpm om models                                       # download every ML model up front (~650MB)
 ```
 
 From a server or CI runner, YouTube answers yt-dlp with "sign in to confirm
@@ -231,9 +239,8 @@ works from a home connection. See [`.env.example`](.env.example) and
 [docs/research/youtube-in-ci.md](docs/research/youtube-in-ci.md).
 
 `om` (in [`packages/agents`](packages/agents/src/cli/om.ts)) writes to the
-same database as everything else (`DB=prod pnpm om ingest <id>` to ingest
-into production). See [`packages/ingest/README.md`](packages/ingest/README.md)
-for details.
+same database as everything else (`DB=prod pnpm om tools ...` for
+production).
 
 ## Working with the data directly
 
@@ -259,9 +266,7 @@ touched and rolls back if it introduced an error. Guidance for agents doing
 this work is in
 [`.claude/skills/transcript-cleanup`](.claude/skills/transcript-cleanup/SKILL.md).
 
-`pnpm db studio` opens a browser UI on it. The pipeline's API (`listIngested`,
-`listAvailable`, `ingestVideo` from `@open-minutes/ingest/om`) and `om`'s
-JSON output (`pnpm -s om status --json`) are designed to be composed.
+`pnpm db studio` opens a browser UI on it.
 
 ## Architecture Decision Records
 
@@ -281,7 +286,7 @@ records research, and mention it in the commit message.
 
 - Short, lowercase, imperative subject lines. Most use a type prefix
   (`feat:`, `fix:`, `refactor:`, `docs:`, `chore:`, `dx:`) or an area prefix
-  (`web:`, `ingest:`, `db:`, `transcript:`). A scope such as `feat(web):` is
+  (`web:`, `pipeline:`, `db:`, `transcript:`). A scope such as `feat(web):` is
   also fine.
 - For anything non-trivial, add a body that explains _why_, and what a
   reviewer should know (follow-ups, known breakage, ADRs).

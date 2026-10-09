@@ -33,6 +33,7 @@ async function insertMeeting(
   db: DB,
   bodyIds: number[],
   date: string | null,
+  { transcribed = true } = {},
 ): Promise<number> {
   const [meeting] = await db
     .insert(meetingsTable)
@@ -41,6 +42,7 @@ async function insertMeeting(
       site_id: `vid${nextSiteId++}`,
       timezone: "America/Anchorage",
       date,
+      transcribed_at: transcribed ? new Date() : null,
     })
     .returning({ id: meetingsTable.id });
   await db
@@ -109,6 +111,18 @@ describe("getAllBodies coverage", () => {
     expect(body!.coverage).toEqual({ meetings: 0, first: null, last: null });
   });
 
+  test("leaves out meetings not yet transcribed", async ({ db }) => {
+    const gbos = await insertBody(db, "GBOS");
+    await insertMeeting(db, [gbos], "2022-01-01");
+    await insertMeeting(db, [gbos], "2026-01-01", { transcribed: false });
+    const [body] = await getAllBodies(db);
+    expect(body!.coverage).toEqual({
+      meetings: 1,
+      first: "2022-01-01",
+      last: "2022-01-01",
+    });
+  });
+
   test("leaves the span unknown when no meeting has a date", async ({ db }) => {
     const gbos = await insertBody(db, "GBOS");
     await insertMeeting(db, [gbos], null);
@@ -118,7 +132,7 @@ describe("getAllBodies coverage", () => {
 });
 
 describe("getBodyById", () => {
-  test("lists the body's meetings, joint ones included, newest first", async ({
+  test("lists the body's transcribed meetings, joint ones included, newest first", async ({
     db,
   }) => {
     const gbos = await insertBody(db, "GBOS");
@@ -128,6 +142,7 @@ describe("getBodyById", () => {
     const joint = await insertMeeting(db, [gbos, luc], "2022-08-30");
     await insertMeeting(db, [gbos], "2022-09-01");
     await insertMeeting(db, [assembly], "2022-09-01");
+    await insertMeeting(db, [luc], "2022-10-01", { transcribed: false });
 
     const body = await getBodyById(db, luc);
     expect(

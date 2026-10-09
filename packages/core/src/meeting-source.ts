@@ -1,5 +1,5 @@
 /**
- * Where a body's meetings are published, which `om available` scans for new
+ * Where a body's meetings are published, which discovery scans for new
  * ones: `bodies.meeting_source`. A body has at most one. A body that shares a
  * YouTube channel with its siblings (the Assembly, P&Z and the school board all
  * publish to the MOA channel) gets its own playlist on it instead.

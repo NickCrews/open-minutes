@@ -1,4 +1,10 @@
-import { type DB, meetingBodiesTable, meetingsTable } from "@open-minutes/db";
+import {
+  type DB,
+  isTranscribed,
+  meetingBodiesTable,
+  meetingsTable,
+  transcribedWhere,
+} from "@open-minutes/db";
 import { compareMeetingsNewestFirst } from "@open-minutes/core/meeting-date";
 import { count, eq, max, min } from "drizzle-orm";
 import { meetingBodiesColumns } from "../meetings/bodies";
@@ -47,6 +53,7 @@ async function getCoverageByBody(db: DB): Promise<Map<number, Coverage>> {
       meetingsTable,
       eq(meetingsTable.id, meetingBodiesTable.meeting_id),
     )
+    .where(isTranscribed)
     .groupBy(meetingBodiesTable.body_id);
   return new Map(rows.map(({ body_id, ...coverage }) => [body_id, coverage]));
 }
@@ -60,7 +67,10 @@ export async function getBodyById(db: DB, bodyId: number) {
     where: { id: bodyId },
     with: {
       jurisdiction: true,
-      meetings: { with: { bodies: meetingBodiesColumns } },
+      meetings: {
+        where: transcribedWhere,
+        with: { bodies: meetingBodiesColumns },
+      },
     },
   });
   if (!body) throw new Error("Body not found");

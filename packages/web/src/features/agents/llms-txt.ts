@@ -24,14 +24,14 @@ export type LlmsTxtBody = {
 
 export type LlmsTxtData = {
   bodies: LlmsTxtBody[];
-  /** When the newest meeting was added, as an ISO date, or null if none. */
+  /** When the newest transcript was saved, as an ISO date, or null if none. */
   dataAsOf: string | null;
 };
 
 export async function getLlmsTxtData(db: DB): Promise<LlmsTxtData> {
   const [bodies, [latest]] = await Promise.all([
     getAllBodies(db),
-    db.select({ at: max(meetingsTable.created_at) }).from(meetingsTable),
+    db.select({ at: max(meetingsTable.transcribed_at) }).from(meetingsTable),
   ]);
   return {
     bodies: bodies.map((body) => ({

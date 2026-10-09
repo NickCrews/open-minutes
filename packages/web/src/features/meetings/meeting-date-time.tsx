@@ -39,8 +39,8 @@ const saveMeetingDate = createServerFn({ method: "POST" })
 
 /**
  * When a meeting happened, in its timezone: the date, plus the time when
- * it's known. In development it doubles as an editor, since ingestion can't
- * derive either and someone has to read it off the video — that's also why the
+ * it's known. In development it doubles as an editor, since the title and
+ * transcript often don't state either and someone has to read it off the video — that's also why the
  * unset state stays visible there instead of collapsing away: an unset date is
  * the thing you came to fix.
  *

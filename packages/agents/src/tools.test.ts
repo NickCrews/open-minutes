@@ -53,7 +53,11 @@ describe("reading", () => {
   test("lists meetings with their sizes", async ({ db }) => {
     const meetings = await callTool(toolContext(db), listMeetings, {});
     const gbos = meetings.find((m) => m.slug === GBOS);
-    expect(gbos).toMatchObject({ bodies: ["GBOS"], chapters: 34 });
+    expect(gbos).toMatchObject({
+      bodies: ["GBOS"],
+      chapters: 34,
+      transcribed: true,
+    });
     expect(gbos!.segments).toBeGreaterThan(200);
   });
 

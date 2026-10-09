@@ -23,7 +23,7 @@ describe("YouTube Module", () => {
   // A channel expands into one nested playlist per tab ("Videos", "Live", ...),
   // so these assert we walk down to the videos rather than handing back the
   // tabs. MOA is the regression case: it has both tabs, and returning them
-  // unflattened made `om available` report exactly 2 channel-ID "videos".
+  // unflattened made discovery report exactly 2 channel-ID "videos".
   const channels = [
     { name: "GBOS", id: "UCOUlNInprZEjhbpVPiJOlEA", minVideos: 10 },
     { name: "MOA", id: "UCZDEuWj4IxdlwBhqrk62_XA", minVideos: 1000 },

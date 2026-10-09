@@ -354,7 +354,7 @@ async function requestFetch(id: string, token: string) {
 /**
  * A video's metadata and audio from YouTube (via yt-dlp). Create one with
  * {@link youtube} or {@link youtubeFromEnv} and pass it around; tests pass a
- * fake instead (see the pipeline's `om/testing.ts`).
+ * fake instead (see the pipeline's `testing.ts`).
  */
 export type YouTube = AudioProvider;
 

@@ -6,7 +6,7 @@ import { readWave } from "@open-minutes/audio/wav";
 import { akleg, aklegSource } from "./index";
 
 // Against the live akleg.gov, so a change to its API or media server fails
-// here, in CI, rather than in an ingest. index.test.ts covers the parsing
+// here, in CI, rather than in a pipeline step. index.test.ts covers the parsing
 // offline; these check the API still answers the way its fixtures say. They
 // use past meetings, whose records shouldn't change, so a failure means
 // akleg.gov changed (or is down), not the data. ~10 s in all when akleg.gov is

@@ -8,10 +8,11 @@ meeting: its metadata, and its audio as 16 kHz mono WAV. It knows nothing about
 the database or what happens to the audio next. `aklegSource({ committee:
 "HRES" })` is a committee as a body's meeting source
 (`{"type":"akleg_committee","committee":"HRES"}`): core's `VideoLister`,
-which `om available` takes.
+which discovery takes.
 
-`om available` and `om ingest` use it for bodies whose meeting source is a
-committee; their meetings are stored with `site_kind` `akleg`. The site's player
+The pipeline's `discover_meetings`, `add_meeting` and `download_audio` steps
+use it for bodies whose meeting source is a committee; their meetings are
+stored with `site_kind` `akleg`. The site's player
 can't play them yet. See [docs/research/akleg.md](../../docs/research/akleg.md)
 for how akleg.gov publishes meetings, how to play them on our site, and
 what's left to do.
@@ -27,7 +28,7 @@ returning wrong data.
 
 - **Channel ID:** the chamber and committee code (`HRES`).
 - **Title:** `House RESOURCES - 2018-09-10 14:00:00`, from which
-  `resolveMeetingDateTime` reads the date and time.
+  `parseDateFromTitle` reads the date and time.
 - **Upload date:** akleg.gov gives none, so the meeting's own date.
 
 ## Audio

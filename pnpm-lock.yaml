@@ -47,9 +47,9 @@ importers:
       '@open-minutes/db':
         specifier: workspace:*
         version: link:../db
-      '@open-minutes/ingest':
+      '@open-minutes/pipeline':
         specifier: workspace:*
-        version: link:../ingest
+        version: link:../pipeline
       citty:
         specifier: ^0.1.6
         version: 0.1.6
@@ -174,7 +174,7 @@ importers:
         specifier: ^4.0.18
         version: 4.1.4(@types/node@25.6.0)(vite@7.3.2(@types/node@25.6.0)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.21.0))
 
-  packages/ingest:
+  packages/pipeline:
     dependencies:
       '@neondatabase/serverless':
         specifier: ^1.1.0

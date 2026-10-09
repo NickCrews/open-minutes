@@ -3,7 +3,6 @@ import {
   openingText,
   parseDateFromTitle,
   parseDateTimeFromTranscript,
-  resolveMeetingDateTime,
 } from "./extract";
 
 describe("parseDateFromTitle", () => {
@@ -298,102 +297,5 @@ describe("openingText", () => {
     ];
     expect(openingText(segments)).toBe("call to order");
     expect(openingText(segments, 2)).toBe("call to");
-  });
-});
-
-describe("resolveMeetingDateTime", () => {
-  const GAVEL =
-    "call the regular meeting to order, June 16th, 2025 at 7:03 p.m.";
-
-  test("title date, transcript time", () => {
-    expect(
-      resolveMeetingDateTime("Regular Meeting June 16, 2025", GAVEL),
-    ).toEqual({
-      date: "2025-06-16",
-      time: "19:03",
-      dateSource: "title",
-      timeSource: "transcript",
-      warnings: [],
-    });
-  });
-
-  test("gavel time beats the title's scheduled time", () => {
-    expect(
-      resolveMeetingDateTime(
-        "Assembly Regular - June 16, 2025 - 2025-06-16 19:00:00",
-        GAVEL,
-      ),
-    ).toMatchObject({ time: "19:03", timeSource: "transcript", warnings: [] });
-  });
-
-  test("falls back to the title's scheduled time", () => {
-    expect(
-      resolveMeetingDateTime(
-        "Assembly Regular - July 7, 2026 - 2026-07-07 17:00:00",
-        "no gavel in the recording",
-      ),
-    ).toEqual({
-      date: "2026-07-07",
-      time: "17:00",
-      dateSource: "title",
-      timeSource: "title",
-      warnings: [],
-    });
-  });
-
-  test("falls back to the transcript's date", () => {
-    expect(resolveMeetingDateTime("Board of Ethics Meeting", GAVEL)).toEqual({
-      date: "2025-06-16",
-      time: "19:03",
-      dateSource: "transcript",
-      timeSource: "transcript",
-      warnings: [],
-    });
-  });
-
-  test("the upload date supplies a year neither states", () => {
-    // Uploaded January 13th; the chair's "December 12th" was last year.
-    expect(
-      resolveMeetingDateTime(
-        "Board of Ethics Meeting",
-        "call the regular meeting to order, December 12th at 7:03 p.m.",
-        { uploadDate: "2026-01-13" },
-      ),
-    ).toMatchObject({ date: "2025-12-12", dateSource: "transcript" });
-  });
-
-  test("nothing to go on", () => {
-    expect(resolveMeetingDateTime("Board of Ethics Meeting", "hello")).toEqual({
-      date: null,
-      time: null,
-      dateSource: null,
-      timeSource: null,
-      warnings: [],
-    });
-  });
-
-  test("flags a title whose year is wrong", () => {
-    // Real: this 2025 meeting was uploaded as "June 16, 2026".
-    const resolved = resolveMeetingDateTime(
-      "Girdwood Board of Supervisors Regular Meeting  June 16, 2026",
-      GAVEL,
-    );
-    expect(resolved).toMatchObject({ date: "2026-06-16", dateSource: "title" });
-    expect(resolved.warnings).toEqual([
-      expect.stringMatching(
-        /title date 2026-06-16 .* transcript date 2025-06-16/,
-      ),
-    ]);
-  });
-
-  test("flags a gavel time far from the scheduled time", () => {
-    const resolved = resolveMeetingDateTime(
-      "Assembly Regular - June 16, 2025 - 2025-06-16 12:00:00",
-      GAVEL,
-    );
-    expect(resolved.time).toBe("19:03");
-    expect(resolved.warnings).toEqual([
-      expect.stringMatching(/title time 12:00 .* transcript time 19:03/),
-    ]);
   });
 });

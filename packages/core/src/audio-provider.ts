@@ -2,7 +2,7 @@
  * A site meetings are published on (YouTube today), as the pipeline sees it:
  * what a video is, and its audio. Each site implements this (see
  * @open-minutes/youtube), so the pipeline can take one without caring which,
- * and tests can pass a fake (see the pipeline's `om/testing.ts`). Listing a
+ * and tests can pass a fake (see the pipeline's `testing.ts`). Listing a
  * site's videos is `VideoLister`'s job (see ./video-lister).
  */
 export interface AudioProvider {

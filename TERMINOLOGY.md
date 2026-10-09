@@ -32,7 +32,8 @@ _Avoid_: platform, provider, host
 ### Meetings and transcripts
 
 **Meeting**:
-One gathering of one body, or of several in a joint meeting, recorded as one video; the unit we ingest, store, and display.
+One gathering of one body, or of several in a joint meeting, recorded as one video; the unit we transcribe, store, and display.
+A meeting is added to the database before it's transcribed.
 _Avoid_: session, hearing, event, recording, video
 
 **Joint meeting**:
@@ -69,7 +70,7 @@ _Avoid_: timestamp, start time
 
 **Segment**:
 A run of consecutive words spoken by one speaker.
-The speaker's identity could be resolved 
+The speaker's identity could be resolved
 No limit on length.
 If someone talks for 5 straight minutes, eg during a presentation, that is still one segment.
 _Avoid_: utterance, turn, block, paragraph, line, clip
@@ -164,26 +165,30 @@ We recognize this speaker as an exact person, eg "Jennifer Wingard, the GBOS co-
 A stretch of a meeting's audio, from start to end in seconds from the start of the file.
 _Avoid_: range, interval, from/to.
 
-**Ingestion**:
-Running one meeting's recording through transcription, diarization, alignment, and recognition, then storing the meeting and its segments all at once.
-_Avoid_: import, processing, scraping, sync
+**Step**:
+One action of the pipeline, run on its own: discovering meetings, adding one, downloading its audio, transcribing, cleaning, diarizing, aligning, embedding speakers, recognizing them, or saving the transcript. Nothing runs one step after another; an agent calls each.
+_Avoid_: stage, ingest, ingestion, import, processing, sync
+
+**Discovery**:
+Scanning bodies' meeting sources for meetings that aren't in the database yet.
+_Avoid_: scraping, listing, polling
 
 **Available meeting**:
-A meeting on a body's meeting source that hasn't been ingested yet.
-_Avoid_: available video, new video, pending video, backlog
+A meeting in the database that hasn't been transcribed yet: its `transcribed_at` is null. Readers don't see it.
+_Avoid_: available video, new video, pending video, backlog, unprocessed meeting
 
 **Transcription**:
-The process of turning audio into a Transcript.
+The steps that turn a meeting's audio into its transcript, ending with saving it, which sets the meeting's `transcribed_at`.
 Relies on the larger context of the database, eg when identifying a speaker in audio,
 it should be able to look up the voiceprints of the speakers already in the database.
-_Avoid_: ASR, speech-to-text, captioning
+_Avoid_: ASR, speech-to-text, captioning, ingestion
 
 **Speech run**:
 A stretch of audio between silences, fed to the recognizer. Knows nothing about speakers.
 _Avoid_: segment, chunk
 
 **Diarization**:
-The stage that splits audio into diarization turns and groups them into clusters by voice, knowing nothing about who anyone is.
+The step that splits audio into diarization turns and groups them into clusters by voice, knowing nothing about who anyone is.
 _Avoid_: speaker detection, segmentation, identification
 
 **Diarization turn**:
@@ -191,11 +196,11 @@ A span of time in which diarization heard one cluster speaking. Has a start, an 
 _Avoid_: segment, turn (alone)
 
 **Alignment**:
-The stage that assigns each word to the diarization turn it overlaps most and groups consecutive same-speaker words into segments.
+The step that assigns each word to the diarization turn it overlaps most and groups consecutive same-speaker words into segments.
 _Avoid_: merging, matching
 
 **Work directory**:
-A meeting's cache of stage outputs (audio, transcription, diarization) kept between pipeline runs.
+Where a meeting's steps leave their outputs (audio, transcription, diarization, ...) for the steps after them.
 _Avoid_: cache dir, temp dir
 
 ### Test data and evaluation

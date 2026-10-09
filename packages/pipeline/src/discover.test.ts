@@ -2,7 +2,7 @@ import { describe, expect } from "vitest";
 import type { ListedVideo } from "@open-minutes/core/video-lister";
 import type { MeetingSource } from "@open-minutes/core/meeting-source";
 import { loadBodies } from "@open-minutes/fixtures/test-data";
-import { listAvailable } from "./available";
+import { discoverMeetings } from "./discover";
 import {
   GOLDEN_GBOS,
   goldenGbosId,
@@ -32,14 +32,14 @@ const GBOS_SOURCE: MeetingSource = {
   channel_id: GOLDEN_GBOS.channelId,
 };
 
-describe("listAvailable", () => {
+describe("discoverMeetings", () => {
   goldenTest(
-    "returns scraped meetings minus ingested ones, newest first",
+    "returns scanned meetings minus those in the database, newest first",
     async ({ db }) => {
       await insertMeeting(db, await goldenGbosId(db), "already-in-db");
 
       const { sourceFor } = fakeSources((source) =>
-        // Source order is newest-first; listAvailable must preserve it. The
+        // Source order is newest-first; discoverMeetings must preserve it. The
         // other golden bodies' playlists have nothing new.
         source.type === "youtube_channel" &&
         source.channel_id === GOLDEN_GBOS.channelId
@@ -47,32 +47,29 @@ describe("listAvailable", () => {
           : [],
       );
 
-      expect(await listAvailable(db, { sourceFor })).toEqual([
+      expect(await discoverMeetings(db, { sourceFor })).toEqual([
         { siteKind: "youtube", siteId: "newest", body: "gbos" },
         { siteKind: "youtube", siteId: "oldest", body: "gbos" },
       ]);
     },
   );
 
-  goldenTest(
-    "scrapes only bodies that have a meeting source",
-    async ({ db }) => {
-      await insertBody(db, { name: "No Channel Town", name_short: "NCT" });
+  goldenTest("scans only bodies that have a meeting source", async ({ db }) => {
+    await insertBody(db, { name: "No Channel Town", name_short: "NCT" });
 
-      const { scraped, sourceFor } = fakeSources((source) => [
-        { id: `video-${JSON.stringify(source)}` },
-      ]);
+    const { scraped, sourceFor } = fakeSources((source) => [
+      { id: `video-${JSON.stringify(source)}` },
+    ]);
 
-      const available = await listAvailable(db, { sourceFor });
-      const goldenSources = loadBodies().flatMap((b) =>
-        b.meeting_source ? [JSON.stringify(b.meeting_source)] : [],
-      );
-      expect(scraped.sort()).toEqual(goldenSources.sort());
-      expect(available.map((m) => m.siteId).sort()).toEqual(
-        goldenSources.map((s) => `video-${s}`).sort(),
-      );
-    },
-  );
+    const discovered = await discoverMeetings(db, { sourceFor });
+    const goldenSources = loadBodies().flatMap((b) =>
+      b.meeting_source ? [JSON.stringify(b.meeting_source)] : [],
+    );
+    expect(scraped.sort()).toEqual(goldenSources.sort());
+    expect(discovered.map((m) => m.siteId).sort()).toEqual(
+      goldenSources.map((s) => `video-${s}`).sort(),
+    );
+  });
 
   // An empty database: the only bodies are the ones inserted here.
   test("lists each body's meetings under its site", async ({ db }) => {
@@ -92,7 +89,7 @@ describe("listAvailable", () => {
       { id: "HRES 2026-02-01 13:00:00" },
       { id: "HRES 2026-01-01 13:00:00" },
     ]);
-    expect(await listAvailable(db, { sourceFor })).toEqual([
+    expect(await discoverMeetings(db, { sourceFor })).toEqual([
       { siteKind: "akleg", siteId: "HRES 2026-02-01 13:00:00", body: "hres" },
       { siteKind: "akleg", siteId: "HRES 2026-01-01 13:00:00", body: "hres" },
     ]);
@@ -103,12 +100,12 @@ describe("listAvailable", () => {
       "HRES 2026-01-01 13:00:00",
       { siteKind: "akleg" },
     );
-    expect(await listAvailable(db, { sourceFor })).toEqual([
+    expect(await discoverMeetings(db, { sourceFor })).toEqual([
       { siteKind: "akleg", siteId: "HRES 2026-02-01 13:00:00", body: "hres" },
     ]);
   });
 
-  goldenTest("--body restricts the scrape to that body", async ({ db }) => {
+  goldenTest("body restricts the scan to that body", async ({ db }) => {
     await insertBody(db, {
       name: "Other Town Council",
       name_short: "OT",
@@ -117,9 +114,9 @@ describe("listAvailable", () => {
 
     const { scraped, sourceFor } = fakeSources(() => [{ id: "video" }]);
 
-    const available = await listAvailable(db, { body: "gbos", sourceFor });
+    const discovered = await discoverMeetings(db, { body: "gbos", sourceFor });
     expect(scraped).toEqual([JSON.stringify(GBOS_SOURCE)]);
-    expect(available).toEqual([
+    expect(discovered).toEqual([
       { siteKind: "youtube", siteId: "video", body: "gbos" },
     ]);
   });
@@ -129,7 +126,7 @@ describe("listAvailable", () => {
       throw new Error("unexpected listVideos call");
     });
     await expect(
-      listAvailable(db, { body: "atlantis", sourceFor }),
+      discoverMeetings(db, { body: "atlantis", sourceFor }),
     ).rejects.toThrow(/atlantis/);
   });
 });

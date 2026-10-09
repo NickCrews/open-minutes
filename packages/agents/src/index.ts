@@ -1,6 +1,7 @@
-// Agent-facing tools for cleaning up Open Minutes data: reading and editing
-// it, and listening to the audio. See ./tool.ts for the shape, ./tools.ts for
-// the list, and ./cli/tools.ts for the shell interface (`om tools`).
+// Agent-facing tools for Open Minutes data: adding and transcribing meetings
+// one pipeline step at a time, reading and editing the data, and listening to
+// the audio. See ./tool.ts for the shape, ./tools.ts for the list, and
+// ./cli/tools.ts for the shell interface (`om tools`).
 export { tools } from "./tools";
 export * from "./tools";
 export {
@@ -9,7 +10,8 @@ export {
   speechActivity,
   transcribeRangeTool,
 } from "./audio/tools";
-export { toolContext } from "./context";
+export * from "./pipeline/tools";
+export { toolContext, type ToolContextOptions } from "./context";
 export {
   callTool,
   type Db,

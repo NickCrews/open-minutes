@@ -1,6 +1,6 @@
 // Unit tests: transcribeAudio's parts do what they say. Whether its design is
 // any good is measured by the WER and runtime of
-// packages/ingest/src/transcription-quality/north-star.test.ts, which outranks
+// packages/pipeline/src/transcription-quality/north-star.test.ts, which outranks
 // these; see the README.md there.
 import { beforeAll, describe, expect, it } from "vitest";
 import { existsSync, mkdirSync } from "node:fs";

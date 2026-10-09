@@ -1,4 +1,4 @@
-import { type DB, bodiesTable, meetingsTable } from "@open-minutes/db";
+import { bodiesTable, meetingsTable } from "@open-minutes/db";
 import { bodySlug } from "@open-minutes/core/bodies";
 import {
   type MeetingSource,
@@ -7,9 +7,11 @@ import {
 } from "@open-minutes/core/meeting-source";
 import type { VideoLister } from "@open-minutes/core/video-lister";
 import { listerFor, type SiteMeeting } from "./sites";
+import type { Db } from "./db";
+import { PipelineError } from "./work-dir";
 
-export interface ListAvailableOptions {
-  /** Restrict the scrape to the body with this slug (eg "gbos"). */
+export interface DiscoverOptions {
+  /** Restrict the scan to the body with this slug (eg "gbos"). */
   body?: string;
   /**
    * The {@link VideoLister} for a body's meeting source; injectable for tests.
@@ -19,20 +21,20 @@ export interface ListAvailableOptions {
 }
 
 /** A meeting on a body's meeting source that isn't in the database yet. */
-export interface AvailableMeeting extends SiteMeeting {
+export interface DiscoveredMeeting extends SiteMeeting {
   /** The slug of the body whose source lists it, eg "gbos". */
   body: string;
 }
 
 /**
- * Scrape every body's meeting source and return the meetings not yet
- * ingested, each body's newest first (the source's natural order). A pure
+ * Scan every body's meeting source and return the meetings not in the
+ * database, each body's newest first (the source's natural order). A pure
  * read: no database writes, no persisted discovery state.
  */
-export async function listAvailable(
-  db: DB,
-  options: ListAvailableOptions = {},
-): Promise<AvailableMeeting[]> {
+export async function discoverMeetings(
+  db: Db,
+  options: DiscoverOptions = {},
+): Promise<DiscoveredMeeting[]> {
   const sourceFor = options.sourceFor ?? listerFor;
 
   const allBodies = await db.select().from(bodiesTable);
@@ -42,12 +44,14 @@ export async function listAvailable(
     bodies = bodies.filter((b) => bodySlug(b) === wanted);
     if (bodies.length === 0) {
       const known = allBodies.map(bodySlug).sort().join(", ");
-      throw new Error(`No body with slug "${options.body}". Known: ${known}`);
+      throw new PipelineError(
+        `No body with slug "${options.body}". Known: ${known}`,
+      );
     }
   }
 
   const key = (siteKind: string, siteId: string) => `${siteKind} ${siteId}`;
-  const ingested = new Set(
+  const known = new Set(
     (
       await db
         .select({
@@ -58,17 +62,17 @@ export async function listAvailable(
     ).map((r) => key(r.siteKind, r.siteId)),
   );
 
-  const available: AvailableMeeting[] = [];
+  const discovered: DiscoveredMeeting[] = [];
   for (const body of bodies) {
     const source = body.meeting_source;
     if (!source) continue;
     const siteKind = siteKindOf(source);
-    console.error(`Scraping ${body.name_short} ${meetingSourceUrl(source)}...`);
+    console.error(`Scanning ${body.name_short} ${meetingSourceUrl(source)}...`);
     const meetings = await sourceFor(source).listVideos();
     for (const { id } of meetings) {
-      if (!ingested.has(key(siteKind, id)))
-        available.push({ siteKind, siteId: id, body: bodySlug(body) });
+      if (!known.has(key(siteKind, id)))
+        discovered.push({ siteKind, siteId: id, body: bodySlug(body) });
     }
   }
-  return available;
+  return discovered;
 }

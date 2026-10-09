@@ -1,4 +1,6 @@
+import { existsSync } from "node:fs";
 import { copyFile } from "node:fs/promises";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect } from "vitest";
 import { eq, isNotNull } from "drizzle-orm";
@@ -8,10 +10,21 @@ import type { TranscriptWord } from "@open-minutes/core/transcription";
 import { getMeetingData } from "@open-minutes/fixtures/test-data";
 import type { GoldenSegment } from "@open-minutes/fixtures/psv";
 import { compareTranscripts } from "@open-minutes/core/transcription";
-import { goldenMeetingsData } from "../seed/golden-meetings-data";
+import { goldenMeetingsData } from "./seed/golden-meetings-data";
+import { addMeeting } from "./add";
+import { recognizeSpeakers } from "./recognize";
+import { saveTranscript } from "./save";
+import {
+  align,
+  clean,
+  diarize,
+  downloadAudio,
+  embedSpeakers,
+  transcribe,
+} from "./steps";
 import { GOLDEN_GBOS, fakeSite } from "./testing";
-import { ingestMeeting } from "./ingest";
-import { getMeetingAudio } from "../test-utils/audio-cache";
+import { getMeetingAudio } from "./test-utils/audio-cache";
+import { meetingWorkDir } from "./work-dir";
 
 // End-to-end cross-meeting speaker recognition.
 //
@@ -23,11 +36,12 @@ import { getMeetingAudio } from "../test-utils/audio-cache";
 // The test:
 //   1. Start from a database already holding two goldens (transcripts + a
 //      voiceprint per identified person): the goldenMeetingsData dataset.
-//   2. Ingest a THIRD golden's audio through the real pipeline (transcribe →
-//      diarize → align → identify). Ingestion sees only audio, never the third
-//      golden's labels; its diarizer invents anonymous clusters, and identify.ts
-//      matches those clusters' voiceprints back to the people seeded in step 1.
-//   3. Compare the ingested result against the third golden: word error rate, and
+//   2. Run a THIRD golden's audio through every pipeline step (transcribe →
+//      clean → diarize → align → embed → recognize → save). The steps see only
+//      audio, never the third golden's labels; diarization invents anonymous
+//      clusters, and recognition matches those clusters' voiceprints back to
+//      the people seeded in step 1.
+//   3. Compare the saved transcript against the third golden: word error rate, and
 //      — once the third golden is hand-labeled with identified people — how often
 //      the right person was recognized.
 //
@@ -38,11 +52,10 @@ import { getMeetingAudio } from "../test-utils/audio-cache";
 const SEED_SLUGS = ["gbos-2026-03-23", "gbos-2026-05-18"];
 const HELD_OUT_SLUG = "gbos-2026-06-15";
 
-// Ingesting the held-out meeting re-runs transcription + diarization, which take
-// the better part of an hour on a ~2.7h recording. Persist the pipeline's
-// per-stage artifact cache across runs (gitignored under test-runs/) so only the
-// first, cold run pays that cost; later runs — while iterating on the assertions
-// — hit the cache and finish in seconds.
+// Transcription and diarization of the held-out meeting take the better part
+// of an hour on a ~2.7h recording. The work directory persists across runs
+// (gitignored under test-runs/), and the test skips a model step whose
+// artifact is already there, so only the first, cold run pays that cost.
 const E2E_WORK_ROOT = fileURLToPath(
   new URL("../../test-runs/e2e-work/", import.meta.url),
 );
@@ -74,9 +87,9 @@ describe("e2e cross-meeting speaker recognition", () => {
       );
       expect(seededSlugs.size).toBeGreaterThan(0);
 
-      // 2. Ingest the third meeting through the real pipeline. The mock YouTube
-      //    boundary hands the pipeline the cached golden audio and GBOS metadata,
-      //    but never the golden's labels.
+      // 2. Run the third meeting through every step. The fake YouTube hands
+      //    the steps the cached golden audio and GBOS metadata, but never the
+      //    golden's labels.
       const held = getMeetingData(HELD_OUT_SLUG);
       const heldAudio = await getMeetingAudio(held);
       const youtube = fakeSite({
@@ -89,34 +102,41 @@ describe("e2e cross-meeting speaker recognition", () => {
           uploadDate: null,
         }),
         ensureAudioDownloaded: async (_id: string, dest: string) => {
-          await copyFile(heldAudio.path, dest);
+          if (!existsSync(dest)) await copyFile(heldAudio.path, dest);
           return { downloaded: true };
         },
       });
-      const result = await ingestMeeting(db, held.youtube_id, {
-        sites: { youtube },
-        workRoot: E2E_WORK_ROOT,
-      });
-      if (result.status !== "ingested") {
-        throw new Error(`expected ingestion, got ${result.status}`);
-      }
+      const site = { siteKind: "youtube", siteId: held.youtube_id } as const;
+      const { meetingId } = await addMeeting(db, youtube, site, ["gbos"]);
+      const dir = await meetingWorkDir(E2E_WORK_ROOT, site);
+      const unlessCached = async (artifact: string, step: () => unknown) => {
+        if (!existsSync(join(dir, artifact))) await step();
+      };
+      await downloadAudio(youtube, held.youtube_id, dir);
+      await unlessCached("transcription.json", () => transcribe(dir));
+      await clean(dir);
+      await unlessCached("diarization.json", () => diarize(dir));
+      await align(dir);
+      await unlessCached("embeddings.json", () => embedSpeakers(dir));
+      await recognizeSpeakers(db, dir);
+      await saveTranscript(db, meetingId, dir);
 
       // 3a. Word error rate vs the held-out golden.
-      const ingested = await db
+      const saved = await db
         .select({
           words: segmentsTable.words,
           slug: peopleTable.slug,
         })
         .from(segmentsTable)
         .leftJoin(peopleTable, eq(peopleTable.id, segmentsTable.person_id))
-        .where(eq(segmentsTable.meeting_id, result.meetingId))
+        .where(eq(segmentsTable.meeting_id, meetingId))
         // Segments are inserted in time order; id order recovers it. Without this
         // the words come back unordered and the WER alignment is meaningless.
         .orderBy(segmentsTable.id);
 
-      const ingestedWords = ingested.flatMap((s) => s.words);
+      const savedWords = saved.flatMap((s) => s.words);
       const refWords = held.segments.flatMap((s) => s.words);
-      const cmp = compareTranscripts(refWords, ingestedWords);
+      const cmp = compareTranscripts(refWords, savedWords);
       console.log(
         `[e2e] WER=${cmp.wer.toFixed(4)} ` +
           `(sub=${cmp.substitutions} del=${cmp.deletions} ins=${cmp.insertions} ` +
@@ -127,13 +147,13 @@ describe("e2e cross-meeting speaker recognition", () => {
       // mainly guards against the pipeline emitting materially different words than
       // it did at golden-generation time (a model change, dropped words). Lax on
       // purpose — tighten once the golden transcript is corrected by hand.
-      expect(ingestedWords.length).toBeGreaterThan(0);
+      expect(savedWords.length).toBeGreaterThan(0);
       expect(cmp.wer).toBeLessThan(0.5);
 
-      // 3b. Cross-meeting recognition signal: how many ingested segments were tied
+      // 3b. Cross-meeting recognition signal: how many saved segments were tied
       //     to a person we seeded from the other meetings.
       const recognized = new Map<string, number>();
-      for (const seg of ingested) {
+      for (const seg of saved) {
         if (seg.slug && seededSlugs.has(seg.slug)) {
           recognized.set(seg.slug, (recognized.get(seg.slug) ?? 0) + 1);
         }
@@ -145,7 +165,7 @@ describe("e2e cross-meeting speaker recognition", () => {
 
       // 3c. Identification accuracy — only meaningful once the held-out golden has
       //     identified people. Skip the assertion while it is still spk-N only.
-      const identityScore = scoreIdentifications(held.segments, ingested);
+      const identityScore = scoreIdentifications(held.segments, saved);
       if (identityScore.total > 0) {
         console.log(
           `[e2e] identification accuracy: ` +
@@ -167,14 +187,14 @@ describe("e2e cross-meeting speaker recognition", () => {
 /**
  * Fraction of the held-out golden's identified segments whose speaker the
  * pipeline recognized correctly. A golden segment is scored by taking its
- * midpoint in time and finding the ingested segment spanning it; a hit is when
+ * midpoint in time and finding the saved segment spanning it; a hit is when
  * that segment resolved to the same person slug.
  */
 function scoreIdentifications(
   reference: readonly GoldenSegment[],
-  ingested: readonly { words: TranscriptWord[]; slug: string | null }[],
+  saved: readonly { words: TranscriptWord[]; slug: string | null }[],
 ): { correct: number; total: number } {
-  const spans = ingested
+  const spans = saved
     .filter((s) => s.words.length > 0)
     .map((s) => ({
       start: s.words[0]!.start,

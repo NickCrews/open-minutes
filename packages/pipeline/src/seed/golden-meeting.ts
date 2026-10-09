@@ -68,6 +68,7 @@ export async function seedGoldenMeeting(
       title: meeting.title,
       date: meeting.date,
       time: meeting.time,
+      transcribed_at: new Date(),
     })
     .returning({ id: meetingsTable.id });
   const meetingId = meetingRow!.id;

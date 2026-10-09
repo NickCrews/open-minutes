@@ -18,7 +18,8 @@ import { dbTest } from "@open-minutes/db/testing/vitest";
 import { goldenData } from "@open-minutes/fixtures/golden-data";
 import { loadBodies } from "@open-minutes/fixtures/test-data";
 
-// Test helpers for the om API tests (not collected by vitest — no .test suffix).
+// Test helpers for the pipeline's tests and the agent tools' (not collected by
+// vitest: no .test suffix).
 
 /**
  * A site (YouTube, akleg.gov) where every call throws unless overridden, so a
@@ -70,8 +71,8 @@ export async function insertBody(
 }
 
 /**
- * Insert a bare meeting row (as if previously ingested), by default a YouTube
- * video. Returns its id.
+ * Insert a bare, untranscribed meeting row, by default a YouTube video.
+ * Returns its id.
  */
 export async function insertMeeting(
   db: DB,
@@ -106,7 +107,7 @@ const workRootFixture = {
   },
 };
 
-/** An empty database, plus a disposable work-directory root for ingest tests. */
+/** An empty database, plus a disposable work-directory root. */
 export const test = dbTest().extend<{ workRoot: string }>(workRootFixture);
 
 /**

@@ -62,7 +62,7 @@ describe("renderLlmsTxt", () => {
 });
 
 describe("getLlmsTxtData", () => {
-  test("reads coverage and when the newest meeting was added", async ({
+  test("reads coverage and when the newest transcript was saved", async ({
     db,
   }) => {
     const [jurisdiction] = await db
@@ -85,14 +85,21 @@ describe("getLlmsTxtData", () => {
           site_kind: "youtube",
           site_id: "a",
           date: "2026-03-23",
-          created_at: new Date("2026-09-01T12:00:00Z"),
+          transcribed_at: new Date("2026-09-01T12:00:00Z"),
         },
         {
           timezone: "America/Anchorage",
           site_kind: "youtube",
           site_id: "b",
           date: "2025-01-06",
-          created_at: new Date("2026-10-02T12:00:00Z"),
+          transcribed_at: new Date("2026-10-02T12:00:00Z"),
+        },
+        // Added later, but not transcribed: not covered yet.
+        {
+          timezone: "America/Anchorage",
+          site_kind: "youtube",
+          site_id: "c",
+          date: "2026-10-05",
         },
       ])
       .returning({ id: meetingsTable.id });

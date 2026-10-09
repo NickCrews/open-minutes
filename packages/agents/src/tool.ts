@@ -1,5 +1,7 @@
 import { z } from "zod";
 import type { DB } from "@open-minutes/db";
+import type { AudioProvider } from "@open-minutes/core/audio-provider";
+import type { SiteKind } from "@open-minutes/core/meeting-source";
 import type { AudioMeeting } from "./audio/meeting";
 import type { MeetingRef } from "./meeting-ref";
 
@@ -24,6 +26,10 @@ export interface ToolContext {
    * A meeting's audio and transcript, by slug or id. Opened once per context.
    */
   meeting(ref: MeetingRef): Promise<AudioMeeting>;
+  /** Where a meeting's metadata and audio come from on its site. */
+  site(kind: SiteKind): AudioProvider;
+  /** Where the pipeline steps keep each meeting's work directory. */
+  workRoot: string;
 }
 
 export interface Tool<I extends z.ZodType = z.ZodType, O = unknown> {

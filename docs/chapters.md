@@ -401,7 +401,7 @@ A chapter's speakers should be **computed from `segments` whose time ranges
 intersect the chapter**, with speaking seconds per speaker. They should not be
 emitted by the model or stored on the chapter. Reasons:
 
-- Speaker identity changes after ingest. Humans name `speaker 3`, and ADR 0002
+- Speaker identity changes after a transcript is saved. Humans name `speaker 3`, and ADR 0002
   adds cross-meeting recognition. A stored list would go stale. A derived list
   picks up every relabel for free.
 - It is exact where the model would be approximate.
