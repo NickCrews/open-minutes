@@ -1,35 +1,36 @@
 # @open-minutes/pipeline
 
 The steps that find meetings, add them to the database, and turn their audio
-into speaker-attributed transcripts. Each step is its own function, and the
-agent tools in `@open-minutes/agents` expose each as its own tool. Nothing runs
-one step after another: an agent (or a person, or a test) calls them in turn.
+into speaker-attributed transcripts. Each step is its own function. Nothing
+runs one step after another: the caller calls them in turn.
 
-| Step                  | Function            | Reads                                                  | Writes                                          |
-| --------------------- | ------------------- | ------------------------------------------------------ | ----------------------------------------------- |
-| `discover_meetings`   | `discoverMeetings`  | bodies' meeting sources, the database                  | nothing                                         |
-| `add_meeting`         | `addMeeting`        | the meeting's site                                     | `meetings`, `meeting_bodies`                    |
-| `download_audio`      | `downloadAudio`     | the meeting's site                                     | `audio.wav`                                     |
-| `transcribe`          | `transcribe`        | `audio.wav`                                            | `transcription.json`                            |
-| `clean_transcription` | `clean`             | `transcription.json`                                   | `cleaned.json`                                  |
-| `diarize`             | `diarize`           | `audio.wav`                                            | `diarization.json`                              |
-| `align_speakers`      | `align`             | `cleaned.json`, `diarization.json`                     | `segments.json`                                 |
-| `embed_speakers`      | `embedSpeakers`     | `audio.wav`, `segments.json`                           | `embeddings.json`                               |
-| `recognize_speakers`  | `recognizeSpeakers` | `embeddings.json`, people's voiceprints                | `recognition.json`                              |
-| `save_transcript`     | `saveTranscript`    | `segments.json`, `embeddings.json`, `recognition.json` | `people`, `segments`, `meetings.transcribed_at` |
+| Function            | Reads                                                  | Writes                                          |
+| ------------------- | ------------------------------------------------------ | ----------------------------------------------- |
+| `discoverMeetings`  | bodies' meeting sources, the database                  | nothing                                         |
+| `addMeeting`        | the meeting's site                                     | `meetings`, `meeting_bodies`                    |
+| `downloadAudio`     | the meeting's site                                     | `audio.wav`                                     |
+| `transcribe`        | `audio.wav`                                            | `transcription.json`                            |
+| `clean`             | `transcription.json`                                   | `cleaned.json`                                  |
+| `diarize`           | `audio.wav`                                            | `diarization.json`                              |
+| `align`             | `cleaned.json`, `diarization.json`                     | `segments.json`                                 |
+| `embedSpeakers`     | `audio.wav`, `segments.json`                           | `embeddings.json`                               |
+| `recognizeSpeakers` | `embeddings.json`, people's voiceprints                | `recognition.json`                              |
+| `saveTranscript`    | `segments.json`, `embeddings.json`, `recognition.json` | `people`, `segments`, `meetings.transcribed_at` |
 
-Files are in the meeting's **work directory**,
+Files are in the meeting's **work directory** (`meetingWorkDir`),
 `data/meetings/<site>_<id>/` under this package (gitignored; an akleg.gov ID's
-spaces and colons become `-`). A step whose input is missing refuses, naming
-the step that writes it. A step run again replaces its output.
+spaces and colons become `-`). A step whose input is missing throws, naming
+the function that writes it. A step run again replaces its output.
 
-`transcribe`, `diarize` and `embed_speakers` run the models in
+`transcribe`, `diarize` and `embedSpeakers` run the models in
 `@open-minutes/audio` locally (sherpa-onnx, downloading ONNX models on demand)
 and are slow: tens of minutes for a long meeting. The rest take seconds.
-`clean_transcription` strips disfluencies such as "um" and stutters (see
+`clean` strips disfluencies such as "um" and stutters (see
 `@open-minutes/core/transcription`'s `clean.ts`); `transcription.json` stays
 the recognizer's verbatim output, so a changed cleaning rule only needs
-`clean_transcription` and the steps after it.
+`clean` and the steps after it.
+
+`pnpm om models` downloads every model up front (~650MB).
 
 ## Adding a meeting
 
@@ -58,10 +59,3 @@ UPDATE bodies SET meeting_source = '{"type":"akleg_committee","committee":"HRES"
 -- or {"type":"youtube_channel","channel_id":"UC..."}
 -- or {"type":"youtube_playlist","playlist_id":"PL..."}
 ```
-
-## Meeting audio cache
-
-`@open-minutes/pipeline/audio-cache` downloads a meeting's audio into the
-per-machine cache (`~/.cache/open-minutes/meetings/<youtubeId>/`) and reads it
-back. The audio tools in `@open-minutes/agents` use it to open a meeting; they
-call the models in `@open-minutes/audio` directly.

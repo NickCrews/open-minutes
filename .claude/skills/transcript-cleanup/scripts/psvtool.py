@@ -25,9 +25,7 @@
             the word texts exactly (space separated). `new` may have more or
             fewer words; "" deletes.
         {"op":"insert","words":["0:01:57.24 Are","0:01:57.52 we"],"speaker":L}
-            Add words the transcript is missing (eg from `pnpm audio
-            transcribe_range`, whose "words" list has this shape), each at
-            its onset. With "speaker", they form their own turn and the
+            Add words the transcript is missing, each at its onset. With "speaker", they form their own turn and the
             words after them go back to whoever was speaking; without it,
             they join the segment they fall in. An onset that a word
             already has is refused.

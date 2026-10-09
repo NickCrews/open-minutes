@@ -13,12 +13,13 @@ code, comments, and commit messages.
 ## How it works
 
 ```
-YouTube ──yt-dlp──▶ pipeline steps (om tools) ──▶ Postgres + pgvector ◀── web (Cloudflare Workers)
-                    add / transcribe / diarize /     (local Docker or Neon)
-                    align / recognize / save
+YouTube ──yt-dlp──▶ pipeline steps ──▶ Postgres + pgvector ◀── web (Cloudflare Workers)
+                    add / transcribe /    (local Docker or Neon)
+                    diarize / align /
+                    recognize / save
 ```
 
-A [pnpm](https://pnpm.io) workspace with nine packages. Each depends only on
+A [pnpm](https://pnpm.io) workspace with eight packages. Each depends only on
 the ones listed above it:
 
 - **[`packages/core`](packages/core)** (`@open-minutes/core`): shared domain
@@ -55,13 +56,9 @@ the ones listed above it:
   bodies' meeting sources, adds one to the database, gets its audio from
   `@open-minutes/youtube` or `@open-minutes/akleg`, runs it through
   `@open-minutes/audio`, aligns turns to words, recognizes speakers against
-  known voiceprints, and saves the transcript. See the
+  known voiceprints, and saves the transcript. It also holds the `om` CLI
+  (`om models`). See the
   [pipeline README](packages/pipeline/README.md).
-- **[`packages/agents`](packages/agents)** (`@open-minutes/agents`): the
-  interface for agents and people. One tool per pipeline step, and tools for
-  editing the data (speaker labels, people, chapters), as typed tool
-  definitions for agent loops; and the `om` CLI: `om tools`, the tools as a
-  JSON CLI, and `om models`.
 - **[`packages/web`](packages/web)** (`@open-minutes/web`): the public
   transcript browser, built with [SolidJS](https://www.solidjs.com) +
   [TanStack Start](https://tanstack.com/start), Kobalte and Tailwind, deployed
@@ -172,14 +169,10 @@ Shared test configuration is in `vitest.config.ts`, `vitest.shared.ts` and
 
 ### Checking hand-edited test data
 
-Meetings in the database and in golden fixture files follow the same rules,
-in [`packages/core/src/meeting-check.ts`](packages/core/src/meeting-check.ts).
-
-- Database: `check_meeting` in `@open-minutes/agents`. Write tools roll back
-  a change that introduces an error.
-- Golden fixtures: `pnpm fixtures:check [file ...]` prints
-  `file:line: severity: message`, and also checks the file format. Errors
-  fail it and the test suite.
+Golden fixture files follow the rules in
+[`packages/core/src/meeting-check.ts`](packages/core/src/meeting-check.ts).
+`pnpm fixtures:check [file ...]` prints `file:line: severity: message`, and
+also checks the file format. Errors fail it and the test suite.
 
 [`.claude/settings.json`](.claude/settings.json) runs the same check as a
 Claude Code hook after every edit to those files, so an agent sees the
@@ -187,13 +180,13 @@ problem on the turn it makes it.
 
 ### Transcript cleaning
 
-The recognizer transcribes verbatim, so the `clean_transcription` step,
-after `transcribe`, strips disfluencies: filler words ("um", "uh"), stuttered
+The recognizer transcribes verbatim, so the `clean` step, after
+`transcribe`, strips disfluencies: filler words ("um", "uh"), stuttered
 function words ("the the"), and abandoned word fragments ("six- sixteen"). The
 rules live in
 [`packages/core/src/transcription/clean.ts`](packages/core/src/transcription/clean.ts);
 `transcription.json` stays verbatim, so a rule change applies by running
-`clean_transcription` again, without transcribing again.
+`clean` again, without transcribing again.
 
 Golden transcripts must already be clean, or the pipeline's output would be
 scored against disfluencies it removed on purpose. `pnpm fixtures:check`
@@ -210,18 +203,9 @@ tests, then run `pnpm fixtures:clean` and review the golden diff.
 
 ## Running the pipeline
 
-Each step is a tool; an agent (or you) calls them in turn. See the
+Each step is a function in `@open-minutes/pipeline`, called in turn. See the
 [pipeline README](packages/pipeline/README.md) for what each reads and writes.
-
-```sh
-pnpm om tools discover_meetings '{"body":"gbos"}'   # meetings not in the database yet
-pnpm om tools add_meeting '{"id":"<video id>","bodies":["gbos"]}'
-pnpm om tools download_audio '{"meeting":12}'
-pnpm om tools transcribe '{"meeting":12}'            # then clean_transcription, diarize,
-                                                     # align_speakers, embed_speakers,
-                                                     # recognize_speakers, save_transcript
-pnpm om models                                       # download every ML model up front (~650MB)
-```
+`pnpm om models` downloads every ML model up front (~650MB).
 
 From a server or CI runner, YouTube answers yt-dlp with "sign in to confirm
 you're not a bot". Metadata and audio come from the object store instead: the
@@ -238,10 +222,6 @@ waits for it; without it, a missing video is downloaded with yt-dlp, which
 works from a home connection. See [`.env.example`](.env.example) and
 [docs/research/youtube-in-ci.md](docs/research/youtube-in-ci.md).
 
-`om` (in [`packages/agents`](packages/agents/src/cli/om.ts)) writes to the
-same database as everything else (`DB=prod pnpm om tools ...` for
-production).
-
 ## Working with the data directly
 
 It's plain Postgres. Transcripts live in `segments` (with generated `text`,
@@ -256,15 +236,6 @@ LEFT JOIN people p ON p.id = s.person_id
 WHERE s.text ILIKE '%snow removal%'
 ORDER BY m.start_time, s.start_secs;
 ```
-
-To change the data, agents (and people) use the tools in
-[`packages/agents`](packages/agents/src/tools.ts) rather than raw SQL: `pnpm om
-tools` lists them, and `pnpm om tools <tool> '<json>'` calls one and prints
-JSON. The same tools are exported from `@open-minutes/agents`, with `toAgentTool` to
-hand them to an agent loop such as pi. Every write re-checks the meetings it
-touched and rolls back if it introduced an error. Guidance for agents doing
-this work is in
-[`.claude/skills/transcript-cleanup`](.claude/skills/transcript-cleanup/SKILL.md).
 
 `pnpm db studio` opens a browser UI on it.
 

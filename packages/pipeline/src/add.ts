@@ -1,5 +1,6 @@
 import { and, eq, sql } from "drizzle-orm";
 import {
+  type DB,
   bodiesTable,
   meetingBodiesTable,
   meetingsTable,
@@ -8,8 +9,6 @@ import type { AudioProvider } from "@open-minutes/core/audio-provider";
 import { bodySlug } from "@open-minutes/core/bodies";
 import { parseDateFromTitle } from "@open-minutes/core/meeting-date";
 import type { SiteMeeting } from "./sites";
-import type { Db } from "./db";
-import { PipelineError } from "./work-dir";
 
 export interface AddedMeeting extends SiteMeeting {
   meetingId: number;
@@ -29,13 +28,13 @@ export interface AddedMeeting extends SiteMeeting {
  * first body's.
  */
 export async function addMeeting(
-  db: Db,
+  db: DB,
   site: AudioProvider,
   { siteKind, siteId }: SiteMeeting,
   bodySlugs: readonly string[],
 ): Promise<AddedMeeting> {
   if (bodySlugs.length === 0)
-    throw new PipelineError("A meeting needs at least one body");
+    throw new Error("A meeting needs at least one body");
   const allBodies = await db
     .select({
       id: bodiesTable.id,
@@ -47,7 +46,7 @@ export async function addMeeting(
     (slug) => {
       const body = allBodies.find((b) => bodySlug(b) === slug);
       if (!body)
-        throw new PipelineError(
+        throw new Error(
           `No body with slug "${slug}"; bodies are ${allBodies.map(bodySlug).join(", ")}`,
         );
       return body;
@@ -64,7 +63,7 @@ export async function addMeeting(
       ),
     );
   if (existing)
-    throw new PipelineError(
+    throw new Error(
       `${siteKind} meeting ${siteId} is already meeting ${existing.id}`,
     );
 

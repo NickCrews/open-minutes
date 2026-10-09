@@ -1,4 +1,4 @@
-import { bodiesTable, meetingsTable } from "@open-minutes/db";
+import { type DB, bodiesTable, meetingsTable } from "@open-minutes/db";
 import { bodySlug } from "@open-minutes/core/bodies";
 import {
   type MeetingSource,
@@ -7,8 +7,6 @@ import {
 } from "@open-minutes/core/meeting-source";
 import type { VideoLister } from "@open-minutes/core/video-lister";
 import { listerFor, type SiteMeeting } from "./sites";
-import type { Db } from "./db";
-import { PipelineError } from "./work-dir";
 
 export interface DiscoverOptions {
   /** Restrict the scan to the body with this slug (eg "gbos"). */
@@ -32,7 +30,7 @@ export interface DiscoveredMeeting extends SiteMeeting {
  * read: no database writes, no persisted discovery state.
  */
 export async function discoverMeetings(
-  db: Db,
+  db: DB,
   options: DiscoverOptions = {},
 ): Promise<DiscoveredMeeting[]> {
   const sourceFor = options.sourceFor ?? listerFor;
@@ -44,9 +42,7 @@ export async function discoverMeetings(
     bodies = bodies.filter((b) => bodySlug(b) === wanted);
     if (bodies.length === 0) {
       const known = allBodies.map(bodySlug).sort().join(", ");
-      throw new PipelineError(
-        `No body with slug "${options.body}". Known: ${known}`,
-      );
+      throw new Error(`No body with slug "${options.body}". Known: ${known}`);
     }
   }
 

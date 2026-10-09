@@ -10,7 +10,7 @@ the database or what happens to the audio next. `aklegSource({ committee:
 (`{"type":"akleg_committee","committee":"HRES"}`): core's `VideoLister`,
 which discovery takes.
 
-The pipeline's `discover_meetings`, `add_meeting` and `download_audio` steps
+The pipeline's `discoverMeetings`, `addMeeting` and `downloadAudio` steps
 use it for bodies whose meeting source is a committee; their meetings are
 stored with `site_kind` `akleg`. The site's player
 can't play them yet. See [docs/research/akleg.md](../../docs/research/akleg.md)

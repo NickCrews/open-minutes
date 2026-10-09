@@ -26,8 +26,7 @@ import {
 //
 // then recognizeSpeakers (./recognize.ts) and saveTranscript (./save.ts).
 // Each one runs when called, replacing its artifact; nothing chains them. A
-// missing artifact names the agent tool that writes it (see
-// @open-minutes/agents).
+// missing artifact names the function that writes it.
 
 /** On-disk shape of diarization.json. */
 export interface DiarizationArtifact {
@@ -116,11 +115,7 @@ export async function diarize(
 export async function align(
   dir: string,
 ): Promise<{ segments: number; speakers: number }> {
-  const cleaned = await readArtifact<SpeechSegment[]>(
-    dir,
-    "cleaned",
-    "clean_transcription",
-  );
+  const cleaned = await readArtifact<SpeechSegment[]>(dir, "cleaned", "clean");
   const { turns } = await readArtifact<DiarizationArtifact>(
     dir,
     "diarization",
@@ -144,7 +139,7 @@ export async function embedSpeakers(
   const segments = await readArtifact<TranscriptSegment[]>(
     dir,
     "segments",
-    "align_speakers",
+    "align",
   );
   const embeddings: EmbeddingsArtifact = [
     ...computeSpeakerEmbeddings(audio, segmentsToTurns(segments)),

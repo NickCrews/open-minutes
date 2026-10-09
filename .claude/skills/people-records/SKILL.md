@@ -1,14 +1,13 @@
 ---
 name: people-records
-description: Conventions for a person's name and bio in Open Minutes. Use when adding or editing a person, in the database (update_person) or in packages/fixtures/test-data/people.jsonl.
+description: Conventions for a person's name and bio in Open Minutes. Use when adding or editing a person in packages/fixtures/test-data/people.jsonl.
 ---
 
 # People records
 
-A person has a `slug`, a `name` and a `bio`. In the database, set them with
-`update_person` (see the `transcript-cleanup` skill for the tools). In golden
-fixtures they live in `packages/fixtures/test-data/people.jsonl`, one JSON
-object per line; check with `pnpm fixtures:check`.
+A person has a `slug`, a `name` and a `bio`. In golden fixtures they live in
+`packages/fixtures/test-data/people.jsonl`, one JSON object per line; check
+with `pnpm fixtures:check`.
 
 ## Rules
 
@@ -45,7 +44,7 @@ object per line; check with `pnpm fixtures:check`.
    someone talks about. When a role changes, update the dates; don't delete
    the earlier role.
 7. **Dashes are plain hyphens** ("2019-2022"), never en or em dashes.
-   `update_person` refuses them, and a fixture test checks people.jsonl.
+   A fixture test checks people.jsonl.
 
 ## Examples
 

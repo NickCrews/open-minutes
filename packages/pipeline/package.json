@@ -1,14 +1,16 @@
 {
   "name": "@open-minutes/pipeline",
   "version": "0.1.0",
-  "description": "Open Minutes pipeline steps: discover meetings, add them to the database, and turn their audio into transcripts with @open-minutes/audio, one step at a time",
+  "description": "Open Minutes pipeline: discover meetings, add them to the database, and turn their audio into transcripts with @open-minutes/audio, one function per step",
   "type": "module",
+  "bin": {
+    "om": "./src/cli/om.ts"
+  },
   "exports": {
-    ".": "./src/index.ts",
-    "./audio-cache": "./src/test-utils/audio-cache.ts",
-    "./testing": "./src/testing.ts"
+    ".": "./src/index.ts"
   },
   "scripts": {
+    "om": "tsx src/cli/om.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
@@ -19,6 +21,7 @@
     "@open-minutes/core": "workspace:*",
     "@open-minutes/db": "workspace:*",
     "@open-minutes/youtube": "workspace:*",
+    "citty": "^0.1.6",
     "drizzle-orm": "1.0.0-beta.21"
   },
   "devDependencies": {

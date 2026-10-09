@@ -1,28 +1,17 @@
 ---
 name: transcript-cleanup
-description: Fix who-said-what, people, and chapters in Open Minutes meeting data. Use when correcting speaker labels, splitting or merging segments, naming people, or writing chapters, in the database or in golden fixture files.
+description: Fix who-said-what, people, and chapters in Open Minutes golden fixture files. Use when correcting speaker labels, splitting or merging segments, naming people, or writing chapters.
 ---
 
 # Transcript cleanup
 
 ## Tools
 
-Edit the database only through the tools in `@open-minutes/agents`, never raw
-SQL:
-
-- Shell: `pnpm om tools` lists the tools, `pnpm om tools <tool> --schema`
-  shows a tool's input, and `pnpm om tools <tool> '<json>'` calls it. Output
-  is JSON.
-- TypeScript: `import { tools, toAgentTool } from "@open-minutes/agents"`.
-
-Every write returns `issues` for the meetings it touched, and it rolls back
-if the change introduces an error. Read the issues each time. Pass
-`"dryRun": true` to preview a change.
-
 Golden fixtures (`packages/fixtures/test-data/`) are files. Check them with
-`pnpm fixtures:check`, which holds them to the same rules as `check_meeting`
-plus the rules of the file format. Fix every error; read every warning and
-fix it unless the data is right as it is. In a PSV file, a speaker marker goes on the line just
+`pnpm fixtures:check`, which holds them to the rules in
+`packages/core/src/meeting-check.ts` and the rules of the file format. Fix
+every error; read every warning and fix it unless the data is right as it
+is. In a PSV file, a speaker marker goes on the line just
 before its first word, with the same onset. Transcripts carry no fillers
 ("um", "uh") or stutters ("the the"): `pnpm fixtures:clean` removes them, so
 never type one back in.
@@ -35,27 +24,6 @@ ops (run it with no arguments for details). Keep
 the ops files, or the script that generates them, so a batch can be fixed and
 re-run. `fixtures:check` doesn't verify that an `identified:` slug exists in
 `people.jsonl`, so add every new person yourself.
-
-### Listening to the audio
-
-The text can't show everything. Some of the same tools read the meeting's
-audio. Like every tool, they take the meeting by slug
-(`"meeting": "gbos-2026-03-23"`) or by id (`"meeting": 12`), and read it from
-the database. A golden fixture's slug is its directory name; to listen to a
-golden, make sure the database you point at has it (`pnpm db up` seeds them
-into your local one), and run `pnpm db up --data-reset if-needed` after
-editing its PSV so the tools see your edits. Their segment ids are database
-row ids, not psvtool's numbering, so match segments by time: times in and out
-are `H:MM:SS.ss`, as psvtool prints them.
-
-- `find_untranscribed_speech` lists stretches where someone is talking but
-  the transcript has no words, with what recognition hears there on its own.
-  Run it once per meeting: skipped roll-call answers, motions and seconds
-  hide in these gaps, and they are evidence for rule 1.
-- `transcribe_range` re-decodes a short stretch to recover dropped words or
-  check a misheard one.
-- `speech_activity` shows the pauses in a stretch, which is where a turn
-  can change.
 
 ## Rules
 
@@ -87,7 +55,7 @@ are `H:MM:SS.ss`, as psvtool prints them.
    word where the speaker changes, then relabel each part. Edges are usually
    off by one to five words, most often with the next segment starting on the
    previous speaker's last words ("Thank | you."), so check the first and last
-   words of every segment. `check_meeting` and `fixtures:check` warn about a
+   words of every segment. `fixtures:check` warns about a
    speaker change inside a sentence near a longer pause; the pause hints
    which way to move it, but read the words to decide who said them.
 4. **Give every voice change its own segment.** The diarizer often folds
@@ -104,11 +72,9 @@ are `H:MM:SS.ss`, as psvtool prints them.
 6. **Choose the right kind of label.** A known person has a slug, their
    stable ID across meetings, databases and fixtures. An anonymous
    person is a voice that recognition saw again. A speaker number is a voice
-   within one meeting only. Unattributed means unknown. Use `update_person` to
-   name a recurring anonymous person. Use `merge_people` only when two person
-   rows are certainly the same voice. Leave a one-off speaker on a speaker
-   number. In a golden, a split-out voice with no name gets a speaker number
-   not yet used in that meeting.
+   within one meeting only. Unattributed means unknown. Leave a one-off
+   speaker on a speaker number. A split-out voice with no name gets a speaker
+   number not yet used in that meeting.
 7. **Don't untangle what needs the audio.** If one label seems to cover two
    voices and the text doesn't show which is which, fix only the segments with
    evidence and report the rest.
@@ -120,8 +86,8 @@ are `H:MM:SS.ss`, as psvtool prints them.
    lists the recurring ones.
 9. **Keep chapter text in step with labels.** After relabelling, check that
    chapter titles and summaries name the right people. Chapters follow
-   `docs/chapters.md`. Write them with `replace_chapters`, with
-   `reviewedByHuman: false` unless a human checked them.
+   `docs/chapters.md`. Write them in the meeting's `chapters.json`, with
+   `"reviewed_by_human": false` unless a human checked them.
 10. **Voiceprints aren't recomputed.** Relabelling segments doesn't change
     anyone's voiceprint, so say so if recognition will depend on your fix.
 

@@ -1,15 +1,13 @@
 // The pipeline's steps, each its own function: discover meetings on bodies'
 // meeting sources, add one to the database, and turn its audio into a saved
-// transcript one step at a time (see ./steps.ts for the order). The agent
-// tools in @open-minutes/agents call these; nothing here runs one step after
-// another.
+// transcript one step at a time (see ./steps.ts for the order). Nothing here
+// runs one step after another.
 export {
   discoverMeetings,
   type DiscoverOptions,
   type DiscoveredMeeting,
 } from "./discover";
 export { addMeeting, type AddedMeeting } from "./add";
-export type { Db } from "./db";
 export {
   align,
   clean,
@@ -34,6 +32,5 @@ export {
   artifactPath,
   DEFAULT_WORK_ROOT,
   meetingWorkDir,
-  PipelineError,
   workDirName,
 } from "./work-dir";

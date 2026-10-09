@@ -1,10 +1,14 @@
 import { count, eq } from "drizzle-orm";
-import { meetingsTable, peopleTable, segmentsTable } from "@open-minutes/db";
+import {
+  type DB,
+  meetingsTable,
+  peopleTable,
+  segmentsTable,
+} from "@open-minutes/db";
 import type { TranscriptSegment } from "@open-minutes/core/transcription";
-import type { Db } from "./db";
 import type { RecognitionArtifact } from "./recognize";
 import type { EmbeddingsArtifact } from "./steps";
-import { PipelineError, readArtifact } from "./work-dir";
+import { readArtifact } from "./work-dir";
 
 /**
  * Write a meeting's transcript to the database in one transaction: a new
@@ -13,24 +17,24 @@ import { PipelineError, readArtifact } from "./work-dir";
  * `meetings.transcribed_at`. Refuses a meeting that already has a transcript.
  */
 export async function saveTranscript(
-  db: Db,
+  db: DB,
   meetingId: number,
   dir: string,
 ): Promise<{ segments: number; recognized: number; newPeople: number }> {
   const segments = await readArtifact<TranscriptSegment[]>(
     dir,
     "segments",
-    "align_speakers",
+    "align",
   );
   const embeddings = await readArtifact<EmbeddingsArtifact>(
     dir,
     "embeddings",
-    "embed_speakers",
+    "embedSpeakers",
   );
   const recognition = await readArtifact<RecognitionArtifact>(
     dir,
     "recognition",
-    "recognize_speakers",
+    "recognizeSpeakers",
   );
 
   return db.transaction(async (tx) => {
@@ -39,13 +43,13 @@ export async function saveTranscript(
       .from(meetingsTable)
       .where(eq(meetingsTable.id, meetingId))
       .for("update");
-    if (!meeting) throw new PipelineError(`No meeting ${meetingId}`);
+    if (!meeting) throw new Error(`No meeting ${meetingId}`);
     const [existing] = await tx
       .select({ n: count() })
       .from(segmentsTable)
       .where(eq(segmentsTable.meeting_id, meetingId));
     if (meeting.transcribedAt !== null || existing!.n > 0)
-      throw new PipelineError(`Meeting ${meetingId} already has a transcript`);
+      throw new Error(`Meeting ${meetingId} already has a transcript`);
 
     const personBySpeaker = new Map<number, number>();
     let newPeople = 0;
@@ -56,8 +60,8 @@ export async function saveTranscript(
       }
       const embedding = embeddings.find((e) => e.speaker === speaker);
       if (!embedding)
-        throw new PipelineError(
-          `recognition.json has speaker ${speaker}, embeddings.json doesn't: run recognize_speakers again`,
+        throw new Error(
+          `recognition.json has speaker ${speaker}, embeddings.json doesn't: run recognizeSpeakers again`,
         );
       const [created] = await tx
         .insert(peopleTable)

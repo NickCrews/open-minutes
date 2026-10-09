@@ -13,3 +13,7 @@ read and write WAV files through `@open-minutes/audio/wav`.
 
 The ONNX models (~650MB) are downloaded into `src/models/` (gitignored) the
 first time each is used, or all at once with `pnpm om models`.
+
+`src/models.bench.ts` times the models on a checked-in minute of real meeting
+audio (`src/testdata/`), so `pnpm bench` reports each model's time per minute
+of audio and a model swap shows what it costs.

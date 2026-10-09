@@ -1,8 +1,7 @@
-// The rules a meeting's data must follow, wherever it lives: rows in the
-// database (checked by @open-minutes/agents after every edit) or golden
-// fixture files (checked by @open-minutes/fixtures). Each caller loads the
-// meeting into a CheckedMeeting, runs checkMeeting, and maps the indices in
-// each issue back to whatever its readers can act on: row ids, or file:line.
+// The rules a meeting's data must follow, eg in golden fixture files
+// (checked by @open-minutes/fixtures). Each caller loads the meeting into a
+// CheckedMeeting, runs checkMeeting, and maps the indices in each issue back
+// to whatever its readers can act on, eg file:line.
 //
 // A check is a function from the meeting to the problems it finds. Each
 // result has a code and a message, plus whatever structured data an agent

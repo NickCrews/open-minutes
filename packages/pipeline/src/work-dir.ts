@@ -60,7 +60,7 @@ export async function readArtifact<T>(
 ): Promise<T> {
   const path = artifactPath(dir, artifact);
   if (!existsSync(path))
-    throw new PipelineError(
+    throw new Error(
       `No ${ARTIFACTS[artifact]} in ${dir}: run ${writtenBy} first.`,
     );
   return JSON.parse(await readFile(path, "utf8")) as T;
@@ -78,16 +78,8 @@ export async function writeArtifact(
 export function requireAudio(dir: string): string {
   const path = artifactPath(dir, "audio");
   if (!existsSync(path))
-    throw new PipelineError(
-      `No ${ARTIFACTS.audio} in ${dir}: run download_audio first.`,
+    throw new Error(
+      `No ${ARTIFACTS.audio} in ${dir}: run downloadAudio first.`,
     );
   return path;
-}
-
-/**
- * A step refused: bad input, a meeting in the wrong state, or a step run
- * before the one whose output it reads.
- */
-export class PipelineError extends Error {
-  override name = "PipelineError";
 }

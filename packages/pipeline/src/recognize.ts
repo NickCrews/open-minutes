@@ -1,6 +1,5 @@
 import { cosineDistance, sql } from "drizzle-orm";
-import { peopleTable } from "@open-minutes/db";
-import type { Db } from "./db";
+import { type DB, peopleTable } from "@open-minutes/db";
 import type { EmbeddingsArtifact } from "./steps";
 import { readArtifact, writeArtifact } from "./work-dir";
 
@@ -30,13 +29,13 @@ export type RecognitionArtifact = Array<{
  * unmatched.
  */
 export async function recognizeSpeakers(
-  db: Db,
+  db: DB,
   dir: string,
 ): Promise<RecognitionArtifact> {
   const embeddings = await readArtifact<EmbeddingsArtifact>(
     dir,
     "embeddings",
-    "embed_speakers",
+    "embedSpeakers",
   );
   const recognition: RecognitionArtifact = [];
   for (const { speaker, centroid } of embeddings) {

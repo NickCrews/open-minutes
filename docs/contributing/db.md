@@ -279,8 +279,6 @@ data is renamed to `open_minutes__main` on first use.
   ([`packages/web/vite/dev-database.ts`](../../packages/web/vite/dev-database.ts))
   migrates without seeding, then passes the URL to the Worker, which can't
   read `.env.local` or `.git` itself.
-- **`om`**, before every command, so `DB=prod om tools <tool>` fails fast if
-  production is behind.
 - **Tests** build their templates with it.
 - **Production deploys**, just before switching traffic ([deploy.md](deploy.md)).
 - **CI** ([`.github/workflows/ci.yml`](../../.github/workflows/ci.yml)) checks

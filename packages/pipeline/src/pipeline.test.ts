@@ -100,7 +100,7 @@ const EMBEDDINGS = [
 ];
 
 /**
- * A work directory holding what transcribe, diarize and embed_speakers would
+ * A work directory holding what transcribe, diarize and embedSpeakers would
  * have written, so the cheap steps around them can run without models.
  */
 async function workDirWithModelOutputs(workRoot: string): Promise<string> {
@@ -240,12 +240,10 @@ describe("clean and align", () => {
   }) => {
     const dir = await meetingWorkDir(workRoot, VIDEO);
     await expect(clean(dir)).rejects.toThrow(/run transcribe first/);
-    await expect(align(dir)).rejects.toThrow(/run clean_transcription first/);
-    await expect(transcribe(dir)).rejects.toThrow(/run download_audio first/);
-    await expect(diarize(dir)).rejects.toThrow(/run download_audio first/);
-    await expect(embedSpeakers(dir)).rejects.toThrow(
-      /run download_audio first/,
-    );
+    await expect(align(dir)).rejects.toThrow(/run clean first/);
+    await expect(transcribe(dir)).rejects.toThrow(/run downloadAudio first/);
+    await expect(diarize(dir)).rejects.toThrow(/run downloadAudio first/);
+    await expect(embedSpeakers(dir)).rejects.toThrow(/run downloadAudio first/);
   });
 });
 
@@ -306,7 +304,7 @@ describe("recognizeSpeakers and saveTranscript", () => {
     await clean(dir);
     await align(dir);
     await expect(saveTranscript(db, meetingId, dir)).rejects.toThrow(
-      /run recognize_speakers first/,
+      /run recognizeSpeakers first/,
     );
     expect(await db.select().from(segmentsTable)).toHaveLength(0);
     expect(await db.select().from(peopleTable)).toHaveLength(0);
