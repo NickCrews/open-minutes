@@ -57,33 +57,33 @@ Committee.
 
 ## Anchorage Assembly and its committees
 
-| Heard                                                             | Meant                         |
-| ----------------------------------------------------------------- | ----------------------------- |
-| Vaughn, Voland, Volan, Walland, Mollen, Mullen, Balland, Ball and | Volland                       |
-| Kirker, Gerker, Garker, Girker, Gurker, Gricker                   | Goecker                       |
-| Presridia, Presford, Perez Verde, "President"                     | Perez-Verdia                  |
-| Raleigh, Riley, Burley, Broley, Barley, Bradley, Brownie          | Brawley                       |
-| Hilvers, Hulvers, Hovers, Solvers                                 | Silvers                       |
-| Baldon, Balbon, Ballon, Goldon, Baldenay                          | Baldwin Day                   |
-| Fivera, Devera                                                    | Rivera                        |
-| Zach (Johnson)                                                    | Zac                           |
-| Lisa Babb, me, Lisa                                               | Mélisa Babb                   |
-| Great C (development)                                             | Greg Soule                    |
-| can't call this, Cole Hayes, Collis                               | Kohlhase                      |
-| Mr. Terry, Mr. Cheerio                                            | Mr. Chair                     |
-| Error (2026-38), R (2026-42), A o                                 | AR, AO                        |
-| anchor municipal code                                             | Anchorage Municipal Code      |
-| the diet, the diocese                                             | dais                          |
-| levy (Girdwood, HLB)                                              | levee                         |
-| the core (flood control)                                          | the Corps                     |
-| acridge                                                           | Anchorage                     |
-| Touge, Chugyak, Chugia, Shuyak                                    | Chugiak                       |
-| Moldum                                                            | Muldoon                       |
-| Rondi                                                             | Rondy                         |
-| language plan                                                     | land use plan                 |
-| creators                                                          | graders                       |
-| burns, farms (snow)                                               | berms                         |
-| track list                                                        | Trackless (sidewalk tractors) |
+| Heard                                                                              | Meant                         |
+| ---------------------------------------------------------------------------------- | ----------------------------- |
+| Vaughn, Voland, Volan, Walland, Mollen, Mullen, Mullin, Rolland, Balland, Ball and | Volland                       |
+| Kirker, Gerker, Garker, Girker, Gurker, Gricker                                    | Goecker                       |
+| Presridia, Presford, Perez Verde, "President"                                      | Perez-Verdia                  |
+| Raleigh, Riley, Burley, Broley, Barley, Bradley, Brownie                           | Brawley                       |
+| Hilvers, Hulvers, Hovers, Solvers                                                  | Silvers                       |
+| Baldon, Balbon, Ballon, Goldon, Baldenay                                           | Baldwin Day                   |
+| Fivera, Devera                                                                     | Rivera                        |
+| Zach (Johnson)                                                                     | Zac                           |
+| Lisa Babb, me, Lisa                                                                | Mélisa Babb                   |
+| Great C (development)                                                              | Greg Soule                    |
+| can't call this, Cole Hayes, Collis                                                | Kohlhase                      |
+| Mr. Terry, Mr. Cheerio                                                             | Mr. Chair                     |
+| Error (2026-38), R (2026-42), A o                                                  | AR, AO                        |
+| anchor municipal code                                                              | Anchorage Municipal Code      |
+| the diet, the diocese                                                              | dais                          |
+| levy (Girdwood, HLB)                                                               | levee                         |
+| the core (flood control)                                                           | the Corps                     |
+| acridge                                                                            | Anchorage                     |
+| Touge, Chugyak, Chugia, Shuyak                                                     | Chugiak                       |
+| Moldum                                                                             | Muldoon                       |
+| Rondi                                                                              | Rondy                         |
+| language plan                                                                      | land use plan                 |
+| creators                                                                           | graders                       |
+| burns, farms (snow)                                                                | berms                         |
+| track list                                                                         | Trackless (sidewalk tractors) |
 
 ## Planning and Zoning Commission
 
