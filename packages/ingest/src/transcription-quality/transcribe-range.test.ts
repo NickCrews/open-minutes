@@ -35,8 +35,9 @@ import clips from "./range-clips.json";
 //   three, kept if any decode heard it         0.126 / 0.201 / 0.067  3.5
 //   one pass, 20 s either side                 0.171 / 0.246 / 0.111  2.1
 // Which three framings made no difference. On these 219 clips, one decode
-// gets 0.132 (0.187 / 0.090) and transcribeRange 0.109 (0.167 / 0.064). Of the golden words the vote
-// misses, about 60% were heard by some decode of the clip.
+// gets 0.132 (0.187 / 0.090) and transcribeRange 0.109 (0.167 / 0.064). Of
+// the golden words the vote misses, about 60% were heard by some decode of
+// the clip.
 
 const CONCURRENCY = 2;
 
