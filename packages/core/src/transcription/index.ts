@@ -8,7 +8,9 @@ export { LAST_WORD_DURATION_SEC } from "./types";
 export { type SplitSentence, splitSentences } from "./turn-edges";
 export { type FoldedAnswer, foldedAnswers } from "./folded-answers";
 export {
+  ANCHORAGE_WRITTEN_FORM_RULES,
   findWrittenFormIssues,
+  LOCAL_WRITTEN_FORM_RULES,
   spelledNumbers,
   splitNumerals,
   WRITTEN_FORM_RULES,

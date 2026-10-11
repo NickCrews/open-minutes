@@ -1,7 +1,11 @@
-import { findWrittenFormIssues } from "../transcription";
+import {
+  findWrittenFormIssues,
+  WRITTEN_FORM_RULES,
+  type WrittenFormRule,
+} from "../transcription";
 import {
   type AtWord,
-  type RuleMeeting,
+  type Rule,
   type Severity,
   type Violation,
   wordIssues,
@@ -20,9 +24,15 @@ export type WrittenForm = Violation<typeof code> &
 export const defaultSeverity = "error" satisfies Severity;
 
 /**
- * A number, time, sum, date or identifier not written the transcript's way
- * ("AR 2026 48", "ten dollars", "11 15 AM"; see transcription/written-form.ts).
+ * A rule for numbers, times, sums, dates and identifiers not written the
+ * transcript's way ("ten dollars", "11 15 AM", and with Anchorage's rules "AR
+ * 2026 48"; see transcription/written-form.ts), by the given written-form
+ * rules.
  */
-export function rule(meeting: RuleMeeting): WrittenForm[] {
-  return wordIssues(meeting, code, (words) => findWrittenFormIssues(words));
+export function ruleBy(rules: readonly WrittenFormRule[]): Rule<WrittenForm> {
+  return (meeting) =>
+    wordIssues(meeting, code, (words) => findWrittenFormIssues(words, rules));
 }
+
+/** By the written-form rules for anywhere: WRITTEN_FORM_RULES. */
+export const rule = ruleBy(WRITTEN_FORM_RULES);

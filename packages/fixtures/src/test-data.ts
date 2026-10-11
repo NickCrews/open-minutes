@@ -21,6 +21,12 @@ export interface GoldenJurisdiction {
   name: string;
   name_short: string;
   state: string;
+  /**
+   * Local written-form rules its transcripts follow, by name in
+   * LOCAL_WRITTEN_FORM_RULES (@open-minutes/core/transcription), eg
+   * ["anchorage"] for Anchorage's bill and code numbers. Not a DB column.
+   */
+  _written_forms?: string[];
 }
 
 export interface GoldenBody {
@@ -153,6 +159,27 @@ export function loadPeople(): GoldenPerson[] {
   if (!existsSync(peoplePath))
     throw new Error(`People file not found: ${peoplePath}`);
   return parseJsonl<GoldenPerson>(peoplePath);
+}
+
+/**
+ * The local written-form rules a meeting's transcript follows: those its
+ * bodies' jurisdictions opt into with `_written_forms`. Throws on a name
+ * LOCAL_WRITTEN_FORM_RULES doesn't have.
+ */
+export function localWrittenForms(
+  bodyIds: readonly string[],
+  root: string = TEST_DATA_ROOT,
+): string[] {
+  const bodies = parseJsonl<GoldenBody>(join(root, "bodies.jsonl"));
+  const jurisdictions = parseJsonl<GoldenJurisdiction>(
+    join(root, "jurisdictions.jsonl"),
+  );
+  const names = bodyIds.flatMap((id) => {
+    const body = bodies.find((b) => b.id === id);
+    const j = jurisdictions.find((j) => j.id === body?.jurisdiction_id);
+    return j?._written_forms ?? [];
+  });
+  return [...new Set(names)];
 }
 
 /**

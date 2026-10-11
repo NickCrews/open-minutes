@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { TranscriptWord } from "./types";
 import {
+  ANCHORAGE_WRITTEN_FORM_RULES,
   findWrittenFormIssues,
   spelledNumbers,
   splitNumerals,
+  WRITTEN_FORM_RULES,
 } from "./written-form";
 
 /** Words from a sentence, a third of a second apart. */
@@ -12,8 +14,12 @@ function words(sentence: string): TranscriptWord[] {
 }
 
 /** `rule: text` for each issue in a sentence. */
+/** `rule: text` for each issue in a sentence, by the general and Anchorage rules. */
 const found = (sentence: string) =>
-  findWrittenFormIssues(words(sentence)).map((i) => `${i.rule}: ${i.text}`);
+  findWrittenFormIssues(words(sentence), [
+    ...WRITTEN_FORM_RULES,
+    ...ANCHORAGE_WRITTEN_FORM_RULES,
+  ]).map((i) => `${i.rule}: ${i.text}`);
 
 const spelled = (sentence: string) =>
   [...spelledNumbers(words(sentence)), ...splitNumerals(words(sentence))].map(
@@ -40,6 +46,16 @@ describe("findWrittenFormIssues", () => {
       expect(found(s), s).toEqual([]);
   });
 
+  it("leaves Anchorage's identifiers to the Anchorage rules", () => {
+    const general = (sentence: string) =>
+      findWrittenFormIssues(words(sentence)).map((i) => i.rule);
+    expect(general("AR 2026 48, item 10 B1, section 2103050, R4.")).toEqual([]);
+    expect(general("section three dot seventy at 7 pm")).toEqual([
+      "spoken-separator",
+      "time",
+    ]);
+  });
+
   it("finds bill numbers the recognizer wrote its own way", () => {
     expect(found("AR 2026 48 and AO2026-23 and A02026-27.")).toEqual([
       "bill-number: AR 2026",
@@ -60,8 +76,8 @@ describe("findWrittenFormIssues", () => {
       "code-section: 2103050.",
     ]);
     expect(found("section three dot seventy and six dash two")).toEqual([
-      "code-section: three dot seventy",
-      "code-section: six dash two",
+      "spoken-separator: three dot seventy",
+      "spoken-separator: six dash two",
     ]);
   });
 
@@ -124,6 +140,11 @@ describe("findWrittenFormIssues", () => {
       "date: March 24th",
       "date: February nineteenth.",
     ]);
+    expect(found("born july fourth, and march 24 or later.")).toEqual([
+      "date: july fourth,",
+      "date: march 24",
+    ]);
+    expect(found("This march is a call. You may one day.")).toEqual([]);
   });
 });
 

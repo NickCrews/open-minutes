@@ -8,7 +8,9 @@ import {
   RULE_SPECS,
   RULE_SPECS_BY_CODE,
   STYLE_RULE_SPECS,
+  styleRuleSpecs,
 } from ".";
+import { ANCHORAGE_WRITTEN_FORM_RULES } from "../transcription";
 import type { RuleSpec, Violation } from "./common";
 import { seg } from "./testing";
 import * as splitSentence from "./split-sentence";
@@ -65,6 +67,13 @@ describe("checkMeeting", () => {
     expect(await codes({ segments })).toEqual([]);
     expect(
       await codes({ segments }, [...RULE_SPECS, ...STYLE_RULE_SPECS]),
+    ).toEqual(["warning spelled-number", "warning spelled-number"]);
+    // Anchorage's bill numbers only when a jurisdiction opts in.
+    expect(
+      await codes({ segments }, [
+        ...RULE_SPECS,
+        ...styleRuleSpecs(ANCHORAGE_WRITTEN_FORM_RULES),
+      ]),
     ).toEqual([
       "error written-form",
       "warning spelled-number",
