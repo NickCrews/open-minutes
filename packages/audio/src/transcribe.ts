@@ -119,8 +119,9 @@ export interface TranscribeOptions {
 /**
  * Transcribe audio into speech segments. Silero VAD splits the audio at silences
  * (never mid-word); consecutive runs are merged into windows of up to
- * MERGE_WINDOW_SEC that are each decoded in one pass (so the model gets context),
- * then each window's words are redistributed back to the VAD runs they fall in.
+ * MERGE_WINDOW_SEC that are each decoded in one pass (so the model gets context).
+ * Speech those passes have no words for is decoded again on its own (see
+ * repairHoles), then the words are distributed back to the VAD runs they fall in.
  * The result is one {@link SpeechSegment} per VAD run, with absolute word
  * timestamps, in time order. Returns [] for silence. Input must be 16 kHz mono.
  */
@@ -141,10 +142,10 @@ export async function transcribeAudio(
     `Transcribing ${typeof audio === "string" ? audio : "<waveform>"} (${duration.toFixed(1)}s) in ${windows.length} window(s) merged from ${speechRuns.length} VAD run(s)...`,
   );
 
-  const windowSegments = await mapWithConcurrency(
+  const windowWords = await mapWithConcurrency(
     windows,
     TRANSCRIBE_CONCURRENCY,
-    async (win, i): Promise<SpeechSegment[]> => {
+    async (win, i): Promise<TranscriptWord[]> => {
       const start = win.startSample / wave.sampleRate;
       const end = win.endSample / wave.sampleRate;
       // Zero-copy view into the original waveform — never copy the window's samples
@@ -167,12 +168,15 @@ export async function transcribeAudio(
         wallEndMs: Date.now(),
       });
 
-      const words = tokensToWords(
-        result.tokens ?? [],
-        result.timestamps ?? [],
-      ).map((w) => ({ ...w, start: w.start + start }));
-      return splitWordsIntoRuns(win.runs, words, wave.sampleRate);
+      return tokensToWords(result.tokens ?? [], result.timestamps ?? []).map(
+        (w) => ({ ...w, start: w.start + start }),
+      );
     },
+  );
+  const words = await repairHoles(
+    wave,
+    windowWords.flat(),
+    speechIn(wave, 0, duration),
   );
 
   const elapsed = (Date.now() - wallStart) / 1000;
@@ -180,7 +184,7 @@ export async function transcribeAudio(
     `Done: ${duration.toFixed(1)}s audio in ${elapsed.toFixed(1)}s (RTF=${(elapsed / duration).toFixed(2)})`,
   );
 
-  return windowSegments.flat();
+  return splitWordsIntoRuns(speechRuns, words, wave.sampleRate);
 }
 
 /**
@@ -330,7 +334,6 @@ interface SpeechRun {
 interface SpeechWindow {
   startSample: number;
   endSample: number;
-  runs: SpeechRun[];
 }
 
 /**
@@ -349,20 +352,15 @@ function mergeRuns(
     const last = windows.at(-1);
     if (last && run.endSample - last.startSample <= maxSamples) {
       last.endSample = run.endSample;
-      last.runs.push(run);
     } else {
-      windows.push({
-        startSample: run.startSample,
-        endSample: run.endSample,
-        runs: [run],
-      });
+      windows.push({ startSample: run.startSample, endSample: run.endSample });
     }
   }
   return windows;
 }
 
 /**
- * Distribute a window's recognized words (absolute timestamps, in time order)
+ * Distribute recognized words (absolute timestamps, in time order)
  * back to the VAD runs they fall in, yielding one SpeechSegment per run so the
  * output still marks exactly where VAD cut. Each word is assigned to the latest
  * run whose start it has reached; a word landing in an inter-run silence attaches
