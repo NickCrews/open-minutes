@@ -1,20 +1,15 @@
 // How a transcript writes numbers, times, money and the identifiers a
-// legislature uses: AO 2026-23, AMC 21.05.040G.2, item 10.B.1, 7:30 p.m.,
-// $36,000, 3.79%, March 19, R-4. The recognizer writes these several ways
-// ("AO twenty twenty six dash twenty", "AR 2026 48", "10 B1", "11 15 AM",
-// "five thousand dollar"); a transcript reads and searches better with one.
+// legislature uses. The recognizer writes these several ways ("AO twenty
+// twenty six dash twenty", "AR 2026 48", "10 B1", "11 15 AM", "five thousand
+// dollar"); a transcript reads and searches better with one.
 //
-// The style, in brief:
+// The style, in brief. Anywhere:
 //
 //   - Numbers: words for zero to nine, numerals from 10 up, and numerals for
 //     every year, time, date, sum of money, percentage, tally, address and
 //     identifier. A sentence may start with a spelled-out number.
-//   - Bills: "AO 2026-20", "AR 2026-7", "AO 2025-144(S)", "AO 2025-74(S-2)",
-//     "AM 142-2026", "AIM 25-2026"; "AO 2026 unnumbered" before it has one.
-//   - Code: "AMC 3.70.190", "AMC 25.35.060C", "21.05.040G.2.b", "Title 21",
-//     "chapter 21.05", "AS 44.62.310".
-//   - Agenda items: "item 10.B.1", "14.C", "9.A".
-//   - Zoning districts: "R-4", "R-2M", "B-3", "CE-R-10", "gR-1", "gC-8".
+//   - Numbers with a spoken separator in digits: "3.70.190", "2026-23", "4.3",
+//     not "three dot seventy" or "six dash two".
 //   - Times: "7 p.m.", "11:30 a.m.", "7:30".
 //   - Money: "$10", "$36,000", "$1.2 million", "$130,331.31".
 //   - Percentages: "1%", "3.79%".
@@ -22,11 +17,22 @@
 //     isn't said.
 //   - Tallies: "passes 5-0", "on a vote of 12 to 0".
 //
-// Two kinds of finding. WRITTEN_FORM_RULES match only text that is wrong
-// wherever it appears, like "AR 2026 48" or "ten dollars". spelledNumbers()
-// finds number words that the style writes as numerals, which can be right in
-// a phrase it doesn't know ("a hundred and ten percent sure" is caught, but
-// "one of the twenty" may be a name).
+// And in Anchorage, which a jurisdiction opts into (see
+// LOCAL_WRITTEN_FORM_RULES), since other places number their bills, code and
+// agendas their own way:
+//
+//   - Bills: "AO 2026-20", "AR 2026-7", "AO 2025-144(S)", "AO 2025-74(S-2)",
+//     "AM 142-2026", "AIM 25-2026"; "AO 2026 unnumbered" before it has one.
+//   - Code: "AMC 3.70.190", "AMC 25.35.060C", "21.05.040G.2.b", "Title 21",
+//     "chapter 21.05", "AS 44.62.310".
+//   - Agenda items: "item 10.B.1", "14.C", "9.A".
+//   - Zoning districts: "R-4", "R-2M", "B-3", "CE-R-10", "gR-1", "gC-8".
+//
+// Two kinds of finding. The rules match only text that is wrong wherever it
+// appears, like "AR 2026 48" or "ten dollars". spelledNumbers() finds number
+// words that the style writes as numerals, which can be right in a phrase it
+// doesn't know ("a hundred and ten percent sure" is caught, but "one of the
+// twenty" may be a name).
 
 import type { TranscriptWord } from "./types";
 
@@ -232,17 +238,16 @@ export const billNumberRule: WrittenFormRule = {
 };
 
 /**
- * Code sections: "AMC 3.70.190", "25.35.060C", "21.05.040G.2.b". Catches
- * a dropped or extra dot ("21.09050", "2103050", "3.3.144") and "dot" or
- * "dash" or "slash" spoken between numbers.
+ * A number with "dot", "dash", "slash" or "point" spoken in it: "3.70.190",
+ * "2026-23", "4.3", not "three dot seventy", "six dash two" or "four point
+ * three".
  */
-export const codeSectionRule: WrittenFormRule = {
-  name: "code-section",
+export const spokenSeparatorRule: WrittenFormRule = {
+  name: "spoken-separator",
   find(words) {
     const found: Omit<WrittenFormIssue, "rule">[] = [];
     words.forEach((w, i) => {
-      const c = core(w);
-      const lower = c.toLowerCase();
+      const lower = core(w).toLowerCase();
       if (
         ["dot", "dots", "dash", "slash", "point"].includes(lower) &&
         !endsPhrase(w) &&
@@ -251,7 +256,7 @@ export const codeSectionRule: WrittenFormRule = {
         !endsPhrase(words[i - 1]!) &&
         i + 1 < words.length &&
         isNumber(words[i + 1]!)
-      ) {
+      )
         found.push(
           issue(
             i - 1,
@@ -260,9 +265,23 @@ export const codeSectionRule: WrittenFormRule = {
             `write a number with "${lower}" in it in digits, eg "3.70.190", "2026-23", "4.3"`,
           ),
         );
-        return;
-      }
-      // Sections are title.chapter.section: "21.05.040", then any subsection.
+    });
+    return found;
+  },
+};
+
+/**
+ * Anchorage Municipal Code sections, title.chapter.section: "AMC 3.70.190",
+ * "25.35.060C", "21.05.040G.2.b". Catches a dropped or extra dot
+ * ("21.09050", "2103050", "3.3.144"). Alaska Statutes share the shape
+ * ("AS 44.62.310").
+ */
+export const codeSectionRule: WrittenFormRule = {
+  name: "code-section",
+  find(words) {
+    const found: Omit<WrittenFormIssue, "rule">[] = [];
+    words.forEach((w, i) => {
+      const c = core(w);
       if (/^\d+\.\d+\.\d+/.test(c)) {
         if (!/^\d{1,2}\.\d{2}\.\d{3}([A-Z](\.\d+(\.[a-z])?)?)?$/.test(c))
           found.push(
@@ -295,7 +314,10 @@ export const codeSectionRule: WrittenFormRule = {
   },
 };
 
-/** Agenda items: "10.B.1", "14.C", not "10 B1", "10A1" or "14B". */
+/**
+ * Anchorage Assembly agenda items: "10.B.1", "14.C", not "10 B1", "10A1" or
+ * "14B".
+ */
 export const agendaItemRule: WrittenFormRule = {
   name: "agenda-item",
   find(words) {
@@ -347,8 +369,8 @@ function zoningDistrict(prefix: string, number: string): string {
 }
 
 /**
- * Zoning districts: "R-4", "R-2M", "B-3", "CE-R-10", and Girdwood's
- * "gR-1", "gC-8".
+ * Anchorage zoning districts (AMC title 21): "R-4", "R-2M", "B-3",
+ * Chugiak-Eagle River's "CE-R-10", and Girdwood's "gR-1", "gC-8".
  */
 export const zoningDistrictRule: WrittenFormRule = {
   name: "zoning-district",
@@ -476,31 +498,42 @@ export const percentRule: WrittenFormRule = {
 };
 
 const MONTHS =
-  /^(January|February|March|April|May|June|July|August|September|October|November|December)$/;
+  /^(january|february|march|april|may|june|july|august|september|october|november|december)$/i;
 
-/** Dates: "March 19", not "March nineteenth", "March 19th" or "March nineteen". */
+/**
+ * Dates: "March 19", not "March nineteenth", "March 19th", "March nineteen"
+ * or "march 19". A month is matched in any case, since the recognizer often
+ * writes one in lower case ("born july fourth").
+ */
 export const dateRule: WrittenFormRule = {
   name: "date",
   find(words) {
     const found: Omit<WrittenFormIssue, "rule">[] = [];
     words.forEach((w, i) => {
       const next = words[i + 1];
-      if (!MONTHS.test(core(w)) || endsPhrase(w) || next === undefined) return;
+      const month = core(w);
+      if (!MONTHS.test(month) || endsPhrase(w) || next === undefined) return;
       const n = core(next);
       // "the February one" is a pronoun, not a day.
       if (/^(the|this|that|next|last)$/i.test(core(words[i - 1] ?? ""))) return;
-      // "May" is a verb as often as a month; only a day after it counts.
+      const lower = /^\p{Ll}/u.test(month);
+      // "may" is a verb as often as a month, and "march" a noun: only an
+      // ordinal after one counts, or a numeral after a capitalized one.
+      const ambiguous = /^(may|march)$/i.test(month);
+      const ordinal = /^\d{1,2}(st|nd|rd|th)$/.test(n) || isOrdinalWord(next);
+      const cardinal = isNumberWord(next) && !isOrdinalWord(next);
+      const numeral = /^\d{1,2}$/.test(n);
       if (
-        /^\d{1,2}(st|nd|rd|th)$/.test(n) ||
-        ((isNumberWord(next) || isOrdinalWord(next)) &&
-          !(core(w) === "May" && !isOrdinalWord(next)))
+        ordinal ||
+        (cardinal && !ambiguous) ||
+        (lower && numeral && (!ambiguous || /^March$/i.test(month)))
       )
         found.push(
           issue(
             i,
             words,
             2,
-            `write a date as "March 19", the day in numerals with no "th"`,
+            `write a date as "March 19": the month capitalized, the day in numerals with no "th"`,
           ),
         );
     });
@@ -542,17 +575,34 @@ export const tallyRule: WrittenFormRule = {
   },
 };
 
+/** The rules for anywhere. */
 export const WRITTEN_FORM_RULES: readonly WrittenFormRule[] = [
-  billNumberRule,
-  codeSectionRule,
-  agendaItemRule,
-  zoningDistrictRule,
+  spokenSeparatorRule,
   timeRule,
   moneyRule,
   percentRule,
   dateRule,
   tallyRule,
 ];
+
+/** Anchorage's identifiers: its bills, code, agenda items and zoning. */
+export const ANCHORAGE_WRITTEN_FORM_RULES: readonly WrittenFormRule[] = [
+  billNumberRule,
+  codeSectionRule,
+  agendaItemRule,
+  zoningDistrictRule,
+];
+
+/**
+ * Local rules a jurisdiction can opt into by name, on top of
+ * WRITTEN_FORM_RULES. A place that numbers its bills or code its own way
+ * gets its own entry.
+ */
+export const LOCAL_WRITTEN_FORM_RULES: Readonly<
+  Record<string, readonly WrittenFormRule[]>
+> = {
+  anchorage: ANCHORAGE_WRITTEN_FORM_RULES,
+};
 
 /** What the rules find in one speaker's words, in word order. */
 export function findWrittenFormIssues(

@@ -9,8 +9,10 @@ import {
   RULE_SPECS_BY_CODE,
   type RuleSegment,
   STYLE_RULE_SPECS,
+  styleRuleSpecs,
   TRANSCRIPT_RULE_SPECS,
 } from "@open-minutes/core/rules";
+import { LOCAL_WRITTEN_FORM_RULES } from "@open-minutes/core/transcription";
 import { formatClock } from "@open-minutes/core/clock";
 import {
   formatSpeaker,
@@ -21,6 +23,7 @@ import {
 import {
   type GoldenMeeting,
   getMeetingData,
+  localWrittenForms,
   parseGoldenChapters,
   TEST_DATA_ROOT,
   transcriptPath,
@@ -32,8 +35,10 @@ import {
 // same ones the database is checked against; this adds the rules for the
 // files themselves (PSV syntax, where a speaker marker goes, the directory
 // name), and holds goldens to the written style in STYLE_RULE_SPECS (numbers,
-// times, money, bill and code numbers). Errors fail the fixture tests and
-// `pnpm fixtures:check`; warnings are printed and want a look.
+// times, money), plus the local rules their jurisdiction opts into with
+// `_written_forms` in jurisdictions.jsonl (Anchorage's bill and code numbers).
+// Errors fail the fixture tests and `pnpm fixtures:check`; warnings are
+// printed and want a look.
 
 export type Severity = "error" | "warning";
 
@@ -119,10 +124,20 @@ export async function checkMeetingDir(dir: string): Promise<Issue[]> {
     ? chapterStartLines(readFileSync(chaptersPath, "utf8"))
     : [];
   const chapters = meeting.chapters?.chapters ?? null;
+  const root = resolve(dir, "../..");
+  const forms = localWrittenForms(meeting.body_ids, root);
+  const unknown = forms.filter((f) => !(f in LOCAL_WRITTEN_FORM_RULES));
+  if (unknown.length)
+    issues.push({
+      file: join(root, "jurisdictions.jsonl"),
+      severity: "error",
+      message: `unknown _written_forms ${JSON.stringify(unknown)}; known: ${JSON.stringify(Object.keys(LOCAL_WRITTEN_FORM_RULES))}`,
+    });
+  const localRules = forms.flatMap((f) => LOCAL_WRITTEN_FORM_RULES[f] ?? []);
   const placed = (
     await checkMeeting(ruleMeeting(meeting), [
       ...RULE_SPECS,
-      ...STYLE_RULE_SPECS,
+      ...styleRuleSpecs(localRules),
     ])
   ).map((i) =>
     "segmentIndex" in i

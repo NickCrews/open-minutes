@@ -14,6 +14,7 @@
 // RULE_SPECS, or STYLE_RULE_SPECS for how the transcript is written; its code
 // and violation type follow from it.
 
+import { WRITTEN_FORM_RULES, type WrittenFormRule } from "../transcription";
 import * as chapterSize from "./chapter-size";
 import type { RuleMeeting, RuleSpec, Severity } from "./common";
 import * as emptySegment from "./empty-segment";
@@ -78,14 +79,24 @@ export const CHAPTER_RULE_SPECS = [
 ] as const satisfies readonly RuleSpec[];
 
 /**
- * How the transcript is written: numbers, times, money, dates and bill and
- * code numbers. The golden fixtures follow it; pipeline output doesn't yet,
- * so the database's checks leave these out.
+ * How the transcript is written: numbers, times, money and dates, plus the
+ * local rules a jurisdiction opts into (Anchorage's bill and code numbers;
+ * see LOCAL_WRITTEN_FORM_RULES in @open-minutes/core/transcription). The
+ * golden fixtures follow it; pipeline output doesn't yet, so the database's
+ * checks leave these out.
  */
-export const STYLE_RULE_SPECS = [
-  writtenForm,
-  spelledNumber,
-] as const satisfies readonly RuleSpec[];
+export function styleRuleSpecs(localRules: readonly WrittenFormRule[] = []) {
+  return [
+    {
+      ...writtenForm,
+      rule: writtenForm.ruleBy([...WRITTEN_FORM_RULES, ...localRules]),
+    },
+    spelledNumber,
+  ] as const satisfies readonly RuleSpec[];
+}
+
+/** The style rules with no local rules. */
+export const STYLE_RULE_SPECS = styleRuleSpecs();
 
 type AnyRuleSpec =
   | (typeof RULE_SPECS)[number]
