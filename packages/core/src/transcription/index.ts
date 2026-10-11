@@ -21,6 +21,14 @@ export {
 } from "./clean";
 export { type SplitSentence, splitSentences } from "./turn-edges";
 export {
+  findWrittenFormIssues,
+  spelledNumbers,
+  splitNumerals,
+  WRITTEN_FORM_RULES,
+  type WrittenFormIssue,
+  type WrittenFormRule,
+} from "./written-form";
+export {
   alignSpeakers,
   MAX_WORD_SEC,
   segmentsToSpeechRuns,

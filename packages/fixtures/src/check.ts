@@ -4,8 +4,10 @@ import {
   type CheckedMeeting,
   type CheckedSegment,
   CHAPTER_CHECKERS,
+  CHECKERS,
   checkMeeting,
   type MeetingIssue,
+  STYLE_CHECKERS,
   TRANSCRIPT_CHECKERS,
 } from "@open-minutes/core/meeting-check";
 import { formatClock } from "@open-minutes/core/clock";
@@ -27,7 +29,8 @@ import {
 // A meeting's data follows the rules in @open-minutes/core/meeting-check, the
 // same ones the database is checked against; this adds the rules for the
 // files themselves (PSV syntax, where a speaker marker goes, the directory
-// name). Errors fail the fixture tests and `pnpm fixtures:check`; warnings are
+// name), and holds goldens to the written style in STYLE_CHECKERS (numbers,
+// times, money, bill and code numbers). Errors fail the fixture tests and `pnpm fixtures:check`; warnings are
 // printed and want a look.
 
 export type Severity = "error" | "warning";
@@ -97,7 +100,12 @@ export async function checkMeetingDir(dir: string): Promise<Issue[]> {
     ? chapterStartLines(readFileSync(chaptersPath, "utf8"))
     : [];
   const chapters = meeting.chapters?.chapters ?? null;
-  const placed = (await checkMeeting(checkedMeeting(meeting))).map((i) =>
+  const placed = (
+    await checkMeeting(checkedMeeting(meeting), [
+      ...CHECKERS,
+      ...STYLE_CHECKERS,
+    ])
+  ).map((i) =>
     "segment" in i
       ? atPsvLine(i, psvPath!, psv!.lines)
       : i.code === "no-bodies"
@@ -285,7 +293,7 @@ export async function checkPsv(
   if (segments)
     for (const i of await checkMeeting(
       { segments: checkedSegments(segments) },
-      TRANSCRIPT_CHECKERS,
+      [...TRANSCRIPT_CHECKERS, ...STYLE_CHECKERS],
     ))
       if ("segment" in i) issues.push(atPsvLine(i, file, lines));
   return issues.sort((a, b) => (a.line ?? 0) - (b.line ?? 0));

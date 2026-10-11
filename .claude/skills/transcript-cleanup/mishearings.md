@@ -71,6 +71,8 @@ Committee.
 | Great C (development)                                             | Greg Soule                    |
 | can't call this, Cole Hayes, Collis                               | Kohlhase                      |
 | Mr. Terry, Mr. Cheerio                                            | Mr. Chair                     |
+| Error (2026-38), R (2026-42), A o                                 | AR, AO                        |
+| anchor municipal code                                             | Anchorage Municipal Code      |
 | the diet, the diocese                                             | dais                          |
 | levy (Girdwood, HLB)                                              | levee                         |
 | the core (flood control)                                          | the Corps                     |

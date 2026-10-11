@@ -21,9 +21,13 @@ import {
 import { formatClock } from "./clock";
 import {
   cleanWords,
+  findWrittenFormIssues,
   LAST_WORD_DURATION_SEC,
+  spelledNumbers,
+  splitNumerals,
   splitSentences,
   type TranscriptWord,
+  type WrittenFormIssue,
 } from "./transcription";
 
 export interface CheckedSegment {
@@ -215,6 +219,60 @@ export function checkSplitSentences(meeting: CheckedMeeting): SplitSentence[] {
     });
 }
 
+type WrittenForm = CheckResult<"written-form"> &
+  AtWord & {
+    /** The written-form rule it breaks, eg "bill-number". */
+    rule: string;
+    /** The words at fault. */
+    text: string;
+  };
+
+/**
+ * A number, time, sum, date or identifier not written the transcript's way
+ * ("AR 2026 48", "ten dollars", "11 15 AM"; see transcription/written-form.ts).
+ */
+export function checkWrittenForms(meeting: CheckedMeeting): WrittenForm[] {
+  return atWords(meeting, findWrittenFormIssues, "written-form");
+}
+
+type SpelledNumber = CheckResult<"spelled-number"> &
+  AtWord & {
+    /** "spelled-number" or "split-numeral". */
+    rule: string;
+    /** The words at fault. */
+    text: string;
+  };
+
+/**
+ * Number words the style writes as numerals ("twenty twenty six", "eleven"),
+ * and two numerals in a row that are probably one ("2026 48").
+ */
+export function checkSpelledNumbers(meeting: CheckedMeeting): SpelledNumber[] {
+  return atWords(
+    meeting,
+    (words) => [...spelledNumbers(words), ...splitNumerals(words)],
+    "spelled-number",
+  );
+}
+
+function atWords<Code extends string>(
+  meeting: CheckedMeeting,
+  find: (words: readonly TranscriptWord[]) => WrittenFormIssue[],
+  code: Code,
+) {
+  return meeting.segments.flatMap(({ words }, segment) =>
+    find(words).map((f) => ({
+      code,
+      message: `${JSON.stringify(f.text)}: ${f.message}`,
+      segment,
+      word: f.index,
+      at: words[f.index]!.start,
+      rule: f.rule,
+      text: f.text,
+    })),
+  );
+}
+
 type InvalidChapter = CheckResult<"chapter"> & InChapter;
 
 /**
@@ -305,6 +363,13 @@ export const CHECKERS = [
   ...CHAPTER_CHECKERS,
 ] as const;
 
+/**
+ * How the transcript is written: numbers, times, money, dates and bill and
+ * code numbers. The golden fixtures follow it; pipeline output doesn't yet,
+ * so the database's checks leave these out.
+ */
+export const STYLE_CHECKERS = [checkWrittenForms, checkSpelledNumbers] as const;
+
 /** What a checker finds, unwrapped from any promise and array. */
 type ResultOf<C> = C extends (meeting: CheckedMeeting) => infer Out
   ? Awaited<Out> extends readonly (infer R)[]
@@ -312,8 +377,10 @@ type ResultOf<C> = C extends (meeting: CheckedMeeting) => infer Out
     : Awaited<Out>
   : never;
 
-/** Anything one of {@link CHECKERS} can find. */
-export type MeetingCheckResult = ResultOf<(typeof CHECKERS)[number]>;
+/** Anything one of {@link CHECKERS} or {@link STYLE_CHECKERS} can find. */
+export type MeetingCheckResult = ResultOf<
+  (typeof CHECKERS)[number] | (typeof STYLE_CHECKERS)[number]
+>;
 
 export type IssueCode = MeetingCheckResult["code"];
 
@@ -326,6 +393,8 @@ export const SEVERITY: Record<IssueCode, Severity> = {
   "word-order": "error",
   "unclean-word": "error",
   "split-sentence": "warning",
+  "written-form": "error",
+  "spelled-number": "warning",
   chapter: "error",
   "chapter-convention": "warning",
   "uncovered-speech": "warning",
