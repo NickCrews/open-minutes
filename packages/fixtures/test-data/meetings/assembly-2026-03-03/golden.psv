@@ -8122,10 +8122,9 @@ start_sec|event_type|event_data
 1:10:46.82|text|IDIQ
 1:10:47.46|text|contract
 1:10:47.70|text|with
-1:10:47.86|text|one
-1:10:48.10|text|twenty
-1:10:48.34|text|peaks
-1:10:48.74|text|consulting
+1:10:47.86|text|120
+1:10:48.10|text|Peaks
+1:10:48.34|text|Consulting
 1:10:49.14|text|LLC
 1:10:49.94|text|to
 1:10:50.18|text|provide
@@ -8506,7 +8505,7 @@ start_sec|event_type|event_data
 1:13:36.21|text|Is
 1:13:37.57|text|is
 1:13:37.97|text|120
-1:13:38.85|text|peaks
+1:13:38.85|text|Peaks
 1:13:39.41|text|familiar
 1:13:40.21|text|with
 1:13:41.01|text|the
@@ -11299,7 +11298,9 @@ start_sec|event_type|event_data
 1:31:37.46|text|youth
 1:31:37.78|text|member
 1:31:38.02|text|votes.
+1:31:38.58|meta|{"begin_speaker":"identified:jacob-lavarias"}
 1:31:38.58|text|Yes.
+1:31:38.98|meta|{"begin_speaker":"identified:christopher-constant"}
 1:31:38.98|text|Yes,
 1:31:39.22|text|AR
 1:31:40.42|text|2026-44
@@ -11757,7 +11758,9 @@ start_sec|event_type|event_data
 1:34:42.61|text|youth
 1:34:42.85|text|member
 1:34:43.17|text|votes.
+1:34:43.73|meta|{"begin_speaker":"identified:jacob-lavarias"}
 1:34:43.73|text|Yes,
+1:34:44.13|meta|{"begin_speaker":"identified:christopher-constant"}
 1:34:44.13|text|yes,
 1:34:44.45|text|AR
 1:34:44.93|text|2026-46
@@ -16247,7 +16250,9 @@ start_sec|event_type|event_data
 2:03:53.57|text|youth
 2:03:53.81|text|member
 2:03:54.13|text|votes.
+2:03:55.17|meta|{"begin_speaker":"identified:jacob-lavarias"}
 2:03:55.17|text|No.
+2:03:57.73|meta|{"begin_speaker":"identified:christopher-constant"}
 2:03:57.73|text|No.
 2:03:58.05|text|The
 2:03:58.21|text|motion
@@ -17320,6 +17325,7 @@ start_sec|event_type|event_data
 2:09:48.92|text|youth
 2:09:49.24|text|member
 2:09:49.56|text|votes.
+2:09:50.28|meta|{"begin_speaker":"identified:jacob-lavarias"}
 2:09:50.28|text|Yes.
 2:09:51.00|meta|{"begin_speaker":"identified:christopher-constant"}
 2:09:51.00|text|Yes.
@@ -18584,7 +18590,9 @@ start_sec|event_type|event_data
 2:18:49.04|text|youth
 2:18:49.28|text|member
 2:18:49.60|text|votes.
+2:18:50.31|meta|{"begin_speaker":"identified:jacob-lavarias"}
 2:18:50.31|text|Yes.
+2:18:50.71|meta|{"begin_speaker":"identified:christopher-constant"}
 2:18:50.71|text|Yes.
 2:18:51.03|text|AO
 2:18:51.51|text|2026-25
@@ -18895,8 +18903,8 @@ start_sec|event_type|event_data
 2:20:49.29|text|right,
 2:20:49.93|text|Jamie
 2:20:50.25|text|Lopez
-2:20:50.65|text|you
-2:20:50.81|text|sinker,
+2:20:50.65|text|East
+2:20:50.81|text|Anchorage,
 2:20:51.29|text|formerly
 2:20:51.61|text|coal
 2:20:51.77|text|ocean,
@@ -20107,9 +20115,9 @@ start_sec|event_type|event_data
 2:28:06.71|text|All
 2:28:06.95|text|right.
 2:28:07.59|text|Jamie
-2:28:07.91|text|Lip
-2:28:08.47|text|C
-2:28:08.63|text|Sankarage.
+2:28:07.91|text|Lopez,
+2:28:08.47|text|East
+2:28:08.63|text|Anchorage.
 2:28:09.83|text|So
 2:28:11.11|text|again,
 2:28:11.59|text|went
@@ -20536,8 +20544,8 @@ start_sec|event_type|event_data
 2:30:44.76|text|by
 2:30:44.92|text|Miss
 2:30:45.24|text|Brawley.
-2:30:46.28|text|Ms.
-2:30:46.60|text|Rolland.
+2:30:46.28|text|Mr.
+2:30:46.60|text|Volland.
 2:30:47.56|meta|{"begin_speaker":"identified:daniel-volland"}
 2:30:47.56|text|Yeah,
 2:30:47.80|text|I

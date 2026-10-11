@@ -16859,9 +16859,9 @@ start_sec|event_type|event_data
 1:49:36.28|text|have
 1:49:36.44|text|a
 1:49:36.60|text|discussion?
+1:49:37.80|meta|{"begin_speaker":"identified:jennifer-wingard"}
 1:49:37.80|text|Yes.
 1:49:40.20|text|Yes.
-1:49:42.44|meta|{"begin_speaker":"identified:jennifer-wingard"}
 1:49:42.44|text|So
 1:49:44.04|text|we
 1:49:44.36|text|can

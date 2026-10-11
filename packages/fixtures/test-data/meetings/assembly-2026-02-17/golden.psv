@@ -3689,9 +3689,12 @@ start_sec|event_type|event_data
 0:41:06.81|text|Day?
 0:41:10.01|text|Member
 0:41:10.41|text|Johnson.
+0:41:12.49|meta|{"begin_speaker":"identified:zac-johnson"}
 0:41:12.49|text|Yes.
+0:41:13.77|meta|{"begin_speaker":"segmented:spk-23"}
 0:41:13.77|text|Member
 0:41:14.17|text|Rivera.
+0:41:17.05|meta|{"begin_speaker":"identified:felix-rivera"}
 0:41:17.05|text|Yes.
 0:41:21.29|meta|{"begin_speaker":"identified:christopher-constant"}
 0:41:21.29|text|On
@@ -3706,7 +3709,9 @@ start_sec|event_type|event_data
 0:41:22.89|text|youth
 0:41:23.13|text|member
 0:41:23.45|text|votes.
+0:41:24.09|meta|{"begin_speaker":"identified:kennedy-bowser"}
 0:41:24.09|text|Yes.
+0:41:24.89|meta|{"begin_speaker":"identified:christopher-constant"}
 0:41:24.89|text|Yes.
 0:41:25.93|text|The
 0:41:26.09|text|unnumbered
@@ -6583,7 +6588,9 @@ start_sec|event_type|event_data
 1:02:34.97|text|youth
 1:02:35.21|text|member
 1:02:35.53|text|votes.
+1:02:36.25|meta|{"begin_speaker":"identified:kennedy-bowser"}
 1:02:36.25|text|Yes.
+1:02:36.97|meta|{"begin_speaker":"identified:christopher-constant"}
 1:02:36.97|text|Yes.
 1:02:37.45|text|AR
 1:02:38.09|text|2026-38
@@ -9199,7 +9206,9 @@ start_sec|event_type|event_data
 1:38:26.29|text|the
 1:38:26.77|text|member
 1:38:27.01|text|votes.
+1:38:27.49|meta|{"begin_speaker":"identified:kennedy-bowser"}
 1:38:27.49|text|Yes.
+1:38:27.97|meta|{"begin_speaker":"identified:christopher-constant"}
 1:38:27.97|text|Yes,
 1:38:28.29|text|the
 1:38:28.37|text|amendment
@@ -9348,7 +9357,9 @@ start_sec|event_type|event_data
 1:39:26.55|text|youth
 1:39:26.79|text|member
 1:39:27.11|text|votes.
+1:39:27.75|meta|{"begin_speaker":"identified:kennedy-bowser"}
 1:39:27.75|text|Yes.
+1:39:28.23|meta|{"begin_speaker":"identified:christopher-constant"}
 1:39:28.23|text|Yes.
 1:39:28.55|text|AR
 1:39:28.95|text|2026-7
@@ -9865,7 +9876,9 @@ start_sec|event_type|event_data
 1:42:59.37|text|youth
 1:42:59.69|text|member
 1:42:59.93|text|votes.
+1:43:00.41|meta|{"begin_speaker":"identified:kennedy-bowser"}
 1:43:00.41|text|Yes.
+1:43:00.89|meta|{"begin_speaker":"identified:christopher-constant"}
 1:43:00.89|text|Yes,
 1:43:01.21|text|AR
 1:43:01.21|text|2026-11
@@ -10087,7 +10100,9 @@ start_sec|event_type|event_data
 1:44:43.22|text|youth
 1:44:43.46|text|member
 1:44:43.78|text|votes.
+1:44:44.42|meta|{"begin_speaker":"identified:kennedy-bowser"}
 1:44:44.42|text|Yes.
+1:44:44.90|meta|{"begin_speaker":"identified:christopher-constant"}
 1:44:44.90|text|Yes,
 1:44:45.30|text|AO
 1:44:45.94|text|2026-18
@@ -10313,7 +10328,9 @@ start_sec|event_type|event_data
 1:46:23.06|text|youth
 1:46:23.30|text|member
 1:46:23.62|text|votes.
+1:46:24.18|meta|{"begin_speaker":"identified:kennedy-bowser"}
 1:46:24.18|text|Yes.
+1:46:24.90|meta|{"begin_speaker":"identified:christopher-constant"}
 1:46:24.90|text|Yes.
 1:46:26.42|text|AO
 1:46:27.06|text|2026-20
@@ -12612,7 +12629,9 @@ start_sec|event_type|event_data
 2:00:31.89|text|youth
 2:00:32.13|text|member
 2:00:32.29|text|votes.
+2:00:33.25|meta|{"begin_speaker":"identified:kennedy-bowser"}
 2:00:33.25|text|Yes.
+2:00:33.65|meta|{"begin_speaker":"identified:christopher-constant"}
 2:00:33.65|text|Yes.
 2:00:34.05|text|So
 2:00:34.29|text|we're
@@ -12669,7 +12688,9 @@ start_sec|event_type|event_data
 2:01:01.65|text|youth
 2:01:01.89|text|member
 2:01:02.21|text|votes.
+2:01:02.77|meta|{"begin_speaker":"identified:kennedy-bowser"}
 2:01:02.77|text|Yes.
+2:01:03.25|meta|{"begin_speaker":"identified:christopher-constant"}
 2:01:03.25|text|Yes,
 2:01:03.49|text|AO
 2:01:03.81|text|2026-17
@@ -15915,8 +15936,9 @@ start_sec|event_type|event_data
 2:20:02.52|text|Brawley
 2:20:03.16|text|Amendment
 2:20:03.56|text|one.
-2:20:05.08|meta|{"begin_speaker":"identified:christopher-constant"}
+2:20:05.08|meta|{"begin_speaker":"segmented:spk-41"}
 2:20:05.08|text|Second
+2:20:05.56|meta|{"begin_speaker":"identified:christopher-constant"}
 2:20:05.56|text|motion
 2:20:06.04|text|to
 2:20:06.28|text|amend
@@ -17360,7 +17382,9 @@ start_sec|event_type|event_data
 2:28:54.69|text|youth
 2:28:54.93|text|member
 2:28:55.25|text|votes.
+2:28:55.73|meta|{"begin_speaker":"identified:kennedy-bowser"}
 2:28:55.73|text|Yes.
+2:28:56.29|meta|{"begin_speaker":"identified:christopher-constant"}
 2:28:56.29|text|Yes.
 2:28:56.93|text|The
 2:28:57.09|text|amendment
@@ -17734,7 +17758,9 @@ start_sec|event_type|event_data
 2:31:19.05|text|youth
 2:31:19.37|text|member
 2:31:19.69|text|votes.
+2:31:20.25|meta|{"begin_speaker":"identified:kennedy-bowser"}
 2:31:20.25|text|Yes.
+2:31:20.73|meta|{"begin_speaker":"identified:christopher-constant"}
 2:31:20.73|text|Yes,
 2:31:21.05|text|AO
 2:31:21.53|text|2026-19
@@ -19411,8 +19437,9 @@ start_sec|event_type|event_data
 2:43:46.37|text|Move
 2:43:46.69|text|to
 2:43:46.85|text|approved.
-2:43:47.57|meta|{"begin_speaker":"identified:christopher-constant"}
+2:43:47.57|meta|{"begin_speaker":"identified:daniel-volland"}
 2:43:47.57|text|Second.
+2:43:47.97|meta|{"begin_speaker":"identified:christopher-constant"}
 2:43:47.97|text|Move
 2:43:48.21|text|by
 2:43:48.29|text|Ms.
@@ -19420,7 +19447,7 @@ start_sec|event_type|event_data
 2:43:48.93|text|second
 2:43:49.17|text|by
 2:43:49.25|text|Mr.
-2:43:49.49|text|Mullin,
+2:43:49.49|text|Volland,
 2:43:49.89|text|Ms.
 2:43:50.05|text|Brawley.
 2:43:51.25|meta|{"begin_speaker":"identified:anna-brawley"}
@@ -19471,8 +19498,9 @@ start_sec|event_type|event_data
 2:44:02.13|text|Brawley
 2:44:02.69|text|amendment
 2:44:03.01|text|one.
-2:44:03.57|meta|{"begin_speaker":"identified:christopher-constant"}
+2:44:03.57|meta|{"begin_speaker":"identified:daniel-volland"}
 2:44:03.57|text|Second.
+2:44:05.41|meta|{"begin_speaker":"identified:christopher-constant"}
 2:44:05.41|text|Motion
 2:44:05.81|text|to
 2:44:06.05|text|amend
@@ -19482,7 +19510,7 @@ start_sec|event_type|event_data
 2:44:07.25|text|seconded
 2:44:07.65|text|by
 2:44:07.73|text|Mr.
-2:44:07.97|text|Mullin,
+2:44:07.97|text|Volland,
 2:44:08.37|text|Ms.
 2:44:08.53|text|Brawley.
 2:44:10.05|meta|{"begin_speaker":"identified:anna-brawley"}
@@ -19995,7 +20023,7 @@ start_sec|event_type|event_data
 2:47:18.15|text|after
 2:47:18.31|text|the
 2:47:18.39|text|word
-2:47:18.55|text|AM.
+2:47:18.55|text|AIM.
 2:47:19.03|text|Mr.
 2:47:19.27|text|Goecker.
 2:47:20.15|meta|{"begin_speaker":"identified:jared-goecker"}
@@ -22014,7 +22042,9 @@ start_sec|event_type|event_data
 2:57:51.09|text|youth
 2:57:51.41|text|member
 2:57:51.73|text|votes
+2:57:52.29|meta|{"begin_speaker":"identified:kennedy-bowser"}
 2:57:52.29|text|yes
+2:57:52.69|meta|{"begin_speaker":"identified:christopher-constant"}
 2:57:52.69|text|yes
 2:57:53.01|text|the
 2:57:53.09|text|amendment
@@ -22425,7 +22455,9 @@ start_sec|event_type|event_data
 3:00:11.77|text|youth
 3:00:12.01|text|member
 3:00:12.33|text|votes.
+3:00:12.73|meta|{"begin_speaker":"identified:kennedy-bowser"}
 3:00:12.73|text|Yes.
+3:00:13.29|meta|{"begin_speaker":"identified:christopher-constant"}
 3:00:13.29|text|Yes,
 3:00:13.53|text|and
 3:00:13.69|text|that
@@ -22480,7 +22512,9 @@ start_sec|event_type|event_data
 3:00:46.49|text|youth
 3:00:46.81|text|member
 3:00:47.05|text|votes.
+3:00:47.61|meta|{"begin_speaker":"identified:kennedy-bowser"}
 3:00:47.61|text|Yes.
+3:00:48.09|meta|{"begin_speaker":"identified:christopher-constant"}
 3:00:48.09|text|Yes,
 3:00:48.41|text|AO
 3:00:48.89|text|2026-16(S)

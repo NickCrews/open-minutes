@@ -20,6 +20,7 @@ export {
   stutterRule,
 } from "./clean";
 export { type SplitSentence, splitSentences } from "./turn-edges";
+export { type FoldedAnswer, foldedAnswers } from "./folded-answers";
 export {
   findWrittenFormIssues,
   spelledNumbers,

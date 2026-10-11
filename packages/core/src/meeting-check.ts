@@ -22,6 +22,7 @@ import { formatClock } from "./clock";
 import {
   cleanWords,
   findWrittenFormIssues,
+  foldedAnswers,
   LAST_WORD_DURATION_SEC,
   spelledNumbers,
   splitNumerals,
@@ -273,6 +274,32 @@ function atWords<Code extends string>(
   );
 }
 
+type FoldedAnswer = CheckResult<"folded-answer"> &
+  AtWord & {
+    /** The answer, eg "Yes." */
+    answer: string;
+    /** The sentence that asked for it, or that restates the motion after it. */
+    asked: string;
+  };
+
+/**
+ * A one-word answer ("Yes.", "Second.") in the same segment as the question,
+ * roll call or call for a motion it answers (see transcription/folded-answers.ts).
+ */
+export function checkFoldedAnswers(meeting: CheckedMeeting): FoldedAnswer[] {
+  return meeting.segments.flatMap(({ words }, segment) =>
+    foldedAnswers(words).map((f) => ({
+      code: "folded-answer" as const,
+      message: `${JSON.stringify(f.answer)} and ${JSON.stringify(f.asked)} are in one segment; the answer is probably someone else's. Give it its own segment under whoever was asked, or whoever the motion names`,
+      segment,
+      word: f.index,
+      at: words[f.index]!.start,
+      answer: f.answer,
+      asked: f.asked,
+    })),
+  );
+}
+
 type InvalidChapter = CheckResult<"chapter"> & InChapter;
 
 /**
@@ -348,6 +375,7 @@ export const TRANSCRIPT_CHECKERS = [
   checkWordOrder,
   checkUncleanWords,
   checkSplitSentences,
+  checkFoldedAnswers,
 ] as const;
 
 /** The checks on the chapters, against the transcript. */
@@ -393,6 +421,7 @@ export const SEVERITY: Record<IssueCode, Severity> = {
   "word-order": "error",
   "unclean-word": "error",
   "split-sentence": "warning",
+  "folded-answer": "warning",
   "written-form": "error",
   "spelled-number": "warning",
   chapter: "error",
