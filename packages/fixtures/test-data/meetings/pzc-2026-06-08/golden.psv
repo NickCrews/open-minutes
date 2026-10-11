@@ -698,8 +698,7 @@ start_sec|event_type|event_data
 0:05:56.61|text|special
 0:05:57.01|text|limitations
 0:05:58.05|text|to
-0:05:58.37|text|CER
-0:05:59.33|text|three,
+0:05:58.37|text|CE-R-3,
 0:05:59.81|text|multifamily
 0:06:00.61|text|residential
 0:06:01.09|text|district.
@@ -3222,8 +3221,7 @@ start_sec|event_type|event_data
 0:26:16.44|text|one
 0:26:16.68|text|lot
 0:26:17.08|text|from
-0:26:17.24|text|CEB
-0:26:17.80|text|three
+0:26:17.24|text|CE-B-3
 0:26:18.04|text|SL
 0:26:18.60|text|General
 0:26:18.92|text|Business
@@ -3232,8 +3230,7 @@ start_sec|event_type|event_data
 0:26:20.28|text|special
 0:26:20.60|text|limitations
 0:26:21.24|text|to
-0:26:21.48|text|CEB
-0:26:22.04|text|three
+0:26:21.48|text|CE-B-3
 0:26:22.36|text|general
 0:26:22.68|text|business
 0:26:23.00|text|district.
@@ -3318,8 +3315,7 @@ start_sec|event_type|event_data
 0:26:57.96|text|the
 0:26:58.12|text|rezone
 0:26:58.92|text|to
-0:26:59.24|text|CEB
-0:27:00.20|text|three
+0:26:59.24|text|CE-B-3
 0:27:00.68|text|to
 0:27:00.92|text|the
 0:27:01.08|text|assembly.

@@ -5,8 +5,9 @@ import {
   fixMeeting,
   type MeetingIssue,
   type MeetingViolation,
+  RULE_SPECS,
   RULE_SPECS_BY_CODE,
-  type STYLE_RULE_SPECS,
+  STYLE_RULE_SPECS,
 } from ".";
 import type { RuleSpec, Violation } from "./common";
 import { seg } from "./testing";
@@ -54,6 +55,21 @@ describe("checkMeeting", () => {
       text: "Um,",
       atSecs: 1,
     });
+  });
+
+  it("checks the written style only when asked to", async () => {
+    const segments = [
+      seg("a", [1, "AR"], [1.3, "2026"], [1.6, "48"], [2, "passed"]),
+      seg("b", [3, "on"], [3.2, "the"], [3.4, "twenty"], [3.6, "fourth."]),
+    ];
+    expect(await codes({ segments })).toEqual([]);
+    expect(
+      await codes({ segments }, [...RULE_SPECS, ...STYLE_RULE_SPECS]),
+    ).toEqual([
+      "error written-form",
+      "warning spelled-number",
+      "warning spelled-number",
+    ]);
   });
 
   it("runs the rules it is given, sync or async, at their severity", async () => {

@@ -15,7 +15,7 @@ const MOTION_ANSWER =
   /^(second|seconded|i second|i'll second|so moved|moved)[.!]$/i;
 
 /** The chair restating a motion: "moved by …", "seconded by …". */
-const RESTATES_MOTION = /\b(moved|seconded|second|motion)\b.*\bby\b/i;
+const RESTATES_MOTION = /\b(move|moved|seconded|second|motion)\b.*\bby\b/i;
 
 /** A call for a second or a motion: "Do we have a second?", "a motion." */
 const CALLS_FOR_MOTION = /\b(second|motion|move)\b/i;
@@ -39,12 +39,16 @@ export interface FoldedAnswer {
   asked: string;
 }
 
+/** A title whose period doesn't end a sentence: "Ms. Brawley". */
+const TITLE = /^(Mr|Ms|Mrs|Dr|St)\.$/;
+
 /** Sentences as [first word index, text]. */
 function sentences(words: readonly TranscriptWord[]): [number, string][] {
   const out: [number, string][] = [];
   let start = 0;
   words.forEach((w, i) => {
-    if (/[.?!]["')\]]*$/.test(w.text) || i === words.length - 1) {
+    const ends = /[.?!]["')\]]*$/.test(w.text) && !TITLE.test(w.text);
+    if (ends || i === words.length - 1) {
       out.push([
         start,
         words
