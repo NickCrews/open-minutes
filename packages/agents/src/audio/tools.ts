@@ -148,11 +148,13 @@ export const findUntranscribedSpeech = defineTool({
       const { before, after } = neighbours(meeting.segments, s.start);
       const heard = input.transcribe
         ? cleanWords(
-            await transcribeRange(
-              meeting.wave(),
-              Math.max(0, s.start - TRANSCRIBE_PAD_SECS),
-              s.end + TRANSCRIBE_PAD_SECS,
-            ),
+            (
+              await transcribeRange(
+                meeting.wave(),
+                Math.max(0, s.start - TRANSCRIBE_PAD_SECS),
+                s.end + TRANSCRIBE_PAD_SECS,
+              )
+            ).words,
           ).words
         : null;
       results.push({
@@ -186,7 +188,7 @@ export const findUntranscribedSpeech = defineTool({
 export const transcribeRangeTool = defineTool({
   name: "transcribe_range",
   label: "Transcribe a range",
-  description: `Run speech recognition on just one stretch of a meeting's audio (at most ${MAX_TRANSCRIBE_SECS} s), and show it next to what the transcript has there. Decoding a short stretch on its own often recovers words the full-meeting pass dropped, and the onsets tell you where a missing word goes. Fillers and stutters are removed, as in the pipeline, unless raw is true.`,
+  description: `Run speech recognition on just one stretch of a meeting's audio (at most ${MAX_TRANSCRIBE_SECS} s), and show it next to what the transcript has there. Decoding a short stretch on its own often recovers words the full-meeting pass dropped, and the onsets tell you where a missing word goes. The stretch is decoded several ways and the words most decodes agree on win; \`uncertain\` lists where they disagreed, with what each heard, so you can pick the reading that fits (a name you know, a number on the agenda). Fillers and stutters are removed, as in the pipeline, unless raw is true.`,
   input: z.object({
     meeting: meetingRef,
     from: time,
@@ -196,11 +198,20 @@ export const transcribeRangeTool = defineTool({
   run: async (ctx, input) => {
     checkRange(input.from, input.to, MAX_TRANSCRIBE_SECS);
     const meeting = await ctx.meeting(input.meeting);
-    const words = await transcribeRange(meeting.wave(), input.from, input.to);
+    const { words, disagreements } = await transcribeRange(
+      meeting.wave(),
+      input.from,
+      input.to,
+    );
     const heard = input.raw ? words : cleanWords(words).words;
     return {
       heard: wordsText(heard),
       words: heard.map((w) => `${formatClock(w.start)} ${w.text}`),
+      uncertain: disagreements.map((d) => ({
+        at: formatClock(d.start),
+        chose: d.chosen,
+        alternatives: d.readings.filter((r) => r !== d.chosen),
+      })),
       transcript: transcriptIn(meeting, input.from, input.to),
     };
   },

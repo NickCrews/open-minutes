@@ -34,7 +34,7 @@ describe("per minute of audio", () => {
   );
 
   bench(
-    "transcribeRange, one pass",
+    "transcribeRange: three decodes, voted, holes repaired",
     async () => {
       await transcribeRange(rollCall.wave, 0, 60);
     },

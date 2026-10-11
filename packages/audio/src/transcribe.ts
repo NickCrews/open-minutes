@@ -4,6 +4,9 @@ import { fileURLToPath } from "node:url";
 import { availableParallelism } from "node:os";
 import { ensureDownloaded, ModelSpec } from "./model.js";
 import { EXPECTED_SAMPLE_RATE } from "./embed.js";
+import { findHoles, splitHole } from "./holes.js";
+import { detectSpeech, type Span } from "./speech-runs.js";
+import { voteWords, type Disagreement } from "./vote.js";
 
 import sherpa_onnx, {
   type OfflineRecognizer,
@@ -181,39 +184,140 @@ export async function transcribeAudio(
 }
 
 /**
- * How much audio either side of the requested range transcribeRange decodes.
- * The recognizer hears a word cut off at the edge of what it's given poorly,
- * and the words around it guess better with their neighbours; a couple of
- * seconds covers a word and a half either side.
+ * Recognize exactly [start, end) of the waveform in one pass, with nothing
+ * either side: the words, with absolute onsets. What the model hears in that
+ * framing alone; transcribeRange is the better transcript of a range.
  */
-export const RANGE_CONTEXT_SEC = 2;
+export async function recognizeOnce(
+  wave: WaveForm,
+  start: number,
+  end: number,
+): Promise<TranscriptWord[]> {
+  assertSampleRate(wave.sampleRate);
+  const rate = wave.sampleRate;
+  const from = Math.max(0, Math.round(start * rate));
+  const to = Math.min(wave.samples.length, Math.round(end * rate));
+  if (to <= from) return [];
+  const result = await transcribeSamples(wave.samples.subarray(from, to), rate);
+  const offset = from / rate;
+  return tokensToWords(result.tokens ?? [], result.timestamps ?? []).map(
+    (w) => ({ ...w, start: w.start + offset }),
+  );
+}
 
 /**
- * Recognize one stretch of audio in a single pass, without VAD: the words
- * whose onsets fall in [start, end) of the waveform, with absolute onsets.
- * The pass decodes `contextSecs` more either side, so the model gets lead-in
- * and lead-out, and the words found there are dropped. For a closer look at a
- * short range (under a few minutes); transcribeAudio is for whole meetings.
+ * How transcribeRange frames its decodes: seconds of audio decoded before and
+ * after the range. Every framing changes a few percent of the words, so the
+ * vote over these is right more often than any one of them. Each starts at
+ * least 2 s out, as the model hears a word cut off at the edge of what it's
+ * given poorly. Three decodes is where more stop paying: on hard clips of the
+ * golden meetings, five were no better.
+ */
+export const RANGE_FRAMINGS = [
+  { before: 2, after: 2 },
+  { before: 2.75, after: 2.75 },
+  { before: 3.5, after: 2 },
+] as const;
+
+/** Holes longer than this are re-decoded in pieces about this long. */
+const HOLE_PIECE_SEC = 8;
+/** Seconds of audio decoded either side of a hole, on the first try. */
+const HOLE_CONTEXT_SEC = 1;
+/** How many times to look for holes again after filling them. */
+const HOLE_ROUNDS = 2;
+
+export interface RangeTranscript {
+  /** The words whose onsets fall in the range, with absolute onsets. */
+  words: TranscriptWord[];
+  /**
+   * Where the decodes heard different words, and what each heard. The vote is
+   * usually right, but where it isn't, the right reading is often among
+   * these.
+   */
+  disagreements: Disagreement[];
+}
+
+/**
+ * Transcribe one stretch of audio, as well as we can: the words whose onsets
+ * fall in [start, end). Decodes the stretch once per RANGE_FRAMINGS and takes
+ * the words most decodes agree on (see voteWords), then re-decodes on its own
+ * any stretch of speech the result has no words for (see repairHoles). For a
+ * closer look at a short range (under a few minutes); transcribeAudio is for
+ * whole meetings.
  */
 export async function transcribeRange(
   wave: WaveForm,
   start: number,
   end: number,
-  { contextSecs = RANGE_CONTEXT_SEC } = {},
-): Promise<TranscriptWord[]> {
+): Promise<RangeTranscript> {
   assertSampleRate(wave.sampleRate);
-  const rate = wave.sampleRate;
-  const from = Math.max(0, Math.floor((start - contextSecs) * rate));
-  const to = Math.min(
-    wave.samples.length,
-    Math.ceil((end + contextSecs) * rate),
+  const inRange = (ws: TranscriptWord[]) =>
+    ws.filter((w) => w.start >= start && w.start < end);
+  const decodes = await Promise.all(
+    RANGE_FRAMINGS.map(async ({ before, after }) =>
+      inRange(await recognizeOnce(wave, start - before, end + after)),
+    ),
   );
-  if (to <= from) return [];
-  const result = await transcribeSamples(wave.samples.subarray(from, to), rate);
-  const offset = from / rate;
-  return tokensToWords(result.tokens ?? [], result.timestamps ?? [])
-    .map((w) => ({ ...w, start: w.start + offset }))
-    .filter((w) => w.start >= start && w.start < end);
+  const vote = voteWords(decodes);
+  const speech = speechIn(wave, start - 1, end + 1);
+  const words = inRange(await repairHoles(wave, vote.words, speech));
+  return { words, disagreements: vote.disagreements };
+}
+
+/**
+ * `words` (in time order) with the holes in them filled: each stretch of
+ * `speech` they have no words for (see findHoles) is decoded on its own, in
+ * pieces of up to HOLE_PIECE_SEC, and the words heard there are added. A
+ * piece still empty is tried again, framed a little wider, up to HOLE_ROUNDS
+ * times.
+ */
+async function repairHoles(
+  wave: WaveForm,
+  words: readonly TranscriptWord[],
+  speech: readonly Span[],
+): Promise<TranscriptWord[]> {
+  let out = [...words];
+  for (let round = 0; round < HOLE_ROUNDS; round++) {
+    const holes = findHoles(out, speech);
+    if (holes.length === 0) break;
+    const context = HOLE_CONTEXT_SEC + round * 0.37;
+    const found = await mapWithConcurrency(
+      holes,
+      TRANSCRIBE_CONCURRENCY,
+      async (hole) => {
+        // Only words between the hole's neighbours, so none is heard twice.
+        const after = out.find((w) => w.start >= hole.end)?.start ?? Infinity;
+        const pieces = splitHole(hole, speech, HOLE_PIECE_SEC);
+        const heard = await Promise.all(
+          pieces.map((p) =>
+            recognizeOnce(wave, p.start - context, p.end + context),
+          ),
+        );
+        return heard.flatMap((ws, i) =>
+          ws.filter(
+            (w) =>
+              w.start >= pieces[i]!.start - 0.5 &&
+              w.start < pieces[i]!.end &&
+              w.start < after - 0.15,
+          ),
+        );
+      },
+    );
+    out = [...out, ...found.flat()].sort((a, b) => a.start - b.start);
+  }
+  return out;
+}
+
+/** Speech spans by VAD in [from, to) of the waveform, in absolute seconds. */
+function speechIn(wave: WaveForm, from: number, to: number): Span[] {
+  const rate = wave.sampleRate;
+  const a = Math.max(0, Math.floor(from * rate));
+  const b = Math.min(wave.samples.length, Math.ceil(to * rate));
+  const offset = a / rate;
+  return detectSpeech({
+    sampleRate: rate,
+    samples: wave.samples.subarray(a, b),
+  }).map((s) => ({ start: s.start + offset, end: s.end + offset }));
 }
 
 /** A speech run as half-open sample-index bounds into the source waveform. */

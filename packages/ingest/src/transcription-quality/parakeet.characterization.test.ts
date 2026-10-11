@@ -11,7 +11,7 @@
 // behaviour changes in kind, not by a point.
 
 import { beforeAll, describe, expect, it } from "vitest";
-import { transcribeRange } from "@open-minutes/audio/transcribe";
+import { recognizeOnce } from "@open-minutes/audio/transcribe";
 import { readWave, type WaveForm } from "@open-minutes/audio/wav";
 import { getMeetingData } from "@open-minutes/fixtures/test-data";
 import {
@@ -44,7 +44,7 @@ beforeAll(
 
 /** One pass over exactly [start, end): no context either side. */
 function decode(start: number, end: number): Promise<TranscriptWord[]> {
-  return transcribeRange(wave, start, end, { contextSecs: 0 });
+  return recognizeOnce(wave, start, end);
 }
 
 function refIn(start: number, end: number): TranscriptWord[] {

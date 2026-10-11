@@ -99,7 +99,9 @@ describe("on the GBOS roll call, half missing from the transcript", () => {
       async () => {
         // Exact spellings shift with where the window starts ("Burnett" or
         // "Brunett", "connected" or "connecting"), so match loosely.
-        const words = plain(await transcribeRange(rollCall.wave, 11, 21.5));
+        const words = plain(
+          (await transcribeRange(rollCall.wave, 11, 21.5)).words,
+        );
         expect(words).toContain("brian");
         expect(words).toContain("sullivan");
         expect(words.filter((w) => w === "present")).toHaveLength(2);
@@ -110,7 +112,7 @@ describe("on the GBOS roll call, half missing from the transcript", () => {
     it(
       "returns only words starting in the range",
       async () => {
-        const words = await transcribeRange(rollCall.wave, 15, 18);
+        const words = (await transcribeRange(rollCall.wave, 15, 18)).words;
         expect(words.length).toBeGreaterThan(0);
         for (const w of words) {
           expect(w.start).toBeGreaterThanOrEqual(15);
@@ -130,7 +132,7 @@ describe("on the GBOS roll call, half missing from the transcript", () => {
         // would you like to do the roll call", cut off at 0:10 mid-request.
         // Given only [5, 10) the model drops the half-heard request (it ends
         // at "Thank you very much."); with the audio around it, it hears it.
-        const words = await transcribeRange(rollCall.wave, 5, 10);
+        const words = (await transcribeRange(rollCall.wave, 5, 10)).words;
         expect(words.filter((w) => w.start > 8).length).toBeGreaterThan(2);
         expect(words.at(-1)!.start).toBeLessThan(10);
       },
@@ -140,9 +142,9 @@ describe("on the GBOS roll call, half missing from the transcript", () => {
     it(
       "clamps context at the start and end of the audio",
       async () => {
-        const words = await transcribeRange(rollCall.wave, 0, 3);
+        const words = (await transcribeRange(rollCall.wave, 0, 3)).words;
         expect(hears(words, "wider community")).toBe(true);
-        const end = await transcribeRange(rollCall.wave, 58, 60);
+        const end = (await transcribeRange(rollCall.wave, 58, 60)).words;
         expect(hears(end, "thank you")).toBe(true);
       },
       DECODE_TIMEOUT,

@@ -1,13 +1,20 @@
 # Transcription quality
 
-How well `transcribeAudio` (in `@open-minutes/audio`) does, and why it's built
-the way it is. The tests here form a hierarchy:
+How well `transcribeAudio` and `transcribeRange` (in `@open-minutes/audio`)
+do, and why they're built the way they are. The tests here form a hierarchy:
 
 1. **[north-star.test.ts](north-star.test.ts): what we optimize.** Word
    error rate against the hand-corrected golden meetings, and runtime as a
    fraction of the audio's length. These two numbers decide every change to
    transcription. A change that lowers WER without slowing us down much is
    good, however it gets there.
+
+   **[transcribe-range.test.ts](transcribe-range.test.ts)** is the same
+   for `transcribeRange`, which agents call to take a closer look at a
+   stretch: WER on 219 clips of the goldens, half of them the stretches
+   `transcribeAudio` does worst on. It runs in about 15 minutes, so it's also
+   the quicker way to try an idea about decoding before running the north
+   star.
 
 2. **[parakeet.characterization.test.ts](parakeet.characterization.test.ts):
    what the model does.** Facts about the recognizer that the implementation
