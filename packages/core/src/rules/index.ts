@@ -19,6 +19,7 @@ import type { RuleMeeting, RuleSpec, Severity } from "./common";
 import * as emptySegment from "./empty-segment";
 import * as falseStart from "./false-start";
 import * as fillerWord from "./filler-word";
+import * as foldedAnswer from "./folded-answer";
 import * as invalidChapter from "./invalid-chapter";
 import * as noBodies from "./no-bodies";
 import * as segmentOutOfOrder from "./segment-out-of-order";
@@ -49,6 +50,7 @@ export const RULE_SPECS = [
   falseStart,
   stutter,
   splitSentence,
+  foldedAnswer,
   invalidChapter,
   chapterSize,
   uncoveredSpeech,
@@ -64,6 +66,7 @@ export const TRANSCRIPT_RULE_SPECS = [
   falseStart,
   stutter,
   splitSentence,
+  foldedAnswer,
 ] as const satisfies readonly RuleSpec[];
 
 /** The rules that apply to chapters, against their transcript. */

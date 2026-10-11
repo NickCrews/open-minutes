@@ -13466,8 +13466,10 @@ start_sec|event_type|event_data
 1:27:04.98|text|I
 1:27:05.22|text|speak,
 1:27:05.62|text|Jen?
+1:27:07.14|meta|{"begin_speaker":"identified:jennifer-wingard"}
 1:27:07.14|text|Yes.
 1:27:08.02|text|Please.
+1:27:10.90|meta|{"begin_speaker":"identified:kellie-okonek"}
 1:27:10.90|text|Yeah,
 1:27:11.38|text|I
 1:27:11.70|text|do

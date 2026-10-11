@@ -325,7 +325,7 @@ start_sec|event_type|event_data
 0:02:37.44|text|approve
 0:02:37.66|text|tonights
 0:02:38.06|text|agenda
-0:02:43.70|meta|{"begin_speaker":"segmented:spk-20"}
+0:02:43.70|meta|{"begin_speaker":"identified:brian-burnett"}
 0:02:43.70|text|I'll
 0:02:43.86|text|second.
 0:02:45.22|meta|{"begin_speaker":"identified:mike-edgington"}
@@ -13220,7 +13220,7 @@ start_sec|event_type|event_data
 1:22:08.36|text|guys
 1:22:09.80|text|thank
 1:22:10.36|text|you.
-1:22:17.96|meta|{"begin_speaker":"segmented:spk-10"}
+1:22:17.96|meta|{"begin_speaker":"identified:mitch-roth"}
 1:22:17.96|text|you
 1:22:18.12|text|hear
 1:22:18.44|text|me
@@ -16958,8 +16958,7 @@ start_sec|event_type|event_data
 1:47:35.19|meta|{"begin_speaker":"identified:kyle-kelley"}
 1:47:35.19|text|Motion
 1:47:35.59|text|passes
-1:47:35.91|text|three,
-1:47:36.31|text|two.
+1:47:35.91|text|3-2.
 1:47:36.95|text|Thank
 1:47:37.27|text|you.
 1:47:39.67|meta|{"begin_speaker":"identified:mike-edgington"}
@@ -19731,7 +19730,7 @@ start_sec|event_type|event_data
 2:06:20.65|text|have
 2:06:20.81|text|a
 2:06:20.97|text|second
-2:06:22.57|meta|{"begin_speaker":"segmented:spk-29"}
+2:06:22.57|meta|{"begin_speaker":"identified:brianna-sullivan"}
 2:06:22.57|text|second
 2:06:23.85|meta|{"begin_speaker":"identified:mike-edgington"}
 2:06:23.85|text|thank
@@ -20656,7 +20655,7 @@ start_sec|event_type|event_data
 2:12:31.03|text|approve
 2:12:31.27|text|it
 2:12:31.43|text|ahead.
-2:12:34.10|meta|{"begin_speaker":"segmented:spk-31"}
+2:12:34.10|meta|{"begin_speaker":"identified:kellie-okonek"}
 2:12:34.10|text|Second.
 2:12:34.82|meta|{"begin_speaker":"identified:mike-edgington"}
 2:12:34.82|text|Thank
@@ -20895,6 +20894,7 @@ start_sec|event_type|event_data
 2:13:58.66|text|one,
 2:13:58.90|text|et
 2:13:59.06|text|cetera.
+2:13:59.86|meta|{"begin_speaker":"identified:brian-burnett"}
 2:13:59.86|text|Right.
 2:14:00.58|text|All
 2:14:00.74|text|right,
@@ -21139,9 +21139,12 @@ start_sec|event_type|event_data
 2:16:15.13|text|Park
 2:16:15.45|text|Foundation
 2:16:15.93|text|challenge.
+2:16:16.97|meta|{"begin_speaker":"identified:mike-edgington"}
 2:16:16.97|text|Thank
 2:16:17.21|text|you,
+2:16:17.77|meta|{"begin_speaker":"identified:kellie-okonek"}
 2:16:17.77|text|second
+2:16:19.61|meta|{"begin_speaker":"identified:mike-edgington"}
 2:16:19.61|text|thank
 2:16:19.85|text|you
 2:16:20.01|text|very
@@ -21350,9 +21353,8 @@ start_sec|event_type|event_data
 2:17:48.92|meta|{"begin_speaker":"identified:kyle-kelley"}
 2:17:48.92|text|Motion
 2:17:49.24|text|passes
-2:17:49.64|text|five
-2:17:49.96|meta|{"begin_speaker":"identified:mike-edgington"}
-2:17:49.96|text|zero.
+2:17:49.64|text|5-0.
+2:17:50.44|meta|{"begin_speaker":"identified:mike-edgington"}
 2:17:50.44|text|Thank
 2:17:50.76|text|you.
 2:17:52.04|text|Thank
