@@ -3,7 +3,9 @@ import {
   type CheckedSegment,
   type CheckResult,
   checkBodies,
+  CHECKERS,
   checkMeeting,
+  STYLE_CHECKERS,
 } from "./meeting-check";
 
 /** A segment from `[onset, word]` pairs. */
@@ -69,6 +71,28 @@ describe("checkMeeting", () => {
     expect(
       await codes({ segments: segments.map((s) => ({ ...s, speaker: "a" })) }),
     ).toEqual([]);
+  });
+
+  it("warns about an answer left in the asker's segment", async () => {
+    const segments = [
+      seg("clerk", [1, "Member"], [1.3, "Johnson."], [2, "Yes."]),
+    ];
+    expect(await codes({ segments })).toEqual(["warning folded-answer"]);
+  });
+
+  it("checks the written style only when asked to", async () => {
+    const segments = [
+      seg("a", [1, "AR"], [1.3, "2026"], [1.6, "48"], [2, "passed"]),
+      seg("b", [3, "on"], [3.2, "the"], [3.4, "twenty"], [3.6, "fourth."]),
+    ];
+    expect(await codes({ segments })).toEqual([]);
+    expect(await codes({ segments }, [...CHECKERS, ...STYLE_CHECKERS])).toEqual(
+      [
+        "error written-form",
+        "warning spelled-number",
+        "warning spelled-number",
+      ],
+    );
   });
 
   it("checks chapters against the meeting's length", async () => {

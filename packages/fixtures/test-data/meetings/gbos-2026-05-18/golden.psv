@@ -18077,7 +18077,7 @@ start_sec|event_type|event_data
 1:57:27.29|text|have
 1:57:27.45|text|any
 1:57:27.69|text|discussion?
-1:57:32.09|meta|{"begin_speaker":"segmented:spk-11"}
+1:57:32.09|meta|{"begin_speaker":"identified:brian-burnett"}
 1:57:32.09|text|This
 1:57:32.33|text|seems
 1:57:32.73|text|to
@@ -18274,8 +18274,7 @@ start_sec|event_type|event_data
 1:59:23.08|meta|{"begin_speaker":"identified:kyle-kelley"}
 1:59:23.08|text|motion
 1:59:23.48|text|passes
-1:59:23.80|text|for
-1:59:24.04|text|one.
+1:59:23.80|text|4-1.
 1:59:24.52|meta|{"begin_speaker":"identified:jennifer-wingard"}
 1:59:24.52|text|Okay,
 1:59:24.84|text|in
@@ -18443,8 +18442,7 @@ start_sec|event_type|event_data
 2:00:27.27|meta|{"begin_speaker":"segmented:spk-10"}
 2:00:27.27|text|Motion
 2:00:27.67|text|passes
-2:00:28.07|text|three,
-2:00:28.39|text|two.
+2:00:28.07|text|3-2.
 2:00:31.91|meta|{"begin_speaker":"identified:jennifer-wingard"}
 2:00:31.91|text|That
 2:00:32.07|text|is
@@ -18863,10 +18861,10 @@ start_sec|event_type|event_data
 2:02:56.58|text|relocatable
 2:02:57.30|text|dwelling
 2:02:57.70|text|units.
-2:02:58.10|text|GR-1,
-2:03:00.18|text|GC-5
+2:02:58.10|text|gR-1,
+2:03:00.18|text|gC-5
 2:03:01.30|text|and
-2:03:01.54|text|GC-8
+2:03:01.54|text|gC-8
 2:03:02.50|text|zoning
 2:03:03.06|text|districts.
 2:03:04.02|meta|{"begin_speaker":"segmented:spk-0"}
@@ -18906,7 +18904,7 @@ start_sec|event_type|event_data
 2:03:20.42|text|relocatables
 2:03:21.54|text|and
 2:03:21.70|text|then
-2:03:22.02|text|GC-5
+2:03:22.02|text|gC-5
 2:03:23.14|text|is
 2:03:23.38|text|in
 2:03:23.94|text|South
@@ -18916,7 +18914,7 @@ start_sec|event_type|event_data
 2:03:27.30|text|you
 2:03:27.54|text|can
 2:03:27.70|text|see
-2:03:28.02|text|GR-1
+2:03:28.02|text|gR-1
 2:03:28.90|text|runs
 2:03:29.22|text|along
 2:03:29.62|text|the
@@ -19050,10 +19048,10 @@ start_sec|event_type|event_data
 2:04:24.41|text|those
 2:04:24.65|text|zones
 2:04:25.13|text|in
-2:04:25.37|text|GR-1,
-2:04:26.09|text|GC-5,
+2:04:25.37|text|gR-1,
+2:04:26.09|text|gC-5,
 2:04:27.53|text|and
-2:04:27.85|text|GC-8.
+2:04:27.85|text|gC-8.
 2:04:30.65|text|And
 2:04:30.97|text|I'll
 2:04:31.21|text|let
@@ -19243,7 +19241,7 @@ start_sec|event_type|event_data
 2:05:40.20|text|you
 2:05:40.28|text|know
 2:05:40.44|text|why
-2:05:40.60|text|GR-1
+2:05:40.60|text|gR-1
 2:05:41.56|text|was
 2:05:41.80|text|proposed
 2:05:42.28|text|to
@@ -19261,7 +19259,7 @@ start_sec|event_type|event_data
 2:05:45.72|text|me,
 2:05:45.96|text|but
 2:05:46.12|text|the
-2:05:46.20|text|GR-1
+2:05:46.20|text|gR-1
 2:05:46.84|text|part
 2:05:47.16|text|is
 2:05:47.40|text|less
@@ -19434,7 +19432,7 @@ start_sec|event_type|event_data
 2:07:09.40|text|unit
 2:07:09.80|text|community
 2:07:10.44|text|for
-2:07:10.68|text|GR-1.
+2:07:10.68|text|gR-1.
 2:07:12.76|text|Consider
 2:07:13.48|text|line
 2:07:13.80|text|245
@@ -20508,7 +20506,7 @@ start_sec|event_type|event_data
 2:13:48.58|text|we're
 2:13:48.74|text|talking
 2:13:48.90|text|about.
-2:13:49.30|text|GR-1
+2:13:49.30|text|gR-1
 2:13:50.26|text|is
 2:13:50.66|text|gigantic
 2:13:51.94|text|along

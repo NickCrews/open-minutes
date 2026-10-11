@@ -96,7 +96,10 @@ are `H:MM:SS.ss`, as psvtool prints them.
    a vote tally. In some meetings it folds most in-room speakers into the
    chair while online speakers get clean clusters. A long chair segment that
    holds a presentation usually starts after a first-name handoff ("item nine
-   … Jennifer."). Long runs with no punctuation usually hide a turn change.
+   … Jennifer."), or after the chair reads an agenda item that names its
+   sponsor ("GTC request … (Burnett)"). Long runs with no punctuation usually
+   hide a turn change. `check_meeting` and `fixtures:check` warn about a bare
+   "Yes." or "Second." left in the segment of whoever asked for it.
 5. **Check every segment of a cluster before labelling the whole cluster.**
    One `segmented:spk-N` can hold unrelated voices: a legislator and a police
    chief, or a member, a staffer and a presenter. Music before a meeting or

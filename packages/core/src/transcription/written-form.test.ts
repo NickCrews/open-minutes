@@ -28,7 +28,7 @@ describe("findWrittenFormIssues", () => {
       "AO 2026 unnumbered, an ordinance amending chapter 21.05.",
       "Assembly memorandum AM 142-2026 has passed.",
       "AMC 25.35.060C and 21.05.040G.2.b and AS 44.62.310.",
-      "Rezone from R-4 SL to R-4, near B-3 and GR-1 and CE-R-10.",
+      "Rezone from R-4 SL to R-4, near B-3 and gR-1 and CE-R-10.",
       "We meet at 7 p.m. or 11:30 a.m. tomorrow.",
       "It costs $10, or $36,000, or $1.5 million, or 6 cents.",
       "An increase of 1% or 3.79% a year.",
@@ -73,11 +73,16 @@ describe("findWrittenFormIssues", () => {
     ]);
   });
 
-  it("finds zoning districts without a hyphen", () => {
-    expect(found("from R4 to R2M and GC8 but not R19.")).toEqual([
+  it("finds zoning districts not written as R-4 or gR-1", () => {
+    expect(found("from R4 to R2M and GC8 or GC-5 but not R19.")).toEqual([
       "zoning-district: R4",
       "zoning-district: R2M",
       "zoning-district: GC8",
+      "zoning-district: GC-5",
+    ]);
+    expect(found("to CER three and GC eight, not item B one.")).toEqual([
+      "zoning-district: CER three",
+      "zoning-district: GC eight,",
     ]);
   });
 
@@ -88,6 +93,18 @@ describe("findWrittenFormIssues", () => {
       "time: 504 p.m.",
     ]);
     expect(found("I am here at 10 a m sharp.")).toEqual(["time: 10 a"]);
+  });
+
+  it("finds tallies said in words", () => {
+    expect(
+      found(
+        "Motion passes three, two. It fails four to one. It carries five zero.",
+      ),
+    ).toEqual([
+      "tally: three, two.",
+      "tally: four to one.",
+      "tally: five zero.",
+    ]);
   });
 
   it("finds money, percentages and dates said in words", () => {

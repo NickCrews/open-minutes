@@ -14,7 +14,7 @@
 //   - Code: "AMC 3.70.190", "AMC 25.35.060C", "21.05.040G.2.b", "Title 21",
 //     "chapter 21.05", "AS 44.62.310".
 //   - Agenda items: "item 10.B.1", "14.C", "9.A".
-//   - Zoning districts: "R-4", "R-2M", "B-3", "GR-1", "GC-8", "CE-R-10".
+//   - Zoning districts: "R-4", "R-2M", "B-3", "CE-R-10", "gR-1", "gC-8".
 //   - Times: "7 p.m.", "11:30 a.m.", "7:30".
 //   - Money: "$10", "$36,000", "$1.2 million", "$130,331.31".
 //   - Percentages: "1%", "3.79%".
@@ -334,24 +334,56 @@ export const agendaItemRule: WrittenFormRule = {
 };
 
 // Districts are numbered 1 to 10; "R19" is something else, like a permit.
-const ZONING = /^(R|B|I|GR|GC|GT|CER|CEB|CE-R|CE-B)(([1-9]|10)[A-Z]?)$/;
+// Girdwood's districts (AMC 21.09) start with a lowercase g: "gR-1", "gC-8".
+const ZONING =
+  /^(R|B|I|CER|CEB|CE-R|CE-B|GR|GC|GT|GI|gR|gC|gT|gI)-?(([1-9]|10)[A-Z]?)$/;
 
-/** Zoning districts: "R-4", "R-2M", "B-3", "GR-1", "GC-8", "CE-R-10". */
+/** How a district is written: "R-4", "CE-R-10", "gR-1". */
+function zoningDistrict(prefix: string, number: string): string {
+  const p = /^g/i.test(prefix)
+    ? `g${prefix[1]}`
+    : prefix.replace(/^CE-?/, "CE-");
+  return `${p}-${number}`;
+}
+
+/**
+ * Zoning districts: "R-4", "R-2M", "B-3", "CE-R-10", and Girdwood's
+ * "gR-1", "gC-8".
+ */
 export const zoningDistrictRule: WrittenFormRule = {
   name: "zoning-district",
   find(words) {
     const found: Omit<WrittenFormIssue, "rule">[] = [];
     words.forEach((w, i) => {
-      const m = ZONING.exec(core(w));
-      // "10 B1" is an agenda item, found by agendaItemRule.
-      if (m && !/^\d{1,2}$/.test(words[i - 1] ?? ""))
+      const c = core(w);
+      // "CER three", "GC 8": a district said as two words. Not "R 10" or
+      // "B one", which can be list items.
+      const next = words[i + 1];
+      if (
+        /^(CER|CEB|GR|GC|gR|gC)$/.test(c) &&
+        !endsPhrase(w) &&
+        next !== undefined &&
+        (/^\d{1,2}$/.test(core(next)) ||
+          ((wordValue(next) ?? 0) >= 1 && (wordValue(next) ?? 0) <= 10))
+      ) {
+        const n = /^\d/.test(core(next)) ? core(next) : wordValue(next)!;
         found.push(
           issue(
             i,
             words,
-            1,
-            `write a zoning district with a hyphen, as "${m[1]!.replace(/^CE-?/, "CE-")}-${m[2]}"`,
+            2,
+            `write the zoning district as "${zoningDistrict(c, String(n))}"`,
           ),
+        );
+        return;
+      }
+      const m = ZONING.exec(c);
+      // "10 B1" is an agenda item, found by agendaItemRule.
+      if (!m || /^\d{1,2}$/.test(words[i - 1] ?? "")) return;
+      const want = zoningDistrict(m[1]!, m[2]!);
+      if (c !== want)
+        found.push(
+          issue(i, words, 1, `write the zoning district as "${want}"`),
         );
     });
     return found;
@@ -476,6 +508,40 @@ export const dateRule: WrittenFormRule = {
   },
 };
 
+/**
+ * Vote tallies: "passes 5-0", "fails 3-2", not "passes five zero", "passes
+ * three, two" or "fails four to one". (A vote said with "to", "on a vote of
+ * 12 to 0", is written that way.)
+ */
+export const tallyRule: WrittenFormRule = {
+  name: "tally",
+  find(words) {
+    const found: Omit<WrittenFormIssue, "rule">[] = [];
+    words.forEach((w, i) => {
+      if (!/^(passes|passed|fails|failed|carries|carried)$/i.test(core(w)))
+        return;
+      const [a, b, c] = [words[i + 1], words[i + 2], words[i + 3]];
+      if (a === undefined || !isNumberWord(a)) return;
+      if (
+        (b !== undefined && isNumberWord(b) && !endsSentence(a)) ||
+        (b !== undefined &&
+          core(b).toLowerCase() === "to" &&
+          c !== undefined &&
+          isNumberWord(c))
+      )
+        found.push(
+          issue(
+            i + 1,
+            words,
+            core(b ?? "") === "to" ? 3 : 2,
+            `write a tally as "5-0" or "3-2"`,
+          ),
+        );
+    });
+    return found;
+  },
+};
+
 export const WRITTEN_FORM_RULES: readonly WrittenFormRule[] = [
   billNumberRule,
   codeSectionRule,
@@ -485,6 +551,7 @@ export const WRITTEN_FORM_RULES: readonly WrittenFormRule[] = [
   moneyRule,
   percentRule,
   dateRule,
+  tallyRule,
 ];
 
 /** What the rules find in one speaker's words, in word order. */
