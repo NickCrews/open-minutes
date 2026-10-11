@@ -4594,9 +4594,9 @@ start_sec|event_type|event_data
 0:31:45.32|text|proposing
 0:31:47.40|text|roughly
 0:31:48.28|text|700
-0:31:48.76|text|almost
-0:31:49.24|text|$800
-0:31:49.56|text|million
+0:31:49.24|text|almost
+0:31:49.56|text|$800
+0:31:50.20|text|million
 0:31:51.64|text|of
 0:31:51.88|text|money
 0:31:52.36|text|for
@@ -9929,9 +9929,9 @@ start_sec|event_type|event_data
 1:04:37.45|text|Fair
 1:04:38.41|text|probably
 1:04:38.73|text|later
-1:04:39.13|text|july
-1:04:39.61|text|ear
-1:04:39.85|text|august
+1:04:39.13|text|July
+1:04:39.61|text|or
+1:04:39.85|text|August
 1:04:40.41|text|the
 1:04:40.57|text|other
 1:04:40.73|text|thing
