@@ -6,6 +6,7 @@ import {
   type MeetingIssue,
   type MeetingViolation,
   RULE_SPECS_BY_CODE,
+  type STYLE_RULE_SPECS,
 } from ".";
 import type { RuleSpec, Violation } from "./common";
 import { seg } from "./testing";
@@ -105,7 +106,7 @@ describe("checkMeeting's result type", () => {
       | "uncovered-speech"
     >();
     expectTypeOf<(typeof allIssues)[number]["code"]>().toEqualTypeOf<
-      MeetingIssue["code"]
+      Exclude<MeetingIssue["code"], (typeof STYLE_RULE_SPECS)[number]["code"]>
     >();
   });
 });

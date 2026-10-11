@@ -4,9 +4,11 @@ import {
   CHAPTER_RULE_SPECS,
   checkMeeting,
   type MeetingIssue,
+  RULE_SPECS,
   type RuleMeeting,
   RULE_SPECS_BY_CODE,
   type RuleSegment,
+  STYLE_RULE_SPECS,
   TRANSCRIPT_RULE_SPECS,
 } from "@open-minutes/core/rules";
 import { formatClock } from "@open-minutes/core/clock";
@@ -29,8 +31,9 @@ import {
 // A meeting's data follows the rules in @open-minutes/core/rules, the
 // same ones the database is checked against; this adds the rules for the
 // files themselves (PSV syntax, where a speaker marker goes, the directory
-// name). Errors fail the fixture tests and `pnpm fixtures:check`; warnings are
-// printed and want a look.
+// name), and holds goldens to the written style in STYLE_RULE_SPECS (numbers,
+// times, money, bill and code numbers). Errors fail the fixture tests and
+// `pnpm fixtures:check`; warnings are printed and want a look.
 
 export type Severity = "error" | "warning";
 
@@ -116,7 +119,12 @@ export async function checkMeetingDir(dir: string): Promise<Issue[]> {
     ? chapterStartLines(readFileSync(chaptersPath, "utf8"))
     : [];
   const chapters = meeting.chapters?.chapters ?? null;
-  const placed = (await checkMeeting(ruleMeeting(meeting))).map((i) =>
+  const placed = (
+    await checkMeeting(ruleMeeting(meeting), [
+      ...RULE_SPECS,
+      ...STYLE_RULE_SPECS,
+    ])
+  ).map((i) =>
     "segmentIndex" in i
       ? atPsvLine(i, psvPath!, psv!.lines)
       : "chapterIndex" in i || i.code === "uncovered-speech"
@@ -336,10 +344,10 @@ export async function checkPsv(
 ): Promise<Issue[]> {
   const { issues, segments, lines } = readPsv(content, file);
   if (segments)
-    for (const i of await checkMeeting(
-      { segments: ruleSegments(segments) },
-      TRANSCRIPT_RULE_SPECS,
-    ))
+    for (const i of await checkMeeting({ segments: ruleSegments(segments) }, [
+      ...TRANSCRIPT_RULE_SPECS,
+      ...STYLE_RULE_SPECS,
+    ]))
       if ("segmentIndex" in i) issues.push(atPsvLine(i, file, lines));
   return issues.sort((a, b) => (a.line ?? 0) - (b.line ?? 0));
 }
