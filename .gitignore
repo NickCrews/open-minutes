@@ -22,4 +22,5 @@ dist/
 # OS
 .DS_Store
 .tanstack
-.wrangler__pycache__/
+.wrangler
+__pycache__/
