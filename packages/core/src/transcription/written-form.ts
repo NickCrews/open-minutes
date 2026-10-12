@@ -14,7 +14,7 @@
 //   - Money: "$10", "$36,000", "$1.2 million", "$130,331.31".
 //   - Percentages: "1%", "3.79%".
 //   - Dates: "February 17, 2026", "March 19"; "the 27th" when the month
-//     isn't said.
+//     isn't said. Months capitalized: "in July".
 //   - Tallies: "passes 5-0", "on a vote of 12 to 0".
 //
 // And in Anchorage, which a jurisdiction opts into (see
@@ -542,6 +542,38 @@ export const dateRule: WrittenFormRule = {
 };
 
 /**
+ * A month name in lower case: "July", not "july". Not "may" or "march",
+ * which are usually ordinary words, and not a month before a day, which
+ * dateRule reports.
+ */
+export const monthCapitalRule: WrittenFormRule = {
+  name: "month-capital",
+  find(words) {
+    const found: Omit<WrittenFormIssue, "rule">[] = [];
+    words.forEach((w, i) => {
+      const month = core(w);
+      if (!MONTHS.test(month) || !/^\p{Ll}/u.test(month)) return;
+      if (/^(may|march)$/.test(month)) return;
+      const next = words[i + 1];
+      const day =
+        next !== undefined &&
+        !endsPhrase(w) &&
+        (/^\d{1,2}(st|nd|rd|th)?$/.test(core(next)) || isNumberWord(next));
+      if (!day)
+        found.push(
+          issue(
+            i,
+            words,
+            1,
+            `capitalize the month: "${month[0]!.toUpperCase()}${month.slice(1)}"`,
+          ),
+        );
+    });
+    return found;
+  },
+};
+
+/**
  * Vote tallies: "passes 5-0", "fails 3-2", not "passes five zero", "passes
  * three, two" or "fails four to one". (A vote said with "to", "on a vote of
  * 12 to 0", is written that way.)
@@ -582,6 +614,7 @@ export const WRITTEN_FORM_RULES: readonly WrittenFormRule[] = [
   moneyRule,
   percentRule,
   dateRule,
+  monthCapitalRule,
   tallyRule,
 ];
 
