@@ -36,12 +36,34 @@
 
 import type { TranscriptWord } from "./types";
 
+/**
+ * Every kind of written-form finding, one per rule: what a meeting check
+ * reports it as.
+ */
+export const WRITTEN_FORM_CODES = [
+  "spoken-separator",
+  "time",
+  "money",
+  "percent",
+  "date",
+  "month-capital",
+  "tally",
+  "bill-number",
+  "code-section",
+  "agenda-item",
+  "zoning-district",
+  "spelled-number",
+  "split-numeral",
+] as const;
+
+export type WrittenFormCode = (typeof WRITTEN_FORM_CODES)[number];
+
 /** One word (or the first of a run of words) written the wrong way. */
 export interface WrittenFormIssue {
   /** Index into the words passed in. */
   index: number;
-  /** Name of the rule that found it, eg "bill-number". */
-  rule: string;
+  /** The rule that found it, eg "bill-number". */
+  rule: WrittenFormCode;
   /** The words at fault, joined by spaces. */
   text: string;
   /** What to write instead. */
@@ -49,7 +71,7 @@ export interface WrittenFormIssue {
 }
 
 export interface WrittenFormRule {
-  name: string;
+  name: WrittenFormCode;
   /** Issues in one speaker's words, in order. */
   find(words: readonly string[]): Omit<WrittenFormIssue, "rule">[];
 }

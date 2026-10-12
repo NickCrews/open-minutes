@@ -1,11 +1,7 @@
 // The types every rule shares, and helpers for more than one rule.
 
 import type { ChapterSpan } from "../chapters";
-import {
-  LAST_WORD_DURATION_SEC,
-  type TranscriptWord,
-  type WrittenFormIssue,
-} from "../transcription";
+import { LAST_WORD_DURATION_SEC, type TranscriptWord } from "../transcription";
 
 export interface RuleSegment {
   /**
@@ -110,26 +106,4 @@ export function chapterName(
   i: number,
 ): string {
   return `chapter ${i + 1} (${JSON.stringify(chapters[i]!.title)})`;
-}
-
-/**
- * What `find` reports in each segment's words, as violations of `code` at the
- * word each starts at.
- */
-export function wordIssues<Code extends string>(
-  meeting: RuleMeeting,
-  code: Code,
-  find: (words: readonly TranscriptWord[]) => WrittenFormIssue[],
-) {
-  return meeting.segments.flatMap(({ words }, segment) =>
-    find(words).map((f) => ({
-      code,
-      message: `${JSON.stringify(f.text)}: ${f.message}`,
-      segmentIndex: segment,
-      wordIndex: f.index,
-      atSecs: words[f.index]!.start,
-      rule: f.rule,
-      text: f.text,
-    })),
-  );
 }

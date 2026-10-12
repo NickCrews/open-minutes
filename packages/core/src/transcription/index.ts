@@ -13,7 +13,9 @@ export {
   LOCAL_WRITTEN_FORM_RULES,
   spelledNumbers,
   splitNumerals,
+  WRITTEN_FORM_CODES,
   WRITTEN_FORM_RULES,
+  type WrittenFormCode,
   type WrittenFormIssue,
   type WrittenFormRule,
 } from "./written-form";
