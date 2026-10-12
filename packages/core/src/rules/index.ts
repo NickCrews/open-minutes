@@ -14,7 +14,11 @@
 // RULE_SPECS, or STYLE_RULE_SPECS for how the transcript is written; its code
 // and violation type follow from it.
 
-import { WRITTEN_FORM_RULES, type WrittenFormRule } from "../transcription";
+import {
+  LOCAL_WRITTEN_FORM_RULES,
+  WRITTEN_FORM_RULES,
+  type WrittenFormRule,
+} from "../transcription";
 import * as chapterSize from "./chapter-size";
 import type { RuleMeeting, RuleSpec, Severity } from "./common";
 import * as emptySegment from "./empty-segment";
@@ -24,13 +28,17 @@ import * as foldedAnswer from "./folded-answer";
 import * as invalidChapter from "./invalid-chapter";
 import * as noBodies from "./no-bodies";
 import * as segmentOutOfOrder from "./segment-out-of-order";
-import * as spelledNumber from "./spelled-number";
 import * as splitSentence from "./split-sentence";
 import * as stutter from "./stutter";
 import * as typographicDash from "./typographic-dash";
 import * as uncoveredSpeech from "./uncovered-speech";
 import * as wordOutOfOrder from "./word-out-of-order";
-import * as writtenForm from "./written-form";
+import {
+  spelledNumber,
+  splitNumeral,
+  writtenFormSpec,
+  type WrittenFormSpec,
+} from "./written-form";
 
 export type { RuleMeeting, RuleSegment } from "./common";
 export {
@@ -85,14 +93,14 @@ export const CHAPTER_RULE_SPECS = [
  * golden fixtures follow it; pipeline output doesn't yet, so the database's
  * checks leave these out.
  */
-export function styleRuleSpecs(localRules: readonly WrittenFormRule[] = []) {
+export function styleRuleSpecs(
+  localRules: readonly WrittenFormRule[] = [],
+): WrittenFormSpec[] {
   return [
-    {
-      ...writtenForm,
-      rule: writtenForm.ruleBy([...WRITTEN_FORM_RULES, ...localRules]),
-    },
+    ...[...WRITTEN_FORM_RULES, ...localRules].map(writtenFormSpec),
     spelledNumber,
-  ] as const satisfies readonly RuleSpec[];
+    splitNumeral,
+  ];
 }
 
 /** The style rules with no local rules. */
@@ -106,7 +114,10 @@ export type RuleCode = AnyRuleSpec["code"];
 
 /** Each rule's spec, by its code. */
 export const RULE_SPECS_BY_CODE = Object.fromEntries(
-  [...RULE_SPECS, ...STYLE_RULE_SPECS].map((spec) => [spec.code, spec]),
+  [
+    ...RULE_SPECS,
+    ...styleRuleSpecs(Object.values(LOCAL_WRITTEN_FORM_RULES).flat()),
+  ].map((spec) => [spec.code, spec]),
 ) as { [S in AnyRuleSpec as S["code"]]: S };
 
 type Unarray<T> = T extends readonly (infer V)[] ? V : T;

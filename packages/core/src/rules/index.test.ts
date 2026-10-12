@@ -67,7 +67,7 @@ describe("checkMeeting", () => {
     expect(await codes({ segments })).toEqual([]);
     expect(
       await codes({ segments }, [...RULE_SPECS, ...STYLE_RULE_SPECS]),
-    ).toEqual(["warning spelled-number", "warning spelled-number"]);
+    ).toEqual(["warning spelled-number", "warning split-numeral"]);
     // Anchorage's bill numbers only when a jurisdiction opts in.
     expect(
       await codes({ segments }, [
@@ -75,9 +75,9 @@ describe("checkMeeting", () => {
         ...styleRuleSpecs(ANCHORAGE_WRITTEN_FORM_RULES),
       ]),
     ).toEqual([
-      "error written-form",
+      "error bill-number",
       "warning spelled-number",
-      "warning spelled-number",
+      "warning split-numeral",
     ]);
   });
 
@@ -114,6 +114,13 @@ describe("RULE_SPECS_BY_CODE", () => {
     expect(RULE_SPECS_BY_CODE["split-sentence"]).toBe(splitSentence);
     expectTypeOf<
       (typeof RULE_SPECS_BY_CODE)["split-sentence"]["defaultSeverity"]
+    >().toEqualTypeOf<"warning">();
+  });
+
+  it("finds a written-form rule, local ones included", () => {
+    expect(RULE_SPECS_BY_CODE["bill-number"].defaultSeverity).toBe("error");
+    expectTypeOf<
+      (typeof RULE_SPECS_BY_CODE)["split-numeral"]["defaultSeverity"]
     >().toEqualTypeOf<"warning">();
   });
 });
