@@ -3,13 +3,13 @@ import { meetingBodiesTable, meetingsTable } from "@open-minutes/db";
 import {
   checkMeeting as checkMeetingData,
   type MeetingIssue,
-} from "@open-minutes/core/meeting-check";
+} from "@open-minutes/core/rules";
 import { type Db, ToolError } from "./tool";
 import { intervalSecs, loadChapters, loadSegments } from "./load";
 
 /**
  * Something wrong, or probably wrong, with a meeting's data: a result from
- * @open-minutes/core/meeting-check with its severity, and with the segment
+ * @open-minutes/core/rules with its severity, and with the segment
  * and chapter it names given by row id.
  */
 export type Issue = Located<MeetingIssue>;
@@ -22,7 +22,7 @@ type Located<I> = I extends unknown
 
 /**
  * Check a meeting's bodies, transcript and chapters against the rules in
- * @open-minutes/core/meeting-check, the same ones the golden fixtures follow.
+ * @open-minutes/core/rules, the same ones the golden fixtures follow.
  */
 export async function checkMeeting(
   db: Db,

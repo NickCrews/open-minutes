@@ -1,9 +1,9 @@
 import { describe, expect, test as plainTest } from "vitest";
 import { dbTest } from "@open-minutes/db/testing/vitest";
 import { eq } from "drizzle-orm";
-import { checkMeeting as checkMeetingData } from "@open-minutes/core/meeting-check";
+import { checkMeeting as checkMeetingData } from "@open-minutes/core/rules";
 import { segmentsTable } from "@open-minutes/db";
-import { checkedMeeting } from "@open-minutes/fixtures/check";
+import { ruleMeeting } from "@open-minutes/fixtures/check";
 import { devData } from "@open-minutes/fixtures/dev-data";
 import { loadAllTestData } from "@open-minutes/fixtures/test-data";
 import { checkMeeting } from "./check";
@@ -96,7 +96,7 @@ describe("reading", () => {
         message: string;
       }) => `${golden.slug}: ${i.severity} ${i.code}: ${i.message}`;
       expect((await checkMeeting(db, id)).map(summary)).toEqual(
-        (await checkMeetingData(checkedMeeting(golden))).map(summary),
+        (await checkMeetingData(ruleMeeting(golden))).map(summary),
       );
     }
   });

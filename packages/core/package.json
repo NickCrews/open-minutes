@@ -14,7 +14,7 @@
     "./voice_embeddings": "./src/voice_embeddings/index.ts",
     "./chapters": "./src/chapters.ts",
     "./clock": "./src/clock.ts",
-    "./meeting-check": "./src/meeting-check.ts",
+    "./rules": "./src/rules/index.ts",
     "./transcript-fingerprint": "./src/transcript-fingerprint.ts",
     "./text": "./src/text.ts",
     "./timezone": "./src/timezone.ts"
