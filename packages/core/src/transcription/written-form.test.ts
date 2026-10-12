@@ -145,6 +145,10 @@ describe("findWrittenFormIssues", () => {
       "date: march 24",
     ]);
     expect(found("This march is a call. You may one day.")).toEqual([]);
+    expect(found("later in july or august, not may.")).toEqual([
+      "month-capital: july",
+      "month-capital: august,",
+    ]);
   });
 });
 
