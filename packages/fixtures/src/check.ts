@@ -1,13 +1,13 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import {
-  type CheckedMeeting,
-  type CheckedSegment,
-  CHAPTER_CHECKERS,
+  CHAPTER_RULES,
   checkMeeting,
   type MeetingIssue,
-  TRANSCRIPT_CHECKERS,
-} from "@open-minutes/core/meeting-check";
+  type RuleMeeting,
+  type RuleSegment,
+  TRANSCRIPT_RULES,
+} from "@open-minutes/core/rules";
 import { formatClock } from "@open-minutes/core/clock";
 import {
   formatSpeaker,
@@ -24,7 +24,7 @@ import {
 
 // Checks over the hand-edited fixture files, reported against file and line
 // so whoever made an edit (often an agent) can go straight to the mistake.
-// A meeting's data follows the rules in @open-minutes/core/meeting-check, the
+// A meeting's data follows the rules in @open-minutes/core/rules, the
 // same ones the database is checked against; this adds the rules for the
 // files themselves (PSV syntax, where a speaker marker goes, the directory
 // name). Errors fail the fixture tests and `pnpm fixtures:check`; warnings are
@@ -97,7 +97,7 @@ export async function checkMeetingDir(dir: string): Promise<Issue[]> {
     ? chapterStartLines(readFileSync(chaptersPath, "utf8"))
     : [];
   const chapters = meeting.chapters?.chapters ?? null;
-  const placed = (await checkMeeting(checkedMeeting(meeting))).map((i) =>
+  const placed = (await checkMeeting(ruleMeeting(meeting))).map((i) =>
     "segment" in i
       ? atPsvLine(i, psvPath!, psv!.lines)
       : i.code === "no-bodies"
@@ -205,17 +205,17 @@ function readPsv(
 }
 
 /** A golden meeting as the meeting rules take it. */
-export function checkedMeeting(meeting: GoldenMeeting): CheckedMeeting {
+export function ruleMeeting(meeting: GoldenMeeting): RuleMeeting {
   return {
     bodyCount: meeting.body_ids.length,
     durationSecs: meeting.duration_secs,
-    segments: checkedSegments(meeting.segments),
+    segments: ruleSegments(meeting.segments),
     chapters: meeting.chapters?.chapters ?? null,
   };
 }
 
 /** Golden segments as the meeting rules take them. */
-function checkedSegments(segments: readonly GoldenSegment[]): CheckedSegment[] {
+function ruleSegments(segments: readonly GoldenSegment[]): RuleSegment[] {
   return segments.map((s) => ({
     speaker: s.speaker.kind === "unlabeled" ? null : formatSpeaker(s.speaker),
     words: s.words,
@@ -275,7 +275,7 @@ function atChapterLine(
 
 /**
  * Check a PSV transcript on its own: the file's syntax and speaker markers,
- * and the transcript rules in @open-minutes/core/meeting-check.
+ * and the transcript rules in @open-minutes/core/rules.
  */
 export async function checkPsv(
   content: string,
@@ -284,8 +284,8 @@ export async function checkPsv(
   const { issues, segments, lines } = readPsv(content, file);
   if (segments)
     for (const i of await checkMeeting(
-      { segments: checkedSegments(segments) },
-      TRANSCRIPT_CHECKERS,
+      { segments: ruleSegments(segments) },
+      TRANSCRIPT_RULES,
     ))
       if ("segment" in i) issues.push(atPsvLine(i, file, lines));
   return issues.sort((a, b) => (a.line ?? 0) - (b.line ?? 0));
@@ -293,7 +293,7 @@ export async function checkPsv(
 
 /**
  * Check a chapters.json against its meeting's transcript, with the chapter
- * rules in @open-minutes/core/meeting-check.
+ * rules in @open-minutes/core/rules.
  */
 export async function checkChapters(
   content: string,
@@ -321,8 +321,8 @@ export async function checkChapters(
   const { chapters } = parsed;
   const lines = chapterStartLines(content);
   const found = await checkMeeting(
-    { segments: checkedSegments(segments), chapters, durationSecs },
-    CHAPTER_CHECKERS,
+    { segments: ruleSegments(segments), chapters, durationSecs },
+    CHAPTER_RULES,
   );
   return found
     .flatMap((i) =>

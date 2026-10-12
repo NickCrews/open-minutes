@@ -1,0 +1,20 @@
+import { uncoveredSpeech as uncoveredSpans } from "../chapters";
+import { formatClock } from "../clock";
+import { type RuleMeeting, speechSpans, type Violation } from "./common";
+
+export type UncoveredSpeech = Violation<"uncovered-speech"> & {
+  /** Where the uncovered speech starts, in seconds. */
+  at: number;
+  end: number;
+};
+
+/** A long stretch of speech in no chapter, when the meeting has chapters. */
+export function uncoveredSpeech(meeting: RuleMeeting): UncoveredSpeech[] {
+  if (!meeting.chapters?.length) return [];
+  return uncoveredSpans(speechSpans(meeting), meeting.chapters).map((gap) => ({
+    code: "uncovered-speech",
+    message: `speech from ${formatClock(gap.start)} to ${formatClock(gap.end)} is in no chapter; extend a neighbouring chapter or add one`,
+    at: gap.start,
+    end: gap.end,
+  }));
+}

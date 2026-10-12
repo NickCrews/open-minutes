@@ -1,16 +1,11 @@
 import { describe, expect, it } from "vitest";
-import {
-  type CheckedSegment,
-  type CheckResult,
-  checkBodies,
-  checkMeeting,
-} from "./meeting-check";
+import { checkMeeting, noBodies, type RuleSegment, type Violation } from ".";
 
 /** A segment from `[onset, word]` pairs. */
 const seg = (
   speaker: string | null,
   ...words: [number, string][]
-): CheckedSegment => ({
+): RuleSegment => ({
   speaker,
   words: words.map(([start, text]) => ({ start, text })),
 });
@@ -90,15 +85,15 @@ describe("checkMeeting", () => {
     ]);
   });
 
-  it("runs the checkers it is given, sync or async", async () => {
-    const checkers = [
-      checkBodies,
-      async (): Promise<CheckResult<"no-bodies">[]> => [
+  it("runs the rules it is given, sync or async", async () => {
+    const rules = [
+      noBodies,
+      async (): Promise<Violation<"no-bodies">[]> => [
         { code: "no-bodies", message: "also" },
       ],
     ];
     expect(
-      (await checkMeeting({ bodyCount: 0, segments: [] }, checkers)).map(
+      (await checkMeeting({ bodyCount: 0, segments: [] }, rules)).map(
         (i) => `${i.severity} ${i.message}`,
       ),
     ).toEqual(["error the meeting has no bodies", "error also"]);
