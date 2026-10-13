@@ -6,13 +6,13 @@ import {
   type Violation,
 } from "./common";
 
-export type ChapterConvention = Violation<"chapter-convention"> & InChapter;
+export type ChapterSize = Violation<"chapter-size"> & InChapter;
 
 /** A chapter outside the size conventions in ../chapters.ts. */
-export function chapterConvention(meeting: RuleMeeting): ChapterConvention[] {
+export function chapterSize(meeting: RuleMeeting): ChapterSize[] {
   const chapters = meeting.chapters ?? [];
   return chapterWarnings(chapters).map((w) => ({
-    code: "chapter-convention",
+    code: "chapter-size",
     message: `${chapterName(chapters, w.chapter)} ${w.message}`,
     chapter: w.chapter,
     at: chapters[w.chapter]!.start,

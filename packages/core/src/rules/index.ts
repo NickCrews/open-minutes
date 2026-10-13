@@ -13,16 +13,16 @@
 // is rolled back, and a fixture with one fails the tests); warnings are data
 // that is probably wrong, or breaks a convention, and wants a look.
 
-import { chapter } from "./chapter";
-import { chapterConvention } from "./chapter-convention";
+import { chapterSize } from "./chapter-size";
 import type { Rule, RuleMeeting } from "./common";
 import { emptySegment } from "./empty-segment";
+import { invalidChapter } from "./invalid-chapter";
 import { noBodies } from "./no-bodies";
-import { segmentOrder } from "./segment-order";
+import { segmentOutOfOrder } from "./segment-out-of-order";
 import { splitSentence } from "./split-sentence";
 import { uncleanWord } from "./unclean-word";
 import { uncoveredSpeech } from "./uncovered-speech";
-import { wordOrder } from "./word-order";
+import { wordOutOfOrder } from "./word-out-of-order";
 
 export type {
   AtWord,
@@ -33,32 +33,32 @@ export type {
   RuleSegment,
   Violation,
 } from "./common";
-export { chapter, type InvalidChapter } from "./chapter";
-export {
-  chapterConvention,
-  type ChapterConvention,
-} from "./chapter-convention";
+export { chapterSize, type ChapterSize } from "./chapter-size";
 export { emptySegment, type EmptySegment } from "./empty-segment";
+export { invalidChapter, type InvalidChapter } from "./invalid-chapter";
 export { noBodies, type NoBodies } from "./no-bodies";
-export { segmentOrder, type SegmentOrder } from "./segment-order";
+export {
+  segmentOutOfOrder,
+  type SegmentOutOfOrder,
+} from "./segment-out-of-order";
 export { splitSentence, type SplitSentence } from "./split-sentence";
 export { uncleanWord, type UncleanWord } from "./unclean-word";
 export { uncoveredSpeech, type UncoveredSpeech } from "./uncovered-speech";
-export { wordOrder, type WordOrder } from "./word-order";
+export { wordOutOfOrder, type WordOutOfOrder } from "./word-out-of-order";
 
 /** The rules that look only at the transcript. */
 export const TRANSCRIPT_RULES = [
   emptySegment,
-  segmentOrder,
-  wordOrder,
+  segmentOutOfOrder,
+  wordOutOfOrder,
   uncleanWord,
   splitSentence,
 ] as const;
 
 /** The rules on the chapters, against the transcript. */
 export const CHAPTER_RULES = [
-  chapter,
-  chapterConvention,
+  invalidChapter,
+  chapterSize,
   uncoveredSpeech,
 ] as const;
 
@@ -74,19 +74,19 @@ type ViolationOf<R> = R extends (meeting: RuleMeeting) => infer Out
 /** Anything one of {@link RULES} can find. */
 export type MeetingViolation = ViolationOf<(typeof RULES)[number]>;
 
-export type IssueCode = MeetingViolation["code"];
+export type RuleCode = MeetingViolation["code"];
 
 export type Severity = "error" | "warning";
 
-export const SEVERITY: Record<IssueCode, Severity> = {
+export const SEVERITY: Record<RuleCode, Severity> = {
   "no-bodies": "error",
   "empty-segment": "error",
-  "segment-order": "error",
-  "word-order": "error",
+  "segment-out-of-order": "error",
+  "word-out-of-order": "error",
   "unclean-word": "error",
   "split-sentence": "warning",
-  chapter: "error",
-  "chapter-convention": "warning",
+  "invalid-chapter": "error",
+  "chapter-size": "warning",
   "uncovered-speech": "warning",
 };
 

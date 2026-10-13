@@ -42,8 +42,8 @@ describe("checkMeeting", () => {
     ).toEqual([
       ["no-bodies", undefined, undefined],
       ["empty-segment", 2, undefined],
-      ["segment-order", 1, 0],
-      ["word-order", 1, 1],
+      ["segment-out-of-order", 1, 0],
+      ["word-out-of-order", 1, 1],
       ["unclean-word", 0, 0],
     ]);
     expect(issues.every((i) => i.severity === "error")).toBe(true);
@@ -78,7 +78,7 @@ describe("checkMeeting", () => {
       await codes({ segments, durationSecs: 200, chapters: [chapter(0, 150)] }),
     ).toEqual([]);
     expect(await codes({ segments, chapters: [chapter(0, 150)] })).toEqual([
-      "error chapter",
+      "error invalid-chapter",
     ]);
     expect(await codes({ segments, chapters: [chapter(0, 50)] })).toEqual([
       "warning uncovered-speech",
