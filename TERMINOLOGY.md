@@ -243,7 +243,7 @@ A rule's kebab-case name. It says what is wrong, such as `word-out-of-order`, an
 _Avoid_: issue code, check name, rule id
 
 **Violation**:
-One place where a meeting breaks a rule, with a message and the data needed to fix it.
+An instance of a meeting breaking a rule, with a rule code and message. It may be blamed on a single word, a segment, a set of segments, a chapter, a set of chapters, etc. If so, it has the diagnostic info needed to fix it.
 _Avoid_: check result, problem, error (that is a severity)
 
 **Severity**:
