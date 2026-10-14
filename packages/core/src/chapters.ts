@@ -1,6 +1,5 @@
 // A meeting's chapters, as the web page navigates them. The rules chapters
-// must follow are in ./rules (invalid-chapter, chapter-size, uncovered-speech
-// and typographic-dash); docs/chapters.md says why they are what they are.
+// must follow are in ./rules, with the rest of the meeting rules.
 
 /** The part of a chapter the rules look at, with times in seconds. */
 export interface ChapterSpan {
