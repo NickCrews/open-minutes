@@ -55,11 +55,11 @@ export const RULE_SPECS_BY_CODE = Object.fromEntries(
   RULE_SPECS.map((spec) => [spec.code, spec]),
 ) as { [S in AnyRuleSpec as S["code"]]: S };
 
+type Unarray<T> = T extends readonly (infer V)[] ? V : T;
+
 /** What a rule finds, unwrapped from any promise and array. */
 type ViolationOf<R> = R extends (meeting: RuleMeeting) => infer Out
-  ? Awaited<Out> extends readonly (infer V)[]
-    ? V
-    : Awaited<Out>
+  ? Unarray<Awaited<Out>>
   : never;
 
 type AnyViolation = ViolationOf<AnyRuleSpec["rule"]>;
@@ -79,14 +79,22 @@ export type MeetingIssue<C extends RuleCode = RuleCode> =
     severity: Severity;
   };
 
+/** What running these specs can report: each one's violations, with a severity. */
+type IssueOf<S extends RuleSpec<MeetingViolation>> = ViolationOf<S["rule"]> & {
+  severity: Severity;
+};
+
 /**
  * Run rules on a meeting, by default all of {@link RULE_SPECS} in order, and
- * report each violation at its rule's default severity.
+ * report each violation at its rule's default severity. The result's type
+ * holds only the violations the given specs can find.
  */
-export async function checkMeeting(
+export async function checkMeeting<
+  const S extends readonly RuleSpec<MeetingViolation>[] = typeof RULE_SPECS,
+>(
   meeting: RuleMeeting,
-  specs: readonly RuleSpec<MeetingViolation>[] = RULE_SPECS,
-): Promise<MeetingIssue[]> {
+  specs: S = RULE_SPECS as unknown as S,
+): Promise<IssueOf<S[number]>[]> {
   const found = await Promise.all(
     specs.map(async ({ rule, defaultSeverity }) =>
       [await rule(meeting)].flat().map((violation) => ({
@@ -95,5 +103,5 @@ export async function checkMeeting(
       })),
     ),
   );
-  return found.flat();
+  return found.flat() as unknown as IssueOf<S[number]>[];
 }
