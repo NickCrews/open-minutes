@@ -4,8 +4,8 @@ import {
   CHAPTER_RULE_SPECS,
   checkMeeting,
   type MeetingIssue,
-  type RuleCode,
   type RuleMeeting,
+  RULE_SPECS_BY_CODE,
   type RuleSegment,
   TRANSCRIPT_RULE_SPECS,
 } from "@open-minutes/core/rules";
@@ -261,24 +261,17 @@ function atPsvLine(
     "wordIndex" in issue && issue.wordIndex >= 0
       ? lines.words[s]![issue.wordIndex]
       : lines.markers[s];
-  const message =
+  const message = withFixHint(
     issue.code === "empty-segment"
-      ? "speaker marker with no words after it"
-      : withFixHint(issue);
+      ? { ...issue, message: "speaker marker with no words after it" }
+      : issue,
+  );
   return { file, line, severity: issue.severity, message };
 }
 
-/** The rules whose fix resolves everything they find. */
-const FULLY_FIXABLE: ReadonlySet<string> = new Set<RuleCode>([
-  "typographic-dash",
-  "filler-word",
-  "false-start",
-  "stutter",
-]);
-
-/** An issue's message, pointing at `pnpm fixtures:fix` when that fixes it. */
+/** An issue's message, pointing at `pnpm fixtures:fix` when its rule has a fix. */
 function withFixHint(issue: MeetingIssue): string {
-  return FULLY_FIXABLE.has(issue.code)
+  return "fix" in RULE_SPECS_BY_CODE[issue.code]
     ? `${issue.message}; run \`pnpm fixtures:fix\``
     : issue.message;
 }
