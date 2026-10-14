@@ -2,11 +2,12 @@ import { describe, expect, expectTypeOf, it } from "vitest";
 import {
   checkMeeting,
   type MeetingViolation,
-  noBodies,
+  RULE_SPECS_BY_CODE,
   type RuleSegment,
   type RuleSpec,
   type Violation,
 } from ".";
+import * as splitSentence from "./split-sentence";
 import type { SplitSentence } from "./split-sentence";
 
 /** A segment from `[onset, word]` pairs. */
@@ -95,11 +96,12 @@ describe("checkMeeting", () => {
 
   it("runs the rules it is given, sync or async, at their severity", async () => {
     const specs = [
-      noBodies,
+      RULE_SPECS_BY_CODE["no-bodies"],
       {
         rule: async (): Promise<Violation<"no-bodies">[]> => [
           { code: "no-bodies", message: "also" },
         ],
+        code: "no-bodies",
         defaultSeverity: "warning",
       } satisfies RuleSpec<Violation<"no-bodies">>,
     ];
@@ -117,5 +119,14 @@ describe("MeetingViolation", () => {
     expectTypeOf<
       MeetingViolation<"split-sentence">
     >().toEqualTypeOf<SplitSentence>();
+  });
+});
+
+describe("RULE_SPECS_BY_CODE", () => {
+  it("finds each rule by its code", () => {
+    expect(RULE_SPECS_BY_CODE["split-sentence"]).toBe(splitSentence);
+    expectTypeOf<
+      (typeof RULE_SPECS_BY_CODE)["split-sentence"]["defaultSeverity"]
+    >().toEqualTypeOf<"warning">();
   });
 });

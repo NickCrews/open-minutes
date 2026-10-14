@@ -8,7 +8,9 @@ import {
   type Violation,
 } from "./common";
 
-export type InvalidChapter = Violation<"invalid-chapter"> & InChapter;
+export const code = "invalid-chapter";
+
+export type InvalidChapter = Violation<typeof code> & InChapter;
 
 export const defaultSeverity = "error" satisfies Severity;
 
@@ -24,7 +26,7 @@ export function rule(meeting: RuleMeeting): InvalidChapter[] {
     ...speechSpans(meeting).map((s) => s.end),
   );
   return chapterErrors(chapters, end).map((e) => ({
-    code: "invalid-chapter",
+    code,
     message: `${chapterName(chapters, e.chapter)} ${e.message}`,
     chapterIndex: e.chapter,
     atSecs: chapters[e.chapter]!.start,
