@@ -92,7 +92,7 @@ describe("fixMeetingDir", () => {
     const rewritten = await fixMeetingDir(dir);
     expect(rewritten.map((r) => [r.file, r.fixed.map((v) => v.code)])).toEqual([
       [psv, ["unclean-word"]],
-      [chaptersFile, ["invalid-chapter"]],
+      [chaptersFile, ["chapter-dash"]],
     ]);
     expect(readFileSync(psv, "utf8")).toBe(
       readFileSync(transcriptPath(withChapters)!, "utf8"),

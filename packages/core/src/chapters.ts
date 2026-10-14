@@ -42,6 +42,13 @@ export const MAX_UNCOVERED_SPEECH_SECS = 30;
  */
 export const SNAP_SECS = 10;
 
+/** Whether a chapter's title, summary or bullets have an en or em dash. */
+export function chapterHasTypographicDash(chapter: ChapterSpan): boolean {
+  return [chapter.title, chapter.summary ?? "", ...chapter.bullets].some(
+    hasTypographicDash,
+  );
+}
+
 /** What {@link chapterErrors} says of a chapter with an en or em dash. */
 export const TYPOGRAPHIC_DASH_ERROR =
   "has an en or em dash; write a plain hyphen (-)";
@@ -61,8 +68,7 @@ export function chapterErrors(
     const error = (message: string) => errors.push({ chapter: i, message });
     if (!c.title.trim()) error("has no title");
     if (c.bullets.some((b) => !b.trim())) error("has a blank bullet");
-    if ([c.title, c.summary ?? "", ...c.bullets].some(hasTypographicDash))
-      error(TYPOGRAPHIC_DASH_ERROR);
+    if (chapterHasTypographicDash(c)) error(TYPOGRAPHIC_DASH_ERROR);
     if (c.start < 0) error("starts before the meeting");
     if (c.end <= c.start) error("doesn't end after it starts");
     if (durationSecs !== undefined && c.end > durationSecs)
