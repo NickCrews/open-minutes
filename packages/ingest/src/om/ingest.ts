@@ -176,7 +176,7 @@ export async function ingestMeeting(
     join(workDir, "transcription.json"),
     () => transcribeAudio(audioPath),
   );
-  // Strip disfluencies (fillers, stutters, ...). Deliberately not cached:
+  // Apply the rules' fixes, eg dropping fillers. Deliberately not cached:
   // transcription.json stays the recognizer's verbatim output, so a new or
   // changed rule applies on the next run without re-transcribing.
   const speechSegments = cleanSpeechSegments(rawSpeechSegments);

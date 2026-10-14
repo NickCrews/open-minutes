@@ -192,11 +192,11 @@ problem on the turn it makes it.
 
 ### Transcript cleaning
 
-The recognizer transcribes verbatim, so `om ingest` runs a **clean** stage
-right after transcription that strips disfluencies such as filler words
-("um", "uh") and stuttered function words ("the the"). It applies the fixes
-of the rules in `CLEANING_RULE_SPECS`
-([`packages/core/src/rules/clean.ts`](packages/core/src/rules/clean.ts));
+Right after transcription, `om ingest` runs a **clean** stage that applies
+the fixes of the rules in `CLEANING_RULE_SPECS`
+([`packages/core/src/rules/clean.ts`](packages/core/src/rules/clean.ts)) to
+the recognizer's verbatim output, such as dropping filler words ("um", "uh")
+and stuttered function words ("the the");
 the cached `transcription.json` stays verbatim, so a rule change applies on
 the next run without re-transcribing.
 
