@@ -166,6 +166,16 @@ export function loadBodies(): GoldenBody[] {
   return parseJsonl<GoldenBody>(bodiesPath);
 }
 
+/**
+ * A meeting directory's transcript: golden.psv for a verified golden meeting,
+ * transcript.psv for an unverified one. Undefined when it has neither.
+ */
+export function transcriptPath(meetingDir: string): string | undefined {
+  return ["golden.psv", "transcript.psv"]
+    .map((file) => join(meetingDir, file))
+    .find((path) => existsSync(path));
+}
+
 export function getMeetingData(
   meetingSlug: string,
   root: string = TEST_DATA_ROOT,
@@ -185,10 +195,7 @@ export function getMeetingData(
       : "timezone must be a string";
   if (timezoneError) throw new Error(`${meetingPath}: ${timezoneError}`);
 
-  // Golden fixtures are verified (golden.psv); dev fixtures aren't (transcript.psv).
-  const psvPath = ["golden.psv", "transcript.psv"]
-    .map((file) => join(meetingDir, file))
-    .find((path) => existsSync(path));
+  const psvPath = transcriptPath(meetingDir);
   if (!psvPath)
     throw new Error(`No golden.psv or transcript.psv in ${meetingDir}`);
   const segments = parsePsv({ path: psvPath });

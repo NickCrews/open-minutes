@@ -24,7 +24,7 @@ Golden fixtures (`packages/fixtures/test-data/`) are files. Check them with
 plus the rules of the file format. Fix every error; read every warning and
 fix it unless the data is right as it is. In a PSV file, a speaker marker goes on the line just
 before its first word, with the same onset. Transcripts carry no fillers
-("um", "uh") or stutters ("the the"): `pnpm fixtures:clean` removes them, so
+("um", "uh") or stutters ("the the"): `pnpm fixtures:fix` removes them, so
 never type one back in.
 
 Edit a golden with [scripts/psvtool.py](scripts/psvtool.py) rather than by

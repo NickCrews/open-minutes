@@ -1,0 +1,119 @@
+// Fixing checked-in fixtures: applies the fixes of the rules in
+// @open-minutes/core/rules to a meeting's files, the transcript and
+// chapters.json. Goldens must look like cleaned pipeline output (see
+// @open-minutes/core/transcription's clean.ts), or every disfluency the
+// pipeline strips would count against it as a deletion; unclean-word's fix
+// does the cleaning. `pnpm fixtures:fix` rewrites the files; check.ts reports
+// what is left, so `pnpm fixtures:check`, the fixture tests and the post-edit
+// hook all catch what it can't fix.
+
+import { readFileSync, writeFileSync } from "node:fs";
+import { basename, join, resolve } from "node:path";
+import { formatClock } from "@open-minutes/core/clock";
+import {
+  fixMeeting,
+  type MeetingIssue,
+  TRANSCRIPT_RULE_SPECS,
+} from "@open-minutes/core/rules";
+import { ruleMeeting, ruleSegment } from "./check";
+import { type GoldenSegment, parsePsv, serializePsv } from "./psv";
+import {
+  getMeetingData,
+  type GoldenChapters,
+  transcriptPath,
+} from "./test-data";
+
+/** A file the fixes rewrote, and the violations they fixed in it. */
+export interface FileFix {
+  file: string;
+  fixed: MeetingIssue[];
+}
+
+/** Golden segments as the meeting rules take them, keeping their labels. */
+function labeled(segments: readonly GoldenSegment[]) {
+  return segments.map((s) => ({ ...ruleSegment(s), label: s.speaker }));
+}
+
+function unlabeled(segments: ReturnType<typeof labeled>): GoldenSegment[] {
+  return segments.map((s) => ({ speaker: s.label, words: [...s.words] }));
+}
+
+/**
+ * Apply the transcript rules' fixes to golden segments, eg clean each
+ * speaker's words and drop a segment left with none. Returns the segments
+ * given if nothing changed.
+ */
+export async function fixGoldenSegments(
+  segments: readonly GoldenSegment[],
+): Promise<{ segments: readonly GoldenSegment[]; fixed: MeetingIssue[] }> {
+  const given = { segments: labeled(segments) };
+  const { meeting, fixed } = await fixMeeting(given, TRANSCRIPT_RULE_SPECS);
+  if (meeting === given) return { segments, fixed };
+  return { segments: unlabeled(meeting.segments), fixed };
+}
+
+/**
+ * Apply the transcript rules' fixes to a PSV file on its own, rewriting it
+ * only if something changed. Returns what it rewrote.
+ */
+export async function fixTranscriptFile(path: string): Promise<FileFix[]> {
+  const before = parsePsv(readFileSync(path, "utf8"));
+  const { segments, fixed } = await fixGoldenSegments(before);
+  if (segments === before) return [];
+  writeFileSync(path, serializePsv(segments));
+  return [{ file: path, fixed }];
+}
+
+/**
+ * Apply every rule's fix to a meeting directory, rewriting the transcript and
+ * chapters.json where something changed. Returns what it rewrote. Throws if
+ * the meeting doesn't load.
+ */
+export async function fixMeetingDir(dir: string): Promise<FileFix[]> {
+  const golden = getMeetingData(basename(dir), resolve(dir, "../.."));
+  const given = {
+    ...ruleMeeting(golden),
+    segments: labeled(golden.segments),
+    chapters: golden.chapters?.chapters ?? null,
+  };
+  const { meeting, fixed } = await fixMeeting(given);
+  const rewritten: FileFix[] = [];
+  if (meeting.segments !== given.segments) {
+    const file = transcriptPath(dir)!;
+    writeFileSync(file, serializePsv(unlabeled(meeting.segments)));
+    rewritten.push({
+      file,
+      fixed: fixed.filter((v) => "segmentIndex" in v),
+    });
+  }
+  if (golden.chapters && meeting.chapters !== given.chapters) {
+    const file = join(dir, "chapters.json");
+    writeFileSync(
+      file,
+      serializeChapters({ ...golden.chapters, chapters: meeting.chapters! }),
+    );
+    rewritten.push({
+      file,
+      fixed: fixed.filter((v) => "chapterIndex" in v),
+    });
+  }
+  return rewritten;
+}
+
+/** A meeting's chapters as chapters.json, times as "H:MM:SS.ss". */
+export function serializeChapters({
+  generation,
+  chapters,
+}: GoldenChapters): string {
+  const raw = {
+    generation,
+    chapters: chapters.map((c) => ({
+      start: formatClock(c.start),
+      end: formatClock(c.end),
+      title: c.title,
+      summary: c.summary,
+      bullets: c.bullets,
+    })),
+  };
+  return JSON.stringify(raw, null, 2) + "\n";
+}

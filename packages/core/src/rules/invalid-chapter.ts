@@ -1,6 +1,8 @@
-import { chapterErrors } from "../chapters";
+import { type ChapterSpan, chapterErrors } from "../chapters";
+import { hasTypographicDash, plainDashes } from "../text";
 import {
   chapterName,
+  type Fix,
   type InChapter,
   type RuleMeeting,
   type Severity,
@@ -32,3 +34,27 @@ export function rule(meeting: RuleMeeting): InvalidChapter[] {
     atSecs: chapters[e.chapter]!.start,
   }));
 }
+
+/**
+ * Writes a plain hyphen for every en or em dash in a chapter's text. The rest
+ * of what the rule finds takes judgment.
+ */
+export const fix: Fix = (meeting) => {
+  const { chapters } = meeting;
+  const dashed = (c: ChapterSpan) =>
+    [c.title, c.summary ?? "", ...c.bullets].some(hasTypographicDash);
+  if (!chapters?.some(dashed)) return meeting;
+  return {
+    ...meeting,
+    chapters: chapters.map((c) =>
+      dashed(c)
+        ? {
+            ...c,
+            title: plainDashes(c.title),
+            ...(c.summary !== undefined && { summary: plainDashes(c.summary) }),
+            bullets: c.bullets.map(plainDashes),
+          }
+        : c,
+    ),
+  };
+};

@@ -107,6 +107,9 @@ export async function checkMeeting<
   return found.flat() as unknown as IssueOf<S[number]>[];
 }
 
+/** A JSON string in a message, eg a word or a chapter's title. */
+const QUOTED = /"(?:[^"\\]|\\.)*"/g;
+
 /** How many times fixMeeting runs the fixes before giving up on them settling. */
 const MAX_FIX_PASSES = 10;
 
@@ -115,8 +118,9 @@ const MAX_FIX_PASSES = 10;
  * until they change nothing: one rule's fix can leave work for another's, as
  * cleaning a segment's words can empty it. Returns the fixed meeting, the one
  * given if nothing changed, and the violations it fixed: those found before
- * and not after, matched by code and message. What the fixes can't resolve
- * is left for {@link checkMeeting} to report.
+ * and not after, matched by code, `atSecs` and message, ignoring the quoted
+ * text in messages that a fix may have changed, eg a chapter's title. What
+ * the fixes can't resolve is left for {@link checkMeeting} to report.
  */
 export async function fixMeeting<
   M extends RuleMeeting,
@@ -136,7 +140,8 @@ export async function fixMeeting<
   }
   if (current === meeting) return { meeting, fixed: [] };
 
-  const key = (v: Violation) => `${v.code}\0${v.message}`;
+  const key = (v: Violation & { atSecs?: number }) =>
+    [v.code, v.atSecs, v.message.replace(QUOTED, '""')].join("\0");
   const left = new Map<string, number>();
   for (const v of await checkMeeting(current, fixable))
     left.set(key(v), (left.get(key(v)) ?? 0) + 1);

@@ -13,23 +13,15 @@
 
 import { readFileSync } from "node:fs";
 import { resolve, sep } from "node:path";
-import { checkFixtures, formatIssue, meetingDirs } from "./check";
-import { TEST_DATA_ROOT } from "./test-data";
+import {
+  checkFixtures,
+  formatIssue,
+  meetingDirs,
+  meetingDirsFor,
+} from "./check";
 
 // pnpm runs this from the package directory; paths are the caller's.
 const CWD = process.env.INIT_CWD ?? process.cwd();
-const ROOTS = [resolve(TEST_DATA_ROOT)];
-
-/** The meeting directories a file belongs to; all of them for shared files. */
-function dirsFor(file: string): string[] {
-  const path = resolve(CWD, file);
-  const root = ROOTS.find((r) => path.startsWith(r + sep));
-  if (!root) return [];
-  const meetings = resolve(root, "meetings") + sep;
-  if (!path.startsWith(meetings)) return meetingDirs(); // people.jsonl etc.
-  const name = path.slice(meetings.length).split(sep)[0]!;
-  return [resolve(meetings, name)];
-}
 
 const args = process.argv.slice(2);
 const hook = args.includes("--hook");
@@ -42,7 +34,7 @@ if (hook) {
 }
 
 const dirs = files.length
-  ? [...new Set(files.flatMap(dirsFor))]
+  ? [...new Set(files.flatMap((f) => meetingDirsFor(resolve(CWD, f))))]
   : hook
     ? []
     : meetingDirs();

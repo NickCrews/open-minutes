@@ -95,8 +95,8 @@ describe("checkPsv", () => {
         ),
       ),
     ).toEqual([
-      '2: error: filler "Um," should not be in a transcript; run `pnpm fixtures:clean`',
-      '3: error: stutter "The" should not be in a transcript; run `pnpm fixtures:clean`',
+      '2: error: filler "Um," should not be in a transcript; run `pnpm fixtures:fix`',
+      '3: error: stutter "The" should not be in a transcript; run `pnpm fixtures:fix`',
     ]);
   });
 

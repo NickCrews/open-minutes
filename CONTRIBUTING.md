@@ -171,13 +171,20 @@ Shared test configuration is in `vitest.config.ts`, `vitest.shared.ts` and
 ### Checking hand-edited test data
 
 Meetings in the database and in golden fixture files follow the same rules,
-in [`packages/core/src/meeting-check.ts`](packages/core/src/meeting-check.ts).
+one file each in [`packages/core/src/rules/`](packages/core/src/rules/).
 
 - Database: `check_meeting` in `@open-minutes/agents`. Write tools don't
   check, so run it after editing.
 - Golden fixtures: `pnpm fixtures:check [file ...]` prints
   `file:line: severity: message`, and also checks the file format. Errors
   fail it and the test suite.
+
+Some rules have a fix, which rewrites the meeting to remove what the rule
+finds where that needs no judgment: cleaning an unclean word, dropping an
+empty segment, putting misordered segments in order, or writing a plain
+hyphen for a dash in a chapter. `pnpm fixtures:fix [file ...]` applies every
+fix to the golden fixtures, rewriting their transcripts and chapters.json in
+place (`--help` lists the fixes, `--verbose` each violation fixed).
 
 [`.claude/settings.json`](.claude/settings.json) runs the same check as a
 Claude Code hook after every edit to those files, so an agent sees the
@@ -196,15 +203,11 @@ the next run without re-transcribing.
 Golden transcripts must already be clean, or the pipeline's output would be
 scored against disfluencies it removed on purpose. `pnpm fixtures:check`
 reports any left in a golden as an error, so the tests and the hook above
-catch them in new goldens too. To remove them:
-
-```sh
-pnpm fixtures:clean              # rewrite every golden transcript in place
-pnpm fixtures:clean <file.psv>   # just one file (--verbose lists each word)
-```
+catch them in new goldens too. `pnpm fixtures:fix` removes them, with the
+`unclean-word` rule's fix.
 
 To add a cleanup, write a rule in `clean.ts`, add it to `CLEANING_RULES` with
-tests, then run `pnpm fixtures:clean` and review the golden diff.
+tests, then run `pnpm fixtures:fix` and review the golden diff.
 
 ## Running the pipeline
 
