@@ -1,12 +1,6 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
-import {
-  checkMeeting,
-  type MeetingViolation,
-  RULE_SPECS_BY_CODE,
-  type RuleSegment,
-  type RuleSpec,
-  type Violation,
-} from ".";
+import { checkMeeting, type MeetingViolation, RULE_SPECS_BY_CODE } from ".";
+import type { RuleSegment, RuleSpec, Violation } from "./common";
 import * as splitSentence from "./split-sentence";
 import type { SplitSentence } from "./split-sentence";
 

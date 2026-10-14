@@ -23,17 +23,7 @@ import * as uncleanWord from "./unclean-word";
 import * as uncoveredSpeech from "./uncovered-speech";
 import * as wordOutOfOrder from "./word-out-of-order";
 
-export type {
-  AtWord,
-  InChapter,
-  InSegment,
-  Rule,
-  RuleMeeting,
-  RuleSegment,
-  RuleSpec,
-  Severity,
-  Violation,
-} from "./common";
+export type { RuleMeeting, RuleSegment } from "./common";
 /** The rules that look only at the transcript. */
 export const TRANSCRIPT_RULE_SPECS = [
   emptySegment,
@@ -50,7 +40,7 @@ export const CHAPTER_RULE_SPECS = [
   uncoveredSpeech,
 ] as const satisfies readonly RuleSpec[];
 
-export const RULE_SPECS = [
+const RULE_SPECS = [
   noBodies,
   ...TRANSCRIPT_RULE_SPECS,
   ...CHAPTER_RULE_SPECS,
