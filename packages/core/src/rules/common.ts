@@ -33,6 +33,20 @@ export type Rule<V extends Violation = Violation> = (
   meeting: RuleMeeting,
 ) => V | V[] | Promise<V | V[]>;
 
+/**
+ * `error`: the data is wrong. A write that introduces one is rolled back, and
+ * a fixture with one fails the tests. `warning`: the data is probably wrong,
+ * or breaks a convention, and wants a look.
+ */
+export type Severity = "error" | "warning";
+
+/** What each rule's module exports. */
+export interface RuleSpec<V extends Violation = Violation> {
+  rule: Rule<V>;
+  /** What its violations are reported as. */
+  defaultSeverity: Severity;
+}
+
 /** In a segment. */
 export interface InSegment {
   /** An index into `segments`. */

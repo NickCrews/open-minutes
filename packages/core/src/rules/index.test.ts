@@ -4,6 +4,7 @@ import {
   type MeetingViolation,
   noBodies,
   type RuleSegment,
+  type RuleSpec,
   type SplitSentence,
   type Violation,
 } from ".";
@@ -92,18 +93,21 @@ describe("checkMeeting", () => {
     ]);
   });
 
-  it("runs the rules it is given, sync or async", async () => {
-    const rules = [
+  it("runs the rules it is given, sync or async, at their severity", async () => {
+    const specs = [
       noBodies,
-      async (): Promise<Violation<"no-bodies">[]> => [
-        { code: "no-bodies", message: "also" },
-      ],
+      {
+        rule: async (): Promise<Violation<"no-bodies">[]> => [
+          { code: "no-bodies", message: "also" },
+        ],
+        defaultSeverity: "warning",
+      } satisfies RuleSpec<Violation<"no-bodies">>,
     ];
     expect(
-      (await checkMeeting({ bodyCount: 0, segments: [] }, rules)).map(
+      (await checkMeeting({ bodyCount: 0, segments: [] }, specs)).map(
         (i) => `${i.severity} ${i.message}`,
       ),
-    ).toEqual(["error the meeting has no bodies", "error also"]);
+    ).toEqual(["error the meeting has no bodies", "warning also"]);
   });
 });
 

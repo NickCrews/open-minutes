@@ -1,5 +1,5 @@
 import { cleanWords } from "../transcription";
-import type { AtWord, RuleMeeting, Violation } from "./common";
+import type { AtWord, RuleMeeting, Severity, Violation } from "./common";
 
 export type UncleanWord = Violation<"unclean-word"> &
   AtWord & {
@@ -8,11 +8,13 @@ export type UncleanWord = Violation<"unclean-word"> &
     text: string;
   };
 
+export const defaultSeverity = "error" satisfies Severity;
+
 /**
  * A disfluency the pipeline's clean stage would have removed ("um", "the
  * the"; see transcription/clean.ts).
  */
-export function uncleanWord(meeting: RuleMeeting): UncleanWord[] {
+export function rule(meeting: RuleMeeting): UncleanWord[] {
   return meeting.segments.flatMap(({ words }, segment) =>
     cleanWords(words)
       // A word recased, not removed, is a knock-on fix, eg a passed-on capital.

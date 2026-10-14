@@ -1,6 +1,6 @@
 import { formatClock } from "../clock";
 import { splitSentences } from "../transcription";
-import type { InSegment, RuleMeeting, Violation } from "./common";
+import type { InSegment, RuleMeeting, Severity, Violation } from "./common";
 
 export type SplitSentence = Violation<"split-sentence"> &
   InSegment & {
@@ -12,11 +12,13 @@ export type SplitSentence = Violation<"split-sentence"> &
     misplaced: string[];
   };
 
+export const defaultSeverity = "warning" satisfies Severity;
+
 /**
  * A speaker change inside a sentence, a few words from a clearly longer
  * pause (see transcription/turn-edges.ts).
  */
-export function splitSentence(meeting: RuleMeeting): SplitSentence[] {
+export function rule(meeting: RuleMeeting): SplitSentence[] {
   const { segments } = meeting;
   return splitSentences(segments)
     .filter(

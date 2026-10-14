@@ -1,5 +1,5 @@
 import { formatClock } from "../clock";
-import type { AtWord, RuleMeeting, Violation } from "./common";
+import type { AtWord, RuleMeeting, Severity, Violation } from "./common";
 
 export type SegmentOutOfOrder = Violation<"segment-out-of-order"> &
   AtWord & {
@@ -7,8 +7,10 @@ export type SegmentOutOfOrder = Violation<"segment-out-of-order"> &
     previousLastWordSecs: number;
   };
 
+export const defaultSeverity = "error" satisfies Severity;
+
 /** A segment that starts before an earlier one's last word. */
-export function segmentOutOfOrder(meeting: RuleMeeting): SegmentOutOfOrder[] {
+export function rule(meeting: RuleMeeting): SegmentOutOfOrder[] {
   const results: SegmentOutOfOrder[] = [];
   let prevLast = -Infinity;
   meeting.segments.forEach(({ words }, segment) => {

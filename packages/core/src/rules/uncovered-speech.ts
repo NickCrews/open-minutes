@@ -1,6 +1,11 @@
 import { uncoveredSpeech as uncoveredSpans } from "../chapters";
 import { formatClock } from "../clock";
-import { type RuleMeeting, speechSpans, type Violation } from "./common";
+import {
+  type RuleMeeting,
+  type Severity,
+  speechSpans,
+  type Violation,
+} from "./common";
 
 export type UncoveredSpeech = Violation<"uncovered-speech"> & {
   /** Where the uncovered speech starts. */
@@ -8,8 +13,10 @@ export type UncoveredSpeech = Violation<"uncovered-speech"> & {
   endSecs: number;
 };
 
+export const defaultSeverity = "warning" satisfies Severity;
+
 /** A long stretch of speech in no chapter, when the meeting has chapters. */
-export function uncoveredSpeech(meeting: RuleMeeting): UncoveredSpeech[] {
+export function rule(meeting: RuleMeeting): UncoveredSpeech[] {
   if (!meeting.chapters?.length) return [];
   return uncoveredSpans(speechSpans(meeting), meeting.chapters).map((gap) => ({
     code: "uncovered-speech",

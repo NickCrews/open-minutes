@@ -1,9 +1,11 @@
-import type { InSegment, RuleMeeting, Violation } from "./common";
+import type { InSegment, RuleMeeting, Severity, Violation } from "./common";
 
 export type EmptySegment = Violation<"empty-segment"> & InSegment;
 
+export const defaultSeverity = "error" satisfies Severity;
+
 /** A segment with no words. */
-export function emptySegment(meeting: RuleMeeting): EmptySegment[] {
+export function rule(meeting: RuleMeeting): EmptySegment[] {
   return meeting.segments.flatMap((seg, segment) =>
     seg.words.length === 0
       ? [

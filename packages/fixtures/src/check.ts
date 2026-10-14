@@ -1,12 +1,12 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import {
-  CHAPTER_RULES,
+  CHAPTER_RULE_SPECS,
   checkMeeting,
   type MeetingIssue,
   type RuleMeeting,
   type RuleSegment,
-  TRANSCRIPT_RULES,
+  TRANSCRIPT_RULE_SPECS,
 } from "@open-minutes/core/rules";
 import { formatClock } from "@open-minutes/core/clock";
 import {
@@ -285,7 +285,7 @@ export async function checkPsv(
   if (segments)
     for (const i of await checkMeeting(
       { segments: ruleSegments(segments) },
-      TRANSCRIPT_RULES,
+      TRANSCRIPT_RULE_SPECS,
     ))
       if ("segmentIndex" in i) issues.push(atPsvLine(i, file, lines));
   return issues.sort((a, b) => (a.line ?? 0) - (b.line ?? 0));
@@ -322,7 +322,7 @@ export async function checkChapters(
   const lines = chapterStartLines(content);
   const found = await checkMeeting(
     { segments: ruleSegments(segments), chapters, durationSecs },
-    CHAPTER_RULES,
+    CHAPTER_RULE_SPECS,
   );
   return found
     .flatMap((i) =>
