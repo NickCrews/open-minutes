@@ -1,11 +1,11 @@
 // Fixing checked-in fixtures: applies the fixes of the rules in
-// @open-minutes/core/rules to a meeting's files, the transcript and
-// chapters.json. Goldens must look like cleaned pipeline output (see
-// @open-minutes/core/transcription's clean.ts), or every disfluency the
-// pipeline strips would count against it as a deletion; unclean-word's fix
-// does the cleaning. `pnpm fixtures:fix` rewrites the files; check.ts reports
-// what is left, so `pnpm fixtures:check`, the fixture tests and the post-edit
-// hook all catch what it can't fix.
+// @open-minutes/core/rules to a meeting's files: meeting.json, the transcript
+// and chapters.json. Goldens must look like cleaned pipeline output, or every
+// disfluency the pipeline strips would count against it as a deletion; the
+// cleaning rules' fixes (see core/rules/clean.ts) do that here too.
+// `pnpm fixtures:fix` rewrites the files; check.ts reports what is left, so
+// `pnpm fixtures:check`, the fixture tests and the post-edit hook all catch
+// what it can't fix.
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
@@ -65,9 +65,9 @@ export async function fixTranscriptFile(path: string): Promise<FileFix[]> {
 }
 
 /**
- * Apply every rule's fix to a meeting directory, rewriting the transcript and
- * chapters.json where something changed. Returns what it rewrote. Throws if
- * the meeting doesn't load.
+ * Apply every rule's fix to a meeting directory, rewriting meeting.json, the
+ * transcript and chapters.json where something changed. Returns what it
+ * rewrote. Throws if the meeting doesn't load.
  */
 export async function fixMeetingDir(dir: string): Promise<FileFix[]> {
   const golden = getMeetingData(basename(dir), resolve(dir, "../.."));
@@ -78,6 +78,18 @@ export async function fixMeetingDir(dir: string): Promise<FileFix[]> {
   };
   const { meeting, fixed } = await fixMeeting(given);
   const rewritten: FileFix[] = [];
+  if (meeting.title !== given.title) {
+    // In place, so the rest of the file keeps its formatting.
+    const file = join(dir, "meeting.json");
+    writeFileSync(
+      file,
+      readFileSync(file, "utf8").replace(
+        JSON.stringify(given.title),
+        JSON.stringify(meeting.title),
+      ),
+    );
+    rewritten.push({ file, fixed: fixed.filter((v) => "field" in v) });
+  }
   if (meeting.segments !== given.segments) {
     const file = transcriptPath(dir)!;
     writeFileSync(file, serializePsv(unlabeled(meeting.segments)));

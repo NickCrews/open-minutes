@@ -180,11 +180,11 @@ one file each in [`packages/core/src/rules/`](packages/core/src/rules/).
   fail it and the test suite.
 
 Some rules have a fix, which rewrites the meeting to remove what the rule
-finds where that needs no judgment: cleaning an unclean word, dropping an
-empty segment, putting misordered segments in order, or writing a plain
-hyphen for a dash in a chapter. `pnpm fixtures:fix [file ...]` applies every
-fix to the golden fixtures, rewriting their transcripts and chapters.json in
-place (`--help` lists the fixes, `--verbose` each violation fixed).
+finds where that needs no judgment: dropping a filler word, stutter or false
+start, dropping an empty segment, putting misordered segments in order, or
+writing a plain hyphen for an en or em dash. `pnpm fixtures:fix [file ...]` applies every
+fix to the golden fixtures, rewriting their meeting.json, transcript and
+chapters.json in place (`--help` lists the fixes, `--verbose` each violation fixed).
 
 [`.claude/settings.json`](.claude/settings.json) runs the same check as a
 Claude Code hook after every edit to those files, so an agent sees the
@@ -195,8 +195,10 @@ problem on the turn it makes it.
 The recognizer transcribes verbatim, so `om ingest` runs a **clean** stage
 right after transcription that strips disfluencies: filler words ("um",
 "uh"), stuttered function words ("the the"), and abandoned word fragments
-("six- sixteen"). The rules live in
-[`packages/core/src/transcription/clean.ts`](packages/core/src/transcription/clean.ts);
+("six- sixteen"), and writes a plain hyphen for an en or em dash. It applies
+the fixes of the `filler-word`, `stutter`, `false-start` and
+`typographic-dash` rules
+([`packages/core/src/rules/clean.ts`](packages/core/src/rules/clean.ts));
 the cached `transcription.json` stays verbatim, so a rule change applies on
 the next run without re-transcribing.
 
@@ -204,10 +206,11 @@ Golden transcripts must already be clean, or the pipeline's output would be
 scored against disfluencies it removed on purpose. `pnpm fixtures:check`
 reports any left in a golden as an error, so the tests and the hook above
 catch them in new goldens too. `pnpm fixtures:fix` removes them, with the
-`unclean-word` rule's fix.
+same fixes.
 
-To add a cleanup, write a rule in `clean.ts`, add it to `CLEANING_RULES` with
-tests, then run `pnpm fixtures:fix` and review the golden diff.
+To add a cleanup, write a rule with a fix in `packages/core/src/rules/`, add
+it to `RULE_SPECS` and `CLEANING_RULE_SPECS` with tests, then run
+`pnpm fixtures:fix` and review the golden diff.
 
 ## Running the pipeline
 

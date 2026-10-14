@@ -1,8 +1,6 @@
 import { z } from "zod";
-import {
-  cleanWords,
-  type TranscriptWord,
-} from "@open-minutes/core/transcription";
+import { cleanWords } from "@open-minutes/core/rules";
+import type { TranscriptWord } from "@open-minutes/core/transcription";
 import { transcribeRange } from "@open-minutes/audio/transcribe";
 import {
   clip,
@@ -153,7 +151,7 @@ export const findUntranscribedSpeech = defineTool({
               Math.max(0, s.start - TRANSCRIBE_PAD_SECS),
               s.end + TRANSCRIBE_PAD_SECS,
             ),
-          ).words
+          )
         : null;
       results.push({
         from: formatClock(s.start),
@@ -197,7 +195,7 @@ export const transcribeRangeTool = defineTool({
     checkRange(input.from, input.to, MAX_TRANSCRIBE_SECS);
     const meeting = await ctx.meeting(input.meeting);
     const words = await transcribeRange(meeting.wave(), input.from, input.to);
-    const heard = input.raw ? words : cleanWords(words).words;
+    const heard = input.raw ? words : cleanWords(words);
     return {
       heard: wordsText(heard),
       words: heard.map((w) => `${formatClock(w.start)} ${w.text}`),

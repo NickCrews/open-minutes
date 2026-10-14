@@ -13,40 +13,62 @@
 // go in ./common.ts. To add a rule, write its module and add it to
 // RULE_SPECS; its code and violation type follow from it.
 
-import * as chapterDash from "./chapter-dash";
 import * as chapterSize from "./chapter-size";
 import type { RuleMeeting, RuleSpec, Severity } from "./common";
 import * as emptySegment from "./empty-segment";
+import * as falseStart from "./false-start";
+import * as fillerWord from "./filler-word";
 import * as invalidChapter from "./invalid-chapter";
 import * as noBodies from "./no-bodies";
 import * as segmentOutOfOrder from "./segment-out-of-order";
 import * as splitSentence from "./split-sentence";
-import * as uncleanWord from "./unclean-word";
+import * as stutter from "./stutter";
+import * as typographicDash from "./typographic-dash";
 import * as uncoveredSpeech from "./uncovered-speech";
 import * as wordOutOfOrder from "./word-out-of-order";
 
 export type { RuleMeeting, RuleSegment } from "./common";
-/** The rules that look only at the transcript. */
-export const TRANSCRIPT_RULE_SPECS = [
+export {
+  CLEANING_RULE_SPECS,
+  cleanGroups,
+  cleanSpeechSegments,
+  cleanWords,
+} from "./clean";
+
+/** Every rule, in the order checkMeeting reports them. */
+const RULE_SPECS = [
+  noBodies,
   emptySegment,
   segmentOutOfOrder,
   wordOutOfOrder,
-  uncleanWord,
+  typographicDash,
+  fillerWord,
+  falseStart,
+  stutter,
   splitSentence,
-] as const satisfies readonly RuleSpec[];
-
-/** The rules on the chapters, against the transcript. */
-export const CHAPTER_RULE_SPECS = [
   invalidChapter,
-  chapterDash,
   chapterSize,
   uncoveredSpeech,
 ] as const satisfies readonly RuleSpec[];
 
-const RULE_SPECS = [
-  noBodies,
-  ...TRANSCRIPT_RULE_SPECS,
-  ...CHAPTER_RULE_SPECS,
+/** The rules that apply to a transcript on its own. */
+export const TRANSCRIPT_RULE_SPECS = [
+  emptySegment,
+  segmentOutOfOrder,
+  wordOutOfOrder,
+  typographicDash,
+  fillerWord,
+  falseStart,
+  stutter,
+  splitSentence,
+] as const satisfies readonly RuleSpec[];
+
+/** The rules that apply to chapters, against their transcript. */
+export const CHAPTER_RULE_SPECS = [
+  invalidChapter,
+  typographicDash,
+  chapterSize,
+  uncoveredSpeech,
 ] as const satisfies readonly RuleSpec[];
 
 type AnyRuleSpec = (typeof RULE_SPECS)[number];

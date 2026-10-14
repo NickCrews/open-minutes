@@ -40,9 +40,9 @@ describe("fixGoldenSegments", () => {
       },
     ]);
     expect(fixed.map((v) => v.code)).toEqual([
-      "unclean-word",
-      "unclean-word",
-      "unclean-word",
+      "filler-word",
+      "filler-word",
+      "stutter",
       "empty-segment",
     ]);
   });
@@ -78,7 +78,7 @@ describe("fixMeetingDir", () => {
     expect(await fixMeetingDir(copyMeeting())).toEqual([]);
   });
 
-  it("fixes the transcript and chapters.json", async () => {
+  it("fixes meeting.json, the transcript and chapters.json", async () => {
     const dir = copyMeeting();
     const psv = transcriptPath(dir)!;
     const lines = readFileSync(psv, "utf8").split("\n");
@@ -89,11 +89,20 @@ describe("fixMeetingDir", () => {
     const chapters = readFileSync(chaptersFile, "utf8");
     writeFileSync(chaptersFile, chapters.replace(/"title": "/, '"title": "–'));
 
+    const meetingFile = join(dir, "meeting.json");
+    const meetingJson = readFileSync(meetingFile, "utf8");
+    const { title } = JSON.parse(meetingJson) as { title: string };
+    writeFileSync(meetingFile, meetingJson.replace(title, `${title} – draft`));
+
     const rewritten = await fixMeetingDir(dir);
     expect(rewritten.map((r) => [r.file, r.fixed.map((v) => v.code)])).toEqual([
-      [psv, ["unclean-word"]],
-      [chaptersFile, ["chapter-dash"]],
+      [meetingFile, ["typographic-dash"]],
+      [psv, ["filler-word"]],
+      [chaptersFile, ["typographic-dash"]],
     ]);
+    expect(readFileSync(meetingFile, "utf8")).toBe(
+      meetingJson.replace(title, `${title} - draft`),
+    );
     expect(readFileSync(psv, "utf8")).toBe(
       readFileSync(transcriptPath(withChapters)!, "utf8"),
     );

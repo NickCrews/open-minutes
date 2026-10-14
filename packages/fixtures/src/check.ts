@@ -4,6 +4,7 @@ import {
   CHAPTER_RULE_SPECS,
   checkMeeting,
   type MeetingIssue,
+  type RuleCode,
   type RuleMeeting,
   type RuleSegment,
   TRANSCRIPT_RULE_SPECS,
@@ -118,13 +119,13 @@ export async function checkMeetingDir(dir: string): Promise<Issue[]> {
   const placed = (await checkMeeting(ruleMeeting(meeting))).map((i) =>
     "segmentIndex" in i
       ? atPsvLine(i, psvPath!, psv!.lines)
-      : i.code === "no-bodies"
-        ? {
+      : "chapterIndex" in i || i.code === "uncovered-speech"
+        ? atChapterLine(i, chaptersPath, chapterLines, chapters ?? [])
+        : {
             file: join(dir, "meeting.json"),
             severity: i.severity,
-            message: i.message,
-          }
-        : atChapterLine(i, chaptersPath, chapterLines, chapters ?? []),
+            message: withFixHint(i),
+          },
   );
   issues.push(...placed);
   return issues.sort((a, b) =>
@@ -225,6 +226,7 @@ function readPsv(
 /** A golden meeting as the meeting rules take it. */
 export function ruleMeeting(meeting: GoldenMeeting): RuleMeeting {
   return {
+    title: meeting.title,
     bodyCount: meeting.body_ids.length,
     durationSecs: meeting.duration_secs,
     segments: ruleSegments(meeting.segments),
@@ -262,10 +264,23 @@ function atPsvLine(
   const message =
     issue.code === "empty-segment"
       ? "speaker marker with no words after it"
-      : issue.code === "unclean-word"
-        ? `${issue.message}; run \`pnpm fixtures:fix\``
-        : issue.message;
+      : withFixHint(issue);
   return { file, line, severity: issue.severity, message };
+}
+
+/** The rules whose fix resolves everything they find. */
+const FULLY_FIXABLE: ReadonlySet<string> = new Set<RuleCode>([
+  "typographic-dash",
+  "filler-word",
+  "false-start",
+  "stutter",
+]);
+
+/** An issue's message, pointing at `pnpm fixtures:fix` when that fixes it. */
+function withFixHint(issue: MeetingIssue): string {
+  return FULLY_FIXABLE.has(issue.code)
+    ? `${issue.message}; run \`pnpm fixtures:fix\``
+    : issue.message;
 }
 
 /** The line of each chapter's `"start":` key in a chapters.json. */
@@ -282,7 +297,7 @@ function chapterStartLines(content: string): number[] {
  * before it.
  */
 function atChapterLine(
-  issue: Extract<MeetingIssue, { atSecs: number }>,
+  issue: Extract<MeetingIssue, { chapterIndex: number } | { endSecs: number }>,
   file: string,
   lines: readonly number[],
   chapters: readonly { end: number }[],
@@ -295,7 +310,7 @@ function atChapterLine(
     file,
     line: lines[chapter],
     severity: issue.severity,
-    message: issue.message,
+    message: withFixHint(issue),
   };
 }
 
@@ -352,7 +367,9 @@ export async function checkChapters(
   );
   return found
     .flatMap((i) =>
-      "atSecs" in i ? [atChapterLine(i, file, lines, chapters)] : [],
+      "chapterIndex" in i || i.code === "uncovered-speech"
+        ? [atChapterLine(i, file, lines, chapters)]
+        : [],
     )
     .sort((a, b) => (a.line ?? 0) - (b.line ?? 0));
 }

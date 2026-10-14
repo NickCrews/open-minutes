@@ -1,4 +1,3 @@
-import { chapterErrors, TYPOGRAPHIC_DASH_ERROR } from "../chapters";
 import {
   chapterName,
   type InChapter,
@@ -15,9 +14,10 @@ export type InvalidChapter = Violation<typeof code> & InChapter;
 export const defaultSeverity = "error" satisfies Severity;
 
 /**
- * A chapter that is out of order, overlapping, empty or outside the meeting,
- * by the rules in ../chapters.ts. The meeting ends at `durationSecs` or its
- * last word, whichever is later. A dash in a chapter's text is chapter-dash's.
+ * A chapter with no title or a blank bullet, or that is out of order,
+ * overlapping, empty or outside the meeting. The meeting ends at
+ * `durationSecs` or its last word, whichever is later. The database refuses
+ * most of these too; this says which chapter is at fault.
  */
 export function rule(meeting: RuleMeeting): InvalidChapter[] {
   const chapters = meeting.chapters ?? [];
@@ -25,12 +25,21 @@ export function rule(meeting: RuleMeeting): InvalidChapter[] {
     meeting.durationSecs ?? 0,
     ...speechSpans(meeting).map((s) => s.end),
   );
-  return chapterErrors(chapters, end)
-    .filter((e) => e.message !== TYPOGRAPHIC_DASH_ERROR)
-    .map((e) => ({
+  return chapters.flatMap((c, i) => {
+    const problems: string[] = [];
+    if (!c.title.trim()) problems.push("has no title");
+    if (c.bullets.some((b) => !b.trim())) problems.push("has a blank bullet");
+    if (c.start < 0) problems.push("starts before the meeting");
+    if (c.end <= c.start) problems.push("doesn't end after it starts");
+    if (c.end > end) problems.push("ends after the meeting does");
+    const prev = chapters[i - 1];
+    if (prev && c.start < prev.end)
+      problems.push("starts before the previous chapter ends");
+    return problems.map((problem) => ({
       code,
-      message: `${chapterName(chapters, e.chapter)} ${e.message}`,
-      chapterIndex: e.chapter,
-      atSecs: chapters[e.chapter]!.start,
+      message: `${chapterName(chapters, i)} ${problem}`,
+      chapterIndex: i,
+      atSecs: c.start,
     }));
+  });
 }

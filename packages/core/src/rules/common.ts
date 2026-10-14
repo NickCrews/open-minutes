@@ -14,6 +14,9 @@ export interface RuleSegment {
 
 /** A meeting as the rules take it. */
 export interface RuleMeeting {
+  /** Absent when unknown, as is `description`. */
+  title?: string;
+  description?: string;
   /** How many bodies held it. Absent when unknown, eg for a transcript on its own. */
   bodyCount?: number;
   durationSecs?: number | null;
