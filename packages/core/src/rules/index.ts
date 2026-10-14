@@ -86,7 +86,7 @@ export type MeetingViolation<C extends RuleCode = RuleCode> = Extract<
 
 export type Severity = "error" | "warning";
 
-export const SEVERITY: Record<RuleCode, Severity> = {
+export const SEVERITY = {
   "no-bodies": "error",
   "empty-segment": "error",
   "segment-out-of-order": "error",
@@ -96,7 +96,7 @@ export const SEVERITY: Record<RuleCode, Severity> = {
   "invalid-chapter": "error",
   "chapter-size": "warning",
   "uncovered-speech": "warning",
-};
+} as const satisfies Record<RuleCode, Severity>;
 
 /** A violation, with the severity it is reported at. Narrows by code likewise. */
 export type MeetingIssue<C extends RuleCode = RuleCode> =
