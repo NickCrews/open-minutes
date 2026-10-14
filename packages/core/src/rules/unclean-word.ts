@@ -1,5 +1,5 @@
 import { cleanWords } from "../transcription";
-import type { AtWord, Fix, RuleMeeting, Severity, Violation } from "./common";
+import type { AtWord, Fixed, RuleMeeting, Severity, Violation } from "./common";
 
 export const code = "unclean-word";
 
@@ -34,8 +34,15 @@ export function rule(meeting: RuleMeeting): UncleanWord[] {
   );
 }
 
-/** Cleans each segment's words, as the pipeline's clean stage does. */
-export const fix: Fix = (meeting) => {
+/**
+ * Cleans each segment's words, as the pipeline's clean stage does, which
+ * removes every unclean word. Cleaning also makes changes that are no
+ * violation, eg writing a plain hyphen for a dash in a word.
+ */
+export function fix<M extends RuleMeeting>(
+  meeting: M,
+  violations: readonly UncleanWord[],
+): Fixed<M, UncleanWord> {
   let changed = false;
   const segments = meeting.segments.map((seg) => {
     const { words, changes } = cleanWords(seg.words);
@@ -43,5 +50,8 @@ export const fix: Fix = (meeting) => {
     changed = true;
     return { ...seg, words };
   });
-  return changed ? { ...meeting, segments } : meeting;
-};
+  return {
+    meeting: changed ? { ...meeting, segments } : meeting,
+    fixed: [...violations],
+  };
+}

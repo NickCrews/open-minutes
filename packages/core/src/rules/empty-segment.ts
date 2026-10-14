@@ -1,5 +1,5 @@
 import type {
-  Fix,
+  Fixed,
   InSegment,
   RuleMeeting,
   Severity,
@@ -28,10 +28,16 @@ export function rule(meeting: RuleMeeting): EmptySegment[] {
 }
 
 /** Drops the segments with no words. */
-export const fix: Fix = (meeting) =>
-  meeting.segments.every((seg) => seg.words.length > 0)
-    ? meeting
-    : {
-        ...meeting,
-        segments: meeting.segments.filter((seg) => seg.words.length > 0),
-      };
+export function fix<M extends RuleMeeting>(
+  meeting: M,
+  violations: readonly EmptySegment[],
+): Fixed<M, EmptySegment> {
+  if (violations.length === 0) return { meeting, fixed: [] };
+  return {
+    meeting: {
+      ...meeting,
+      segments: meeting.segments.filter((seg) => seg.words.length > 0),
+    },
+    fixed: [...violations],
+  };
+}

@@ -14,7 +14,7 @@
 // RULE_SPECS; its code and violation type follow from it.
 
 import * as chapterSize from "./chapter-size";
-import type { RuleMeeting, RuleSpec, Severity, Violation } from "./common";
+import type { RuleMeeting, RuleSpec, Severity } from "./common";
 import * as emptySegment from "./empty-segment";
 import * as invalidChapter from "./invalid-chapter";
 import * as noBodies from "./no-bodies";
@@ -107,9 +107,6 @@ export async function checkMeeting<
   return found.flat() as unknown as IssueOf<S[number]>[];
 }
 
-/** A JSON string in a message, eg a word or a chapter's title. */
-const QUOTED = /"(?:[^"\\]|\\.)*"/g;
-
 /** How many times fixMeeting runs the fixes before giving up on them settling. */
 const MAX_FIX_PASSES = 10;
 
@@ -117,10 +114,10 @@ const MAX_FIX_PASSES = 10;
  * Apply the fixes of the given rules, by default all of {@link RULE_SPECS},
  * until they change nothing: one rule's fix can leave work for another's, as
  * cleaning a segment's words can empty it. Returns the fixed meeting, the one
- * given if nothing changed, and the violations it fixed: those found before
- * and not after, matched by code, `atSecs` and message, ignoring the quoted
- * text in messages that a fix may have changed, eg a chapter's title. What
- * the fixes can't resolve is left for {@link checkMeeting} to report.
+ * given if nothing changed, and the violations the fixes resolved, at their
+ * rule's default severity. A violation's indices are into the meeting as it
+ * was when its fix ran. What the fixes can't resolve is left for
+ * {@link checkMeeting} to report.
  */
 export async function fixMeeting<
   M extends RuleMeeting,
@@ -129,27 +126,20 @@ export async function fixMeeting<
   meeting: M,
   specs: S = RULE_SPECS as unknown as S,
 ): Promise<{ meeting: M; fixed: IssueOf<S[number]>[] }> {
-  const fixable = specs.filter((spec) => spec.fix);
+  const fixed: (MeetingViolation & { severity: Severity })[] = [];
   let current = meeting;
   for (let pass = 0; ; pass++) {
-    const next = fixable.reduce((m, spec) => spec.fix!(m), current);
-    if (next === current) break;
+    const before = current;
+    for (const { rule, fix, defaultSeverity } of specs) {
+      if (!fix) continue;
+      const result = fix(current, [await rule(current)].flat());
+      current = result.meeting;
+      for (const v of result.fixed)
+        fixed.push({ ...v, severity: defaultSeverity });
+    }
+    if (current === before) break;
     if (pass === MAX_FIX_PASSES)
       throw new Error(`fixes still changing the meeting after ${pass} passes`);
-    current = next;
   }
-  if (current === meeting) return { meeting, fixed: [] };
-
-  const key = (v: Violation & { atSecs?: number }) =>
-    [v.code, v.atSecs, v.message.replace(QUOTED, '""')].join("\0");
-  const left = new Map<string, number>();
-  for (const v of await checkMeeting(current, fixable))
-    left.set(key(v), (left.get(key(v)) ?? 0) + 1);
-  const fixed = (await checkMeeting(meeting, fixable)).filter((v) => {
-    const n = left.get(key(v)) ?? 0;
-    if (n === 0) return true;
-    left.set(key(v), n - 1);
-    return false;
-  });
   return { meeting: current, fixed: fixed as IssueOf<S[number]>[] };
 }

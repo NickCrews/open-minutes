@@ -1,5 +1,5 @@
 import { formatClock } from "../clock";
-import type { AtWord, Fix, RuleMeeting, Severity, Violation } from "./common";
+import type { AtWord, Fixed, RuleMeeting, Severity, Violation } from "./common";
 
 export const code = "segment-out-of-order";
 
@@ -37,7 +37,10 @@ export function rule(meeting: RuleMeeting): SegmentOutOfOrder[] {
  * they are. Segments that interleave stay out of order: which words belong to
  * which takes judgment.
  */
-export const fix: Fix = (meeting) => {
+export function fix<M extends RuleMeeting>(
+  meeting: M,
+  violations: readonly SegmentOutOfOrder[],
+): Fixed<M, SegmentOutOfOrder> {
   const { segments } = meeting;
   const sorted = segments
     .filter((seg) => seg.words.length > 0)
@@ -46,7 +49,14 @@ export const fix: Fix = (meeting) => {
   const reordered = segments.map((seg) =>
     seg.words.length > 0 ? sorted[next++]! : seg,
   );
-  return reordered.every((seg, i) => seg === segments[i])
-    ? meeting
-    : { ...meeting, segments: reordered };
-};
+  if (reordered.every((seg, i) => seg === segments[i]))
+    return { meeting, fixed: [] };
+  const fixedMeeting = { ...meeting, segments: reordered };
+  const stillOut = new Set(
+    rule(fixedMeeting).map((v) => reordered[v.segmentIndex]),
+  );
+  return {
+    meeting: fixedMeeting,
+    fixed: violations.filter((v) => !stillOut.has(segments[v.segmentIndex]!)),
+  };
+}

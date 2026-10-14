@@ -43,6 +43,7 @@ describe("fixGoldenSegments", () => {
       "unclean-word",
       "unclean-word",
       "unclean-word",
+      "empty-segment",
     ]);
   });
 
