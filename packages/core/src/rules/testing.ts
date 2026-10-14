@@ -4,6 +4,14 @@ import type { ChapterSpan } from "../chapters";
 import type { TranscriptWord } from "../transcription";
 import type { RuleMeeting, RuleSegment, Violation } from "./common";
 
+/** A segment from `[onset, word]` pairs. */
+export function seg(
+  speaker: string | null,
+  ...words: [number, string][]
+): RuleSegment {
+  return { speaker, words: words.map(([start, text]) => ({ start, text })) };
+}
+
 /** Words from a sentence, `step` seconds apart. */
 export function words(sentence: string, step = 0.3): TranscriptWord[] {
   return sentence.split(" ").map((text, i) => ({ text, start: i * step }));
