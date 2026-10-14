@@ -15,9 +15,9 @@ import { intervalSecs, loadChapters, loadSegments } from "./load";
 export type Issue = Located<MeetingIssue>;
 
 type Located<I> = I extends unknown
-  ? Omit<I, "segment" | "chapter"> &
-      (I extends { segment: number } ? { segmentId: number } : unknown) &
-      (I extends { chapter: number } ? { chapterId: number } : unknown)
+  ? Omit<I, "segmentIndex" | "chapterIndex"> &
+      (I extends { segmentIndex: number } ? { segmentId: number } : unknown) &
+      (I extends { chapterIndex: number } ? { chapterId: number } : unknown)
   : never;
 
 /**
@@ -55,14 +55,18 @@ export async function checkMeeting(
     chapters,
   });
   return issues.map((issue) => {
-    const { segment, chapter, ...rest } = issue as MeetingIssue & {
-      segment?: number;
-      chapter?: number;
+    const { segmentIndex, chapterIndex, ...rest } = issue as MeetingIssue & {
+      segmentIndex?: number;
+      chapterIndex?: number;
     };
     return {
       ...rest,
-      ...(segment !== undefined && { segmentId: segments[segment]!.id }),
-      ...(chapter !== undefined && { chapterId: chapters[chapter]!.id }),
+      ...(segmentIndex !== undefined && {
+        segmentId: segments[segmentIndex]!.id,
+      }),
+      ...(chapterIndex !== undefined && {
+        chapterId: chapters[chapterIndex]!.id,
+      }),
     } as Issue;
   });
 }

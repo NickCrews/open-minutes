@@ -33,23 +33,26 @@ export type Rule<V extends Violation = Violation> = (
   meeting: RuleMeeting,
 ) => V | V[] | Promise<V | V[]>;
 
-/** In a segment: an index into `segments`. */
+/** In a segment. */
 export interface InSegment {
-  segment: number;
+  /** An index into `segments`. */
+  segmentIndex: number;
 }
 
-/** At a word: an index into `segments` and into that segment's words. */
+/** At a word. */
 export interface AtWord extends InSegment {
-  word: number;
-  /** The word's onset, in seconds. */
-  at: number;
+  /** An index into the segment's words. */
+  wordIndex: number;
+  /** The word's onset. */
+  atSecs: number;
 }
 
-/** In a chapter: an index into `chapters`. */
+/** In a chapter. */
 export interface InChapter {
-  chapter: number;
-  /** The chapter's start, in seconds. */
-  at: number;
+  /** An index into `chapters`. */
+  chapterIndex: number;
+  /** The chapter's start. */
+  atSecs: number;
 }
 
 /** Each non-empty segment's span, from its first word to its last's end. */

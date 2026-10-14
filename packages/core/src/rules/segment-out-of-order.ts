@@ -4,7 +4,7 @@ import type { AtWord, RuleMeeting, Violation } from "./common";
 export type SegmentOutOfOrder = Violation<"segment-out-of-order"> &
   AtWord & {
     /** Onset of the latest word in the segments before it. */
-    previousLastWord: number;
+    previousLastWordSecs: number;
   };
 
 /** A segment that starts before an earlier one's last word. */
@@ -18,10 +18,10 @@ export function segmentOutOfOrder(meeting: RuleMeeting): SegmentOutOfOrder[] {
       results.push({
         code: "segment-out-of-order",
         message: `starts at ${formatClock(at)}, before the previous segment's last word (${formatClock(prevLast)}); segments must not interleave`,
-        segment,
-        word: 0,
-        at,
-        previousLastWord: prevLast,
+        segmentIndex: segment,
+        wordIndex: 0,
+        atSecs: at,
+        previousLastWordSecs: prevLast,
       });
     prevLast = Math.max(prevLast, ...words.map((w) => w.start));
   });

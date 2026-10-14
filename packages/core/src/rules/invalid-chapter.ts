@@ -23,7 +23,7 @@ export function invalidChapter(meeting: RuleMeeting): InvalidChapter[] {
   return chapterErrors(chapters, end).map((e) => ({
     code: "invalid-chapter",
     message: `${chapterName(chapters, e.chapter)} ${e.message}`,
-    chapter: e.chapter,
-    at: chapters[e.chapter]!.start,
+    chapterIndex: e.chapter,
+    atSecs: chapters[e.chapter]!.start,
   }));
 }

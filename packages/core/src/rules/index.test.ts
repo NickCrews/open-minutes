@@ -36,8 +36,8 @@ describe("checkMeeting", () => {
     expect(
       issues.map((i) => [
         i.code,
-        "segment" in i ? i.segment : undefined,
-        "word" in i ? i.word : undefined,
+        "segmentIndex" in i ? i.segmentIndex : undefined,
+        "wordIndex" in i ? i.wordIndex : undefined,
       ]),
     ).toEqual([
       ["no-bodies", undefined, undefined],
@@ -50,7 +50,7 @@ describe("checkMeeting", () => {
     expect(issues.find((i) => i.code === "unclean-word")).toMatchObject({
       rule: "filler",
       text: "Um,",
-      at: 1,
+      atSecs: 1,
     });
   });
 

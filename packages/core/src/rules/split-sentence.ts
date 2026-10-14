@@ -5,9 +5,9 @@ import type { InSegment, RuleMeeting, Violation } from "./common";
 export type SplitSentence = Violation<"split-sentence"> &
   InSegment & {
     /** Onset of the segment's first word. */
-    at: number;
+    atSecs: number;
     /** Onset of the word after the longer pause, where the turn probably changes. */
-    edgeStart: number;
+    edgeStartSecs: number;
     /** The words between the two, which probably belong to the other speaker. */
     misplaced: string[];
   };
@@ -29,9 +29,9 @@ export function splitSentence(meeting: RuleMeeting): SplitSentence[] {
       return {
         code: "split-sentence" as const,
         message: `speaker change at ${formatClock(split.start)} splits a sentence; the pause at ${formatClock(split.edgeStart)} is longer (${split.edgePause}s vs ${split.pause}s), so ${JSON.stringify(misplaced.join(" "))} may belong to the other speaker. Move the boundary to the sentence edge where the voice changes`,
-        segment: split.segment,
-        at: split.start,
-        edgeStart: split.edgeStart,
+        segmentIndex: split.segment,
+        atSecs: split.start,
+        edgeStartSecs: split.edgeStart,
         misplaced,
       };
     });

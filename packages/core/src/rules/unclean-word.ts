@@ -20,10 +20,10 @@ export function uncleanWord(meeting: RuleMeeting): UncleanWord[] {
       .map((c) => ({
         code: "unclean-word" as const,
         message: `${c.rule} ${JSON.stringify(c.before)} should not be in a transcript`,
-        segment,
+        segmentIndex: segment,
         // By onset alone: a rule may report a word after an earlier rule recased it.
-        word: words.findIndex((w) => w.start === c.start),
-        at: c.start,
+        wordIndex: words.findIndex((w) => w.start === c.start),
+        atSecs: c.start,
         rule: c.rule,
         text: c.before,
       })),

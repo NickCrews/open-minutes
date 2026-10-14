@@ -98,7 +98,7 @@ export async function checkMeetingDir(dir: string): Promise<Issue[]> {
     : [];
   const chapters = meeting.chapters?.chapters ?? null;
   const placed = (await checkMeeting(ruleMeeting(meeting))).map((i) =>
-    "segment" in i
+    "segmentIndex" in i
       ? atPsvLine(i, psvPath!, psv!.lines)
       : i.code === "no-bodies"
         ? {
@@ -224,14 +224,14 @@ function ruleSegments(segments: readonly GoldenSegment[]): RuleSegment[] {
 
 /** A transcript issue at its line in the PSV file, worded for that file. */
 function atPsvLine(
-  issue: Extract<MeetingIssue, { segment: number }>,
+  issue: Extract<MeetingIssue, { segmentIndex: number }>,
   file: string,
   lines: PsvLines,
 ): Issue {
-  const s = issue.segment;
+  const s = issue.segmentIndex;
   const line =
-    "word" in issue && issue.word >= 0
-      ? lines.words[s]![issue.word]
+    "wordIndex" in issue && issue.wordIndex >= 0
+      ? lines.words[s]![issue.wordIndex]
       : lines.markers[s];
   const message =
     issue.code === "empty-segment"
@@ -256,15 +256,15 @@ function chapterStartLines(content: string): number[] {
  * before it.
  */
 function atChapterLine(
-  issue: Extract<MeetingIssue, { at: number }>,
+  issue: Extract<MeetingIssue, { atSecs: number }>,
   file: string,
   lines: readonly number[],
   chapters: readonly { end: number }[],
 ): Issue {
   const chapter =
-    "chapter" in issue
-      ? issue.chapter
-      : Math.max(0, chapters.filter((c) => c.end <= issue.at).length - 1);
+    "chapterIndex" in issue
+      ? issue.chapterIndex
+      : Math.max(0, chapters.filter((c) => c.end <= issue.atSecs).length - 1);
   return {
     file,
     line: lines[chapter],
@@ -287,7 +287,7 @@ export async function checkPsv(
       { segments: ruleSegments(segments) },
       TRANSCRIPT_RULES,
     ))
-      if ("segment" in i) issues.push(atPsvLine(i, file, lines));
+      if ("segmentIndex" in i) issues.push(atPsvLine(i, file, lines));
   return issues.sort((a, b) => (a.line ?? 0) - (b.line ?? 0));
 }
 
@@ -326,7 +326,7 @@ export async function checkChapters(
   );
   return found
     .flatMap((i) =>
-      "at" in i ? [atChapterLine(i, file, lines, chapters)] : [],
+      "atSecs" in i ? [atChapterLine(i, file, lines, chapters)] : [],
     )
     .sort((a, b) => (a.line ?? 0) - (b.line ?? 0));
 }
