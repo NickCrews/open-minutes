@@ -151,6 +151,22 @@ describe("checkPsv", () => {
     ]);
   });
 
+  it("points interleaved segments at each other, without a fix hint", async () => {
+    expect(
+      await lint(
+        psv(
+          ["0:00:01.00", "@identified:kyle-kelley"],
+          ["0:00:01.00", "One"],
+          ["0:00:03.00", "three."],
+          ["0:00:02.00", "@segmented:spk-1"],
+          ["0:00:02.00", "Two."],
+        ),
+      ),
+    ).toEqual([
+      "5: error: starts at 0:00:02.00, before the previous segment's last word (0:00:03.00), and its words mix with an earlier segment's at 0:00:02.00; segments must not interleave (earlier segment at line 1)",
+    ]);
+  });
+
   it("reports syntax errors at their line", async () => {
     expect(await lint("0:00:01.00|meta|{nope")).toEqual([
       '1: error: Invalid meta JSON on PSV line 1: "{nope"',

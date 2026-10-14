@@ -15,9 +15,18 @@ import { intervalSecs, loadChapters, loadSegments } from "./load";
 export type Issue = Located<MeetingIssue>;
 
 type Located<I> = I extends unknown
-  ? Omit<I, "segmentIndex" | "chapterIndex"> &
+  ? Omit<I, "segmentIndex" | "chapterIndex" | "interleaves"> &
       (I extends { segmentIndex: number } ? { segmentId: number } : unknown) &
-      (I extends { chapterIndex: number } ? { chapterId: number } : unknown)
+      (I extends { chapterIndex: number } ? { chapterId: number } : unknown) &
+      (I extends { interleaves: unknown }
+        ? {
+            interleaves: {
+              segmentId: number;
+              fromSecs: number;
+              toSecs: number;
+            }[];
+          }
+        : unknown)
   : never;
 
 /**
@@ -67,6 +76,12 @@ export async function checkMeeting(
     };
     return {
       ...rest,
+      ...(issue.code === "segment-out-of-order" && {
+        interleaves: issue.interleaves.map(({ segmentIndex: i, ...at }) => ({
+          segmentId: segments[i]!.id,
+          ...at,
+        })),
+      }),
       ...(segmentIndex !== undefined && {
         segmentId: segments[segmentIndex]!.id,
       }),
