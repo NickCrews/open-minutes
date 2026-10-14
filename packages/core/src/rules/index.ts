@@ -33,15 +33,6 @@ export type {
   Severity,
   Violation,
 } from "./common";
-export type { ChapterSize } from "./chapter-size";
-export type { EmptySegment } from "./empty-segment";
-export type { InvalidChapter } from "./invalid-chapter";
-export type { NoBodies } from "./no-bodies";
-export type { SegmentOutOfOrder } from "./segment-out-of-order";
-export type { SplitSentence } from "./split-sentence";
-export type { UncleanWord } from "./unclean-word";
-export type { UncoveredSpeech } from "./uncovered-speech";
-export type { WordOutOfOrder } from "./word-out-of-order";
 export {
   chapterSize,
   emptySegment,

@@ -5,9 +5,9 @@ import {
   noBodies,
   type RuleSegment,
   type RuleSpec,
-  type SplitSentence,
   type Violation,
 } from ".";
+import type { SplitSentence } from "./split-sentence";
 
 /** A segment from `[onset, word]` pairs. */
 const seg = (
