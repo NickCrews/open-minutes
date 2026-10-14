@@ -7,18 +7,10 @@ import {
   type MeetingViolation,
   RULE_SPECS_BY_CODE,
 } from ".";
-import type { RuleSegment, RuleSpec, Violation } from "./common";
+import type { RuleSpec, Violation } from "./common";
+import { seg } from "./testing";
 import * as splitSentence from "./split-sentence";
 import type { SplitSentence } from "./split-sentence";
-
-/** A segment from `[onset, word]` pairs. */
-const seg = (
-  speaker: string | null,
-  ...words: [number, string][]
-): RuleSegment => ({
-  speaker,
-  words: words.map(([start, text]) => ({ start, text })),
-});
 
 const codes = async (...args: Parameters<typeof checkMeeting>) =>
   (await checkMeeting(...args)).map((i) => `${i.severity} ${i.code}`);
@@ -61,37 +53,6 @@ describe("checkMeeting", () => {
       text: "Um,",
       atSecs: 1,
     });
-  });
-
-  it("warns about a speaker change inside a sentence", async () => {
-    const segments = [
-      seg("a", [1, "Allegiance?"], [4.68, "I"]),
-      seg("b", [4.84, "pledge"], [5.32, "allegiance."]),
-    ];
-    expect(await codes({ segments })).toEqual(["warning split-sentence"]);
-    // The same speaker either side is one turn, however it is split.
-    expect(
-      await codes({ segments: segments.map((s) => ({ ...s, speaker: "a" })) }),
-    ).toEqual([]);
-  });
-
-  it("checks chapters against the meeting's length", async () => {
-    const segments = [seg("a", [0, "Start."], [100, "End."])];
-    const chapter = (start: number, end: number) => ({
-      start,
-      end,
-      title: `${start}`,
-      bullets: [],
-    });
-    expect(
-      await codes({ segments, durationSecs: 200, chapters: [chapter(0, 150)] }),
-    ).toEqual([]);
-    expect(await codes({ segments, chapters: [chapter(0, 150)] })).toEqual([
-      "error invalid-chapter",
-    ]);
-    expect(await codes({ segments, chapters: [chapter(0, 50)] })).toEqual([
-      "warning uncovered-speech",
-    ]);
   });
 
   it("runs the rules it is given, sync or async, at their severity", async () => {
@@ -191,51 +152,5 @@ describe("fixMeeting", () => {
       RULE_SPECS_BY_CODE["empty-segment"],
     ]);
     expect(fixed.segments).toEqual([seg("b", [1, "Um,"], [2, "no."])]);
-  });
-
-  it("puts misordered segments in order, but leaves interleaved ones", async () => {
-    const late = seg("a", [5, "Later."]);
-    const early = seg("b", [1, "First."]);
-    expect((await fixMeeting({ segments: [late, early] })).meeting).toEqual({
-      segments: [early, late],
-    });
-    const interleaved = {
-      segments: [seg("a", [1, "One"], [3, "three."]), seg("b", [2, "Two."])],
-    };
-    const { meeting, fixed } = await fixMeeting(interleaved);
-    expect(meeting).toBe(interleaved);
-    expect(fixed).toEqual([]);
-  });
-
-  it("writes a plain hyphen for a dash in a chapter", async () => {
-    const chapter = {
-      start: 0,
-      end: 2,
-      title: "Budget – first reading",
-      summary: "Items 1—3.",
-      bullets: ["2019–2022"],
-    };
-    const { meeting, fixed } = await fixMeeting({
-      segments: [seg("a", [1, "Hello."])],
-      chapters: [chapter],
-    });
-    expect(meeting.chapters).toEqual([
-      {
-        ...chapter,
-        title: "Budget - first reading",
-        summary: "Items 1-3.",
-        bullets: ["2019-2022"],
-      },
-    ]);
-    expect(fixed.map((v) => [v.code, v.message])).toEqual([
-      [
-        "typographic-dash",
-        'chapter 1 ("Budget – first reading") has an en or em dash; write a plain hyphen (-)',
-      ],
-    ]);
-    // Ending after the meeting has no one right fix.
-    expect((await checkMeeting(meeting)).map((i) => i.code)).toEqual([
-      "invalid-chapter",
-    ]);
   });
 });

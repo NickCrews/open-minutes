@@ -1,4 +1,6 @@
 import { describe, expect, test } from "vitest";
+import { seg } from "./testing";
+import * as uncoveredSpeech from "./uncovered-speech";
 import { uncoveredSpans } from "./uncovered-speech";
 
 describe("uncoveredSpans", () => {
@@ -35,5 +37,34 @@ describe("uncoveredSpans", () => {
       { start: 0, end: 40 },
       { start: 100, end: 200 },
     ]);
+  });
+});
+
+describe("uncovered-speech", () => {
+  const segments = [seg("a", [0, "Start."], [100, "End."])];
+  const chapter = (start: number, end: number) => ({
+    start,
+    end,
+    title: `${start}`,
+    bullets: [],
+  });
+
+  test("reports a long stretch of speech in no chapter", () => {
+    expect(
+      uncoveredSpeech.rule({ segments, chapters: [chapter(0, 50)] }),
+    ).toEqual([
+      {
+        code: "uncovered-speech",
+        message:
+          "speech from 0:00:50.00 to 0:01:40.50 is in no chapter; extend a neighbouring chapter or add one",
+        atSecs: 50,
+        endSecs: 100.5,
+      },
+    ]);
+  });
+
+  test("says nothing when the meeting has no chapters", () => {
+    expect(uncoveredSpeech.rule({ segments })).toEqual([]);
+    expect(uncoveredSpeech.rule({ segments, chapters: [] })).toEqual([]);
   });
 });
