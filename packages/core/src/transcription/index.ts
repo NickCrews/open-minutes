@@ -8,18 +8,6 @@ export { LAST_WORD_DURATION_SEC } from "./types";
 export { type SplitSentence, splitSentences } from "./turn-edges";
 export { type FoldedAnswer, foldedAnswers } from "./folded-answers";
 export {
-  ANCHORAGE_WRITTEN_FORM_RULES,
-  findWrittenFormIssues,
-  LOCAL_WRITTEN_FORM_RULES,
-  spelledNumbers,
-  splitNumerals,
-  WRITTEN_FORM_CODES,
-  WRITTEN_FORM_RULES,
-  type WrittenFormCode,
-  type WrittenFormIssue,
-  type WrittenFormRule,
-} from "./written-form";
-export {
   alignSpeakers,
   MAX_WORD_SEC,
   segmentsToSpeechRuns,

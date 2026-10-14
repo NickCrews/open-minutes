@@ -14,31 +14,33 @@
 // RULE_SPECS, or STYLE_RULE_SPECS for how the transcript is written; its code
 // and violation type follow from it.
 
-import {
-  LOCAL_WRITTEN_FORM_RULES,
-  WRITTEN_FORM_RULES,
-  type WrittenFormRule,
-} from "../transcription";
+import * as agendaItem from "./agenda-item";
+import * as billNumber from "./bill-number";
 import * as chapterSize from "./chapter-size";
 import type { RuleMeeting, RuleSpec, Severity } from "./common";
+import * as codeSection from "./code-section";
+import * as date from "./date";
 import * as emptySegment from "./empty-segment";
 import * as falseStart from "./false-start";
 import * as fillerWord from "./filler-word";
 import * as foldedAnswer from "./folded-answer";
 import * as invalidChapter from "./invalid-chapter";
+import * as money from "./money";
+import * as monthCapital from "./month-capital";
 import * as noBodies from "./no-bodies";
+import * as percent from "./percent";
 import * as segmentOutOfOrder from "./segment-out-of-order";
+import * as spelledNumber from "./spelled-number";
+import * as splitNumeral from "./split-numeral";
 import * as splitSentence from "./split-sentence";
+import * as spokenSeparator from "./spoken-separator";
 import * as stutter from "./stutter";
+import * as tally from "./tally";
+import * as time from "./time";
 import * as typographicDash from "./typographic-dash";
 import * as uncoveredSpeech from "./uncovered-speech";
 import * as wordOutOfOrder from "./word-out-of-order";
-import {
-  spelledNumber,
-  splitNumeral,
-  writtenFormSpec,
-  type WrittenFormSpec,
-} from "./written-form";
+import * as zoningDistrict from "./zoning-district";
 
 export type { RuleMeeting, RuleSegment } from "./common";
 export {
@@ -87,20 +89,36 @@ export const CHAPTER_RULE_SPECS = [
 ] as const satisfies readonly RuleSpec[];
 
 /**
- * How the transcript is written: numbers, times, money and dates, plus the
- * local rules a jurisdiction opts into (Anchorage's bill and code numbers;
- * see LOCAL_WRITTEN_FORM_RULES in @open-minutes/core/transcription). The
- * golden fixtures follow it; pipeline output doesn't yet, so the database's
- * checks leave these out.
+ * Local style rules a jurisdiction opts into by name, since other places
+ * number their bills, code and agendas their own way. A place that does gets
+ * its own entry.
  */
-export function styleRuleSpecs(
-  localRules: readonly WrittenFormRule[] = [],
-): WrittenFormSpec[] {
+export const LOCAL_STYLE_RULE_SPECS = {
+  anchorage: [billNumber, codeSection, agendaItem, zoningDistrict],
+} as const satisfies Record<string, readonly RuleSpec[]>;
+
+type LocalStyleRuleSpec =
+  (typeof LOCAL_STYLE_RULE_SPECS)[keyof typeof LOCAL_STYLE_RULE_SPECS][number];
+
+/**
+ * How the transcript is written: numbers, times, money and dates, plus the
+ * local rules a jurisdiction opts into (see {@link LOCAL_STYLE_RULE_SPECS};
+ * the style is described in ./numbers.ts). The golden fixtures follow it;
+ * pipeline output doesn't yet, so the database's checks leave these out.
+ */
+export function styleRuleSpecs(localSpecs: readonly LocalStyleRuleSpec[] = []) {
   return [
-    ...[...WRITTEN_FORM_RULES, ...localRules].map(writtenFormSpec),
+    spokenSeparator,
+    time,
+    money,
+    percent,
+    date,
+    monthCapital,
+    tally,
+    ...localSpecs,
     spelledNumber,
     splitNumeral,
-  ];
+  ] satisfies readonly RuleSpec[];
 }
 
 /** The style rules with no local rules. */
@@ -116,7 +134,7 @@ export type RuleCode = AnyRuleSpec["code"];
 export const RULE_SPECS_BY_CODE = Object.fromEntries(
   [
     ...RULE_SPECS,
-    ...styleRuleSpecs(Object.values(LOCAL_WRITTEN_FORM_RULES).flat()),
+    ...styleRuleSpecs(Object.values(LOCAL_STYLE_RULE_SPECS).flat()),
   ].map((spec) => [spec.code, spec]),
 ) as { [S in AnyRuleSpec as S["code"]]: S };
 
@@ -130,8 +148,9 @@ type ViolationOf<R> = R extends (meeting: RuleMeeting) => infer Out
 type AnyViolation = ViolationOf<AnyRuleSpec["rule"]>;
 
 /**
- * What one of {@link RULE_SPECS} or {@link STYLE_RULE_SPECS} can find: by default any of them, or with a code,
- * only that rule's, eg `MeetingViolation<"split-sentence">`.
+ * What one of {@link RULE_SPECS} or the style rules can find: by default
+ * any of them, or with a code, only that rule's, eg
+ * `MeetingViolation<"split-sentence">`.
  */
 export type MeetingViolation<C extends RuleCode = RuleCode> = Extract<
   AnyViolation,
