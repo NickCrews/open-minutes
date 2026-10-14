@@ -4,9 +4,10 @@
 // meeting into a RuleMeeting, runs checkMeeting, and maps the indices in
 // each issue back to whatever its readers can act on: row ids, or file:line.
 //
-// Each rule is a module named for its code that exports a RuleSpec: `rule`,
-// a function from the meeting to the violations it finds, and
-// `defaultSeverity`. Each violation has a code and a message, plus whatever
+// Each rule is a module named for its code that exports a RuleSpec: its
+// `code`, `rule` (a function from the meeting to the violations it finds),
+// and `defaultSeverity`. Callers find a rule by its code in
+// RULE_SPECS_BY_CODE. Each violation has a code and a message, plus whatever
 // structured data an agent needs to fix it. Helpers more than one rule needs
 // go in ./common.ts. To add a rule, write its module and add it to
 // RULE_SPECS; its code and violation type follow from it.
@@ -33,18 +34,6 @@ export type {
   Severity,
   Violation,
 } from "./common";
-export {
-  chapterSize,
-  emptySegment,
-  invalidChapter,
-  noBodies,
-  segmentOutOfOrder,
-  splitSentence,
-  uncleanWord,
-  uncoveredSpeech,
-  wordOutOfOrder,
-};
-
 /** The rules that look only at the transcript. */
 export const TRANSCRIPT_RULE_SPECS = [
   emptySegment,
@@ -67,6 +56,15 @@ export const RULE_SPECS = [
   ...CHAPTER_RULE_SPECS,
 ] as const satisfies readonly RuleSpec[];
 
+type AnyRuleSpec = (typeof RULE_SPECS)[number];
+
+export type RuleCode = AnyRuleSpec["code"];
+
+/** Each rule's spec, by its code. */
+export const RULE_SPECS_BY_CODE = Object.fromEntries(
+  RULE_SPECS.map((spec) => [spec.code, spec]),
+) as { [S in AnyRuleSpec as S["code"]]: S };
+
 /** What a rule finds, unwrapped from any promise and array. */
 type ViolationOf<R> = R extends (meeting: RuleMeeting) => infer Out
   ? Awaited<Out> extends readonly (infer V)[]
@@ -74,9 +72,7 @@ type ViolationOf<R> = R extends (meeting: RuleMeeting) => infer Out
     : Awaited<Out>
   : never;
 
-type AnyViolation = ViolationOf<(typeof RULE_SPECS)[number]["rule"]>;
-
-export type RuleCode = AnyViolation["code"];
+type AnyViolation = ViolationOf<AnyRuleSpec["rule"]>;
 
 /**
  * What one of {@link RULE_SPECS} can find: by default any of them, or with a code,

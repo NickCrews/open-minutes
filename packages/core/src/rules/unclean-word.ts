@@ -1,7 +1,9 @@
 import { cleanWords } from "../transcription";
 import type { AtWord, RuleMeeting, Severity, Violation } from "./common";
 
-export type UncleanWord = Violation<"unclean-word"> &
+export const code = "unclean-word";
+
+export type UncleanWord = Violation<typeof code> &
   AtWord & {
     /** The cleaning rule that would remove it, eg "filler". */
     rule: string;
@@ -20,7 +22,7 @@ export function rule(meeting: RuleMeeting): UncleanWord[] {
       // A word recased, not removed, is a knock-on fix, eg a passed-on capital.
       .changes.filter((c) => c.after === null)
       .map((c) => ({
-        code: "unclean-word" as const,
+        code,
         message: `${c.rule} ${JSON.stringify(c.before)} should not be in a transcript`,
         segmentIndex: segment,
         // By onset alone: a rule may report a word after an earlier rule recased it.

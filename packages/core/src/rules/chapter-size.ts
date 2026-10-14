@@ -7,7 +7,9 @@ import {
   type Violation,
 } from "./common";
 
-export type ChapterSize = Violation<"chapter-size"> & InChapter;
+export const code = "chapter-size";
+
+export type ChapterSize = Violation<typeof code> & InChapter;
 
 export const defaultSeverity = "warning" satisfies Severity;
 
@@ -15,7 +17,7 @@ export const defaultSeverity = "warning" satisfies Severity;
 export function rule(meeting: RuleMeeting): ChapterSize[] {
   const chapters = meeting.chapters ?? [];
   return chapterWarnings(chapters).map((w) => ({
-    code: "chapter-size",
+    code,
     message: `${chapterName(chapters, w.chapter)} ${w.message}`,
     chapterIndex: w.chapter,
     atSecs: chapters[w.chapter]!.start,

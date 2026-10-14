@@ -1,7 +1,9 @@
 import { formatClock } from "../clock";
 import type { AtWord, RuleMeeting, Severity, Violation } from "./common";
 
-export type WordOutOfOrder = Violation<"word-out-of-order"> &
+export const code = "word-out-of-order";
+
+export type WordOutOfOrder = Violation<typeof code> &
   AtWord & {
     /** Onset of the word before it. */
     previousStartSecs: number;
@@ -17,7 +19,7 @@ export function rule(meeting: RuleMeeting): WordOutOfOrder[] {
       if (!prev || w.start >= prev.start) return [];
       return [
         {
-          code: "word-out-of-order" as const,
+          code,
           message: `word onset ${formatClock(w.start)} is before the previous word's (${formatClock(prev.start)}); words must be in time order`,
           segmentIndex: segment,
           wordIndex: word,

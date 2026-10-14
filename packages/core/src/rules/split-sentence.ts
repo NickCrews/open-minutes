@@ -2,7 +2,9 @@ import { formatClock } from "../clock";
 import { splitSentences } from "../transcription";
 import type { InSegment, RuleMeeting, Severity, Violation } from "./common";
 
-export type SplitSentence = Violation<"split-sentence"> &
+export const code = "split-sentence";
+
+export type SplitSentence = Violation<typeof code> &
   InSegment & {
     /** Onset of the segment's first word. */
     atSecs: number;
@@ -29,7 +31,7 @@ export function rule(meeting: RuleMeeting): SplitSentence[] {
     .map((split) => {
       const misplaced = split.misplaced.map((w) => w.text);
       return {
-        code: "split-sentence" as const,
+        code,
         message: `speaker change at ${formatClock(split.start)} splits a sentence; the pause at ${formatClock(split.edgeStart)} is longer (${split.edgePause}s vs ${split.pause}s), so ${JSON.stringify(misplaced.join(" "))} may belong to the other speaker. Move the boundary to the sentence edge where the voice changes`,
         segmentIndex: split.segment,
         atSecs: split.start,

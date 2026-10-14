@@ -42,6 +42,7 @@ export type Severity = "error" | "warning";
 
 /** What each rule's module exports. */
 export interface RuleSpec<V extends Violation = Violation> {
+  code: V["code"];
   rule: Rule<V>;
   /** What its violations are reported as. */
   defaultSeverity: Severity;

@@ -1,6 +1,8 @@
 import type { InSegment, RuleMeeting, Severity, Violation } from "./common";
 
-export type EmptySegment = Violation<"empty-segment"> & InSegment;
+export const code = "empty-segment";
+
+export type EmptySegment = Violation<typeof code> & InSegment;
 
 export const defaultSeverity = "error" satisfies Severity;
 
@@ -10,7 +12,7 @@ export function rule(meeting: RuleMeeting): EmptySegment[] {
     seg.words.length === 0
       ? [
           {
-            code: "empty-segment" as const,
+            code,
             message: "a segment with no words",
             segmentIndex: segment,
           },
