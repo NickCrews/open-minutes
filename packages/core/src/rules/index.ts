@@ -13,6 +13,7 @@
 // go in ./common.ts. To add a rule, write its module and add it to
 // RULE_SPECS; its code and violation type follow from it.
 
+import * as chapterDash from "./chapter-dash";
 import * as chapterSize from "./chapter-size";
 import type { RuleMeeting, RuleSpec, Severity } from "./common";
 import * as emptySegment from "./empty-segment";
@@ -37,6 +38,7 @@ export const TRANSCRIPT_RULE_SPECS = [
 /** The rules on the chapters, against the transcript. */
 export const CHAPTER_RULE_SPECS = [
   invalidChapter,
+  chapterDash,
   chapterSize,
   uncoveredSpeech,
 ] as const satisfies readonly RuleSpec[];

@@ -139,7 +139,7 @@ describe("checkMeeting's result type", () => {
     const allIssues = await checkMeeting(meeting);
     expect([chapterIssues, allIssues]).toEqual([[], []]);
     expectTypeOf<(typeof chapterIssues)[number]["code"]>().toEqualTypeOf<
-      "invalid-chapter" | "chapter-size" | "uncovered-speech"
+      "invalid-chapter" | "chapter-dash" | "chapter-size" | "uncovered-speech"
     >();
     expectTypeOf<(typeof allIssues)[number]["code"]>().toEqualTypeOf<
       MeetingIssue["code"]
@@ -225,9 +225,15 @@ describe("fixMeeting", () => {
         bullets: ["2019-2022"],
       },
     ]);
-    // The chapter still ends after the meeting, which takes judgment to fix.
-    expect(fixed.map((v) => v.message)).toEqual([
-      'chapter 1 ("Budget – first reading") has an en or em dash; write a plain hyphen (-)',
+    expect(fixed.map((v) => [v.code, v.message])).toEqual([
+      [
+        "chapter-dash",
+        'chapter 1 ("Budget – first reading") has an en or em dash; write a plain hyphen (-)',
+      ],
+    ]);
+    // Ending after the meeting takes judgment to fix.
+    expect((await checkMeeting(meeting)).map((i) => i.code)).toEqual([
+      "invalid-chapter",
     ]);
   });
 });
