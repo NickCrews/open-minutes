@@ -235,7 +235,7 @@ _Avoid_: accuracy, error
 ### Meeting rules
 
 **Rule**:
-A requirement a meeting's data must meet, applied the same way to the database and to golden meetings, such as `split-sentence`. Each rule is a file in `packages/core/src/rules/`. Not the same as a cleaning rule, which is one step of transcript cleaning.
+A requirement a meeting's data must meet, applied the same way to the database and to golden meetings, such as `split-sentence`. Each rule is a file in `packages/core/src/rules/`.
 _Avoid_: check, checker, validator, lint
 
 **Rule code**:
@@ -259,5 +259,9 @@ To run the rules over a meeting, as `check_meeting` and `pnpm fixtures:check` do
 _Avoid_: lint, validate
 
 **Fix**:
-A rule's rewrite of a meeting that removes its violations without judgment, such as cleaning an unclean word. Only some rules have one.
+A rule's rewrite of a meeting that removes its violations without judgment, such as dropping a filler word. Only some rules have one.
 _Avoid_: autofix, repair, correction
+
+**Cleaning**:
+Applying the fixes of the `filler-word`, `stutter`, `false-start` and `typographic-dash` rules to a transcript, as ingestion does to the recognizer's output.
+_Avoid_: disfluency removal, normalization

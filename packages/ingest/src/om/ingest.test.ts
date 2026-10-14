@@ -211,7 +211,7 @@ describe("ingestMeeting", () => {
     expect(segments[1]!.person_id).not.toBeNull();
     expect(segments[0]!.person_id).not.toBe(segments[1]!.person_id);
 
-    // The cached transcription stays verbatim, so cleaning rules can change
+    // The cached transcription stays verbatim, so the rules can change
     // without re-transcribing.
     const cached = JSON.parse(
       await readFile(

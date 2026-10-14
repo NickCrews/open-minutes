@@ -54,11 +54,10 @@ describe("checkMeeting", () => {
       ["empty-segment", 2, undefined],
       ["segment-out-of-order", 1, 0],
       ["word-out-of-order", 1, 1],
-      ["unclean-word", 0, 0],
+      ["filler-word", 0, 0],
     ]);
     expect(issues.every((i) => i.severity === "error")).toBe(true);
-    expect(issues.find((i) => i.code === "unclean-word")).toMatchObject({
-      rule: "filler",
+    expect(issues.find((i) => i.code === "filler-word")).toMatchObject({
       text: "Um,",
       atSecs: 1,
     });
@@ -139,7 +138,10 @@ describe("checkMeeting's result type", () => {
     const allIssues = await checkMeeting(meeting);
     expect([chapterIssues, allIssues]).toEqual([[], []]);
     expectTypeOf<(typeof chapterIssues)[number]["code"]>().toEqualTypeOf<
-      "invalid-chapter" | "chapter-dash" | "chapter-size" | "uncovered-speech"
+      | "invalid-chapter"
+      | "typographic-dash"
+      | "chapter-size"
+      | "uncovered-speech"
     >();
     expectTypeOf<(typeof allIssues)[number]["code"]>().toEqualTypeOf<
       MeetingIssue["code"]
@@ -157,8 +159,8 @@ describe("fixMeeting", () => {
     });
     expect(meeting.segments).toEqual([seg("b", [2.2, "The"], [2.4, "vote."])]);
     expect(fixed.map((v) => [v.code, v.message])).toEqual([
-      ["unclean-word", 'filler "Um." should not be in a transcript'],
-      ["unclean-word", 'stutter "The" should not be in a transcript'],
+      ["filler-word", 'filler "Um." should not be in a transcript'],
+      ["stutter", 'stutter "The" should not be in a transcript'],
       // Left by the filler's removal, and dropped on the next pass.
       ["empty-segment", "a segment with no words"],
     ]);
@@ -227,7 +229,7 @@ describe("fixMeeting", () => {
     ]);
     expect(fixed.map((v) => [v.code, v.message])).toEqual([
       [
-        "chapter-dash",
+        "typographic-dash",
         'chapter 1 ("Budget – first reading") has an en or em dash; write a plain hyphen (-)',
       ],
     ]);

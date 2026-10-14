@@ -119,7 +119,7 @@ describe("reading", () => {
     ).toEqual([
       expect.objectContaining({
         severity: "error",
-        code: "unclean-word",
+        code: "filler-word",
         segmentId: id,
       }),
     ]);

@@ -1,15 +1,12 @@
 import { describe, expect, it } from "vitest";
-import {
-  cleanGroups,
-  cleanWords,
-  dashRule,
-  falseStartRule,
-  fillerRule,
-  findUncleanWords,
-  isFillerWord,
-  stutterRule,
-} from "./clean";
-import type { TranscriptWord } from "./types";
+import type { TranscriptWord } from "../transcription";
+import { cleanGroups, cleanSpeechSegments, cleanWords } from "./clean";
+import type { RuleMeeting, Violation } from "./common";
+import * as falseStart from "./false-start";
+import { isFillerWord } from "./filler-word";
+import * as fillerWord from "./filler-word";
+import * as stutter from "./stutter";
+import * as typographicDash from "./typographic-dash";
 
 /** Words from a sentence, `step` seconds apart. */
 function words(sentence: string, step = 0.3): TranscriptWord[] {
@@ -21,7 +18,26 @@ function text(ws: readonly TranscriptWord[]): string {
 }
 
 function clean(sentence: string, step?: number): string {
-  return text(cleanWords(words(sentence, step)).words);
+  return text(cleanWords(words(sentence, step)));
+}
+
+/** One cleaning rule's fix, on its own, over a sentence. */
+function fixWith(
+  spec: {
+    rule: (meeting: RuleMeeting) => Violation[];
+    fix: <M extends RuleMeeting>(
+      meeting: M,
+      violations: never,
+    ) => { meeting: M };
+  },
+  sentence: string,
+  step?: number,
+): string {
+  const meeting = {
+    segments: [{ speaker: null, words: words(sentence, step) }],
+  };
+  const fixed = spec.fix(meeting, spec.rule(meeting) as never);
+  return text(fixed.meeting.segments[0]!.words);
 }
 
 describe("isFillerWord", () => {
@@ -41,8 +57,8 @@ describe("isFillerWord", () => {
   });
 });
 
-describe("dash rule", () => {
-  const run = (s: string) => text(dashRule.apply(words(s)).words);
+describe("typographic-dash in words", () => {
+  const run = (s: string) => fixWith(typographicDash, s);
 
   it("turns en and em dashes into plain hyphens", () => {
     expect(run("from 2019–2022 we")).toBe("from 2019-2022 we");
@@ -50,13 +66,13 @@ describe("dash rule", () => {
     expect(run("AO 2026-23 passed")).toBe("AO 2026-23 passed");
   });
 
-  it("runs before the false-start rule", () => {
+  it("lets a dashed fragment be a false start", () => {
     expect(clean("six– sixteen items")).toBe("sixteen items");
   });
 });
 
-describe("filler rule", () => {
-  const run = (s: string) => text(fillerRule.apply(words(s)).words);
+describe("filler-word", () => {
+  const run = (s: string) => fixWith(fillerWord, s);
 
   it("drops fillers mid-sentence", () => {
     expect(run("we have uh three items")).toBe("we have three items");
@@ -80,7 +96,7 @@ describe("filler rule", () => {
   });
 
   it("can empty a run entirely", () => {
-    expect(fillerRule.apply(words("Uh, um.")).words).toEqual([]);
+    expect(cleanWords(words("Uh, um."))).toEqual([]);
   });
 
   it("keeps kept words' onsets and extra properties", () => {
@@ -88,15 +104,30 @@ describe("filler rule", () => {
       { text: "Um,", start: 1, tag: "a" },
       { text: "yes", start: 2, tag: "b" },
     ];
-    expect(fillerRule.apply(input).words).toEqual([
-      { text: "Yes", start: 2, tag: "b" },
-    ]);
+    expect(cleanWords(input)).toEqual([{ text: "Yes", start: 2, tag: "b" }]);
     expect(input[1]!.text).toBe("yes"); // not mutated
+  });
+
+  it("reports each filler at its word", () => {
+    expect(
+      fillerWord.rule({
+        segments: [{ speaker: null, words: words("so um, yes") }],
+      }),
+    ).toEqual([
+      {
+        code: "filler-word",
+        message: 'filler "um," should not be in a transcript',
+        segmentIndex: 0,
+        wordIndex: 1,
+        atSecs: 0.3,
+        text: "um,",
+      },
+    ]);
   });
 });
 
-describe("false-start rule", () => {
-  const run = (s: string) => text(falseStartRule.apply(words(s)).words);
+describe("false-start", () => {
+  const run = (s: string) => fixWith(falseStart, s);
 
   it("drops a broken-off fragment", () => {
     expect(run("about six- sixteen units")).toBe("about sixteen units");
@@ -115,9 +146,8 @@ describe("false-start rule", () => {
   });
 });
 
-describe("stutter rule", () => {
-  const run = (s: string, step?: number) =>
-    text(stutterRule.apply(words(s, step)).words);
+describe("stutter", () => {
+  const run = (s: string, step?: number) => fixWith(stutter, s, step);
 
   it("collapses doubled function words", () => {
     expect(run("I I think the the budget")).toBe("I think the budget");
@@ -151,35 +181,26 @@ describe("stutter rule", () => {
 });
 
 describe("cleanWords", () => {
-  it("runs every rule, fillers first", () => {
+  it("runs every rule's fix until they settle", () => {
     expect(clean("Um, the, uh, the the six- sixteen items.")).toBe(
       "The sixteen items.",
     );
   });
 
-  it("reports each change against the original word", () => {
-    const { changes } = cleanWords(words("Um, so I I agree"));
-    expect(changes).toEqual([
-      { rule: "filler", start: 0, before: "Um,", after: null },
-      { rule: "filler", start: 0.3, before: "so", after: "So" },
-      { rule: "stutter", start: 0.6, before: "I", after: null },
-    ]);
-  });
-
   it("is idempotent", () => {
-    const once = cleanWords(words("Um, the the, uh, re- report. Uh.")).words;
-    expect(findUncleanWords(once)).toEqual([]);
-    expect(cleanWords(once).words).toEqual(once);
+    const once = cleanWords(words("Um, the the, uh, re- report. Uh."));
+    expect(cleanWords(once)).toEqual(once);
   });
 
-  it("finds nothing in clean text", () => {
-    expect(findUncleanWords(words("We approved the budget."))).toEqual([]);
+  it("leaves clean text alone", () => {
+    const clean = words("We approved the budget.");
+    expect(cleanWords(clean)).toEqual(clean);
   });
 });
 
 describe("cleanGroups", () => {
   it("never reaches across a group boundary", () => {
-    const { groups } = cleanGroups([
+    const groups = cleanGroups([
       { speaker: "a", words: words("I") },
       { speaker: "b", words: words("I agree") },
     ]);
@@ -187,14 +208,32 @@ describe("cleanGroups", () => {
   });
 
   it("keeps group properties and may leave a group empty", () => {
-    const { groups, changes } = cleanGroups([
-      { speaker: "a", words: words("Um.") },
-      { speaker: "b", words: words("uh, yes") },
-    ]);
-    expect(groups).toEqual([
+    expect(
+      cleanGroups([
+        { speaker: "a", words: words("Um.") },
+        { speaker: "b", words: words("uh, yes") },
+      ]),
+    ).toEqual([
       { speaker: "a", words: [] },
       { speaker: "b", words: [{ text: "yes", start: 0.3 }] },
     ]);
-    expect(changes).toHaveLength(2);
+  });
+});
+
+describe("cleanSpeechSegments", () => {
+  it("cleans each VAD run and keeps it, even emptied", () => {
+    expect(
+      cleanSpeechSegments([
+        { start: 0, end: 1, words: words("Um.") },
+        { start: 1, end: 2, words: words("the the vote") },
+      ]),
+    ).toEqual([
+      { start: 0, end: 1, words: [] },
+      {
+        start: 1,
+        end: 2,
+        words: words("the vote").map((w) => ({ ...w, start: w.start + 0.3 })),
+      },
+    ]);
   });
 });

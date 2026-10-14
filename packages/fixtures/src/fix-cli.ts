@@ -12,7 +12,6 @@
 import { relative, resolve } from "node:path";
 import { formatClock } from "@open-minutes/core/clock";
 import { RULE_SPECS_BY_CODE } from "@open-minutes/core/rules";
-import { CLEANING_RULES } from "@open-minutes/core/transcription";
 import { meetingDirs, meetingDirsFor } from "./check";
 import { type FileFix, fixMeetingDir, fixTranscriptFile } from "./fix";
 
@@ -23,12 +22,7 @@ const args = process.argv.slice(2);
 if (args.includes("--help") || args.includes("-h")) {
   const fixes = Object.values(RULE_SPECS_BY_CODE)
     .filter((spec) => "fix" in spec)
-    .flatMap((spec) => [
-      `  ${spec.code}`,
-      ...(spec.code === "unclean-word"
-        ? CLEANING_RULES.map((r) => `    ${r.name.padEnd(12)} ${r.description}`)
-        : []),
-    ]);
+    .map((spec) => `  ${spec.code}`);
   console.log(
     [
       "Usage: pnpm fixtures:fix [--verbose] [files...]",
@@ -75,14 +69,11 @@ for (const { file, fixed } of rewritten) {
 console.log(`Rewrote ${rewritten.length} file(s).`);
 process.exit(failed ? 1 : 0);
 
-/** Counts by rule code, and for unclean words by cleaning rule. */
+/** Counts by rule code. */
 function summarize(fixed: FileFix["fixed"]): string {
-  // A rewrite with no violations fixed, eg an en dash in a word.
-  if (fixed.length === 0) return "formatting";
   const counts = new Map<string, number>();
   for (const v of fixed) {
-    const what = v.code === "unclean-word" ? v.rule : v.code;
-    counts.set(what, (counts.get(what) ?? 0) + 1);
+    counts.set(v.code, (counts.get(v.code) ?? 0) + 1);
   }
-  return [...counts].map(([what, n]) => `${n} ${what}`).join(", ");
+  return [...counts].map(([code, n]) => `${n} ${code}`).join(", ");
 }

@@ -29,7 +29,11 @@ export async function checkMeeting(
   meetingId: number,
 ): Promise<Issue[]> {
   const [meeting] = await db
-    .select({ duration: meetingsTable.duration_secs })
+    .select({
+      title: meetingsTable.title,
+      description: meetingsTable.description,
+      duration: meetingsTable.duration_secs,
+    })
     .from(meetingsTable)
     .where(eq(meetingsTable.id, meetingId));
   if (!meeting) throw new ToolError(`No meeting ${meetingId}`);
@@ -41,6 +45,8 @@ export async function checkMeeting(
     .where(eq(meetingBodiesTable.meeting_id, meetingId));
 
   const issues = await checkMeetingData({
+    title: meeting.title,
+    description: meeting.description,
     bodyCount: bodies.length,
     durationSecs: meeting.duration ? intervalSecs(meeting.duration) : null,
     segments: segments.map((s) => ({

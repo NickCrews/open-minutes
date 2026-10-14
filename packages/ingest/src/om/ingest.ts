@@ -11,9 +11,10 @@ import {
 } from "@open-minutes/db";
 import { bodySlug } from "@open-minutes/core/bodies";
 import { type SiteKind, siteKindOf } from "@open-minutes/core/meeting-source";
+import { cleanSpeechSegments } from "@open-minutes/core/rules";
+import { plainDashes } from "@open-minutes/core/text";
 import {
   alignSpeakers,
-  cleanSpeechSegments,
   type DiarizationTurn,
   segmentsToTurns,
   type SpeechSegment,
@@ -177,7 +178,7 @@ export async function ingestMeeting(
   );
   // Strip disfluencies (fillers, stutters, ...). Deliberately not cached:
   // transcription.json stays the recognizer's verbatim output, so a new or
-  // changed cleaning rule applies on the next run without re-transcribing.
+  // changed rule applies on the next run without re-transcribing.
   const speechSegments = cleanSpeechSegments(rawSpeechSegments);
 
   // When the meeting happened: the title's date, the chair's gavel-in time.
@@ -234,8 +235,9 @@ export async function ingestMeeting(
       .values({
         site_kind: siteKind,
         site_id: siteId,
-        title: metadata.title,
-        description: metadata.description,
+        // Stored text writes a plain hyphen for a dash (see core/text.ts).
+        title: plainDashes(metadata.title),
+        description: plainDashes(metadata.description),
         // Where the body meets; ingestion can't tell if this meeting was
         // somewhere else.
         timezone: body.timezone,
