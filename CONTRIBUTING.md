@@ -180,9 +180,9 @@ one file each in [`packages/core/src/rules/`](packages/core/src/rules/).
   fail it and the test suite.
 
 Some rules have a fix, which rewrites the meeting to remove what the rule
-finds where the data alone says what the right rewrite is: dropping a filler word, stutter or false
-start, dropping an empty segment, putting misordered segments in order, or
-writing a plain hyphen for an en or em dash. `pnpm fixtures:fix [file ...]` applies every
+finds where the data alone says what the right rewrite is, such as dropping
+a filler word or writing a plain hyphen for an en or em dash.
+`pnpm fixtures:fix [file ...]` applies every
 fix to the golden fixtures, rewriting their meeting.json, transcript and
 chapters.json in place (`--help` lists the fixes, `--verbose` each violation fixed).
 
@@ -193,11 +193,9 @@ problem on the turn it makes it.
 ### Transcript cleaning
 
 The recognizer transcribes verbatim, so `om ingest` runs a **clean** stage
-right after transcription that strips disfluencies: filler words ("um",
-"uh"), stuttered function words ("the the"), and abandoned word fragments
-("six- sixteen"), and writes a plain hyphen for an en or em dash. It applies
-the fixes of the `filler-word`, `stutter`, `false-start` and
-`typographic-dash` rules
+right after transcription that strips disfluencies such as filler words
+("um", "uh") and stuttered function words ("the the"). It applies the fixes
+of the rules in `CLEANING_RULE_SPECS`
 ([`packages/core/src/rules/clean.ts`](packages/core/src/rules/clean.ts));
 the cached `transcription.json` stays verbatim, so a rule change applies on
 the next run without re-transcribing.
