@@ -159,6 +159,8 @@ describe("fixMeeting", () => {
     expect(fixed.map((v) => [v.code, v.message])).toEqual([
       ["unclean-word", 'filler "Um." should not be in a transcript'],
       ["unclean-word", 'stutter "The" should not be in a transcript'],
+      // Left by the filler's removal, and dropped on the next pass.
+      ["empty-segment", "a segment with no words"],
     ]);
     expect(await checkMeeting(meeting)).toEqual([]);
   });
