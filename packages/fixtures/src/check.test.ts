@@ -145,9 +145,9 @@ describe("checkPsv", () => {
         ),
       ),
     ).toEqual([
-      "1: error: speaker marker with no words after it",
+      "1: error: speaker marker with no words after it; run `pnpm fixtures:fix`",
       "4: error: word onset 0:00:01.50 is before the previous word's (0:00:02.00); words must be in time order",
-      "5: error: speaker marker with no words after it",
+      "5: error: speaker marker with no words after it; run `pnpm fixtures:fix`",
     ]);
   });
 
