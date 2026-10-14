@@ -14,7 +14,7 @@ export interface RuleSegment {
 
 /** A meeting as the rules take it. */
 export interface RuleMeeting {
-  /** How many bodies held it. Leave out to skip the no-bodies rule. */
+  /** How many bodies held it. Absent when unknown, eg for a transcript on its own. */
   bodyCount?: number;
   durationSecs?: number | null;
   /** In the order they're stored. */
