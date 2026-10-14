@@ -264,14 +264,33 @@ function atPsvLine(
   const message = withFixHint(
     issue.code === "empty-segment"
       ? { ...issue, message: "speaker marker with no words after it" }
-      : issue,
+      : issue.code === "segment-out-of-order" && issue.interleaves.length
+        ? {
+            ...issue,
+            message: `${issue.message} (${earlierSegmentLines(issue.interleaves, lines)})`,
+          }
+        : issue,
   );
   return { file, line, severity: issue.severity, message };
 }
 
-/** An issue's message, pointing at `pnpm fixtures:fix` when its rule has a fix. */
+/** Where the segments an interleaving names start, eg "earlier segment at line 12". */
+function earlierSegmentLines(
+  interleaves: readonly { segmentIndex: number }[],
+  lines: PsvLines,
+): string {
+  const at = interleaves.map((i) => lines.markers[i.segmentIndex]).join(", ");
+  return interleaves.length === 1
+    ? `earlier segment at line ${at}`
+    : `earlier segments at lines ${at}`;
+}
+
+/** An issue's message, pointing at `pnpm fixtures:fix` when its rule's fix resolves it. */
 function withFixHint(issue: MeetingIssue): string {
-  return "fix" in RULE_SPECS_BY_CODE[issue.code]
+  const fixable =
+    "fix" in RULE_SPECS_BY_CODE[issue.code] &&
+    !(issue.code === "segment-out-of-order" && issue.interleaves.length);
+  return fixable
     ? `${issue.message}; run \`pnpm fixtures:fix\``
     : issue.message;
 }
