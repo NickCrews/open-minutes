@@ -63,3 +63,13 @@ export function chapterProblems(
     (v) => [v.chapterIndex, v.message.replace(/^chapter \d+ \(".*?"\) /, "")],
   );
 }
+
+/** The words each violation of a word rule is at, in a sentence as one segment. */
+export function foundTexts(
+  rule: (meeting: RuleMeeting) => (Violation & { text: string })[],
+  sentence: string,
+): string[] {
+  return rule({ segments: [{ speaker: null, words: words(sentence) }] }).map(
+    (v) => v.text,
+  );
+}

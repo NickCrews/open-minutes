@@ -122,7 +122,7 @@ are `H:MM:SS.ss`, as psvtool prints them.
    or a name alone when you aren't sure. [mishearings.md](mishearings.md)
    lists the recurring ones.
 9. **Write numbers the house way.** Goldens write numbers, times, money and
-   dates as `packages/core/src/transcription/written-form.ts` describes:
+   dates as `packages/core/src/rules/numbers.ts` describes:
    "7:30 p.m.", "$36,000", "3.79%", "March 19", "passes 5-0", and numerals
    from 10 up. A jurisdiction opts into local rules for its own identifiers
    with `_written_forms` in `jurisdictions.jsonl`; Anchorage's are "AO

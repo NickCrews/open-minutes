@@ -22,8 +22,8 @@ export interface GoldenJurisdiction {
   name_short: string;
   state: string;
   /**
-   * Local written-form rules its transcripts follow, by name in
-   * LOCAL_WRITTEN_FORM_RULES (@open-minutes/core/transcription), eg
+   * Local style rules its transcripts follow, by name in
+   * LOCAL_STYLE_RULE_SPECS (@open-minutes/core/rules), eg
    * ["anchorage"] for Anchorage's bill and code numbers. Not a DB column.
    */
   _written_forms?: string[];
@@ -162,9 +162,9 @@ export function loadPeople(): GoldenPerson[] {
 }
 
 /**
- * The local written-form rules a meeting's transcript follows: those its
+ * The local style rules a meeting's transcript follows: those its
  * bodies' jurisdictions opt into with `_written_forms`. Throws on a name
- * LOCAL_WRITTEN_FORM_RULES doesn't have.
+ * LOCAL_STYLE_RULE_SPECS doesn't have.
  */
 export function localWrittenForms(
   bodyIds: readonly string[],

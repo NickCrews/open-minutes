@@ -3,6 +3,7 @@ import {
   CHAPTER_RULE_SPECS,
   checkMeeting,
   fixMeeting,
+  LOCAL_STYLE_RULE_SPECS,
   type MeetingIssue,
   type MeetingViolation,
   RULE_SPECS,
@@ -10,9 +11,8 @@ import {
   STYLE_RULE_SPECS,
   styleRuleSpecs,
 } from ".";
-import { ANCHORAGE_WRITTEN_FORM_RULES } from "../transcription";
 import type { RuleSpec, Violation } from "./common";
-import { seg } from "./testing";
+import { seg, words } from "./testing";
 import * as splitSentence from "./split-sentence";
 import type { SplitSentence } from "./split-sentence";
 
@@ -72,7 +72,7 @@ describe("checkMeeting", () => {
     expect(
       await codes({ segments }, [
         ...RULE_SPECS,
-        ...styleRuleSpecs(ANCHORAGE_WRITTEN_FORM_RULES),
+        ...styleRuleSpecs(LOCAL_STYLE_RULE_SPECS.anchorage),
       ]),
     ).toEqual([
       "error bill-number",
@@ -97,6 +97,47 @@ describe("checkMeeting", () => {
         (i) => `${i.severity} ${i.message}`,
       ),
     ).toEqual(["error the meeting has no bodies", "warning also"]);
+  });
+});
+
+describe("the style rules", () => {
+  const found = async (sentence: string, specs = STYLE_RULE_SPECS) =>
+    (
+      await checkMeeting(
+        { segments: [{ speaker: null, words: words(sentence) }] },
+        specs,
+      )
+    ).map((i) => `${i.code}: ${i.text}`);
+
+  it("accept the house style", async () => {
+    const all = styleRuleSpecs(LOCAL_STYLE_RULE_SPECS.anchorage);
+    for (const s of [
+      "Item 14.C is AO 2026-18, an ordinance amending AMC 3.70.190.",
+      "AO 2025-144(S) and AO 2025-74(S-2) and AR 2026-7.",
+      "AO 2026 unnumbered, an ordinance amending chapter 21.05.",
+      "Assembly memorandum AM 142-2026 has passed.",
+      "AMC 25.35.060C and 21.05.040G.2.b and AS 44.62.310.",
+      "Rezone from R-4 SL to R-4, near B-3 and gR-1 and CE-R-10.",
+      "We meet at 7 p.m. or 11:30 a.m. tomorrow.",
+      "It costs $10, or $36,000, or $1.5 million, or 6 cents.",
+      "An increase of 1% or 3.79% a year.",
+      "On February 17, 2026, and again on the 27th.",
+      "The February one isn't out. May one of you second?",
+      "Passes 5-0 on a vote of 12 to 0.",
+      "We need a second, one more time.",
+    ])
+      expect(await found(s, all), s).toEqual([]);
+  });
+
+  it("leave Anchorage's identifiers to the Anchorage rules", async () => {
+    expect(await found("AR 2026 48, item 10 B1, section 2103050, R4.")).toEqual(
+      ["split-numeral: 2026 48,"],
+    );
+    expect(await found("section three dot seventy at 7 pm")).toEqual([
+      "spoken-separator: three dot seventy",
+      "time: 7 pm",
+      "spelled-number: seventy",
+    ]);
   });
 });
 

@@ -3,6 +3,7 @@ import { join, relative, resolve, sep } from "node:path";
 import {
   CHAPTER_RULE_SPECS,
   checkMeeting,
+  LOCAL_STYLE_RULE_SPECS,
   type MeetingIssue,
   RULE_SPECS,
   type RuleMeeting,
@@ -12,7 +13,6 @@ import {
   styleRuleSpecs,
   TRANSCRIPT_RULE_SPECS,
 } from "@open-minutes/core/rules";
-import { LOCAL_WRITTEN_FORM_RULES } from "@open-minutes/core/transcription";
 import { formatClock } from "@open-minutes/core/clock";
 import {
   formatSpeaker,
@@ -126,18 +126,22 @@ export async function checkMeetingDir(dir: string): Promise<Issue[]> {
   const chapters = meeting.chapters?.chapters ?? null;
   const root = resolve(dir, "../..");
   const forms = localWrittenForms(meeting.body_ids, root);
-  const unknown = forms.filter((f) => !(f in LOCAL_WRITTEN_FORM_RULES));
+  const known = (f: string): f is keyof typeof LOCAL_STYLE_RULE_SPECS =>
+    Object.hasOwn(LOCAL_STYLE_RULE_SPECS, f);
+  const unknown = forms.filter((f) => !known(f));
   if (unknown.length)
     issues.push({
       file: join(root, "jurisdictions.jsonl"),
       severity: "error",
-      message: `unknown _written_forms ${JSON.stringify(unknown)}; known: ${JSON.stringify(Object.keys(LOCAL_WRITTEN_FORM_RULES))}`,
+      message: `unknown _written_forms ${JSON.stringify(unknown)}; known: ${JSON.stringify(Object.keys(LOCAL_STYLE_RULE_SPECS))}`,
     });
-  const localRules = forms.flatMap((f) => LOCAL_WRITTEN_FORM_RULES[f] ?? []);
+  const localSpecs = forms
+    .filter(known)
+    .flatMap((f) => LOCAL_STYLE_RULE_SPECS[f]);
   const placed = (
     await checkMeeting(ruleMeeting(meeting), [
       ...RULE_SPECS,
-      ...styleRuleSpecs(localRules),
+      ...styleRuleSpecs(localSpecs),
     ])
   ).map((i) =>
     "segmentIndex" in i
