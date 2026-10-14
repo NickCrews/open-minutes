@@ -9,7 +9,7 @@
 // every change it made. Checking is defined as "cleaning would change nothing",
 // so the cleaner and the checker can never disagree. To add a cleanup, write a
 // rule and append it to CLEANING_RULES; the pipeline (transcribe → clean) and
-// the golden tooling (`pnpm fixtures clean|check`) pick it up automatically.
+// the golden tooling (`pnpm fixtures:fix` and `pnpm fixtures:check`) pick it up automatically.
 //
 // Rules are deliberately conservative: a missed disfluency costs a little
 // readability, but deleting a word someone actually meant changes the record.

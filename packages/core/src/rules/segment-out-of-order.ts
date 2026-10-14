@@ -1,5 +1,5 @@
 import { formatClock } from "../clock";
-import type { AtWord, RuleMeeting, Severity, Violation } from "./common";
+import type { AtWord, Fix, RuleMeeting, Severity, Violation } from "./common";
 
 export const code = "segment-out-of-order";
 
@@ -31,3 +31,22 @@ export function rule(meeting: RuleMeeting): SegmentOutOfOrder[] {
   });
   return results;
 }
+
+/**
+ * Puts segments in order of their first word, leaving any without words where
+ * they are. Segments that interleave stay out of order: which words belong to
+ * which takes judgment.
+ */
+export const fix: Fix = (meeting) => {
+  const { segments } = meeting;
+  const sorted = segments
+    .filter((seg) => seg.words.length > 0)
+    .sort((a, b) => a.words[0]!.start - b.words[0]!.start);
+  let next = 0;
+  const reordered = segments.map((seg) =>
+    seg.words.length > 0 ? sorted[next++]! : seg,
+  );
+  return reordered.every((seg, i) => seg === segments[i])
+    ? meeting
+    : { ...meeting, segments: reordered };
+};

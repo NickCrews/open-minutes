@@ -1,5 +1,5 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { join, relative, resolve } from "node:path";
+import { join, relative, resolve, sep } from "node:path";
 import {
   CHAPTER_RULE_SPECS,
   checkMeeting,
@@ -20,6 +20,7 @@ import {
   getMeetingData,
   parseGoldenChapters,
   TEST_DATA_ROOT,
+  transcriptPath,
 } from "./test-data";
 
 // Checks over the hand-edited fixture files, reported against file and line
@@ -60,6 +61,25 @@ export function meetingDirs(
   });
 }
 
+/**
+ * The meeting directories a file under the data roots belongs to: all of them
+ * for a shared file like people.jsonl, none for a file outside the roots.
+ */
+export function meetingDirsFor(
+  file: string,
+  roots: readonly string[] = [TEST_DATA_ROOT],
+): string[] {
+  const path = resolve(file);
+  const root = roots
+    .map((r) => resolve(r))
+    .find((r) => path.startsWith(r + sep));
+  if (!root) return [];
+  const meetings = resolve(root, "meetings") + sep;
+  if (!path.startsWith(meetings)) return meetingDirs([root]);
+  const name = path.slice(meetings.length).split(sep)[0]!;
+  return [resolve(meetings, name)];
+}
+
 /** Check every fixture meeting: its transcript and its chapters. */
 export async function checkFixtures(
   dirs: readonly string[] = meetingDirs(),
@@ -70,9 +90,7 @@ export async function checkFixtures(
 /** Check one meeting directory. */
 export async function checkMeetingDir(dir: string): Promise<Issue[]> {
   const issues: Issue[] = [];
-  const psvPath = ["golden.psv", "transcript.psv"]
-    .map((f) => join(dir, f))
-    .find((p) => existsSync(p));
+  const psvPath = transcriptPath(dir);
   const psv = psvPath
     ? readPsv(readFileSync(psvPath, "utf8"), psvPath)
     : undefined;
@@ -245,7 +263,7 @@ function atPsvLine(
     issue.code === "empty-segment"
       ? "speaker marker with no words after it"
       : issue.code === "unclean-word"
-        ? `${issue.message}; run \`pnpm fixtures:clean\``
+        ? `${issue.message}; run \`pnpm fixtures:fix\``
         : issue.message;
   return { file, line, severity: issue.severity, message };
 }

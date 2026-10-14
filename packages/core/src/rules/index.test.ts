@@ -188,4 +188,44 @@ describe("fixMeeting", () => {
     ]);
     expect(fixed.segments).toEqual([seg("b", [1, "Um,"], [2, "no."])]);
   });
+
+  it("puts misordered segments in order, but leaves interleaved ones", async () => {
+    const late = seg("a", [5, "Later."]);
+    const early = seg("b", [1, "First."]);
+    expect((await fixMeeting({ segments: [late, early] })).meeting).toEqual({
+      segments: [early, late],
+    });
+    const interleaved = {
+      segments: [seg("a", [1, "One"], [3, "three."]), seg("b", [2, "Two."])],
+    };
+    const { meeting, fixed } = await fixMeeting(interleaved);
+    expect(meeting).toBe(interleaved);
+    expect(fixed).toEqual([]);
+  });
+
+  it("writes a plain hyphen for a dash in a chapter", async () => {
+    const chapter = {
+      start: 0,
+      end: 2,
+      title: "Budget – first reading",
+      summary: "Items 1—3.",
+      bullets: ["2019–2022"],
+    };
+    const { meeting, fixed } = await fixMeeting({
+      segments: [seg("a", [1, "Hello."])],
+      chapters: [chapter],
+    });
+    expect(meeting.chapters).toEqual([
+      {
+        ...chapter,
+        title: "Budget - first reading",
+        summary: "Items 1-3.",
+        bullets: ["2019-2022"],
+      },
+    ]);
+    // The chapter still ends after the meeting, which takes judgment to fix.
+    expect(fixed.map((v) => v.message)).toEqual([
+      'chapter 1 ("Budget – first reading") has an en or em dash; write a plain hyphen (-)',
+    ]);
+  });
 });
