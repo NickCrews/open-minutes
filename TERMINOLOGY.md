@@ -261,7 +261,3 @@ _Avoid_: lint, validate
 **Fix**:
 A rule's rewrite of a meeting that removes its violations where the data alone says what the right rewrite is, such as dropping a filler word. A violation whose fix depends on what someone meant or which of several plausible changes is right, such as two segments whose words interleave, is left for a person or agent. Only some rules have one.
 _Avoid_: autofix, repair, correction
-
-**Cleaning**:
-Applying the fixes of the `filler-word`, `stutter`, `false-start` and `typographic-dash` rules to a transcript, as ingestion does to the recognizer's output.
-_Avoid_: disfluency removal, normalization
