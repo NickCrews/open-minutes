@@ -173,8 +173,8 @@ Shared test configuration is in `vitest.config.ts`, `vitest.shared.ts` and
 Meetings in the database and in golden fixture files follow the same rules,
 in [`packages/core/src/meeting-check.ts`](packages/core/src/meeting-check.ts).
 
-- Database: `check_meeting` in `@open-minutes/agents`. Write tools roll back
-  a change that introduces an error.
+- Database: `check_meeting` in `@open-minutes/agents`. Write tools don't
+  check, so run it after editing.
 - Golden fixtures: `pnpm fixtures:check [file ...]` prints
   `file:line: severity: message`, and also checks the file format. Errors
   fail it and the test suite.
@@ -254,8 +254,8 @@ To change the data, agents (and people) use the tools in
 [`packages/agents`](packages/agents/src/tools.ts) rather than raw SQL: `pnpm om
 tools` lists them, and `pnpm om tools <tool> '<json>'` calls one and prints
 JSON. The same tools are exported from `@open-minutes/agents`, with `toAgentTool` to
-hand them to an agent loop such as pi. Every write re-checks the meetings it
-touched and rolls back if it introduced an error. Guidance for agents doing
+hand them to an agent loop such as pi. Writes run no rule checks; run
+`check_meeting` after editing. Guidance for agents doing
 this work is in
 [`.claude/skills/transcript-cleanup`](.claude/skills/transcript-cleanup/SKILL.md).
 

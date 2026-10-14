@@ -15,9 +15,9 @@ SQL:
   is JSON.
 - TypeScript: `import { tools, toAgentTool } from "@open-minutes/agents"`.
 
-Every write returns `issues` for the meetings it touched, and it rolls back
-if the change introduces an error. Read the issues each time. Pass
-`"dryRun": true` to preview a change.
+Writes apply the change and run no checks, so edit freely: a step may leave
+the meeting breaking a rule on its way to clean. When done editing, run
+`check_meeting`, fix every error, and read every warning.
 
 Golden fixtures (`packages/fixtures/test-data/`) are files. Check them with
 `pnpm fixtures:check`, which holds them to the same rules as `check_meeting`

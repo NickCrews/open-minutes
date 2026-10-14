@@ -247,7 +247,7 @@ An instance of a meeting breaking a rule, with a rule code and message. It may b
 _Avoid_: check result, problem, error (that is a severity)
 
 **Severity**:
-How a rule's violations are reported; each rule gives a default. `error` means the data is wrong: a write that introduces one is rolled back, and a golden meeting with one fails the tests. `warning` means the data is probably wrong or breaks a convention, and wants a look.
+How a rule's violations are reported; each rule gives a default. `error` means the data is wrong: a golden meeting with one fails the tests. `warning` means the data is probably wrong or breaks a convention, and wants a look.
 _Avoid_: level
 
 **Issue**:

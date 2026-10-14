@@ -34,9 +34,9 @@ export type Rule<V extends Violation = Violation> = (
 ) => V | V[] | Promise<V | V[]>;
 
 /**
- * `error`: the data is wrong. A write that introduces one is rolled back, and
- * a fixture with one fails the tests. `warning`: the data is probably wrong,
- * or breaks a convention, and wants a look.
+ * `error`: the data is wrong, and a fixture with one fails the tests.
+ * `warning`: the data is probably wrong, or breaks a convention, and wants a
+ * look.
  */
 export type Severity = "error" | "warning";
 
