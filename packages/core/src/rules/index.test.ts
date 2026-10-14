@@ -1,5 +1,11 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
-import { checkMeeting, type MeetingViolation, RULE_SPECS_BY_CODE } from ".";
+import {
+  CHAPTER_RULE_SPECS,
+  checkMeeting,
+  type MeetingIssue,
+  type MeetingViolation,
+  RULE_SPECS_BY_CODE,
+} from ".";
 import type { RuleSegment, RuleSpec, Violation } from "./common";
 import * as splitSentence from "./split-sentence";
 import type { SplitSentence } from "./split-sentence";
@@ -122,5 +128,20 @@ describe("RULE_SPECS_BY_CODE", () => {
     expectTypeOf<
       (typeof RULE_SPECS_BY_CODE)["split-sentence"]["defaultSeverity"]
     >().toEqualTypeOf<"warning">();
+  });
+});
+
+describe("checkMeeting's result type", () => {
+  it("holds only what the given specs can find", async () => {
+    const meeting = { segments: [] };
+    const chapterIssues = await checkMeeting(meeting, CHAPTER_RULE_SPECS);
+    const allIssues = await checkMeeting(meeting);
+    expect([chapterIssues, allIssues]).toEqual([[], []]);
+    expectTypeOf<(typeof chapterIssues)[number]["code"]>().toEqualTypeOf<
+      "invalid-chapter" | "chapter-size" | "uncovered-speech"
+    >();
+    expectTypeOf<(typeof allIssues)[number]["code"]>().toEqualTypeOf<
+      MeetingIssue["code"]
+    >();
   });
 });
