@@ -660,11 +660,10 @@ Notes on reconciling with existing tickets:
     matching meeting, and non-blank title, summary and bullets. Coverage and
     the size conventions span rows or are guidance, so they live in code (see
     below) and are reported as warnings.
-- **Rules** (`packages/core/src/rules/`): `invalid-chapter` (ordered,
-  non-overlapping, in bounds), `chapter-size` (the size conventions, as
-  warnings), `uncovered-speech` and `typographic-dash`, checked in the
-  database and in the golden fixtures alike. The active chapter at a time
-  and the `?t=` snap rule are in `packages/core/src/chapters.ts`.
+- **Rules** (`packages/core/src/rules/`): what chapters must follow, such
+  as being ordered and in bounds, checked in the database and in the golden
+  fixtures alike. The active chapter at a time and the `?t=` snap rule are
+  in `packages/core/src/chapters.ts`.
 - **Data**: `chapters.json` next to a golden meeting's transcript holds its
   chapters and their generation. The March 23, 2026 GBOS meeting has a set,
   written by Claude from the golden transcript and not yet reviewed by a
