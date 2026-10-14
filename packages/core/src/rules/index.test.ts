@@ -2,6 +2,7 @@ import { describe, expect, expectTypeOf, it } from "vitest";
 import {
   CHAPTER_RULE_SPECS,
   checkMeeting,
+  fixMeeting,
   type MeetingIssue,
   type MeetingViolation,
   RULE_SPECS_BY_CODE,
@@ -143,5 +144,48 @@ describe("checkMeeting's result type", () => {
     expectTypeOf<(typeof allIssues)[number]["code"]>().toEqualTypeOf<
       MeetingIssue["code"]
     >();
+  });
+});
+
+describe("fixMeeting", () => {
+  it("applies fixes until they settle, and reports what they fixed", async () => {
+    const { meeting, fixed } = await fixMeeting({
+      segments: [
+        seg("a", [1, "Um."]),
+        seg("b", [2, "The"], [2.2, "the"], [2.4, "vote."]),
+      ],
+    });
+    expect(meeting.segments).toEqual([seg("b", [2.2, "The"], [2.4, "vote."])]);
+    expect(fixed.map((v) => [v.code, v.message])).toEqual([
+      ["unclean-word", 'filler "Um." should not be in a transcript'],
+      ["unclean-word", 'stutter "The" should not be in a transcript'],
+    ]);
+    expect(await checkMeeting(meeting)).toEqual([]);
+  });
+
+  it("keeps what the rules don't look at", async () => {
+    const segments = [
+      { ...seg("a"), id: 1 },
+      { ...seg("b", [1, "Uh,"], [2, "yes."]), id: 2 },
+    ];
+    const { meeting } = await fixMeeting({ segments, extra: true });
+    expect(meeting).toEqual({
+      segments: [{ ...seg("b", [2, "Yes."]), id: 2 }],
+      extra: true,
+    });
+  });
+
+  it("returns the meeting given when there is nothing to fix", async () => {
+    const meeting = { bodyCount: 0, segments: [seg("a", [1, "Hello."])] };
+    expect(await fixMeeting(meeting)).toEqual({ meeting, fixed: [] });
+    expect((await fixMeeting(meeting)).meeting).toBe(meeting);
+  });
+
+  it("runs only the fixes of the rules it is given", async () => {
+    const meeting = { segments: [seg("a"), seg("b", [1, "Um,"], [2, "no."])] };
+    const { meeting: fixed } = await fixMeeting(meeting, [
+      RULE_SPECS_BY_CODE["empty-segment"],
+    ]);
+    expect(fixed.segments).toEqual([seg("b", [1, "Um,"], [2, "no."])]);
   });
 });

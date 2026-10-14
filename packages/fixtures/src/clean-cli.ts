@@ -9,12 +9,9 @@
 
 import { existsSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
-import {
-  CLEANING_RULES,
-  type CleanChange,
-} from "@open-minutes/core/transcription";
+import { CLEANING_RULES } from "@open-minutes/core/transcription";
 import { meetingDirs } from "./check";
-import { cleanTranscriptFile } from "./clean";
+import { cleanTranscriptFile, type TranscriptFix } from "./clean";
 import { formatClock } from "@open-minutes/core/clock";
 
 // pnpm runs this from the package directory; paths are the caller's.
@@ -45,26 +42,25 @@ const files = paths.length
 
 let cleaned = 0;
 for (const file of files) {
-  const changes = cleanTranscriptFile(file);
-  if (changes.length === 0) continue;
+  const { changed, fixed } = await cleanTranscriptFile(file);
+  if (!changed) continue;
   cleaned++;
-  console.log(`${relative(CWD, file)}: removed ${summarize(changes)}`);
+  console.log(`${relative(CWD, file)}: fixed ${summarize(fixed)}`);
   if (verbose) {
-    for (const c of changes) {
-      const edit =
-        c.after === null ? "removed" : `→ ${JSON.stringify(c.after)}`;
-      console.log(
-        `  ${formatClock(c.start)}  ${c.rule.padEnd(12)} ${JSON.stringify(c.before)} ${edit}`,
-      );
+    for (const v of fixed) {
+      const at = "atSecs" in v ? formatClock(v.atSecs) : "";
+      console.log(`  ${at.padEnd(10)}  ${v.code.padEnd(14)} ${v.message}`);
     }
   }
 }
 console.log(`Cleaned ${cleaned} of ${files.length} transcript(s).`);
 
-function summarize(changes: readonly CleanChange[]): string {
+function summarize(fixed: readonly TranscriptFix[]): string {
+  if (fixed.length === 0) return "formatting";
   const counts = new Map<string, number>();
-  for (const c of changes) {
-    if (c.after === null) counts.set(c.rule, (counts.get(c.rule) ?? 0) + 1);
+  for (const v of fixed) {
+    const what = v.code === "unclean-word" ? v.rule : v.code;
+    counts.set(what, (counts.get(what) ?? 0) + 1);
   }
-  return [...counts].map(([rule, n]) => `${n} ${rule}`).join(", ");
+  return [...counts].map(([what, n]) => `${n} ${what}`).join(", ");
 }

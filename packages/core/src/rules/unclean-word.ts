@@ -1,5 +1,5 @@
 import { cleanWords } from "../transcription";
-import type { AtWord, RuleMeeting, Severity, Violation } from "./common";
+import type { AtWord, Fix, RuleMeeting, Severity, Violation } from "./common";
 
 export const code = "unclean-word";
 
@@ -33,3 +33,15 @@ export function rule(meeting: RuleMeeting): UncleanWord[] {
       })),
   );
 }
+
+/** Cleans each segment's words, as the pipeline's clean stage does. */
+export const fix: Fix = (meeting) => {
+  let changed = false;
+  const segments = meeting.segments.map((seg) => {
+    const { words, changes } = cleanWords(seg.words);
+    if (changes.length === 0) return seg;
+    changed = true;
+    return { ...seg, words };
+  });
+  return changed ? { ...meeting, segments } : meeting;
+};

@@ -6,14 +6,15 @@
 //
 // Each rule is a module named for its code that exports a RuleSpec: its
 // `code`, `rule` (a function from the meeting to the violations it finds),
-// and `defaultSeverity`. Callers find a rule by its code in
+// `defaultSeverity`, and, if a machine can fix what it finds, `fix`, which
+// fixMeeting applies. Callers find a rule by its code in
 // RULE_SPECS_BY_CODE. Each violation has a code and a message, plus whatever
 // structured data an agent needs to fix it. Helpers more than one rule needs
 // go in ./common.ts. To add a rule, write its module and add it to
 // RULE_SPECS; its code and violation type follow from it.
 
 import * as chapterSize from "./chapter-size";
-import type { RuleMeeting, RuleSpec, Severity } from "./common";
+import type { RuleMeeting, RuleSpec, Severity, Violation } from "./common";
 import * as emptySegment from "./empty-segment";
 import * as invalidChapter from "./invalid-chapter";
 import * as noBodies from "./no-bodies";
@@ -104,4 +105,46 @@ export async function checkMeeting<
     ),
   );
   return found.flat() as unknown as IssueOf<S[number]>[];
+}
+
+/** How many times fixMeeting runs the fixes before giving up on them settling. */
+const MAX_FIX_PASSES = 10;
+
+/**
+ * Apply the fixes of the given rules, by default all of {@link RULE_SPECS},
+ * until they change nothing: one rule's fix can leave work for another's, as
+ * cleaning a segment's words can empty it. Returns the fixed meeting, the one
+ * given if nothing changed, and the violations it fixed: those found before
+ * and not after, matched by code and message. What the fixes can't resolve
+ * is left for {@link checkMeeting} to report.
+ */
+export async function fixMeeting<
+  M extends RuleMeeting,
+  const S extends readonly RuleSpec<MeetingViolation>[] = typeof RULE_SPECS,
+>(
+  meeting: M,
+  specs: S = RULE_SPECS as unknown as S,
+): Promise<{ meeting: M; fixed: IssueOf<S[number]>[] }> {
+  const fixable = specs.filter((spec) => spec.fix);
+  let current = meeting;
+  for (let pass = 0; ; pass++) {
+    const next = fixable.reduce((m, spec) => spec.fix!(m), current);
+    if (next === current) break;
+    if (pass === MAX_FIX_PASSES)
+      throw new Error(`fixes still changing the meeting after ${pass} passes`);
+    current = next;
+  }
+  if (current === meeting) return { meeting, fixed: [] };
+
+  const key = (v: Violation) => `${v.code}\0${v.message}`;
+  const left = new Map<string, number>();
+  for (const v of await checkMeeting(current, fixable))
+    left.set(key(v), (left.get(key(v)) ?? 0) + 1);
+  const fixed = (await checkMeeting(meeting, fixable)).filter((v) => {
+    const n = left.get(key(v)) ?? 0;
+    if (n === 0) return true;
+    left.set(key(v), n - 1);
+    return false;
+  });
+  return { meeting: current, fixed: fixed as IssueOf<S[number]>[] };
 }

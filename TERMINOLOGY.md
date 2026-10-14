@@ -257,3 +257,7 @@ _Avoid_: diagnostic, finding, problem
 **Check**:
 To run the rules over a meeting, as `check_meeting` and `pnpm fixtures:check` do. Only a verb; what it runs are rules.
 _Avoid_: lint, validate
+
+**Fix**:
+A rule's rewrite of a meeting that removes its violations without judgment, such as cleaning an unclean word. Only some rules have one.
+_Avoid_: autofix, repair, correction
