@@ -11,7 +11,6 @@ import {
   segmentsTable,
 } from "@open-minutes/db";
 import { bodySlug } from "@open-minutes/core/bodies";
-import { chapterErrors } from "@open-minutes/core/chapters";
 import {
   parseMeetingDate,
   parseMeetingTime,
@@ -20,78 +19,34 @@ import { hasTypographicDash } from "@open-minutes/core/text";
 import { transcriptFingerprint } from "@open-minutes/core/transcript-fingerprint";
 import { LAST_WORD_DURATION_SEC } from "@open-minutes/core/transcription";
 import { audioTools } from "./audio/tools";
-import { checkMeeting, type Issue } from "./check";
+import { checkMeeting } from "./check";
 import { loadChapters, loadSegments, round, speakerOf } from "./load";
 import { findMeeting, meetingRef } from "./meeting-ref";
 import { type Db, defineTool, type Tool, ToolError } from "./tool";
 
 // Tools for an agent cleaning up a meeting's data: reading the transcript,
 // fixing who said what, naming people, and replacing chapters; and, in
-// ./audio/tools.ts, listening to the audio. Every write
-// runs in a transaction, re-checks the meetings it touched, and rolls back if
-// it introduced an error; `dryRun` always rolls back, to preview a change.
+// ./audio/tools.ts, listening to the audio. A write applies its change and
+// nothing else: it runs no rule checks, so an agent can pass through states
+// that break the rules on its way to a clean meeting, then run check_meeting.
 
 const id = z.int().positive();
-const dryRun = z
-  .boolean()
-  .default(false)
-  .describe("Check the change and report the result without saving it.");
 
-/** What a write reports: whether it was saved, and the meeting's state after. */
-export interface EditResult<T> {
-  applied: boolean;
-  dryRun: boolean;
-  result: T;
-  /** Errors this change would have introduced. Non-empty means not applied. */
-  newErrors: Issue[];
-  /** Every issue in the touched meetings after the change, old ones included. */
-  issues: Issue[];
-}
-
-class Rollback extends Error {}
-
+/** Run a write in a transaction, so a multi-row change saves all or nothing. */
 async function applyEdit<T>(
   db: Db,
-  meetingIds: number[],
-  dry: boolean,
   change: (tx: Db) => Promise<T>,
-): Promise<EditResult<T>> {
-  const check = async (tx: Db) =>
-    (await Promise.all(meetingIds.map((m) => checkMeeting(tx, m)))).flat();
-  const key = (i: Issue) =>
-    `${i.code}|${i.message}|${"segmentId" in i ? i.segmentId : ""}|${"chapterId" in i ? i.chapterId : ""}`;
-  let out: EditResult<T> | undefined;
-  try {
-    await db.transaction(async (tx) => {
-      const before = new Set(
-        (await check(tx)).filter((i) => i.severity === "error").map(key),
-      );
-      let result: T;
-      try {
-        result = await change(tx);
-      } catch (err) {
-        if (err instanceof ToolError) throw err;
-        // A database constraint said no: pass its reason on to the agent.
-        const cause = (err as { cause?: { message?: string } }).cause;
-        throw new ToolError(cause?.message ?? (err as Error).message);
-      }
-      const issues = await check(tx);
-      const newErrors = issues.filter(
-        (i) => i.severity === "error" && !before.has(key(i)),
-      );
-      out = {
-        applied: !dry && newErrors.length === 0,
-        dryRun: dry,
-        result,
-        newErrors,
-        issues,
-      };
-      if (!out.applied) throw new Rollback();
-    });
-  } catch (err) {
-    if (!(err instanceof Rollback)) throw err;
-  }
-  return out!;
+): Promise<T> {
+  return db.transaction(async (tx) => {
+    try {
+      return await change(tx);
+    } catch (err) {
+      if (err instanceof ToolError) throw err;
+      // A database constraint said no: pass its reason on to the agent.
+      const cause = (err as { cause?: { message?: string } }).cause;
+      throw new ToolError(cause?.message ?? (err as Error).message);
+    }
+  });
 }
 
 async function segmentsByIds(db: Db, ids: number[]) {
@@ -205,9 +160,8 @@ export const updateMeeting = defineTool({
       .min(1)
       .optional()
       .describe('Body slugs, eg ["gbos", "luc"].'),
-    dryRun,
   }),
-  run: async (ctx, { meeting: ref, bodies: slugs, dryRun: dry, ...fields }) => {
+  run: async (ctx, { meeting: ref, bodies: slugs, ...fields }) => {
     const db = await ctx.db();
     const meeting = await findMeeting(db, ref);
     if (Object.keys(fields).length === 0 && slugs === undefined)
@@ -240,7 +194,7 @@ export const updateMeeting = defineTool({
       });
     }
 
-    return applyEdit(db, [meeting.id], dry, async (tx) => {
+    return applyEdit(db, async (tx) => {
       if (Object.keys(fields).length > 0)
         await tx
           .update(meetingsTable)
@@ -405,7 +359,7 @@ export const checkMeetingTool = defineTool({
   name: "check_meeting",
   label: "Check meeting",
   description:
-    "List problems in a meeting's data, by the same rules as the golden fixtures. Errors (a write that introduces one is rolled back): no bodies, an empty segment, words or segments out of time order, a filler or stutter the clean stage removes, an invalid chapter. Warnings (probably wrong, or a broken convention): a speaker change inside a sentence near a longer pause, a chapter outside the size conventions, speech no chapter covers. Every write tool also returns this after its change.",
+    "List problems in a meeting's data, by the same rules as the golden fixtures. Errors: no bodies, an empty segment, words or segments out of time order, a filler or stutter the clean stage removes, an invalid chapter. Warnings (probably wrong, or a broken convention): a speaker change inside a sentence near a longer pause, a chapter outside the size conventions, speech no chapter covers. Write tools don't check their changes: run this when done editing.",
   input: z.object({ meeting: meetingRef }),
   run: async (ctx, input) => {
     const db = await ctx.db();
@@ -421,23 +375,17 @@ export const relabelSegments = defineTool({
   input: z.object({
     segmentIds: z.array(id).min(1),
     speaker: speakerInput,
-    dryRun,
   }),
   run: async (ctx, input) => {
     const db = await ctx.db();
-    const rows = await segmentsByIds(db, input.segmentIds);
-    return applyEdit(
-      db,
-      [...new Set(rows.map((r) => r.meeting_id))],
-      input.dryRun,
-      async (tx) => {
-        await tx
-          .update(segmentsTable)
-          .set(speakerColumns(input.speaker))
-          .where(inArray(segmentsTable.id, input.segmentIds));
-        return { relabelled: input.segmentIds.length };
-      },
-    );
+    await segmentsByIds(db, input.segmentIds);
+    return applyEdit(db, async (tx) => {
+      await tx
+        .update(segmentsTable)
+        .set(speakerColumns(input.speaker))
+        .where(inArray(segmentsTable.id, input.segmentIds));
+      return { relabelled: input.segmentIds.length };
+    });
   },
 });
 
@@ -453,7 +401,6 @@ export const splitSegment = defineTool({
       .positive()
       .describe("Index of the first word of the new segment."),
     speaker: speakerInput.optional(),
-    dryRun,
   }),
   run: async (ctx, input) => {
     const db = await ctx.db();
@@ -462,7 +409,7 @@ export const splitSegment = defineTool({
       throw new ToolError(
         `Segment ${seg!.id} has only ${seg!.words.length} words; atWord must be 1–${seg!.words.length - 1}`,
       );
-    return applyEdit(db, [seg!.meeting_id], input.dryRun, async (tx) => {
+    return applyEdit(db, async (tx) => {
       await tx
         .update(segmentsTable)
         .set({ words: seg!.words.slice(0, input.atWord) })
@@ -493,7 +440,6 @@ export const mergeSegments = defineTool({
   input: z.object({
     segmentIds: z.array(id).min(2),
     speaker: speakerInput.optional(),
-    dryRun,
   }),
   run: async (ctx, input) => {
     const db = await ctx.db();
@@ -511,7 +457,7 @@ export const mergeSegments = defineTool({
       );
     const sorted = positions.map((p) => rows.find((r) => r.id === order[p])!);
     const [first, ...rest] = sorted;
-    return applyEdit(db, [meetingId], input.dryRun, async (tx) => {
+    return applyEdit(db, async (tx) => {
       await tx.delete(segmentsTable).where(
         inArray(
           segmentsTable.id,
@@ -554,9 +500,8 @@ export const updatePerson = defineTool({
       .optional(),
     name: personText.nullable().optional(),
     bio: personText.nullable().optional(),
-    dryRun,
   }),
-  run: async (ctx, { personId, dryRun: dry, ...fields }) => {
+  run: async (ctx, { personId, ...fields }) => {
     const db = await ctx.db();
     const [person] = await db
       .select({ id: peopleTable.id })
@@ -565,7 +510,7 @@ export const updatePerson = defineTool({
     if (!person) throw new ToolError(`No person ${personId}`);
     if (Object.keys(fields).length === 0)
       throw new ToolError("Nothing to change");
-    return applyEdit(db, [], dry, async (tx) => {
+    return applyEdit(db, async (tx) => {
       const [row] = await tx
         .update(peopleTable)
         .set(fields)
@@ -586,7 +531,7 @@ export const mergePeople = defineTool({
   label: "Merge people",
   description:
     "Two person rows are the same individual (recognition split one voice in two): move every segment of mergeId to keepId and delete mergeId. keepId's slug, name and bio win; empty ones are filled from mergeId. keepId's voiceprint is kept as is.",
-  input: z.object({ keepId: id, mergeId: id, dryRun }),
+  input: z.object({ keepId: id, mergeId: id }),
   run: async (ctx, input) => {
     const db = await ctx.db();
     if (input.keepId === input.mergeId)
@@ -599,32 +544,23 @@ export const mergePeople = defineTool({
     const merge = people.find((p) => p.id === input.mergeId);
     if (!keep || !merge)
       throw new ToolError(`No person ${!keep ? input.keepId : input.mergeId}`);
-    const meetings = await db
-      .selectDistinct({ m: segmentsTable.meeting_id })
-      .from(segmentsTable)
-      .where(inArray(segmentsTable.person_id, [input.keepId, input.mergeId]));
-    return applyEdit(
-      db,
-      meetings.map((r) => r.m),
-      input.dryRun,
-      async (tx) => {
-        const moved = await tx
-          .update(segmentsTable)
-          .set({ person_id: keep.id })
-          .where(eq(segmentsTable.person_id, merge.id))
-          .returning({ id: segmentsTable.id });
-        await tx.delete(peopleTable).where(eq(peopleTable.id, merge.id));
-        await tx
-          .update(peopleTable)
-          .set({
-            slug: keep.slug ?? merge.slug,
-            name: keep.name ?? merge.name,
-            bio: keep.bio ?? merge.bio,
-          })
-          .where(eq(peopleTable.id, keep.id));
-        return { personId: keep.id, movedSegments: moved.length };
-      },
-    );
+    return applyEdit(db, async (tx) => {
+      const moved = await tx
+        .update(segmentsTable)
+        .set({ person_id: keep.id })
+        .where(eq(segmentsTable.person_id, merge.id))
+        .returning({ id: segmentsTable.id });
+      await tx.delete(peopleTable).where(eq(peopleTable.id, merge.id));
+      await tx
+        .update(peopleTable)
+        .set({
+          slug: keep.slug ?? merge.slug,
+          name: keep.name ?? merge.name,
+          bio: keep.bio ?? merge.bio,
+        })
+        .where(eq(peopleTable.id, keep.id));
+      return { personId: keep.id, movedSegments: moved.length };
+    });
   },
 });
 
@@ -663,7 +599,7 @@ export const replaceChapters = defineTool({
   name: "replace_chapters",
   label: "Replace chapters",
   description:
-    "Replace all of a meeting's chapters with a new set, recorded as a new generation (who wrote them, and whether a human reviewed them). Chapters must be in order and not overlap; they should cover all speech. See docs/chapters.md for the conventions. To edit one chapter, get_chapters, change it, and pass the whole list back.",
+    "Replace all of a meeting's chapters with a new set, recorded as a new generation (who wrote them, and whether a human reviewed them). Chapters should be in order, not overlap, and cover all speech; check_meeting reports any that don't. See docs/chapters.md for the conventions. To edit one chapter, get_chapters, change it, and pass the whole list back.",
   input: z.object({
     meeting: meetingRef,
     model: z
@@ -673,25 +609,14 @@ export const replaceChapters = defineTool({
     promptVersion: z.string().default(""),
     reviewedByHuman: z.boolean().default(false),
     chapters: z.array(chapterInput).min(1),
-    dryRun,
   }),
   run: async (ctx, input) => {
     const db = await ctx.db();
-    const invalid = chapterErrors(input.chapters);
-    if (invalid.length)
-      throw new ToolError(
-        invalid
-          .map(
-            (e) =>
-              `chapter ${e.chapter + 1} ("${input.chapters[e.chapter]!.title}") ${e.message}`,
-          )
-          .join("\n"),
-      );
     const { id: meetingId } = await findMeeting(db, input.meeting);
     const segments = await loadSegments(db, meetingId);
     if (!segments.length)
       throw new ToolError(`Meeting ${input.meeting} has no transcript`);
-    return applyEdit(db, [meetingId], input.dryRun, async (tx) => {
+    return applyEdit(db, async (tx) => {
       const [generation] = await tx
         .insert(chapterGenerationsTable)
         .values({

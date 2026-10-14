@@ -231,7 +231,7 @@ conventions so text search and agents can find it:
 - A chapter that ends in a formal vote says so, with the result, in its
   summary: "The board voted 4-1 to send the letter."
 - Dashes are plain hyphens ("4-1", "2019-2022"), never en or em dashes.
-  `chapterErrors` in @open-minutes/core refuses them, so `replace_chapters`
+  `chapterErrors` in @open-minutes/core reports them, so `check_meeting`
   and `pnpm fixtures:check` do too.
 - Procedural chapters get plain, predictable titles: "Call to order and roll
   call", "Approval of agenda and minutes", "Adjournment".
