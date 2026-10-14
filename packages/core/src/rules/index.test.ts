@@ -1,5 +1,12 @@
-import { describe, expect, it } from "vitest";
-import { checkMeeting, noBodies, type RuleSegment, type Violation } from ".";
+import { describe, expect, expectTypeOf, it } from "vitest";
+import {
+  checkMeeting,
+  type MeetingViolation,
+  noBodies,
+  type RuleSegment,
+  type SplitSentence,
+  type Violation,
+} from ".";
 
 /** A segment from `[onset, word]` pairs. */
 const seg = (
@@ -97,5 +104,14 @@ describe("checkMeeting", () => {
         (i) => `${i.severity} ${i.message}`,
       ),
     ).toEqual(["error the meeting has no bodies", "error also"]);
+  });
+});
+
+describe("MeetingViolation", () => {
+  it("is any rule's violation, or one rule's given its code", () => {
+    expectTypeOf<SplitSentence>().toExtend<MeetingViolation>();
+    expectTypeOf<
+      MeetingViolation<"split-sentence">
+    >().toEqualTypeOf<SplitSentence>();
   });
 });
