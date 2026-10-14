@@ -71,10 +71,18 @@ type ViolationOf<R> = R extends (meeting: RuleMeeting) => infer Out
     : Awaited<Out>
   : never;
 
-/** Anything one of {@link RULES} can find. */
-export type MeetingViolation = ViolationOf<(typeof RULES)[number]>;
+type AnyViolation = ViolationOf<(typeof RULES)[number]>;
 
-export type RuleCode = MeetingViolation["code"];
+export type RuleCode = AnyViolation["code"];
+
+/**
+ * What one of {@link RULES} can find: by default any of them, or with a code,
+ * only that rule's, eg `MeetingViolation<"split-sentence">`.
+ */
+export type MeetingViolation<C extends RuleCode = RuleCode> = Extract<
+  AnyViolation,
+  { code: C }
+>;
 
 export type Severity = "error" | "warning";
 
@@ -90,8 +98,11 @@ export const SEVERITY: Record<RuleCode, Severity> = {
   "uncovered-speech": "warning",
 };
 
-/** A violation, with the severity it is reported at. */
-export type MeetingIssue = MeetingViolation & { severity: Severity };
+/** A violation, with the severity it is reported at. Narrows by code likewise. */
+export type MeetingIssue<C extends RuleCode = RuleCode> =
+  MeetingViolation<C> & {
+    severity: Severity;
+  };
 
 /** Run rules on a meeting: by default all of {@link RULES}, in order. */
 export async function checkMeeting(
