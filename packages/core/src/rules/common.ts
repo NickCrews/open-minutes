@@ -34,6 +34,14 @@ export type Rule<V extends Violation = Violation> = (
 ) => V | V[] | Promise<V | V[]>;
 
 /**
+ * Rewrites a meeting to remove what a rule finds, where that needs no
+ * judgment. A fix may leave violations it can't safely resolve, and returns
+ * the meeting it was given when there is nothing to change. Segments and
+ * chapters keep any properties beyond what the rules look at.
+ */
+export type Fix = <M extends RuleMeeting>(meeting: M) => M;
+
+/**
  * `error`: the data is wrong, and a fixture with one fails the tests.
  * `warning`: the data is probably wrong, or breaks a convention, and wants a
  * look.
@@ -46,6 +54,8 @@ export interface RuleSpec<V extends Violation = Violation> {
   rule: Rule<V>;
   /** What its violations are reported as. */
   defaultSeverity: Severity;
+  /** For a rule whose violations a machine can fix. */
+  fix?: Fix;
 }
 
 /** In a segment. */

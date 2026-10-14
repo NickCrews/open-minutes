@@ -216,10 +216,18 @@ export function ruleMeeting(meeting: GoldenMeeting): RuleMeeting {
 
 /** Golden segments as the meeting rules take them. */
 function ruleSegments(segments: readonly GoldenSegment[]): RuleSegment[] {
-  return segments.map((s) => ({
-    speaker: s.speaker.kind === "unlabeled" ? null : formatSpeaker(s.speaker),
-    words: s.words,
-  }));
+  return segments.map(ruleSegment);
+}
+
+/** A golden segment as the meeting rules take it. */
+export function ruleSegment(segment: GoldenSegment): RuleSegment {
+  return {
+    speaker:
+      segment.speaker.kind === "unlabeled"
+        ? null
+        : formatSpeaker(segment.speaker),
+    words: segment.words,
+  };
 }
 
 /** A transcript issue at its line in the PSV file, worded for that file. */
