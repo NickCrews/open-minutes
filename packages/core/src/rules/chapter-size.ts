@@ -14,7 +14,7 @@ export function chapterSize(meeting: RuleMeeting): ChapterSize[] {
   return chapterWarnings(chapters).map((w) => ({
     code: "chapter-size",
     message: `${chapterName(chapters, w.chapter)} ${w.message}`,
-    chapter: w.chapter,
-    at: chapters[w.chapter]!.start,
+    chapterIndex: w.chapter,
+    atSecs: chapters[w.chapter]!.start,
   }));
 }

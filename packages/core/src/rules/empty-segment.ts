@@ -10,7 +10,7 @@ export function emptySegment(meeting: RuleMeeting): EmptySegment[] {
           {
             code: "empty-segment" as const,
             message: "a segment with no words",
-            segment,
+            segmentIndex: segment,
           },
         ]
       : [],
