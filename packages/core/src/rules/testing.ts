@@ -1,0 +1,57 @@
+// Helpers for the rules' tests.
+
+import type { ChapterSpan } from "../chapters";
+import type { TranscriptWord } from "../transcription";
+import type { RuleMeeting, RuleSegment, Violation } from "./common";
+
+/** Words from a sentence, `step` seconds apart. */
+export function words(sentence: string, step = 0.3): TranscriptWord[] {
+  return sentence.split(" ").map((text, i) => ({ text, start: i * step }));
+}
+
+export function text(ws: readonly TranscriptWord[]): string {
+  return ws.map((w) => w.text).join(" ");
+}
+
+/** A rule's fix, on its own, over one segment of a sentence's words. */
+export function fixWith(
+  spec: {
+    rule: (meeting: RuleMeeting) => Violation[];
+    fix: <M extends RuleMeeting>(
+      meeting: M,
+      violations: never,
+    ) => { meeting: M };
+  },
+  sentence: string,
+  step?: number,
+): string {
+  const meeting = {
+    segments: [{ speaker: null, words: words(sentence, step) }],
+  };
+  const fixed = spec.fix(meeting, spec.rule(meeting) as never);
+  return text(fixed.meeting.segments[0]!.words);
+}
+
+/** A chapter from `start` to `end` with `bullets` bullets. */
+export function chapter(start: number, end: number, bullets = 0): ChapterSpan {
+  return {
+    start,
+    end,
+    title: `${start}-${end}`,
+    bullets: Array.from({ length: bullets }, (_, i) => `bullet ${i}`),
+  };
+}
+
+/**
+ * What a chapter rule says of each chapter, by index, without the chapter's
+ * name. The meeting runs 1000s unless `more` says otherwise.
+ */
+export function chapterProblems(
+  rule: (meeting: RuleMeeting) => (Violation & { chapterIndex?: number })[],
+  chapters: ChapterSpan[],
+  more: { durationSecs?: number; segments?: RuleSegment[] } = {},
+): [number | undefined, string][] {
+  return rule({ segments: [], durationSecs: 1000, ...more, chapters }).map(
+    (v) => [v.chapterIndex, v.message.replace(/^chapter \d+ \(".*?"\) /, "")],
+  );
+}
