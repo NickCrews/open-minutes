@@ -69,7 +69,7 @@ _Avoid_: timestamp, start time
 
 **Segment**:
 A run of consecutive words spoken by one speaker.
-The speaker's identity could be resolved 
+The speaker's identity could be resolved
 No limit on length.
 If someone talks for 5 straight minutes, eg during a presentation, that is still one segment.
 _Avoid_: utterance, turn, block, paragraph, line, clip
@@ -231,3 +231,29 @@ _Avoid_: importing, populating
 **WER**:
 Word error rate: how far a pipeline transcript's words are from a golden transcript's, as a fraction of the golden transcript's word count.
 _Avoid_: accuracy, error
+
+### Meeting rules
+
+**Rule**:
+A requirement a meeting's data must meet, applied the same way to the database and to golden meetings, such as `split-sentence`. Each rule is a file in `packages/core/src/rules/`. Not the same as a cleaning rule, which is one step of transcript cleaning.
+_Avoid_: check, checker, validator, lint
+
+**Rule code**:
+A rule's kebab-case name. It says what is wrong, such as `word-out-of-order`, and reads naturally after "allow".
+_Avoid_: issue code, check name, rule id
+
+**Violation**:
+One place where a meeting breaks a rule, with a message and the data needed to fix it.
+_Avoid_: check result, problem, error (that is a severity)
+
+**Severity**:
+How a rule code's violations are reported, set by the caller, not the rule. `error` means the data is wrong: a write that introduces one is rolled back, and a golden meeting with one fails the tests. `warning` means the data is probably wrong or breaks a convention, and wants a look.
+_Avoid_: level
+
+**Issue**:
+A violation with its severity and its location: row ids in the database, or file and line in the test data.
+_Avoid_: diagnostic, finding, problem
+
+**Check**:
+To run the rules over a meeting, as `check_meeting` and `pnpm fixtures:check` do. Only a verb; what it runs are rules.
+_Avoid_: lint, validate
