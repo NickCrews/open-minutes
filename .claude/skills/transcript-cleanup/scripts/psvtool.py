@@ -23,7 +23,9 @@
         {"op":"replace","at":T,"old":"good wood","new":"Girdwood"}
             Replace the word sequence starting at onset T. `old` must match
             the word texts exactly (space separated). `new` may have more or
-            fewer words; "" deletes.
+            fewer words; "" deletes. Unchanged words keep their onsets and each
+            rewritten run takes the onsets of the words it replaces, so give
+            each number its own op ("ten echo two, ten echo four." as two).
         {"op":"insert","words":["0:01:57.24 Are","0:01:57.52 we"],"speaker":L}
             Add words the transcript is missing (eg from `pnpm audio
             transcribe_range`, whose "words" list has this shape), each at
@@ -43,6 +45,7 @@
   Splits and merges can leave a stutter ("I I") where two turns join; run
   `pnpm fixtures:check` after each batch.
 """
+import difflib
 import json
 import re
 import sys
@@ -121,15 +124,30 @@ def trail(w):
 
 
 def splice(words, i, n, new_texts):
-    """Replace words[i:i+n] with new_texts, assigning onsets."""
+    """Replace words[i:i+n] with new_texts, assigning onsets.
+
+    A word that survives unchanged ("Neighbors" in "twenty one. Neighbors" ->
+    "21. Neighbors") keeps its own onset. Each rewritten run takes the onsets
+    of the words it replaces, spread in order: "twenty twenty six" -> "2026"
+    gets the first "twenty", "eleven thirty PM" -> "11:30 p.m." gets "eleven"
+    and "PM".
+    """
     old = words[i : i + n]
     times = [t for t, _ in old]
-    if new_texts and len(new_texts) == len(old):
-        new = [[times[k], new_texts[k]] for k in range(len(old))]
-    elif new_texts:
-        new = [[times[min(k, len(times) - 1)], txt] for k, txt in enumerate(new_texts)]
-    else:
-        new = []
+    new = []
+    sm = difflib.SequenceMatcher(None, [norm(w) for _, w in old], [norm(w) for w in new_texts], autojunk=False)
+    for tag, i1, i2, j1, j2 in sm.get_opcodes():
+        m = j2 - j1
+        for k in range(m):
+            if tag == "equal":
+                t = times[i1 + k]
+            elif i2 > i1:
+                # first to first, last to last ("p.m." to "PM"), the rest in order
+                last = k == m - 1 and m > 1
+                t = times[i2 - 1] if last else times[i1 + (k * (i2 - i1)) // m]
+            else:  # inserted: share the onset of the word before it
+                t = new[-1][0] if new else times[min(i1, len(times) - 1)]
+            new.append([t, new_texts[j1 + k]])
     words[i : i + n] = new
 
 
