@@ -1,5 +1,5 @@
 import { formatClock } from "../clock";
-import type { AtWord, RuleMeeting, Violation } from "./common";
+import type { AtWord, RuleMeeting, Severity, Violation } from "./common";
 
 export type WordOutOfOrder = Violation<"word-out-of-order"> &
   AtWord & {
@@ -7,8 +7,10 @@ export type WordOutOfOrder = Violation<"word-out-of-order"> &
     previousStartSecs: number;
   };
 
+export const defaultSeverity = "error" satisfies Severity;
+
 /** A word that starts before the word before it in its segment. */
-export function wordOutOfOrder(meeting: RuleMeeting): WordOutOfOrder[] {
+export function rule(meeting: RuleMeeting): WordOutOfOrder[] {
   return meeting.segments.flatMap(({ words }, segment) =>
     words.flatMap((w, word) => {
       const prev = words[word - 1];

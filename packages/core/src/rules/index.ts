@@ -4,25 +4,23 @@
 // meeting into a RuleMeeting, runs checkMeeting, and maps the indices in
 // each issue back to whatever its readers can act on: row ids, or file:line.
 //
-// A rule is a function from the meeting to the violations it finds, in its
-// own file named for its code. Each violation has a code and a message, plus
-// whatever structured data an agent needs to fix it. Helpers more than one
-// rule needs go in ./common.ts. To add a rule, write one, add it to RULES,
-// and give its code a severity in SEVERITY. Severity is the harness's call,
-// not the rule's: errors are data that is wrong (a write that introduces one
-// is rolled back, and a fixture with one fails the tests); warnings are data
-// that is probably wrong, or breaks a convention, and wants a look.
+// Each rule is a module named for its code that exports a RuleSpec: `rule`,
+// a function from the meeting to the violations it finds, and
+// `defaultSeverity`. Each violation has a code and a message, plus whatever
+// structured data an agent needs to fix it. Helpers more than one rule needs
+// go in ./common.ts. To add a rule, write its module and add it to
+// RULE_SPECS; its code and violation type follow from it.
 
-import { chapterSize } from "./chapter-size";
-import type { Rule, RuleMeeting } from "./common";
-import { emptySegment } from "./empty-segment";
-import { invalidChapter } from "./invalid-chapter";
-import { noBodies } from "./no-bodies";
-import { segmentOutOfOrder } from "./segment-out-of-order";
-import { splitSentence } from "./split-sentence";
-import { uncleanWord } from "./unclean-word";
-import { uncoveredSpeech } from "./uncovered-speech";
-import { wordOutOfOrder } from "./word-out-of-order";
+import * as chapterSize from "./chapter-size";
+import type { RuleMeeting, RuleSpec, Severity } from "./common";
+import * as emptySegment from "./empty-segment";
+import * as invalidChapter from "./invalid-chapter";
+import * as noBodies from "./no-bodies";
+import * as segmentOutOfOrder from "./segment-out-of-order";
+import * as splitSentence from "./split-sentence";
+import * as uncleanWord from "./unclean-word";
+import * as uncoveredSpeech from "./uncovered-speech";
+import * as wordOutOfOrder from "./word-out-of-order";
 
 export type {
   AtWord,
@@ -31,38 +29,52 @@ export type {
   Rule,
   RuleMeeting,
   RuleSegment,
+  RuleSpec,
+  Severity,
   Violation,
 } from "./common";
-export { chapterSize, type ChapterSize } from "./chapter-size";
-export { emptySegment, type EmptySegment } from "./empty-segment";
-export { invalidChapter, type InvalidChapter } from "./invalid-chapter";
-export { noBodies, type NoBodies } from "./no-bodies";
+export type { ChapterSize } from "./chapter-size";
+export type { EmptySegment } from "./empty-segment";
+export type { InvalidChapter } from "./invalid-chapter";
+export type { NoBodies } from "./no-bodies";
+export type { SegmentOutOfOrder } from "./segment-out-of-order";
+export type { SplitSentence } from "./split-sentence";
+export type { UncleanWord } from "./unclean-word";
+export type { UncoveredSpeech } from "./uncovered-speech";
+export type { WordOutOfOrder } from "./word-out-of-order";
 export {
+  chapterSize,
+  emptySegment,
+  invalidChapter,
+  noBodies,
   segmentOutOfOrder,
-  type SegmentOutOfOrder,
-} from "./segment-out-of-order";
-export { splitSentence, type SplitSentence } from "./split-sentence";
-export { uncleanWord, type UncleanWord } from "./unclean-word";
-export { uncoveredSpeech, type UncoveredSpeech } from "./uncovered-speech";
-export { wordOutOfOrder, type WordOutOfOrder } from "./word-out-of-order";
+  splitSentence,
+  uncleanWord,
+  uncoveredSpeech,
+  wordOutOfOrder,
+};
 
 /** The rules that look only at the transcript. */
-export const TRANSCRIPT_RULES = [
+export const TRANSCRIPT_RULE_SPECS = [
   emptySegment,
   segmentOutOfOrder,
   wordOutOfOrder,
   uncleanWord,
   splitSentence,
-] as const;
+] as const satisfies readonly RuleSpec[];
 
 /** The rules on the chapters, against the transcript. */
-export const CHAPTER_RULES = [
+export const CHAPTER_RULE_SPECS = [
   invalidChapter,
   chapterSize,
   uncoveredSpeech,
-] as const;
+] as const satisfies readonly RuleSpec[];
 
-export const RULES = [noBodies, ...TRANSCRIPT_RULES, ...CHAPTER_RULES] as const;
+export const RULE_SPECS = [
+  noBodies,
+  ...TRANSCRIPT_RULE_SPECS,
+  ...CHAPTER_RULE_SPECS,
+] as const satisfies readonly RuleSpec[];
 
 /** What a rule finds, unwrapped from any promise and array. */
 type ViolationOf<R> = R extends (meeting: RuleMeeting) => infer Out
@@ -71,12 +83,12 @@ type ViolationOf<R> = R extends (meeting: RuleMeeting) => infer Out
     : Awaited<Out>
   : never;
 
-type AnyViolation = ViolationOf<(typeof RULES)[number]>;
+type AnyViolation = ViolationOf<(typeof RULE_SPECS)[number]["rule"]>;
 
 export type RuleCode = AnyViolation["code"];
 
 /**
- * What one of {@link RULES} can find: by default any of them, or with a code,
+ * What one of {@link RULE_SPECS} can find: by default any of them, or with a code,
  * only that rule's, eg `MeetingViolation<"split-sentence">`.
  */
 export type MeetingViolation<C extends RuleCode = RuleCode> = Extract<
@@ -84,33 +96,27 @@ export type MeetingViolation<C extends RuleCode = RuleCode> = Extract<
   { code: C }
 >;
 
-export type Severity = "error" | "warning";
-
-export const SEVERITY = {
-  "no-bodies": "error",
-  "empty-segment": "error",
-  "segment-out-of-order": "error",
-  "word-out-of-order": "error",
-  "unclean-word": "error",
-  "split-sentence": "warning",
-  "invalid-chapter": "error",
-  "chapter-size": "warning",
-  "uncovered-speech": "warning",
-} as const satisfies Record<RuleCode, Severity>;
-
 /** A violation, with the severity it is reported at. Narrows by code likewise. */
 export type MeetingIssue<C extends RuleCode = RuleCode> =
   MeetingViolation<C> & {
     severity: Severity;
   };
 
-/** Run rules on a meeting: by default all of {@link RULES}, in order. */
+/**
+ * Run rules on a meeting, by default all of {@link RULE_SPECS} in order, and
+ * report each violation at its rule's default severity.
+ */
 export async function checkMeeting(
   meeting: RuleMeeting,
-  rules: readonly Rule<MeetingViolation>[] = RULES,
+  specs: readonly RuleSpec<MeetingViolation>[] = RULE_SPECS,
 ): Promise<MeetingIssue[]> {
-  const found = await Promise.all(rules.map((rule) => rule(meeting)));
-  return found
-    .flat()
-    .map((violation) => ({ ...violation, severity: SEVERITY[violation.code] }));
+  const found = await Promise.all(
+    specs.map(async ({ rule, defaultSeverity }) =>
+      [await rule(meeting)].flat().map((violation) => ({
+        ...violation,
+        severity: defaultSeverity,
+      })),
+    ),
+  );
+  return found.flat();
 }

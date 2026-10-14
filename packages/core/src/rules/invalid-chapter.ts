@@ -3,18 +3,21 @@ import {
   chapterName,
   type InChapter,
   type RuleMeeting,
+  type Severity,
   speechSpans,
   type Violation,
 } from "./common";
 
 export type InvalidChapter = Violation<"invalid-chapter"> & InChapter;
 
+export const defaultSeverity = "error" satisfies Severity;
+
 /**
  * A chapter that is out of order, overlapping, empty or outside the meeting,
  * by the rules in ../chapters.ts. The meeting ends at `durationSecs` or its
  * last word, whichever is later.
  */
-export function invalidChapter(meeting: RuleMeeting): InvalidChapter[] {
+export function rule(meeting: RuleMeeting): InvalidChapter[] {
   const chapters = meeting.chapters ?? [];
   const end = Math.max(
     meeting.durationSecs ?? 0,
