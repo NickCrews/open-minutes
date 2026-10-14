@@ -180,7 +180,7 @@ one file each in [`packages/core/src/rules/`](packages/core/src/rules/).
   fail it and the test suite.
 
 Some rules have a fix, which rewrites the meeting to remove what the rule
-finds where that needs no judgment: dropping a filler word, stutter or false
+finds where the data alone says what the right rewrite is: dropping a filler word, stutter or false
 start, dropping an empty segment, putting misordered segments in order, or
 writing a plain hyphen for an en or em dash. `pnpm fixtures:fix [file ...]` applies every
 fix to the golden fixtures, rewriting their meeting.json, transcript and

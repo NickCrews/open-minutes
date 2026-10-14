@@ -34,8 +34,8 @@ export function rule(meeting: RuleMeeting): SegmentOutOfOrder[] {
 
 /**
  * Puts segments in order of their first word, leaving any without words where
- * they are. Segments that interleave stay out of order: which words belong to
- * which takes judgment.
+ * they are. Segments that interleave stay out of order: the data doesn't say
+ * which of their words belong to which speaker.
  */
 export function fix<M extends RuleMeeting>(
   meeting: M,

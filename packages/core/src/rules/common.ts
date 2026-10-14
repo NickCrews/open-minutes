@@ -59,8 +59,8 @@ export interface RuleSpec<V extends Violation = Violation> {
   defaultSeverity: Severity;
   /**
    * For a rule whose violations a machine can fix: rewrites the meeting to
-   * resolve those of `violations` (what `rule` found in it) that need no
-   * judgment, and says which they were. Segments and chapters keep any
+   * resolve those of `violations` (what `rule` found in it) whose right
+   * rewrite the data alone determines, and says which they were. Segments and chapters keep any
    * properties beyond what the rules look at.
    */
   fix?<M extends RuleMeeting>(

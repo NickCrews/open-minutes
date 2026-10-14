@@ -233,7 +233,7 @@ describe("fixMeeting", () => {
         'chapter 1 ("Budget – first reading") has an en or em dash; write a plain hyphen (-)',
       ],
     ]);
-    // Ending after the meeting takes judgment to fix.
+    // Ending after the meeting has no one right fix.
     expect((await checkMeeting(meeting)).map((i) => i.code)).toEqual([
       "invalid-chapter",
     ]);
