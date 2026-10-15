@@ -1,5 +1,7 @@
 import type { RuleMeeting, Severity } from "./common";
 import {
+  amount,
+  cardinal,
   core,
   endsPhrase,
   endsSentence,
@@ -7,10 +9,13 @@ import {
   isNumberWord,
   isOrdinalWord,
   MULTIPLIERS,
+  ordinalSuffix,
+  rewrite,
   TENS,
   wordRule,
   wordValue,
   type WrittenForm,
+  year,
 } from "./numbers";
 
 export const code = "spelled-number";
@@ -18,6 +23,26 @@ export const code = "spelled-number";
 export type SpelledNumber = WrittenForm<typeof code>;
 
 export const defaultSeverity = "warning" satisfies Severity;
+
+/**
+ * A run of number words in numerals, when it has one reading: "eleven" is
+ * "11", "thirty six thousand" "36,000", "five million" "5 million", "twenty
+ * fourth" "24th", "twenty twenty six" "2026". Not "five zero" (50, or a
+ * tally?), "one fifty five" (155, or 1:55?), or a number from 1,000 to 9,999
+ * said with "thousand" that isn't a round hundred ("two thousand twenty
+ * six": a year, or a count?).
+ */
+function written(run: readonly string[]): string[] | undefined {
+  const read = cardinal(run);
+  if (read) {
+    const { value, ordinal } = read;
+    if (ordinal) return [`${value}${ordinalSuffix(value)}`];
+    if (value >= 1000 && value < 10000 && value % 100 !== 0) return undefined;
+    return amount(value);
+  }
+  const y = year(run);
+  return y === undefined ? undefined : [String(y)];
+}
 
 /**
  * Number words the style writes as numerals: any run of two or more ("twenty
@@ -67,6 +92,7 @@ function find(words: readonly string[]): Finding[] {
     const c = core(run[0]!).toLowerCase();
     const flagged =
       !single || (value >= 10 && !(c in MULTIPLIERS) && c !== "hundredth");
+    const replacement = written(run);
     if (flagged && !sentenceStart)
       found.push({
         index: i,
@@ -74,6 +100,7 @@ function find(words: readonly string[]): Finding[] {
         message: single
           ? `write a number of 10 or more in numerals ("11", "36", "14th")`
           : `write a spoken number in numerals ("2026", "155", "5-0", "907-243-VOTE")`,
+        ...(replacement && { replacement }),
       });
     i = j;
   }
@@ -84,3 +111,11 @@ export const rule: (meeting: RuleMeeting) => SpelledNumber[] = wordRule(
   code,
   find,
 );
+
+/** Writes the number in numerals, when its words have one reading. */
+export function fix<M extends RuleMeeting>(
+  meeting: M,
+  violations: readonly SpelledNumber[],
+) {
+  return rewrite(meeting, violations);
+}

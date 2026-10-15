@@ -4,6 +4,7 @@ import {
   endsPhrase,
   type Finding,
   finding,
+  rewrite,
   wordRule,
   wordValue,
   type WrittenForm,
@@ -47,13 +48,9 @@ function find(words: readonly string[]): Finding[] {
         ((wordValue(next) ?? 0) >= 1 && (wordValue(next) ?? 0) <= 10))
     ) {
       const n = /^\d/.test(core(next)) ? core(next) : wordValue(next)!;
+      const want = zoningDistrict(c, String(n));
       found.push(
-        finding(
-          i,
-          words,
-          2,
-          `write the zoning district as "${zoningDistrict(c, String(n))}"`,
-        ),
+        finding(i, words, 2, `write the zoning district as "${want}"`, [want]),
       );
       return;
     }
@@ -63,7 +60,7 @@ function find(words: readonly string[]): Finding[] {
     const want = zoningDistrict(m[1]!, m[2]!);
     if (c !== want)
       found.push(
-        finding(i, words, 1, `write the zoning district as "${want}"`),
+        finding(i, words, 1, `write the zoning district as "${want}"`, [want]),
       );
   });
   return found;
@@ -73,3 +70,11 @@ export const rule: (meeting: RuleMeeting) => ZoningDistrict[] = wordRule(
   code,
   find,
 );
+
+/** Writes the district as "R-4", "CE-R-10" or "gR-1". */
+export function fix<M extends RuleMeeting>(
+  meeting: M,
+  violations: readonly ZoningDistrict[],
+) {
+  return rewrite(meeting, violations);
+}

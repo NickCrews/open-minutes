@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import * as codeSection from "./code-section";
-import { foundTexts } from "./testing";
+import { fixWith, foundTexts } from "./testing";
 
 const found = (sentence: string) => foundTexts(codeSection.rule, sentence);
 
@@ -20,5 +20,10 @@ describe("code-section", () => {
     expect(
       found("Item 14.C is AO 2026-18, an ordinance amending AMC 3.70.190."),
     ).toEqual([]);
+  });
+  it("puts the dots where the digits say", () => {
+    expect(
+      fixWith(codeSection, "sections 21.09050, 3.3.144 and section 2103050."),
+    ).toBe("sections 21.09.050, 3.3.144 and section 21.03.050.");
   });
 });

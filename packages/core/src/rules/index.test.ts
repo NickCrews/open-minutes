@@ -10,7 +10,7 @@ import {
   RULE_SPECS_BY_CODE,
 } from ".";
 import type { RuleSpec, Violation } from "./common";
-import { seg, words } from "./testing";
+import { seg, text, words } from "./testing";
 import * as splitSentence from "./split-sentence";
 import type { SplitSentence } from "./split-sentence";
 
@@ -215,6 +215,21 @@ describe("fixMeeting", () => {
     const meeting = { bodyCount: 0, segments: [seg("a", [1, "Hello."])] };
     expect(await fixMeeting(meeting)).toEqual({ meeting, fixed: [] });
     expect((await fixMeeting(meeting)).meeting).toBe(meeting);
+  });
+
+  it("writes numbers, times, money and bills the transcript's way", async () => {
+    const sentence =
+      "AO twenty twenty six dash twenty passes five zero at seven PM on march twenty first for thirty six thousand dollars.";
+    const { meeting } = await fixMeeting(
+      { segments: [{ speaker: "a", words: words(sentence) }] },
+      [...RULE_SPECS, ...BODY_RULE_SPECS],
+    );
+    expect(text(meeting.segments[0]!.words)).toBe(
+      "AO 2026-20 passes 5-0 at 7 p.m. on March 21 for $36,000.",
+    );
+    expect(
+      await checkMeeting(meeting, [...RULE_SPECS, ...BODY_RULE_SPECS]),
+    ).toEqual([]);
   });
 
   it("runs only the fixes of the rules it is given", async () => {

@@ -1,3 +1,4 @@
+import { capitalized } from "./date";
 import type { RuleMeeting, Severity } from "./common";
 import {
   core,
@@ -6,6 +7,7 @@ import {
   finding,
   isNumberWord,
   MONTHS,
+  rewrite,
   wordRule,
   type WrittenForm,
 } from "./numbers";
@@ -34,12 +36,9 @@ function find(words: readonly string[]): Finding[] {
       (/^\d{1,2}(st|nd|rd|th)?$/.test(core(next)) || isNumberWord(next));
     if (!day)
       found.push(
-        finding(
-          i,
-          words,
-          1,
-          `capitalize the month: "${month[0]!.toUpperCase()}${month.slice(1)}"`,
-        ),
+        finding(i, words, 1, `capitalize the month: "${capitalized(month)}"`, [
+          capitalized(month),
+        ]),
       );
   });
   return found;
@@ -49,3 +48,11 @@ export const rule: (meeting: RuleMeeting) => MonthCapital[] = wordRule(
   code,
   find,
 );
+
+/** Capitalizes the month. */
+export function fix<M extends RuleMeeting>(
+  meeting: M,
+  violations: readonly MonthCapital[],
+) {
+  return rewrite(meeting, violations);
+}

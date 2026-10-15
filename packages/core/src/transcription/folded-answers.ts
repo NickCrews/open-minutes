@@ -33,6 +33,12 @@ const PUTS_VOTE = /\bmember votes?[.?]$/i;
 export interface FoldedAnswer {
   /** Index into the words of the answer's first word. */
   index: number;
+  /**
+   * What it answers: a motion (made or restated), a roll call, a vote put to
+   * a member, or another question, which the asker may have answered
+   * themselves.
+   */
+  answers: "motion" | "roll-call" | "vote" | "question";
   /** The answer, eg "Yes." */
   answer: string;
   /** The sentence that asked for it, or that restates the motion after it. */
@@ -82,7 +88,12 @@ export function foldedAnswers(
     MOTION_ANSWER.test(first[1]) &&
     RESTATES_MOTION.test(next[1])
   )
-    found.push({ index: first[0], answer: first[1], asked: next[1] });
+    found.push({
+      index: first[0],
+      answers: "motion",
+      answer: first[1],
+      asked: next[1],
+    });
   for (let k = 1; k < sents.length; k++) {
     const [index, answer] = sents[k]!;
     const asked = sents[k - 1]![1];
@@ -90,13 +101,17 @@ export function foldedAnswers(
     const motion = MOTION_ANSWER.test(answer);
     // "…, right? Yeah." is usually the speaker answering their own tag.
     const tag = /\bright\?$/i.test(asked);
-    if (
-      (asked.endsWith("?") && !tag) ||
-      ROLL_CALL.test(asked) ||
-      PUTS_VOTE.test(asked) ||
-      (motion && CALLS_FOR_MOTION.test(asked))
-    )
-      found.push({ index, answer, asked });
+    const answers =
+      motion && CALLS_FOR_MOTION.test(asked)
+        ? "motion"
+        : ROLL_CALL.test(asked)
+          ? "roll-call"
+          : PUTS_VOTE.test(asked)
+            ? "vote"
+            : asked.endsWith("?") && !tag
+              ? "question"
+              : null;
+    if (answers) found.push({ index, answers, answer, asked });
   }
   return found;
 }
