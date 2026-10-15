@@ -11,13 +11,16 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { formatClock } from "@open-minutes/core/clock";
 import {
+  BODY_RULE_SPECS,
   fixMeeting,
   type MeetingIssue,
+  RULE_SPECS,
   TRANSCRIPT_RULE_SPECS,
 } from "@open-minutes/core/rules";
 import { ruleMeeting, ruleSegment } from "./check";
 import { type GoldenSegment, parsePsv, serializePsv } from "./psv";
 import {
+  bodyRuleCodes,
   getMeetingData,
   type GoldenChapters,
   transcriptPath,
@@ -34,8 +37,12 @@ function labeled(segments: readonly GoldenSegment[]) {
   return segments.map((s) => ({ ...ruleSegment(s), label: s.speaker }));
 }
 
+/** Back to golden segments: one a fix took the speaker from is unlabeled. */
 function unlabeled(segments: ReturnType<typeof labeled>): GoldenSegment[] {
-  return segments.map((s) => ({ speaker: s.label, words: [...s.words] }));
+  return segments.map((s) => ({
+    speaker: s.speaker === null ? { kind: "unlabeled" } : s.label,
+    words: [...s.words],
+  }));
 }
 
 /**
@@ -65,18 +72,24 @@ export async function fixTranscriptFile(path: string): Promise<FileFix[]> {
 }
 
 /**
- * Apply every rule's fix to a meeting directory, rewriting meeting.json, the
- * transcript and chapters.json where something changed. Returns what it
- * rewrote. Throws if the meeting doesn't load.
+ * Apply the fix of every rule the meeting follows, its bodies' own included,
+ * to a meeting directory, rewriting meeting.json, the transcript and
+ * chapters.json where something changed. Returns what it rewrote. Throws if
+ * the meeting doesn't load.
  */
 export async function fixMeetingDir(dir: string): Promise<FileFix[]> {
-  const golden = getMeetingData(basename(dir), resolve(dir, "../.."));
+  const root = resolve(dir, "../..");
+  const golden = getMeetingData(basename(dir), root);
   const given = {
     ...ruleMeeting(golden),
     segments: labeled(golden.segments),
     chapters: golden.chapters?.chapters ?? null,
   };
-  const { meeting, fixed } = await fixMeeting(given);
+  const codes = bodyRuleCodes(golden.body_ids, root);
+  const { meeting, fixed } = await fixMeeting(given, [
+    ...RULE_SPECS,
+    ...BODY_RULE_SPECS.filter((spec) => codes.includes(spec.code)),
+  ]);
   const rewritten: FileFix[] = [];
   if (meeting.title !== given.title) {
     // In place, so the rest of the file keeps its formatting.

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import * as spelledNumber from "./spelled-number";
-import { foundTexts } from "./testing";
+import { fixWith, foundTexts } from "./testing";
 
 const found = (sentence: string) => foundTexts(spelledNumber.rule, sentence);
 
@@ -24,5 +24,20 @@ describe("spelled-number", () => {
       ),
     ).toEqual([]);
     expect(found("We need a second, one more time.")).toEqual([]);
+  });
+  it("writes numbers in numerals when their words have one reading", () => {
+    const fix = (s: string) => fixWith(spelledNumber, s);
+    expect(
+      fix("in twenty twenty six, eleven members, thirty-six thousand people,"),
+    ).toBe("in 2026, 11 members, 36,000 people,");
+    expect(fix("on the twenty fourth, five million, two hundred fifty.")).toBe(
+      "on the 24th, 5 million, 250.",
+    );
+    expect(fix("in nineteen ninety and twenty oh five")).toBe(
+      "in 1990 and 2005",
+    );
+    expect(
+      fix("passes five zero, room one fifty five, two thousand twenty six"),
+    ).toBe("passes five zero, room one fifty five, two thousand twenty six");
   });
 });
