@@ -242,6 +242,10 @@ _Avoid_: check, checker, validator, lint
 A rule's kebab-case name. It says what is wrong, such as `word-out-of-order`, and reads naturally after "allow".
 _Avoid_: issue code, check name, rule id
 
+**Body-specific rule**:
+A rule only some bodies follow, such as Anchorage's `bill-number`. A body opts into each by its rule code; every other rule applies to every meeting.
+_Avoid_: local rule, style rule
+
 **Violation**:
 An instance of a meeting breaking a rule, with a rule code and message. It may be blamed on a single word, a segment, a set of segments, a chapter, a set of chapters, etc. If so, it has the diagnostic info needed to fix it.
 _Avoid_: check result, problem, error (that is a severity)
