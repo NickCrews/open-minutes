@@ -11,7 +11,7 @@
 // RULE_SPECS_BY_CODE. Each violation has a code and a message, plus whatever
 // structured data an agent needs to fix it. Helpers more than one rule needs
 // go in ./common.ts. To add a rule, write its module and add it to
-// RULE_SPECS, or STYLE_RULE_SPECS for how the transcript is written; its code
+// RULE_SPECS, or to BODY_RULE_SPECS if only some bodies follow it; its code
 // and violation type follow from it.
 
 import * as agendaItem from "./agenda-item";
@@ -50,7 +50,10 @@ export {
   cleanWords,
 } from "./clean";
 
-/** Every rule but the style rules, in the order checkMeeting reports them. */
+/**
+ * The rules every meeting follows, golden or in the database, in the order
+ * checkMeeting reports them.
+ */
 export const RULE_SPECS = [
   noBodies,
   emptySegment,
@@ -62,6 +65,15 @@ export const RULE_SPECS = [
   stutter,
   splitSentence,
   foldedAnswer,
+  spokenSeparator,
+  time,
+  money,
+  percent,
+  date,
+  monthCapital,
+  tally,
+  spelledNumber,
+  splitNumeral,
   invalidChapter,
   chapterSize,
   uncoveredSpeech,
@@ -78,6 +90,15 @@ export const TRANSCRIPT_RULE_SPECS = [
   stutter,
   splitSentence,
   foldedAnswer,
+  spokenSeparator,
+  time,
+  money,
+  percent,
+  date,
+  monthCapital,
+  tally,
+  spelledNumber,
+  splitNumeral,
 ] as const satisfies readonly RuleSpec[];
 
 /** The rules that apply to chapters, against their transcript. */
@@ -89,53 +110,27 @@ export const CHAPTER_RULE_SPECS = [
 ] as const satisfies readonly RuleSpec[];
 
 /**
- * Local style rules a jurisdiction opts into by name, since other places
- * number their bills, code and agendas their own way. A place that does gets
- * its own entry.
+ * Body-specific rules: those only some bodies follow, such as Anchorage's
+ * ways of numbering its bills, code sections, agenda items and zoning
+ * districts. A body opts into each by its code. For now only the golden
+ * fixtures say which they follow, with `_rules` in bodies.jsonl.
  */
-export const LOCAL_STYLE_RULE_SPECS = {
-  anchorage: [billNumber, codeSection, agendaItem, zoningDistrict],
-} as const satisfies Record<string, readonly RuleSpec[]>;
-
-type LocalStyleRuleSpec =
-  (typeof LOCAL_STYLE_RULE_SPECS)[keyof typeof LOCAL_STYLE_RULE_SPECS][number];
-
-/**
- * How the transcript is written: numbers, times, money and dates, plus the
- * local rules a jurisdiction opts into (see {@link LOCAL_STYLE_RULE_SPECS};
- * the style is described in ./numbers.ts). The golden fixtures follow it;
- * pipeline output doesn't yet, so the database's checks leave these out.
- */
-export function styleRuleSpecs(localSpecs: readonly LocalStyleRuleSpec[] = []) {
-  return [
-    spokenSeparator,
-    time,
-    money,
-    percent,
-    date,
-    monthCapital,
-    tally,
-    ...localSpecs,
-    spelledNumber,
-    splitNumeral,
-  ] satisfies readonly RuleSpec[];
-}
-
-/** The style rules with no local rules. */
-export const STYLE_RULE_SPECS = styleRuleSpecs();
+export const BODY_RULE_SPECS = [
+  billNumber,
+  codeSection,
+  agendaItem,
+  zoningDistrict,
+] as const satisfies readonly RuleSpec[];
 
 type AnyRuleSpec =
   | (typeof RULE_SPECS)[number]
-  | (typeof STYLE_RULE_SPECS)[number];
+  | (typeof BODY_RULE_SPECS)[number];
 
 export type RuleCode = AnyRuleSpec["code"];
 
 /** Each rule's spec, by its code. */
 export const RULE_SPECS_BY_CODE = Object.fromEntries(
-  [
-    ...RULE_SPECS,
-    ...styleRuleSpecs(Object.values(LOCAL_STYLE_RULE_SPECS).flat()),
-  ].map((spec) => [spec.code, spec]),
+  [...RULE_SPECS, ...BODY_RULE_SPECS].map((spec) => [spec.code, spec]),
 ) as { [S in AnyRuleSpec as S["code"]]: S };
 
 type Unarray<T> = T extends readonly (infer V)[] ? V : T;
@@ -148,8 +143,8 @@ type ViolationOf<R> = R extends (meeting: RuleMeeting) => infer Out
 type AnyViolation = ViolationOf<AnyRuleSpec["rule"]>;
 
 /**
- * What one of {@link RULE_SPECS} or the style rules can find: by default
- * any of them, or with a code, only that rule's, eg
+ * What one of {@link RULE_SPECS} or {@link BODY_RULE_SPECS} can find: by
+ * default any of them, or with a code, only that rule's, eg
  * `MeetingViolation<"split-sentence">`.
  */
 export type MeetingViolation<C extends RuleCode = RuleCode> = Extract<

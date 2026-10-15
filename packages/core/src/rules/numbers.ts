@@ -17,9 +17,9 @@
 //     isn't said. Months capitalized: "in July".
 //   - Tallies: "passes 5-0", "on a vote of 12 to 0".
 //
-// And in Anchorage, which a jurisdiction opts into (see LOCAL_STYLE_RULE_SPECS
-// in ./index.ts), since other places number their bills, code and agendas
-// their own way:
+// And in Anchorage, whose bodies opt into these as body-specific rules (see
+// BODY_RULE_SPECS in ./index.ts), since other places number their bills, code
+// and agendas their own way:
 //
 //   - Bills: "AO 2026-20", "AR 2026-7", "AO 2025-144(S)", "AO 2025-74(S-2)",
 //     "AM 142-2026", "AIM 25-2026"; "AO 2026 unnumbered" before it has one.

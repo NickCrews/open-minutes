@@ -21,12 +21,6 @@ export interface GoldenJurisdiction {
   name: string;
   name_short: string;
   state: string;
-  /**
-   * Local style rules its transcripts follow, by name in
-   * LOCAL_STYLE_RULE_SPECS (@open-minutes/core/rules), eg
-   * ["anchorage"] for Anchorage's bill and code numbers. Not a DB column.
-   */
-  _written_forms?: string[];
 }
 
 export interface GoldenBody {
@@ -39,6 +33,12 @@ export interface GoldenBody {
   timezone: string;
   /** As in `bodies.meeting_source`; absent for a body nobody scans. */
   meeting_source?: MeetingSource;
+  /**
+   * Codes of the body-specific rules its transcripts follow, from
+   * BODY_RULE_SPECS in @open-minutes/core/rules, eg ["bill-number"]. Not a DB
+   * column.
+   */
+  _rules?: string[];
 }
 
 export interface GoldenPerson {
@@ -162,24 +162,18 @@ export function loadPeople(): GoldenPerson[] {
 }
 
 /**
- * The local style rules a meeting's transcript follows: those its
- * bodies' jurisdictions opt into with `_written_forms`. Throws on a name
- * LOCAL_STYLE_RULE_SPECS doesn't have.
+ * The codes of the body-specific rules a meeting's transcript follows: those
+ * its bodies opt into with `_rules`.
  */
-export function localWrittenForms(
+export function bodyRuleCodes(
   bodyIds: readonly string[],
   root: string = TEST_DATA_ROOT,
 ): string[] {
   const bodies = parseJsonl<GoldenBody>(join(root, "bodies.jsonl"));
-  const jurisdictions = parseJsonl<GoldenJurisdiction>(
-    join(root, "jurisdictions.jsonl"),
+  const codes = bodyIds.flatMap(
+    (id) => bodies.find((b) => b.id === id)?._rules ?? [],
   );
-  const names = bodyIds.flatMap((id) => {
-    const body = bodies.find((b) => b.id === id);
-    const j = jurisdictions.find((j) => j.id === body?.jurisdiction_id);
-    return j?._written_forms ?? [];
-  });
-  return [...new Set(names)];
+  return [...new Set(codes)];
 }
 
 /**

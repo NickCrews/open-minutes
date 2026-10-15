@@ -1,16 +1,14 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, resolve, sep } from "node:path";
 import {
+  BODY_RULE_SPECS,
   CHAPTER_RULE_SPECS,
   checkMeeting,
-  LOCAL_STYLE_RULE_SPECS,
   type MeetingIssue,
   RULE_SPECS,
   type RuleMeeting,
   RULE_SPECS_BY_CODE,
   type RuleSegment,
-  STYLE_RULE_SPECS,
-  styleRuleSpecs,
   TRANSCRIPT_RULE_SPECS,
 } from "@open-minutes/core/rules";
 import { formatClock } from "@open-minutes/core/clock";
@@ -21,9 +19,9 @@ import {
   parseTimestamp,
 } from "./psv";
 import {
+  bodyRuleCodes,
   type GoldenMeeting,
   getMeetingData,
-  localWrittenForms,
   parseGoldenChapters,
   TEST_DATA_ROOT,
   transcriptPath,
@@ -34,9 +32,8 @@ import {
 // A meeting's data follows the rules in @open-minutes/core/rules, the
 // same ones the database is checked against; this adds the rules for the
 // files themselves (PSV syntax, where a speaker marker goes, the directory
-// name), and holds goldens to the written style in STYLE_RULE_SPECS (numbers,
-// times, money), plus the local rules their jurisdiction opts into with
-// `_written_forms` in jurisdictions.jsonl (Anchorage's bill and code numbers).
+// name), and holds each meeting to the body-specific rules its bodies opt
+// into with `_rules` in bodies.jsonl (Anchorage's bill and code numbers).
 // Errors fail the fixture tests and `pnpm fixtures:check`; warnings are
 // printed and want a look.
 
@@ -125,24 +122,19 @@ export async function checkMeetingDir(dir: string): Promise<Issue[]> {
     : [];
   const chapters = meeting.chapters?.chapters ?? null;
   const root = resolve(dir, "../..");
-  const forms = localWrittenForms(meeting.body_ids, root);
-  const known = (f: string): f is keyof typeof LOCAL_STYLE_RULE_SPECS =>
-    Object.hasOwn(LOCAL_STYLE_RULE_SPECS, f);
-  const unknown = forms.filter((f) => !known(f));
+  const codes = bodyRuleCodes(meeting.body_ids, root);
+  const bodySpecs = BODY_RULE_SPECS.filter((spec) => codes.includes(spec.code));
+  const unknown = codes.filter(
+    (c) => !BODY_RULE_SPECS.some((spec) => spec.code === c),
+  );
   if (unknown.length)
     issues.push({
-      file: join(root, "jurisdictions.jsonl"),
+      file: join(root, "bodies.jsonl"),
       severity: "error",
-      message: `unknown _written_forms ${JSON.stringify(unknown)}; known: ${JSON.stringify(Object.keys(LOCAL_STYLE_RULE_SPECS))}`,
+      message: `unknown _rules ${JSON.stringify(unknown)}; body-specific rules: ${JSON.stringify(BODY_RULE_SPECS.map((spec) => spec.code))}`,
     });
-  const localSpecs = forms
-    .filter(known)
-    .flatMap((f) => LOCAL_STYLE_RULE_SPECS[f]);
   const placed = (
-    await checkMeeting(ruleMeeting(meeting), [
-      ...RULE_SPECS,
-      ...styleRuleSpecs(localSpecs),
-    ])
+    await checkMeeting(ruleMeeting(meeting), [...RULE_SPECS, ...bodySpecs])
   ).map((i) =>
     "segmentIndex" in i
       ? atPsvLine(i, psvPath!, psv!.lines)
@@ -363,10 +355,10 @@ export async function checkPsv(
 ): Promise<Issue[]> {
   const { issues, segments, lines } = readPsv(content, file);
   if (segments)
-    for (const i of await checkMeeting({ segments: ruleSegments(segments) }, [
-      ...TRANSCRIPT_RULE_SPECS,
-      ...STYLE_RULE_SPECS,
-    ]))
+    for (const i of await checkMeeting(
+      { segments: ruleSegments(segments) },
+      TRANSCRIPT_RULE_SPECS,
+    ))
       if ("segmentIndex" in i) issues.push(atPsvLine(i, file, lines));
   return issues.sort((a, b) => (a.line ?? 0) - (b.line ?? 0));
 }

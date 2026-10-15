@@ -1,15 +1,13 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 import {
+  BODY_RULE_SPECS,
   CHAPTER_RULE_SPECS,
   checkMeeting,
   fixMeeting,
-  LOCAL_STYLE_RULE_SPECS,
   type MeetingIssue,
   type MeetingViolation,
   RULE_SPECS,
   RULE_SPECS_BY_CODE,
-  STYLE_RULE_SPECS,
-  styleRuleSpecs,
 } from ".";
 import type { RuleSpec, Violation } from "./common";
 import { seg, words } from "./testing";
@@ -59,25 +57,21 @@ describe("checkMeeting", () => {
     });
   });
 
-  it("checks the written style only when asked to", async () => {
+  it("runs the body-specific rules only when asked to", async () => {
     const segments = [
       seg("a", [1, "AR"], [1.3, "2026"], [1.6, "48"], [2, "passed"]),
       seg("b", [3, "on"], [3.2, "the"], [3.4, "twenty"], [3.6, "fourth."]),
     ];
-    expect(await codes({ segments })).toEqual([]);
-    expect(
-      await codes({ segments }, [...RULE_SPECS, ...STYLE_RULE_SPECS]),
-    ).toEqual(["warning spelled-number", "warning split-numeral"]);
-    // Anchorage's bill numbers only when a jurisdiction opts in.
-    expect(
-      await codes({ segments }, [
-        ...RULE_SPECS,
-        ...styleRuleSpecs(LOCAL_STYLE_RULE_SPECS.anchorage),
-      ]),
-    ).toEqual([
-      "error bill-number",
+    expect(await codes({ segments })).toEqual([
       "warning spelled-number",
       "warning split-numeral",
+    ]);
+    expect(
+      await codes({ segments }, [...RULE_SPECS, ...BODY_RULE_SPECS]),
+    ).toEqual([
+      "warning spelled-number",
+      "warning split-numeral",
+      "error bill-number",
     ]);
   });
 
@@ -100,17 +94,20 @@ describe("checkMeeting", () => {
   });
 });
 
-describe("the style rules", () => {
-  const found = async (sentence: string, specs = STYLE_RULE_SPECS) =>
+describe("the written-form rules", () => {
+  const found = async (
+    sentence: string,
+    specs: readonly RuleSpec<MeetingViolation>[] = RULE_SPECS,
+  ) =>
     (
       await checkMeeting(
         { segments: [{ speaker: null, words: words(sentence) }] },
         specs,
       )
-    ).map((i) => `${i.code}: ${i.text}`);
+    ).map((i) => `${i.code}: ${"text" in i ? i.text : ""}`);
 
   it("accept the house style", async () => {
-    const all = styleRuleSpecs(LOCAL_STYLE_RULE_SPECS.anchorage);
+    const all = [...RULE_SPECS, ...BODY_RULE_SPECS];
     for (const s of [
       "Item 14.C is AO 2026-18, an ordinance amending AMC 3.70.190.",
       "AO 2025-144(S) and AO 2025-74(S-2) and AR 2026-7.",
@@ -129,7 +126,7 @@ describe("the style rules", () => {
       expect(await found(s, all), s).toEqual([]);
   });
 
-  it("leave Anchorage's identifiers to the Anchorage rules", async () => {
+  it("leave Anchorage's identifiers to the body-specific rules", async () => {
     expect(await found("AR 2026 48, item 10 B1, section 2103050, R4.")).toEqual(
       ["split-numeral: 2026 48,"],
     );
@@ -179,7 +176,7 @@ describe("checkMeeting's result type", () => {
       | "uncovered-speech"
     >();
     expectTypeOf<(typeof allIssues)[number]["code"]>().toEqualTypeOf<
-      Exclude<MeetingIssue["code"], (typeof STYLE_RULE_SPECS)[number]["code"]>
+      Exclude<MeetingIssue["code"], (typeof BODY_RULE_SPECS)[number]["code"]>
     >();
   });
 });
