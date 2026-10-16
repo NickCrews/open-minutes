@@ -42,6 +42,12 @@ jobs:
       - uses: ./.github/actions/setup
       - run: pnpm lint
 
+  psvtool:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 -m unittest discover -s .claude/skills/transcript-cleanup/scripts -v
+
   test:
     name: tests
     runs-on: ubuntu-latest
