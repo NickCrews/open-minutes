@@ -1,14 +1,16 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 import {
+  BODY_RULE_SPECS,
   CHAPTER_RULE_SPECS,
   checkMeeting,
   fixMeeting,
   type MeetingIssue,
   type MeetingViolation,
+  RULE_SPECS,
   RULE_SPECS_BY_CODE,
 } from ".";
 import type { RuleSpec, Violation } from "./common";
-import { seg } from "./testing";
+import { seg, text, words } from "./testing";
 import * as splitSentence from "./split-sentence";
 import type { SplitSentence } from "./split-sentence";
 
@@ -55,6 +57,24 @@ describe("checkMeeting", () => {
     });
   });
 
+  it("runs the body-specific rules only when asked to", async () => {
+    const segments = [
+      seg("a", [1, "AR"], [1.3, "2026"], [1.6, "48"], [2, "passed"]),
+      seg("b", [3, "on"], [3.2, "the"], [3.4, "twenty"], [3.6, "fourth."]),
+    ];
+    expect(await codes({ segments })).toEqual([
+      "warning spelled-number",
+      "warning split-numeral",
+    ]);
+    expect(
+      await codes({ segments }, [...RULE_SPECS, ...BODY_RULE_SPECS]),
+    ).toEqual([
+      "warning spelled-number",
+      "warning split-numeral",
+      "error bill-number",
+    ]);
+  });
+
   it("runs the rules it is given, sync or async, at their severity", async () => {
     const specs = [
       RULE_SPECS_BY_CODE["no-bodies"],
@@ -74,6 +94,50 @@ describe("checkMeeting", () => {
   });
 });
 
+describe("the written-form rules", () => {
+  const found = async (
+    sentence: string,
+    specs: readonly RuleSpec<MeetingViolation>[] = RULE_SPECS,
+  ) =>
+    (
+      await checkMeeting(
+        { segments: [{ speaker: null, words: words(sentence) }] },
+        specs,
+      )
+    ).map((i) => `${i.code}: ${"text" in i ? i.text : ""}`);
+
+  it("accept the house style", async () => {
+    const all = [...RULE_SPECS, ...BODY_RULE_SPECS];
+    for (const s of [
+      "Item 14.C is AO 2026-18, an ordinance amending AMC 3.70.190.",
+      "AO 2025-144(S) and AO 2025-74(S-2) and AR 2026-7.",
+      "AO 2026 unnumbered, an ordinance amending chapter 21.05.",
+      "Assembly memorandum AM 142-2026 has passed.",
+      "AMC 25.35.060C and 21.05.040G.2.b and AS 44.62.310.",
+      "Rezone from R-4 SL to R-4, near B-3 and gR-1 and CE-R-10.",
+      "We meet at 7 p.m. or 11:30 a.m. tomorrow.",
+      "It costs $10, or $36,000, or $1.5 million, or 6 cents.",
+      "An increase of 1% or 3.79% a year.",
+      "On February 17, 2026, and again on the 27th.",
+      "The February one isn't out. May one of you second?",
+      "Passes 5-0 on a vote of 12 to 0.",
+      "We need a second, one more time.",
+    ])
+      expect(await found(s, all), s).toEqual([]);
+  });
+
+  it("leave Anchorage's identifiers to the body-specific rules", async () => {
+    expect(await found("AR 2026 48, item 10 B1, section 2103050, R4.")).toEqual(
+      ["split-numeral: 2026 48,"],
+    );
+    expect(await found("section three dot seventy at 7 pm")).toEqual([
+      "spoken-separator: three dot seventy",
+      "time: 7 pm",
+      "spelled-number: seventy",
+    ]);
+  });
+});
+
 describe("MeetingViolation", () => {
   it("is any rule's violation, or one rule's given its code", () => {
     expectTypeOf<SplitSentence>().toExtend<MeetingViolation>();
@@ -88,6 +152,13 @@ describe("RULE_SPECS_BY_CODE", () => {
     expect(RULE_SPECS_BY_CODE["split-sentence"]).toBe(splitSentence);
     expectTypeOf<
       (typeof RULE_SPECS_BY_CODE)["split-sentence"]["defaultSeverity"]
+    >().toEqualTypeOf<"warning">();
+  });
+
+  it("finds a written-form rule, local ones included", () => {
+    expect(RULE_SPECS_BY_CODE["bill-number"].defaultSeverity).toBe("error");
+    expectTypeOf<
+      (typeof RULE_SPECS_BY_CODE)["split-numeral"]["defaultSeverity"]
     >().toEqualTypeOf<"warning">();
   });
 });
@@ -105,7 +176,7 @@ describe("checkMeeting's result type", () => {
       | "uncovered-speech"
     >();
     expectTypeOf<(typeof allIssues)[number]["code"]>().toEqualTypeOf<
-      MeetingIssue["code"]
+      Exclude<MeetingIssue["code"], (typeof BODY_RULE_SPECS)[number]["code"]>
     >();
   });
 });
@@ -144,6 +215,21 @@ describe("fixMeeting", () => {
     const meeting = { bodyCount: 0, segments: [seg("a", [1, "Hello."])] };
     expect(await fixMeeting(meeting)).toEqual({ meeting, fixed: [] });
     expect((await fixMeeting(meeting)).meeting).toBe(meeting);
+  });
+
+  it("writes numbers, times, money and bills the transcript's way", async () => {
+    const sentence =
+      "AO twenty twenty six dash twenty passes five zero at seven PM on march twenty first for thirty six thousand dollars.";
+    const { meeting } = await fixMeeting(
+      { segments: [{ speaker: "a", words: words(sentence) }] },
+      [...RULE_SPECS, ...BODY_RULE_SPECS],
+    );
+    expect(text(meeting.segments[0]!.words)).toBe(
+      "AO 2026-20 passes 5-0 at 7 p.m. on March 21 for $36,000.",
+    );
+    expect(
+      await checkMeeting(meeting, [...RULE_SPECS, ...BODY_RULE_SPECS]),
+    ).toEqual([]);
   });
 
   it("runs only the fixes of the rules it is given", async () => {

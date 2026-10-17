@@ -96,7 +96,10 @@ are `H:MM:SS.ss`, as psvtool prints them.
    a vote tally. In some meetings it folds most in-room speakers into the
    chair while online speakers get clean clusters. A long chair segment that
    holds a presentation usually starts after a first-name handoff ("item nine
-   … Jennifer."). Long runs with no punctuation usually hide a turn change.
+   … Jennifer."), or after the chair reads an agenda item that names its
+   sponsor ("GTC request … (Burnett)"). Long runs with no punctuation usually
+   hide a turn change. `check_meeting` and `fixtures:check` warn about a bare
+   "Yes." or "Second." left in the segment of whoever asked for it.
 5. **Check every segment of a cluster before labelling the whole cluster.**
    One `segmented:spk-N` can hold unrelated voices: a legislator and a police
    chief, or a member, a staffer and a presenter. Music before a meeting or
@@ -118,11 +121,21 @@ are `H:MM:SS.ss`, as psvtool prints them.
    wood" → "Girdwood" is one word), don't rewrite grammar, and leave a number
    or a name alone when you aren't sure. [mishearings.md](mishearings.md)
    lists the recurring ones.
-9. **Keep chapter text in step with labels.** After relabelling, check that
-   chapter titles and summaries name the right people. Chapters follow
-   `docs/chapters.md`. Write them with `replace_chapters`, with
-   `reviewedByHuman: false` unless a human checked them.
-10. **Voiceprints aren't recomputed.** Relabelling segments doesn't change
+9. **Write numbers the house way.** Goldens write numbers, times, money and
+   dates as `packages/core/src/rules/numbers.ts` describes:
+   "7:30 p.m.", "$36,000", "3.79%", "March 19", "passes 5-0", and numerals
+   from 10 up. A body opts into body-specific rules for its own identifiers
+   with `_rules` in `bodies.jsonl`; Anchorage's bodies write "AO
+   2026-23", "AO 2025-144(S)", "AM 142-2026", "AMC 21.05.040G.2", "item
+   10.B.1" and "R-4". Collapse a spoken number into one word with one
+   `replace` op per number ("twenty twenty six dash twenty" → "2026-20"),
+   and write only what was said: a number you can't make out stays as heard.
+   `fixtures:check` reports the rest.
+10. **Keep chapter text in step with labels.** After relabelling, check that
+    chapter titles and summaries name the right people. Chapters follow
+    `docs/chapters.md`. Write them with `replace_chapters`, with
+    `reviewedByHuman: false` unless a human checked them.
+11. **Voiceprints aren't recomputed.** Relabelling segments doesn't change
     anyone's voiceprint, so say so if recognition will depend on your fix.
 
 ## Report

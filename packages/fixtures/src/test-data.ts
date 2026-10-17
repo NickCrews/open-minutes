@@ -33,6 +33,12 @@ export interface GoldenBody {
   timezone: string;
   /** As in `bodies.meeting_source`; absent for a body nobody scans. */
   meeting_source?: MeetingSource;
+  /**
+   * Codes of the body-specific rules its transcripts follow, from
+   * BODY_RULE_SPECS in @open-minutes/core/rules, eg ["bill-number"]. Not a DB
+   * column.
+   */
+  _rules?: string[];
 }
 
 export interface GoldenPerson {
@@ -153,6 +159,21 @@ export function loadPeople(): GoldenPerson[] {
   if (!existsSync(peoplePath))
     throw new Error(`People file not found: ${peoplePath}`);
   return parseJsonl<GoldenPerson>(peoplePath);
+}
+
+/**
+ * The codes of the body-specific rules a meeting's transcript follows: those
+ * its bodies opt into with `_rules`.
+ */
+export function bodyRuleCodes(
+  bodyIds: readonly string[],
+  root: string = TEST_DATA_ROOT,
+): string[] {
+  const bodies = parseJsonl<GoldenBody>(join(root, "bodies.jsonl"));
+  const codes = bodyIds.flatMap(
+    (id) => bodies.find((b) => b.id === id)?._rules ?? [],
+  );
+  return [...new Set(codes)];
 }
 
 /**

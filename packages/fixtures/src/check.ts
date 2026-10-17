@@ -1,9 +1,11 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, resolve, sep } from "node:path";
 import {
+  BODY_RULE_SPECS,
   CHAPTER_RULE_SPECS,
   checkMeeting,
   type MeetingIssue,
+  RULE_SPECS,
   type RuleMeeting,
   RULE_SPECS_BY_CODE,
   type RuleSegment,
@@ -17,6 +19,7 @@ import {
   parseTimestamp,
 } from "./psv";
 import {
+  bodyRuleCodes,
   type GoldenMeeting,
   getMeetingData,
   parseGoldenChapters,
@@ -29,7 +32,9 @@ import {
 // A meeting's data follows the rules in @open-minutes/core/rules, the
 // same ones the database is checked against; this adds the rules for the
 // files themselves (PSV syntax, where a speaker marker goes, the directory
-// name). Errors fail the fixture tests and `pnpm fixtures:check`; warnings are
+// name), and holds each meeting to the body-specific rules its bodies opt
+// into with `_rules` in bodies.jsonl (Anchorage's bill and code numbers).
+// Errors fail the fixture tests and `pnpm fixtures:check`; warnings are
 // printed and want a look.
 
 export type Severity = "error" | "warning";
@@ -116,7 +121,21 @@ export async function checkMeetingDir(dir: string): Promise<Issue[]> {
     ? chapterStartLines(readFileSync(chaptersPath, "utf8"))
     : [];
   const chapters = meeting.chapters?.chapters ?? null;
-  const placed = (await checkMeeting(ruleMeeting(meeting))).map((i) =>
+  const root = resolve(dir, "../..");
+  const codes = bodyRuleCodes(meeting.body_ids, root);
+  const bodySpecs = BODY_RULE_SPECS.filter((spec) => codes.includes(spec.code));
+  const unknown = codes.filter(
+    (c) => !BODY_RULE_SPECS.some((spec) => spec.code === c),
+  );
+  if (unknown.length)
+    issues.push({
+      file: join(root, "bodies.jsonl"),
+      severity: "error",
+      message: `unknown _rules ${JSON.stringify(unknown)}; body-specific rules: ${JSON.stringify(BODY_RULE_SPECS.map((spec) => spec.code))}`,
+    });
+  const placed = (
+    await checkMeeting(ruleMeeting(meeting), [...RULE_SPECS, ...bodySpecs])
+  ).map((i) =>
     "segmentIndex" in i
       ? atPsvLine(i, psvPath!, psv!.lines)
       : "chapterIndex" in i || i.code === "uncovered-speech"

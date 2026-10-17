@@ -11,21 +11,36 @@
 // RULE_SPECS_BY_CODE. Each violation has a code and a message, plus whatever
 // structured data an agent needs to fix it. Helpers more than one rule needs
 // go in ./common.ts. To add a rule, write its module and add it to
-// RULE_SPECS; its code and violation type follow from it.
+// RULE_SPECS, or to BODY_RULE_SPECS if only some bodies follow it; its code
+// and violation type follow from it.
 
+import * as agendaItem from "./agenda-item";
+import * as billNumber from "./bill-number";
 import * as chapterSize from "./chapter-size";
 import type { RuleMeeting, RuleSpec, Severity } from "./common";
+import * as codeSection from "./code-section";
+import * as date from "./date";
 import * as emptySegment from "./empty-segment";
 import * as falseStart from "./false-start";
 import * as fillerWord from "./filler-word";
+import * as foldedAnswer from "./folded-answer";
 import * as invalidChapter from "./invalid-chapter";
+import * as money from "./money";
+import * as monthCapital from "./month-capital";
 import * as noBodies from "./no-bodies";
+import * as percent from "./percent";
 import * as segmentOutOfOrder from "./segment-out-of-order";
+import * as spelledNumber from "./spelled-number";
+import * as splitNumeral from "./split-numeral";
 import * as splitSentence from "./split-sentence";
+import * as spokenSeparator from "./spoken-separator";
 import * as stutter from "./stutter";
+import * as tally from "./tally";
+import * as time from "./time";
 import * as typographicDash from "./typographic-dash";
 import * as uncoveredSpeech from "./uncovered-speech";
 import * as wordOutOfOrder from "./word-out-of-order";
+import * as zoningDistrict from "./zoning-district";
 
 export type { RuleMeeting, RuleSegment } from "./common";
 export {
@@ -35,8 +50,11 @@ export {
   cleanWords,
 } from "./clean";
 
-/** Every rule, in the order checkMeeting reports them. */
-const RULE_SPECS = [
+/**
+ * The rules every meeting follows, golden or in the database, in the order
+ * checkMeeting reports them.
+ */
+export const RULE_SPECS = [
   noBodies,
   emptySegment,
   segmentOutOfOrder,
@@ -46,6 +64,16 @@ const RULE_SPECS = [
   falseStart,
   stutter,
   splitSentence,
+  foldedAnswer,
+  spokenSeparator,
+  time,
+  money,
+  percent,
+  date,
+  monthCapital,
+  tally,
+  spelledNumber,
+  splitNumeral,
   invalidChapter,
   chapterSize,
   uncoveredSpeech,
@@ -61,6 +89,16 @@ export const TRANSCRIPT_RULE_SPECS = [
   falseStart,
   stutter,
   splitSentence,
+  foldedAnswer,
+  spokenSeparator,
+  time,
+  money,
+  percent,
+  date,
+  monthCapital,
+  tally,
+  spelledNumber,
+  splitNumeral,
 ] as const satisfies readonly RuleSpec[];
 
 /** The rules that apply to chapters, against their transcript. */
@@ -71,13 +109,28 @@ export const CHAPTER_RULE_SPECS = [
   uncoveredSpeech,
 ] as const satisfies readonly RuleSpec[];
 
-type AnyRuleSpec = (typeof RULE_SPECS)[number];
+/**
+ * Body-specific rules: those only some bodies follow, such as Anchorage's
+ * ways of numbering its bills, code sections, agenda items and zoning
+ * districts. A body opts into each by its code. For now only the golden
+ * fixtures say which they follow, with `_rules` in bodies.jsonl.
+ */
+export const BODY_RULE_SPECS = [
+  billNumber,
+  codeSection,
+  agendaItem,
+  zoningDistrict,
+] as const satisfies readonly RuleSpec[];
+
+type AnyRuleSpec =
+  | (typeof RULE_SPECS)[number]
+  | (typeof BODY_RULE_SPECS)[number];
 
 export type RuleCode = AnyRuleSpec["code"];
 
 /** Each rule's spec, by its code. */
 export const RULE_SPECS_BY_CODE = Object.fromEntries(
-  RULE_SPECS.map((spec) => [spec.code, spec]),
+  [...RULE_SPECS, ...BODY_RULE_SPECS].map((spec) => [spec.code, spec]),
 ) as { [S in AnyRuleSpec as S["code"]]: S };
 
 type Unarray<T> = T extends readonly (infer V)[] ? V : T;
@@ -90,8 +143,9 @@ type ViolationOf<R> = R extends (meeting: RuleMeeting) => infer Out
 type AnyViolation = ViolationOf<AnyRuleSpec["rule"]>;
 
 /**
- * What one of {@link RULE_SPECS} can find: by default any of them, or with a code,
- * only that rule's, eg `MeetingViolation<"split-sentence">`.
+ * What one of {@link RULE_SPECS} or {@link BODY_RULE_SPECS} can find: by
+ * default any of them, or with a code, only that rule's, eg
+ * `MeetingViolation<"split-sentence">`.
  */
 export type MeetingViolation<C extends RuleCode = RuleCode> = Extract<
   AnyViolation,

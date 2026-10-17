@@ -1,6 +1,6 @@
 import { cpSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { fixGoldenSegments, fixMeetingDir, serializeChapters } from "./fix";
 import { meetingDirs } from "./check";
@@ -47,6 +47,30 @@ describe("fixGoldenSegments", () => {
     ]);
   });
 
+  it("unlabels an answer moved out of the asker's segment", async () => {
+    const clerk = { kind: "identified", person: "clerk" } as const;
+    const { segments } = await fixGoldenSegments([
+      {
+        speaker: clerk,
+        words: [
+          { text: "Member", start: 1 },
+          { text: "Johnson.", start: 1.3 },
+          { text: "Yes.", start: 2 },
+        ],
+      },
+    ]);
+    expect(segments).toEqual([
+      {
+        speaker: clerk,
+        words: [
+          { text: "Member", start: 1 },
+          { text: "Johnson.", start: 1.3 },
+        ],
+      },
+      { speaker: { kind: "unlabeled" }, words: [{ text: "Yes.", start: 2 }] },
+    ]);
+  });
+
   it("returns clean segments as given", async () => {
     const given = [
       {
@@ -63,14 +87,15 @@ describe("fixGoldenSegments", () => {
 });
 
 describe("fixMeetingDir", () => {
-  /** A copy of a meeting with chapters, under a fresh data root. */
+  /** A copy of a meeting with chapters, and the bodies, under a fresh data root. */
   function copyMeeting(): string {
-    const dir = join(
-      mkdtempSync(join(tmpdir(), "fix-")),
-      "meetings",
-      slugOf(withChapters),
-    );
+    const root = mkdtempSync(join(tmpdir(), "fix-"));
+    const dir = join(root, "meetings", slugOf(withChapters));
     cpSync(withChapters, dir, { recursive: true });
+    cpSync(
+      join(resolve(withChapters, "../.."), "bodies.jsonl"),
+      join(root, "bodies.jsonl"),
+    );
     return dir;
   }
 
