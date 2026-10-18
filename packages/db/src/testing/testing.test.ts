@@ -14,25 +14,21 @@ describe("createTestDb", () => {
   // Both isolation tests insert the same row; if they shared a database (like
   // the old one-db-per-run setup), whichever runs second would see 2 rows.
   test("isolates writes from other tests (a)", async ({ db }) => {
-    await db
-      .insert(jurisdictionsTable)
-      .values({
-        slug: "isolation-check",
-        name: "Isolation Check",
-        name_short: "isolation-check",
-      });
+    await db.insert(jurisdictionsTable).values({
+      slug: "isolation-check",
+      name: "Isolation Check",
+      name_short: "isolation-check",
+    });
     const rows = await db.select().from(jurisdictionsTable);
     expect(rows).toHaveLength(1);
   });
 
   test("isolates writes from other tests (b)", async ({ db }) => {
-    await db
-      .insert(jurisdictionsTable)
-      .values({
-        slug: "isolation-check",
-        name: "Isolation Check",
-        name_short: "isolation-check",
-      });
+    await db.insert(jurisdictionsTable).values({
+      slug: "isolation-check",
+      name: "Isolation Check",
+      name_short: "isolation-check",
+    });
     const rows = await db.select().from(jurisdictionsTable);
     expect(rows).toHaveLength(1);
   });
