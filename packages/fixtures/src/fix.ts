@@ -85,7 +85,7 @@ export async function fixMeetingDir(dir: string): Promise<FileFix[]> {
     segments: labeled(golden.segments),
     chapters: golden.chapters?.chapters ?? null,
   };
-  const codes = bodyRuleCodes(golden.body_ids, root);
+  const codes = bodyRuleCodes(golden.body_slugs, root);
   const { meeting, fixed } = await fixMeeting(given, [
     ...RULE_SPECS,
     ...BODY_RULE_SPECS.filter((spec) => codes.includes(spec.code)),

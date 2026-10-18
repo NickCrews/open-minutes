@@ -34,13 +34,13 @@ export function goldenMeetingsData(meetingSlugs: readonly string[]): DataState {
     },
     apply: async (db) => {
       await goldenData.apply(db);
-      const { bodyIdByKey } = mapSnapshot(loadAllTestData());
+      const { bodyIdBySlug } = mapSnapshot(loadAllTestData());
       const peopleBySlug = new Map(loadPeople().map((p) => [p.slug, p]));
       for (const slug of meetingSlugs) {
         const meeting = getMeetingData(slug);
         await seedGoldenMeeting(
           db,
-          meetingBodyIds(meeting, bodyIdByKey),
+          meetingBodyIds(meeting, bodyIdBySlug),
           meeting,
           peopleBySlug,
         );

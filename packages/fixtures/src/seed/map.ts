@@ -8,11 +8,10 @@ export interface MappedRows {
   jurisdictions: JurisdictionInsert[];
   bodies: BodyInsert[];
   /**
-   * Resolves a snapshot body id (e.g. "gbos") to its assigned serial primary
-   * key. This is the seam later slices use to wire up foreign keys (meetings →
+   * Resolves a body slug (e.g. "gbos") to its assigned serial primary key. This is the seam later slices use to wire up foreign keys (meetings →
    * bodies) without a database round-trip.
    */
-  bodyIdByKey: ReadonlyMap<string, number>;
+  bodyIdBySlug: ReadonlyMap<string, number>;
 }
 
 /**
@@ -27,29 +26,31 @@ export interface MappedRows {
  * sequence rather than colliding with leftover serial state.
  */
 export function mapSnapshot(data: TestData): MappedRows {
-  const jurisdictionIdByKey = new Map<string, number>();
+  const jurisdictionIdBySlug = new Map<string, number>();
   const jurisdictions = data.jurisdictions.map((j, i): JurisdictionInsert => {
     const id = i + 1;
-    jurisdictionIdByKey.set(j.id, id);
+    jurisdictionIdBySlug.set(j.slug, id);
     return {
       id,
+      slug: j.slug,
       name: j.name,
       name_short: j.name_short,
       state: j.state,
     };
   });
 
-  const bodyIdByKey = new Map<string, number>();
+  const bodyIdBySlug = new Map<string, number>();
   const bodies = data.bodies.map((b, i): BodyInsert => {
     const id = i + 1;
-    bodyIdByKey.set(b.id, id);
-    const jurisdictionId = jurisdictionIdByKey.get(b.jurisdiction_id);
+    bodyIdBySlug.set(b.slug, id);
+    const jurisdictionId = jurisdictionIdBySlug.get(b.jurisdiction_slug);
     if (jurisdictionId === undefined)
       throw new Error(
-        `Body "${b.id}" references unknown jurisdiction "${b.jurisdiction_id}"`,
+        `Body "${b.slug}" references unknown jurisdiction "${b.jurisdiction_slug}"`,
       );
     return {
       id,
+      slug: b.slug,
       jurisdiction_id: jurisdictionId,
       name: b.name,
       name_short: b.name_short,
@@ -58,21 +59,21 @@ export function mapSnapshot(data: TestData): MappedRows {
     };
   });
 
-  return { jurisdictions, bodies, bodyIdByKey };
+  return { jurisdictions, bodies, bodyIdBySlug };
 }
 
 /**
- * The database ids of a golden meeting's bodies, from their snapshot ids.
+ * The database ids of a golden meeting's bodies, from their slugs.
  * Throws on one bodies.jsonl doesn't have.
  */
 export function meetingBodyIds(
-  meeting: Pick<GoldenMeeting, "slug" | "body_ids">,
-  bodyIdByKey: ReadonlyMap<string, number>,
+  meeting: Pick<GoldenMeeting, "slug" | "body_slugs">,
+  bodyIdBySlug: ReadonlyMap<string, number>,
 ): number[] {
-  return meeting.body_ids.map((key) => {
-    const id = bodyIdByKey.get(key);
+  return meeting.body_slugs.map((slug) => {
+    const id = bodyIdBySlug.get(slug);
     if (id === undefined)
-      throw new Error(`Meeting ${meeting.slug} has unknown body "${key}"`);
+      throw new Error(`Meeting ${meeting.slug} has unknown body "${slug}"`);
     return id;
   });
 }

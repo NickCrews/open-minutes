@@ -10,7 +10,6 @@ import {
   peopleTable,
   segmentsTable,
 } from "@open-minutes/db";
-import { bodySlug } from "@open-minutes/core/bodies";
 import {
   parseMeetingDate,
   parseMeetingTime,
@@ -115,11 +114,11 @@ export const listMeetings = defineTool({
     for (const r of await db
       .select({
         m: meetingBodiesTable.meeting_id,
-        body: bodiesTable.name_short,
+        body: bodiesTable.slug,
       })
       .from(meetingBodiesTable)
       .innerJoin(bodiesTable, eq(bodiesTable.id, meetingBodiesTable.body_id))
-      .orderBy(asc(bodiesTable.name_short)))
+      .orderBy(asc(bodiesTable.slug)))
       bodies.set(r.m, [...(bodies.get(r.m) ?? []), r.body]);
     return meetings.map((m) => ({
       ...m,
@@ -175,20 +174,17 @@ export const updateMeeting = defineTool({
       if (error) throw new ToolError(error);
     }
 
-    let bodies: { id: number; name: string; name_short: string }[] | undefined;
+    let bodies: { id: number; slug: string }[] | undefined;
     if (slugs !== undefined) {
       const all = await db
-        .select({
-          id: bodiesTable.id,
-          name: bodiesTable.name,
-          name_short: bodiesTable.name_short,
-        })
-        .from(bodiesTable);
+        .select({ id: bodiesTable.id, slug: bodiesTable.slug })
+        .from(bodiesTable)
+        .orderBy(asc(bodiesTable.slug));
       bodies = [...new Set(slugs.map((s) => s.toLowerCase()))].map((slug) => {
-        const body = all.find((b) => bodySlug(b) === slug);
+        const body = all.find((b) => b.slug === slug);
         if (!body)
           throw new ToolError(
-            `No body with slug "${slug}"; bodies are ${all.map(bodySlug).join(", ")}`,
+            `No body with slug "${slug}"; bodies are ${all.map((b) => b.slug).join(", ")}`,
           );
         return body;
       });
@@ -223,12 +219,12 @@ export const updateMeeting = defineTool({
         .from(meetingsTable)
         .where(eq(meetingsTable.id, meeting.id));
       const held = await tx
-        .select({ name_short: bodiesTable.name_short })
+        .select({ slug: bodiesTable.slug })
         .from(meetingBodiesTable)
         .innerJoin(bodiesTable, eq(bodiesTable.id, meetingBodiesTable.body_id))
         .where(eq(meetingBodiesTable.meeting_id, meeting.id))
-        .orderBy(asc(bodiesTable.name_short));
-      return { ...row!, bodies: held.map((b) => b.name_short) };
+        .orderBy(asc(bodiesTable.slug));
+      return { ...row!, bodies: held.map((b) => b.slug) };
     });
   },
 });

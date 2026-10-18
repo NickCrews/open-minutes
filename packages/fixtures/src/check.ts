@@ -122,7 +122,7 @@ export async function checkMeetingDir(dir: string): Promise<Issue[]> {
     : [];
   const chapters = meeting.chapters?.chapters ?? null;
   const root = resolve(dir, "../..");
-  const codes = bodyRuleCodes(meeting.body_ids, root);
+  const codes = bodyRuleCodes(meeting.body_slugs, root);
   const bodySpecs = BODY_RULE_SPECS.filter((spec) => codes.includes(spec.code));
   const unknown = codes.filter(
     (c) => !BODY_RULE_SPECS.some((spec) => spec.code === c),
@@ -164,10 +164,10 @@ export async function checkMeetingDir(dir: string): Promise<Issue[]> {
  */
 export function checkMeetingSlug(meeting: {
   slug: string;
-  body_ids: string[];
+  body_slugs: string[];
   date: string | null;
 }): string | null {
-  const stems = meeting.body_ids.map((body) =>
+  const stems = meeting.body_slugs.map((body) =>
     meeting.date ? `${body}-${meeting.date}` : body,
   );
   for (const stem of stems) {
@@ -246,7 +246,7 @@ function readPsv(
 export function ruleMeeting(meeting: GoldenMeeting): RuleMeeting {
   return {
     title: meeting.title,
-    bodyCount: meeting.body_ids.length,
+    bodyCount: meeting.body_slugs.length,
     durationSecs: meeting.duration_secs,
     segments: ruleSegments(meeting.segments),
     chapters: meeting.chapters?.chapters ?? null,

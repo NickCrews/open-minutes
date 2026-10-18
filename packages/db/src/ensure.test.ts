@@ -65,9 +65,11 @@ function markerData(fingerprint: string) {
     async apply(db) {
       state.runs++;
       await db.delete(jurisdictionsTable);
-      await db
-        .insert(jurisdictionsTable)
-        .values({ name: `Marker ${fingerprint}`, name_short: fingerprint });
+      await db.insert(jurisdictionsTable).values({
+        slug: `marker-${fingerprint}`,
+        name: `Marker ${fingerprint}`,
+        name_short: fingerprint,
+      });
     },
   } satisfies DataState & { runs: number };
   return state;
@@ -441,7 +443,7 @@ describe("declared data", () => {
     const url = urlForDatabase(base, name);
     await ensureDatabase(url, quiet);
     await sqlFor(name, async (sql) => {
-      await sql`INSERT INTO jurisdictions (name, name_short) VALUES ('Mine', 'mine')`;
+      await sql`INSERT INTO jurisdictions (slug, name, name_short) VALUES ('mine', 'Mine', 'mine')`;
     });
     const data = markerData("x");
     const result = await ensureDatabase(url, {

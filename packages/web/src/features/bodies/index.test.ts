@@ -12,11 +12,12 @@ import { getAllBodies, getBodyById } from "./index";
 async function insertBody(db: DB, name: string): Promise<number> {
   const [jurisdiction] = await db
     .insert(jurisdictionsTable)
-    .values({ name: "Testville" })
+    .values({ slug: `testville-${name.toLowerCase()}`, name: "Testville" })
     .returning({ id: jurisdictionsTable.id });
   const [body] = await db
     .insert(bodiesTable)
     .values({
+      slug: name.toLowerCase(),
       name,
       name_short: name,
       jurisdiction_id: jurisdiction!.id,
