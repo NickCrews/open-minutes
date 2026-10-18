@@ -49,7 +49,6 @@ export const jurisdictionsTable = pgTable(
     // doesn't change when the jurisdiction is renamed. Lowercase kebab-case.
     slug: varchar().notNull().unique(),
     name: varchar().notNull().default(""),
-    name_short: varchar().notNull().default(""),
     state: varchar().notNull().default(""),
     postcode: varchar().default(""),
     created_at: timestamp().notNull().defaultNow(),

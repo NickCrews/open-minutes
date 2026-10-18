@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "4eac8336-fb9d-42d9-92fa-8a8e668a5090",
+  "id": "b5baaa9b-947a-4cfc-bdf9-743df4630f32",
   "prevIds": [
     "91767938-2b5e-42f7-9ade-42fbe7cf2775"
   ],
@@ -401,19 +401,6 @@
       "generated": null,
       "identity": null,
       "name": "name",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "jurisdictions"
-    },
-    {
-      "type": "varchar",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "''",
-      "generated": null,
-      "identity": null,
-      "name": "name_short",
       "entityType": "columns",
       "schema": "public",
       "table": "jurisdictions"

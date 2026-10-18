@@ -1,6 +1,7 @@
 -- bodies.slug and jurisdictions.slug: stable handles in lowercase kebab-case.
 -- Every slug column, including meetings.slug and people.slug, must be
--- lowercase kebab-case. See schema.ts.
+-- lowercase kebab-case. jurisdictions.name_short goes, once the backfill
+-- has used it. See schema.ts.
 --
 -- Hand-edited: existing rows are backfilled before the columns become NOT
 -- NULL. A slug is name_short (or name, if that's empty) in kebab-case, eg
@@ -45,4 +46,5 @@ ALTER TABLE "jurisdictions" ADD CONSTRAINT "jurisdictions_slug_key" UNIQUE("slug
 ALTER TABLE "bodies" ADD CONSTRAINT "bodies_slug_valid" CHECK ("slug" ~ '^[a-z0-9]+(-[a-z0-9]+)*$');--> statement-breakpoint
 ALTER TABLE "jurisdictions" ADD CONSTRAINT "jurisdictions_slug_valid" CHECK ("slug" ~ '^[a-z0-9]+(-[a-z0-9]+)*$');--> statement-breakpoint
 ALTER TABLE "meetings" ADD CONSTRAINT "meetings_slug_valid" CHECK ("slug" ~ '^[a-z0-9]+(-[a-z0-9]+)*$');--> statement-breakpoint
-ALTER TABLE "people" ADD CONSTRAINT "people_slug_valid" CHECK ("slug" ~ '^[a-z0-9]+(-[a-z0-9]+)*$');
+ALTER TABLE "people" ADD CONSTRAINT "people_slug_valid" CHECK ("slug" ~ '^[a-z0-9]+(-[a-z0-9]+)*$');--> statement-breakpoint
+ALTER TABLE "jurisdictions" DROP COLUMN "name_short";
