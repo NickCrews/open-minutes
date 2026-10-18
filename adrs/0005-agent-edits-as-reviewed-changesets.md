@@ -16,22 +16,39 @@ before it lands.
 ## Decision
 
 An agent's work product is a **changeset**: a SQL file of data changes, plus
-preconditions, written on a branch of the database and applied to main only
-after review.
+preconditions, checked against the database without committing, and applied
+only after review.
 
 ### Data model
 
 - **Main** is the current database state.
-- An agent works on one changeset against a **branch** of main taken at a
-  recorded **base** snapshot.
+- An agent works on one changeset. Its **before** is main as it is when the
+  harness checks the changeset; its **after** is before plus the changeset.
 - A changeset holds:
   - `migration.sql`: the Postgres statements to apply, in order.
   - `preconditions.sql`: optional queries that must hold before applying.
   - `rationale.md`: optional notes for the reviewer.
-  - The base it was written against.
   - The **row diff**: the rows `migration.sql` inserted, updated and deleted
-    when run on the base.
+    at its latest check, and when that check ran.
 - Changesets are kept as the audit trail, whatever their outcome.
+
+### Checking without a branch
+
+The harness computes after in a transaction on main that it always rolls
+back:
+
+1. `BEGIN`
+2. Run `preconditions.sql` (on before).
+3. Run `migration.sql`.
+4. Compute the row diff, run `check_meeting` and any other assertions, and
+   answer the agent's queries (on after).
+5. `ROLLBACK`
+
+This needs nothing but Postgres, so it works on any provider, locally and in
+tests. A check holds locks on the rows it touches until it rolls back;
+changesets are scoped to one meeting and checks take seconds, so that is
+acceptable on production. Only the harness holds a writing connection; the
+agent's own access to the database is read-only.
 
 ### Agent UX
 
@@ -39,23 +56,16 @@ The agent is an ordinary coding agent (bash, read, write, edit). It writes
 `migration.sql` and `preconditions.sql`. The harness takes those files as the
 final product.
 
-The agent has two databases:
+The agent works in a loop of editing the files and running the harness:
 
-- **Scratch**: a branch it can query and change freely while exploring.
-- **After**: rebuilt by the harness from the base plus `migration.sql` on
-  every check. Only this one counts, so the files and the result can't drift
-  apart.
+- `om changeset check`: runs a check and prints the precondition results, a
+  summary of the row diff, and the change in `check_meeting` results (issues
+  fixed and issues introduced).
+- `om changeset query '<sql>'`: runs the query on after, inside a check.
 
-One command (eg `om changeset check`):
-
-1. Runs the preconditions on the base.
-2. Rebuilds after.
-3. Prints a summary of the row diff.
-4. Prints the change in `check_meeting` results: issues fixed and issues
-   introduced.
-
-The agent also has read-only access to the base and after databases, and
-keeps the read-only tools (transcript, people, audio).
+After is always rebuilt from the files, so the files and the result can't
+drift apart. The agent also keeps read-only access to main and the read-only
+tools (transcript, people, audio).
 
 A changeset covers one meeting or one task, so review stays manageable and
 conflicts stay rare.
@@ -64,22 +74,21 @@ conflicts stay rare.
 
 The reviewer, human or agent, reads the row diff, shown in domain terms (eg a
 transcript with relabelled segments highlighted) rather than as SQL, alongside
-the `check_meeting` change and the rationale. An approval binds to the base,
-the hash of `migration.sql` and the hash of the row diff.
+the `check_meeting` change and the rationale. An approval binds to the hash of
+`migration.sql` and the hash of the row diff.
 
 ### Applying
 
-In one transaction on current main:
+Applying is a check that commits:
 
-1. Insert the changeset's row into a `changesets` table, keyed by its id. A
+1. `BEGIN`
+2. Insert the changeset's row into a `changesets` table, keyed by its id. A
    second apply fails on the key, so double-apply is impossible.
-2. Run `preconditions.sql`. Any failure aborts.
-3. Run `migration.sql`.
-4. Compute the row diff and compare it to the approved one. A mismatch rolls
+3. Run `preconditions.sql`. Any failure aborts.
+4. Run `migration.sql`.
+5. Compute the row diff and compare it to the approved one. A mismatch rolls
    back and marks the changeset conflicted, needing review again.
-5. Commit.
-
-If main hasn't moved since the base, step 4 holds trivially.
+6. `COMMIT`
 
 ### Preconditions
 
@@ -90,20 +99,22 @@ comparison catches the rest.
 
 ### Stable references to new rows
 
-Ids are `serial`. Rows that exist at the base have the same id on the branch
-and on main, but a row the changeset inserts can get a different id on main.
-A literal reference to a new row's id is a bug:
+Ids are `serial`. A row the changeset inserts can get a different id at apply
+time than at check time. A literal reference to a new row's id is a bug:
 
 ```sql
-INSERT INTO people (name) VALUES ('Jane Doe');          -- id 57 on the branch
-UPDATE segments SET person_id = 57 WHERE id IN (...);   -- another id on main
+INSERT INTO people (name) VALUES ('Jane Doe');          -- id 57 at check time
+UPDATE segments SET person_id = 57 WHERE id IN (...);   -- another id at apply
 ```
 
 New rows are referenced through `INSERT ... RETURNING` in a CTE, or by slug.
-The harness advances every sequence on the scratch and after databases far
-past main's (eg by 10,000,000), so a hardcoded new id fails a foreign key or
-shows up as a diff mismatch when replayed. The diff comparison matches new
-rows by content and relationships, not id.
+
+Sequences are not transactional: a rolled-back check still uses up the ids it
+drew. So every check runs `migration.sql` twice, in two rolled-back
+transactions. The second run's new rows get different ids, so a hardcoded id
+points at a row that no longer exists and fails a foreign key, or shows up as
+a difference between the two diffs. The diff comparison matches new rows by
+content and relationships, not id.
 
 ### What a changeset may do
 
@@ -123,12 +134,6 @@ catch most of these. The edit tools gain a mode that prints the SQL for an
 edit instead of committing it, so an agent can generate statements for
 `migration.sql` rather than writing them by hand.
 
-### Branching
-
-Production is on Neon, and each changeset's branch is a Neon branch, whose
-branch point is the base. Local databases use `CREATE DATABASE ... TEMPLATE`
-as `pnpm db` does today.
-
 ### Lifecycle
 
 draft → proposed → approved → applied, with conflicted, rejected and
@@ -138,9 +143,14 @@ superseded as the other outcomes.
 
 - **Keep committing edits per tool call.** No review, no unit of work, no
   testing before the data changes.
-- **Store only the row diff and apply it.** A diff is exact for the base but
-  has no intent to replay: it can't adapt to a main that has moved, and it
-  overwrites concurrent changes to the same rows.
+- **A database branch per changeset** (a Neon branch, or a copy made with
+  `CREATE DATABASE ... TEMPLATE` or `pg_dump`). Gives a fixed before and an
+  after the agent can open with any client, but ties the design to a provider
+  with cheap branches or to copying the database. Copies can't use `TEMPLATE`
+  on a live production database, which must be idle to be a template.
+- **Store only the row diff and apply it.** A diff is exact for the database
+  it was computed on but has no intent to replay: it can't adapt to a main
+  that has moved, and it overwrites concurrent changes to the same rows.
 - **Store only the SQL.** The same statements can change different rows on a
   moved main, and the reviewer would approve SQL, not its effect.
 - **Capture statements from the agent's session log.** Mixes exploration,
