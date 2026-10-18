@@ -167,9 +167,31 @@ The diff apply would be set-based in a real harness.
 - **Replay's canonical comparison matches new rows by insertion order.** An
   `INSERT ... SELECT` without `ORDER BY` could insert in a different order on
   a later run and produce a false conflict. That fails safe too.
-- **Capture is cheap and needs no branch.** Triggers gated on `session_user`
-  cost nothing for other sessions, and the log lives only inside the
-  transaction.
+- **Capture is cheap and needs no branch.** For other sessions, a trigger
+  gated on `session_user` costs one comparison per row and writes nothing,
+  and the log lives only inside the transaction.
+
+## Playgrounds
+
+Agents also want scratch databases to explore in. Two ways to make one,
+timed on the same machine, with a main stand-in of 532 MB (2,000,000
+segments):
+
+| Method                                                                                 | Time | Works while main has connections |
+| -------------------------------------------------------------------------------------- | ---- | -------------------------------- |
+| `CREATE DATABASE ... TEMPLATE main STRATEGY WAL_LOG` (the default)                     | 8.7s | no                               |
+| `CREATE DATABASE ... TEMPLATE main STRATEGY FILE_COPY`                                 | 5.7s | no                               |
+| Empty database from a schema-only template, then one meeting's rows copied with `COPY` | 0.4s | yes                              |
+| `DROP DATABASE` of a full copy                                                         | 0.7s |                                  |
+
+- `TEMPLATE` fails with "source database is being accessed by other users"
+  when anything else is connected, so it can't copy a live main. It can copy
+  an idle snapshot of main, or a playground between the agent's commands.
+- Whole-database copies grow with main. The scoped copy grows with the
+  meeting: it copies one meeting's segments and chapters, plus every person,
+  in foreign key order, keeping ids, and needs only a read connection to
+  main.
+- [`playground.py`](agent-changesets/playground.py) times the scoped copy.
 
 ## Running the prototype
 
@@ -185,5 +207,9 @@ PROTO_PG="host=localhost port=5499" python scenarios.py   # results table
 python mistakes.py                                         # mistakes and escapes
 python perf.py                                             # timings
 ```
+
+For `playground.py`, make `big` from `om_base` and fill `segments` (as
+`perf.py` does), then `om_schema` with `pg_dump --schema-only big | psql -d
+om_schema`.
 
 `scenarios.py` makes a database per case from the `om_base` template.

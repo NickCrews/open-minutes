@@ -32,7 +32,7 @@ after review.
     at its latest check, and when that check ran.
 - Changesets are kept as the audit trail, whatever their outcome.
 
-### Checking without a branch
+### Checking
 
 The harness computes after in a transaction on main that it always rolls
 back:
@@ -45,16 +45,49 @@ back:
 
 `migration.sql` runs on its own connection as the `changeset` role, inside
 `om.run(sql)`, a plpgsql function that `EXECUTE`s it, where `COMMIT` and
-`ROLLBACK` raise instead of ending the transaction. An `AFTER` row trigger on
-each data table writes the old and new row to a log table when `session_user`
-is `changeset`, which the changeset's SQL can't change. The row diff is that
-log, read before the rollback.
+`ROLLBACK` raise instead of ending the transaction.
 
 This needs nothing but Postgres, so it works on any provider, locally and in
 tests. A check holds locks on the rows it touches until it rolls back;
 changesets are scoped to one meeting and checks take seconds, so that is
 acceptable on production. Only the harness holds a writing connection; the
 agent's own access to the database is read-only.
+
+### Row diff
+
+Every data table has an `AFTER INSERT OR UPDATE OR DELETE ... FOR EACH ROW`
+trigger that appends to `om.capture_log`:
+
+| column | content                                            |
+| ------ | -------------------------------------------------- |
+| `seq`  | order of the change                                |
+| `tbl`  | table name                                         |
+| `op`   | `INSERT`, `UPDATE` or `DELETE`                     |
+| `old`  | the row before, as `to_jsonb(OLD)`; null on insert |
+| `new`  | the row after, as `to_jsonb(NEW)`; null on delete  |
+
+The trigger records only when `session_user` is `changeset`. A session can't
+change its `session_user`, so the changeset's SQL can't turn capture off, and
+every other session (ingest, the web app, the harness itself) pays one
+comparison per row and writes nothing. Rows changed by a foreign key cascade
+are captured too, as their own entries. The harness reads the log before the
+transaction ends; it is rolled back with everything else, or, on apply,
+cleared before the commit.
+
+The row diff is that list of entries. A reviewer sees it rendered by table
+and row, with changed columns highlighted.
+
+To compare two row diffs (the approved one, and the one an apply produces),
+the harness canonicalizes each:
+
+1. Each inserted row's `id` becomes a placeholder numbered in insertion order
+   per table (`<new people 1>`), there and in every foreign key column that
+   holds it. Foreign keys come from the catalog.
+2. Columns filled by a `now()` default (eg `created_at`) are dropped.
+3. The entries are sorted, so the comparison doesn't depend on the order a
+   single statement visited rows.
+
+Two row diffs match when their canonical forms are equal.
 
 ### Agent UX
 
@@ -76,28 +109,69 @@ tools (transcript, people, audio).
 A changeset covers one meeting or one task, so review stays manageable and
 conflicts stay rare.
 
+### Playgrounds
+
+For anything a check can't show (trying a sequence of edits, running the
+existing edit tools to see what they do, setting up a state to test a
+changeset against), the agent makes playgrounds: throwaway databases it owns
+outright, as many as it likes.
+
+- `om playground new [--meeting <slug>]... [--from <playground>] [--full]`
+  makes one and prints its name. By default it holds the named meetings with
+  their segments and chapters, plus all of `people`, `bodies` and
+  `jurisdictions`, copied from main with `COPY` over a read-only connection,
+  in foreign key order. Ids are kept, and the sequences continue from main's.
+  `--from` copies another playground with `CREATE DATABASE ... TEMPLATE`.
+  `--full` copies all of main.
+- `om playground reset <name>` puts it back as it was made, from a template
+  saved at creation.
+- `om playground diff <name>` shows its row diff since creation. The capture
+  triggers come with the schema, and a database setting on each playground
+  makes them record every session's changes, not only `changeset`'s.
+- `om playground list` and `om playground rm <name>`. Playgrounds unused for a
+  day are dropped, and `pnpm db prune` lists the rest.
+
+Every `om` command takes `--db <playground>`, so the edit tools, `om changeset
+check` and `om changeset query` all run against a playground the same way as
+against main. A playground never feeds main: the product is still
+`migration.sql`, checked against main.
+
+Playgrounds live on a scratch Postgres server, not production's. A copy scoped
+to a meeting takes well under a second whatever main's size, and needs only a
+read connection to main, so it works on any provider and while main is busy.
+`CREATE DATABASE ... TEMPLATE` can't copy main directly, because the source
+must have no other connections; `--full` copies from a snapshot of main that
+is refreshed when stale, or uses a Neon branch where main is on Neon.
+
 ### Review
 
 The reviewer, human or agent, reads the row diff, shown in domain terms (eg a
 transcript with relabelled segments highlighted) rather than as SQL, alongside
-the `check_meeting` change and the rationale. An approval binds to the hash of
-`migration.sql` and the hash of the row diff.
+the `check_meeting` change and the rationale. Approving applies the changeset
+at once, against the row diff the reviewer saw.
 
 ### Applying
 
-Applying is a check that commits:
+Applying is a check that commits, and takes about as long:
 
 1. `BEGIN`
 2. Insert the changeset's row into a `changesets` table, keyed by its id. A
    second apply fails on the key, so double-apply is impossible.
 3. Run `migration.sql`. A failed assertion rolls back and marks the
    changeset conflicted.
-4. Compare the row diff to the approved one, as described under
-   [Row identity](#row-identity). A mismatch rolls back and marks the
-   changeset conflicted.
+4. Compare the row diff to the approved one (see [Row diff](#row-diff)). A
+   mismatch rolls back and marks the changeset conflicted.
 5. `COMMIT`
 
-A conflicted changeset needs review again.
+If main changed since the check but the row diff still matches, the
+changeset applies: it does exactly what the reviewer approved. If the
+approval depended on rows the changeset doesn't change, the changeset says so
+in an assertion. For example, chapters written from a transcript assert that
+the meeting's transcript fingerprint is the one they were written from, and
+naming a voice asserts which segments that voice has.
+
+A conflicted changeset goes back to its author to re-check, and then to
+review again.
 
 ### Assertions
 
@@ -132,9 +206,8 @@ however is natural: a CTE over `INSERT ... RETURNING`, a lookup by slug, or
 
 Every check and every apply runs on main, so every new row's id comes from
 main's sequences, and the references within one run are consistent. Across
-runs a new row gets a different id, so the harness compares row diffs with
-each inserted row's id replaced by a placeholder (`<new people 1>`), there and
-in every foreign key column that points at it, found from the catalog.
+runs a new row gets a different id, which the row diff comparison factors out
+(see [Row diff](#row-diff)).
 
 Sequences are not transactional: an id drawn in a rolled-back check is used
 up and never belongs to a committed row. So if an agent copies a new row's id
@@ -154,9 +227,6 @@ sequences, so defaults work, but not `UPDATE`, so it can't `setval`. It can't
 run DDL, `TRUNCATE`, `SET ROLE` to another role, or
 `session_replication_role` (which would disable the capture triggers).
 
-The diff comparison ignores columns filled by `now()` defaults (eg
-`chapter_generations.generated_at`).
-
 ### Domain invariants
 
 The edit tools encode invariants that raw SQL can bypass: word onsets on
@@ -166,20 +236,26 @@ catch most of these. The edit tools gain a mode that prints the SQL for an
 edit instead of committing it, so an agent can generate statements for
 `migration.sql` rather than writing them by hand.
 
+### Golden fixtures
+
+The golden PSV files become snapshots of database state, exported from the
+database. Agents don't edit them; they change the database through
+changesets.
+
 ### Lifecycle
 
-draft → proposed → approved → applied, with conflicted, rejected and
-superseded as the other outcomes.
+draft → proposed → applied. A proposed changeset can instead end rejected or
+superseded, or become conflicted on apply, which sends it back to draft.
 
 ## Alternatives considered
 
 - **Keep committing edits per tool call.** No review, no unit of work, no
   testing before the data changes.
-- **A database branch per changeset** (a Neon branch, or a copy made with
-  `CREATE DATABASE ... TEMPLATE` or `pg_dump`). Gives a fixed before and an
-  after the agent can open with any client, but ties the design to a provider
-  with cheap branches or to copying the database. Copies can't use `TEMPLATE`
-  on a live production database, which must be idle to be a template.
+- **Check on a branch instead of main.** A branch drifts from main as soon
+  as it's made, so a check there doesn't say what applying would do. Branches
+  are for exploring (see [Playgrounds](#playgrounds)); checks run on main.
+- **An approved state between proposed and applied.** Applying takes as long
+  as a check, so there is nothing to wait for between approving and applying.
 - **UUID keys.** They help when ids are minted in several disconnected
   places (branches, clones, offline clients). Here ids are minted only by
   main's sequences, so serial ids work.
@@ -200,11 +276,3 @@ superseded as the other outcomes.
 - **Postgres functions for edit operations** (`SELECT om.split_segment(...)`).
   Replays well and reads clearly, but duplicates domain logic in plpgsql. Worth
   revisiting if replay conflicts turn out to be common.
-
-## Open questions
-
-1. When main has moved: always require review again, or apply when the
-   replayed diff still matches?
-2. Is apply automatic on approval, or a separate step?
-3. Do the golden fixtures (PSV files edited with psvtool) move to the same
-   flow?
