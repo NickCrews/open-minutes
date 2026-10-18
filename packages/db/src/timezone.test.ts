@@ -52,10 +52,11 @@ describe("bodies.timezone", () => {
   test("rejects what ianaTimezoneError rejects", async ({ db }) => {
     const [jurisdiction] = await db
       .insert(jurisdictionsTable)
-      .values({ name: "Testville" })
+      .values({ slug: "testville", name: "Testville" })
       .returning({ id: jurisdictionsTable.id });
     await expect(
       db.insert(bodiesTable).values({
+        slug: "utc",
         jurisdiction_id: jurisdiction!.id,
         timezone: "UTC",
       }),

@@ -17,6 +17,7 @@ import {
   pgView,
   primaryKey,
   unique,
+  type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { N_DIMENSIONS as VOICE_N_DIMENSIONS } from "@open-minutes/core/voice_embeddings";
 import { TranscriptWord } from "@open-minutes/core/transcription";
@@ -27,19 +28,31 @@ import type {
 
 const secondsInterval = () => interval({ fields: "second", precision: 3 });
 
+/** A check that a slug is lowercase kebab-case, eg "gbos" or "land-use". */
+const kebabCase = (column: AnyPgColumn) =>
+  sql`${column} ~ '^[a-z0-9]+(-[a-z0-9]+)*$'`;
+
 /**
  * A government: the Municipality of Anchorage, the City & Borough of Juneau.
  * A place with boundaries — it never meets and never has minutes. That's what
  * the bodies inside it do.
  */
-export const jurisdictionsTable = pgTable("jurisdictions", {
-  id: serial().primaryKey(),
-  name: varchar().notNull().default(""),
-  name_short: varchar().notNull().default(""),
-  state: varchar().notNull().default(""),
-  postcode: varchar().default(""),
-  created_at: timestamp().notNull().defaultNow(),
-});
+export const jurisdictionsTable = pgTable(
+  "jurisdictions",
+  {
+    id: serial().primaryKey(),
+    // Stable handle (eg "moa") that means the same jurisdiction in every
+    // database, for code and static data to refer to it by. Unlike `name`, it
+    // doesn't change when the jurisdiction is renamed. Lowercase kebab-case.
+    slug: varchar().notNull().unique(),
+    name: varchar().notNull().default(""),
+    name_short: varchar().notNull().default(""),
+    state: varchar().notNull().default(""),
+    postcode: varchar().default(""),
+    created_at: timestamp().notNull().defaultNow(),
+  },
+  (table) => [check("jurisdictions_slug_valid", kebabCase(table.slug))],
+);
 
 /**
  * A deliberative body that actually meets: the Anchorage Assembly, the Girdwood
@@ -54,6 +67,12 @@ export const bodiesTable = pgTable(
     jurisdiction_id: integer()
       .notNull()
       .references(() => jurisdictionsTable.id),
+    // Stable handle (eg "gbos") that means the same body in every database:
+    // what `--body` CLI filters, the update_meeting tool, per-meeting
+    // work-directory names and the fixtures name a body by. Unlike `name` and
+    // `name_short`, it doesn't change when the body is renamed. Lowercase
+    // kebab-case.
+    slug: varchar().notNull().unique(),
     name: varchar().notNull().default(""),
     name_short: varchar().notNull().default(""),
     homepage_url: varchar(),
@@ -67,6 +86,7 @@ export const bodiesTable = pgTable(
     created_at: timestamp().notNull().defaultNow(),
   },
   (table) => [
+    check("bodies_slug_valid", kebabCase(table.slug)),
     check(
       "bodies_timezone_valid",
       sql`iana_timezone_error(${table.timezone}) IS NULL`,

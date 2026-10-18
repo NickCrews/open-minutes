@@ -45,8 +45,8 @@ describe("checkMeetingSlug", () => {
   const ok = (
     slug: string,
     date: string | null = "2026-03-23",
-    body_ids = ["gbos"],
-  ) => checkMeetingSlug({ slug, body_ids, date }) === null;
+    body_slugs = ["gbos"],
+  ) => checkMeetingSlug({ slug, body_slugs, date }) === null;
 
   it("wants <body>-<date>, with an optional suffix", async () => {
     expect(ok("gbos-2026-03-23")).toBe(true);

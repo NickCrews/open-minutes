@@ -18,7 +18,7 @@ A deliberative group that holds meetings, such as the Girdwood Board of Supervis
 _Avoid_: muni, board, council, committee, organization, group
 
 **Body slug**:
-A body's short lowercased name, such as `gbos`, used to refer to it on the command line and in file paths.
+A body's stable handle in lowercase kebab-case, such as `gbos`, stored in `bodies.slug`. Code, static data, the command line and file paths refer to a body by it; it doesn't change when the body is renamed. Jurisdictions have slugs too, such as `moa`.
 _Avoid_: muni slug, body id, short name
 
 **Meeting source**:

@@ -47,20 +47,20 @@ export async function insertBody(
   db: DB,
   body: {
     name: string;
-    name_short: string;
+    slug: string;
     timezone?: string;
     source?: MeetingSource;
   },
 ): Promise<number> {
   const [jurisdiction] = await db
     .insert(jurisdictionsTable)
-    .values({ name: body.name, name_short: body.name_short })
+    .values({ slug: body.slug, name: body.name })
     .returning({ id: jurisdictionsTable.id });
   const [row] = await db
     .insert(bodiesTable)
     .values({
+      slug: body.slug,
       name: body.name,
-      name_short: body.name_short,
       jurisdiction_id: jurisdiction!.id,
       timezone: body.timezone ?? "America/Anchorage",
       meeting_source: body.source,
@@ -118,13 +118,13 @@ export const goldenTest = dbTest({ data: goldenData }).extend<{
   workRoot: string;
 }>(workRootFixture);
 
-const goldenGbos = loadBodies().find((b) => b.id === "gbos")!;
+const goldenGbos = loadBodies().find((b) => b.slug === "gbos")!;
 if (goldenGbos.meeting_source?.type !== "youtube_channel")
   throw new Error("Golden GBOS's meeting source should be a YouTube channel");
 
 /** GBOS as test-data/bodies.jsonl declares it: the one source of truth. */
 export const GOLDEN_GBOS = {
-  name_short: goldenGbos.name_short,
+  slug: goldenGbos.slug,
   channelId: goldenGbos.meeting_source.channel_id,
 };
 
@@ -133,7 +133,7 @@ export async function goldenGbosId(db: DB): Promise<number> {
   const [row] = await db
     .select({ id: bodiesTable.id })
     .from(bodiesTable)
-    .where(eq(bodiesTable.name_short, GOLDEN_GBOS.name_short));
+    .where(eq(bodiesTable.slug, GOLDEN_GBOS.slug));
   if (!row) throw new Error("No GBOS body: is this a goldenTest database?");
   return row.id;
 }

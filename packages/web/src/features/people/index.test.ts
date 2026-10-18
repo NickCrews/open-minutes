@@ -18,11 +18,15 @@ const NO_VOICE = Array.from({ length: VOICE_N_DIMENSIONS }, () => 0);
 async function insertBody(db: DB, name_short: string): Promise<number> {
   const [jurisdiction] = await db
     .insert(jurisdictionsTable)
-    .values({ name: "Testville" })
+    .values({
+      slug: `testville-${name_short.toLowerCase()}`,
+      name: "Testville",
+    })
     .returning({ id: jurisdictionsTable.id });
   const [body] = await db
     .insert(bodiesTable)
     .values({
+      slug: name_short.toLowerCase(),
       name: name_short,
       name_short,
       jurisdiction_id: jurisdiction!.id,

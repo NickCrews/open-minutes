@@ -6,7 +6,6 @@ import {
   meetingsTable,
   segmentsTable,
 } from "@open-minutes/db";
-import { bodySlug } from "@open-minutes/core/bodies";
 import type { SiteMeeting } from "./sites";
 
 /** One fully ingested meeting, as listed by `om status`. */
@@ -39,8 +38,8 @@ export async function listIngested(
       siteId: meetingsTable.site_id,
       // Correlated rather than joined, so several bodies don't multiply the
       // segment count.
-      namesShort: sql<string[]>`(
-        SELECT coalesce(array_agg(${bodiesTable.name_short} ORDER BY lower(${bodiesTable.name_short})), '{}')
+      bodies: sql<string[]>`(
+        SELECT coalesce(array_agg(${bodiesTable.slug} ORDER BY ${bodiesTable.slug}), '{}')
         FROM ${meetingBodiesTable}
         JOIN ${bodiesTable} ON ${bodiesTable.id} = ${meetingBodiesTable.body_id}
         WHERE ${meetingBodiesTable.meeting_id} = ${meetingsTable.id}
@@ -63,8 +62,5 @@ export async function listIngested(
       desc(meetingsTable.id),
     );
 
-  return rows.map(({ namesShort, ...row }) => ({
-    ...row,
-    bodies: namesShort.map((name_short) => bodySlug({ name_short })),
-  }));
+  return rows;
 }

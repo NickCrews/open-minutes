@@ -1,5 +1,4 @@
 import { type DB, bodiesTable, meetingsTable } from "@open-minutes/db";
-import { bodySlug } from "@open-minutes/core/bodies";
 import {
   type MeetingSource,
   meetingSourceUrl,
@@ -39,9 +38,12 @@ export async function listAvailable(
   let bodies = allBodies;
   if (options.body !== undefined) {
     const wanted = options.body.toLowerCase();
-    bodies = bodies.filter((b) => bodySlug(b) === wanted);
+    bodies = bodies.filter((b) => b.slug === wanted);
     if (bodies.length === 0) {
-      const known = allBodies.map(bodySlug).sort().join(", ");
+      const known = allBodies
+        .map((b) => b.slug)
+        .sort()
+        .join(", ");
       throw new Error(`No body with slug "${options.body}". Known: ${known}`);
     }
   }
@@ -67,7 +69,7 @@ export async function listAvailable(
     const meetings = await sourceFor(source).listVideos();
     for (const { id } of meetings) {
       if (!ingested.has(key(siteKind, id)))
-        available.push({ siteKind, siteId: id, body: bodySlug(body) });
+        available.push({ siteKind, siteId: id, body: body.slug });
     }
   }
   return available;

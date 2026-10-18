@@ -13,12 +13,13 @@ import {
 async function insertJointMeeting(db: DB) {
   const [jurisdiction] = await db
     .insert(jurisdictionsTable)
-    .values({ name: "Girdwood" })
+    .values({ slug: "girdwood", name: "Girdwood" })
     .returning({ id: jurisdictionsTable.id });
   const [gbos, luc] = await db
     .insert(bodiesTable)
     .values(
       ["GBOS", "LUC"].map((name_short) => ({
+        slug: name_short.toLowerCase(),
         name_short,
         jurisdiction_id: jurisdiction!.id,
         timezone: "America/Anchorage",

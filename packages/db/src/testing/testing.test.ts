@@ -16,7 +16,11 @@ describe("createTestDb", () => {
   test("isolates writes from other tests (a)", async ({ db }) => {
     await db
       .insert(jurisdictionsTable)
-      .values({ name: "Isolation Check", name_short: "isolation-check" });
+      .values({
+        slug: "isolation-check",
+        name: "Isolation Check",
+        name_short: "isolation-check",
+      });
     const rows = await db.select().from(jurisdictionsTable);
     expect(rows).toHaveLength(1);
   });
@@ -24,7 +28,11 @@ describe("createTestDb", () => {
   test("isolates writes from other tests (b)", async ({ db }) => {
     await db
       .insert(jurisdictionsTable)
-      .values({ name: "Isolation Check", name_short: "isolation-check" });
+      .values({
+        slug: "isolation-check",
+        name: "Isolation Check",
+        name_short: "isolation-check",
+      });
     const rows = await db.select().from(jurisdictionsTable);
     expect(rows).toHaveLength(1);
   });
@@ -55,7 +63,7 @@ const seeded = dbTest({
     apply: async (db) => {
       await db
         .insert(jurisdictionsTable)
-        .values({ name: "Seeded", name_short: "seeded" });
+        .values({ slug: "seeded", name: "Seeded", name_short: "seeded" });
     },
   },
 });
@@ -69,7 +77,7 @@ describe("dbTest({ data })", () => {
   seeded("and stay isolated from each other", async ({ db }) => {
     await db
       .insert(jurisdictionsTable)
-      .values({ name: "Extra", name_short: "extra" });
+      .values({ slug: "extra", name: "Extra", name_short: "extra" });
     const rows = await db.select().from(jurisdictionsTable);
     expect(rows).toHaveLength(2);
   });

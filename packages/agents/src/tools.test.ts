@@ -53,7 +53,7 @@ describe("reading", () => {
   test("lists meetings with their sizes", async ({ db }) => {
     const meetings = await callTool(toolContext(db), listMeetings, {});
     const gbos = meetings.find((m) => m.slug === GBOS);
-    expect(gbos).toMatchObject({ bodies: ["GBOS"], chapters: 34 });
+    expect(gbos).toMatchObject({ bodies: ["gbos"], chapters: 34 });
     expect(gbos!.segments).toBeGreaterThan(200);
   });
 
@@ -290,17 +290,17 @@ describe("update_meeting", () => {
     const bodiesOf = async () =>
       (await callTool(ctx, listMeetings, {})).find((m) => m.slug === GBOS)!
         .bodies;
-    expect(await bodiesOf()).toEqual(["GBOS"]);
+    expect(await bodiesOf()).toEqual(["gbos"]);
 
     const result = await callTool(ctx, updateMeeting, {
       meeting: GBOS,
       bodies: ["gbos", "LUC", "luc"],
     });
-    expect(result.bodies).toEqual(["GBOS", "LUC"]);
-    expect(await bodiesOf()).toEqual(["GBOS", "LUC"]);
+    expect(result.bodies).toEqual(["gbos", "luc"]);
+    expect(await bodiesOf()).toEqual(["gbos", "luc"]);
 
     await callTool(ctx, updateMeeting, { meeting: GBOS, bodies: ["gbos"] });
-    expect(await bodiesOf()).toEqual(["GBOS"]);
+    expect(await bodiesOf()).toEqual(["gbos"]);
   });
 
   test("sets the fields given and leaves the rest", async ({ db }) => {
@@ -319,7 +319,7 @@ describe("update_meeting", () => {
       date: before.date,
       time: "19:00:00",
       timezone: "America/Juneau",
-      bodies: ["GBOS"],
+      bodies: ["gbos"],
     });
 
     // Clearing the date clears the time with it.

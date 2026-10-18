@@ -9,7 +9,6 @@ import {
   meetingBodiesTable,
   meetingsTable,
 } from "@open-minutes/db";
-import { bodySlug } from "@open-minutes/core/bodies";
 import { type SiteKind, siteKindOf } from "@open-minutes/core/meeting-source";
 import { cleanSpeechSegments } from "@open-minutes/core/rules";
 import { plainDashes } from "@open-minutes/core/text";
@@ -161,7 +160,7 @@ export async function ingestMeeting(
     bodyArg,
   );
 
-  const workDir = join(workRoot, workDirName(bodySlug(body), siteId));
+  const workDir = join(workRoot, workDirName(body.slug, siteId));
   await mkdir(workDir, { recursive: true });
 
   const audioPath = join(workDir, "audio.wav");
@@ -323,6 +322,7 @@ async function resolveBody(
   const bodies = await db
     .select({
       id: bodiesTable.id,
+      slug: bodiesTable.slug,
       name: bodiesTable.name,
       name_short: bodiesTable.name_short,
       timezone: bodiesTable.timezone,
@@ -331,7 +331,7 @@ async function resolveBody(
     .from(bodiesTable);
 
   if (slug !== undefined) {
-    const body = bodies.find((b) => bodySlug(b) === slug.toLowerCase());
+    const body = bodies.find((b) => b.slug === slug.toLowerCase());
     if (!body) throw new Error(`No body with slug "${slug}"`);
     const source = body.meeting_source;
     if (source && siteKindOf(source) !== siteKind)
@@ -349,7 +349,7 @@ async function resolveBody(
   if (matches.length > 1)
     throw new Error(
       `${siteKind} meeting ${siteId} is from "${channelId}", the meeting source ` +
-        `of several bodies (${matches.map((b) => bodySlug(b)).join(", ")}). ` +
+        `of several bodies (${matches.map((b) => b.slug).join(", ")}). ` +
         `Say which body it belongs to.`,
     );
   throw new Error(

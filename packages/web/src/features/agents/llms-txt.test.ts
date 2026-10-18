@@ -67,11 +67,12 @@ describe("getLlmsTxtData", () => {
   }) => {
     const [jurisdiction] = await db
       .insert(jurisdictionsTable)
-      .values({ name: "Testville" })
+      .values({ slug: "testville", name: "Testville" })
       .returning({ id: jurisdictionsTable.id });
     const [gbos] = await db
       .insert(bodiesTable)
       .values({
+        slug: "gbos",
         name: "GBOS",
         jurisdiction_id: jurisdiction!.id,
         timezone: "America/Anchorage",

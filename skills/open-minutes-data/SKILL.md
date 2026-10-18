@@ -52,8 +52,8 @@ If a download is blocked, tell the person which website needs to be allowed:
 
 | Table              | One row per                                                     | Useful columns                                                                |
 | ------------------ | --------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| `jurisdictions`    | government, e.g. the Municipality of Anchorage                  | `name`, `state`                                                               |
-| `bodies`           | group that holds meetings, e.g. the Anchorage Assembly          | `jurisdiction_id`, `name`, `name_short`, `timezone`                           |
+| `jurisdictions`    | government, e.g. the Municipality of Anchorage                  | `slug`, `name`, `state`                                                       |
+| `bodies`           | group that holds meetings, e.g. the Anchorage Assembly          | `slug`, `jurisdiction_id`, `name`, `name_short`, `timezone`                   |
 | `meetings`         | recorded meeting                                                | `title`, `date`, `time`, `timezone`, `url`, `duration_secs`                   |
 | `meeting_bodies`   | body holding a meeting (several for a joint meeting)            | `meeting_id`, `body_id`                                                       |
 | `segments`         | stretch of one person talking                                   | `meeting_id`, `person_id`, `speaker_number`, `text`, `start_secs`, `end_secs` |

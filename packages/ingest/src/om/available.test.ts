@@ -57,7 +57,7 @@ describe("listAvailable", () => {
   goldenTest(
     "scrapes only bodies that have a meeting source",
     async ({ db }) => {
-      await insertBody(db, { name: "No Channel Town", name_short: "NCT" });
+      await insertBody(db, { name: "No Channel Town", slug: "nct" });
 
       const { scraped, sourceFor } = fakeSources((source) => [
         { id: `video-${JSON.stringify(source)}` },
@@ -78,13 +78,13 @@ describe("listAvailable", () => {
   test("lists each body's meetings under its site", async ({ db }) => {
     await insertBody(db, {
       name: "House Resources Committee",
-      name_short: "HRES",
+      slug: "hres",
       source: { type: "akleg_committee", committee: "HRES" },
     });
     // The same ID on another site is a different meeting.
     await insertMeeting(
       db,
-      await insertBody(db, { name: "X", name_short: "X" }),
+      await insertBody(db, { name: "X", slug: "x" }),
       "HRES 2026-01-01 13:00:00",
     );
 
@@ -99,7 +99,7 @@ describe("listAvailable", () => {
 
     await insertMeeting(
       db,
-      await insertBody(db, { name: "Y", name_short: "Y" }),
+      await insertBody(db, { name: "Y", slug: "y" }),
       "HRES 2026-01-01 13:00:00",
       { siteKind: "akleg" },
     );
@@ -111,7 +111,7 @@ describe("listAvailable", () => {
   goldenTest("--body restricts the scrape to that body", async ({ db }) => {
     await insertBody(db, {
       name: "Other Town Council",
-      name_short: "OT",
+      slug: "ot",
       source: { type: "youtube_channel", channel_id: "UC_OTHER_CHANNEL" },
     });
 
