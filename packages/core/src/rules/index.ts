@@ -112,8 +112,8 @@ export const CHAPTER_RULE_SPECS = [
 /**
  * Body-specific rules: those only some bodies follow, such as Anchorage's
  * ways of numbering its bills, code sections, agenda items and zoning
- * districts. A body opts into each by its code. For now only the golden
- * fixtures say which they follow, with `_rules` in bodies.jsonl.
+ * districts. A body follows those its glossaries name, in
+ * @open-minutes/glossary.
  */
 export const BODY_RULE_SPECS = [
   billNumber,

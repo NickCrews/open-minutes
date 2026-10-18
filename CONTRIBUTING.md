@@ -33,6 +33,10 @@ the ones listed above it:
   data that seeds local and test databases. `test-data/` holds the real,
   hand-verified jurisdictions, bodies, people and golden meetings. Nothing here
   ships to production.
+- **[`packages/glossary`](packages/glossary)** (`@open-minutes/glossary`): the
+  local words of each region (Anchorage, Girdwood), what they mean and how
+  speech recognition mishears them, and the body-specific rules meetings
+  there follow. Kept as static data for now.
 - **[`packages/audio`](packages/audio)** (`@open-minutes/audio`): speech
   processing, run locally with
   [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx). It transcribes a WAV

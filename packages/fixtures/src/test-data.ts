@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { type GoldenSegment, parsePsv, parseTimestamp } from "./psv";
 import type { MeetingSource } from "@open-minutes/core/meeting-source";
 import { ianaTimezoneError } from "@open-minutes/core/timezone";
+import { glossaryFor, type MeetingGlossary } from "@open-minutes/glossary";
 import {
   type MeetingWhen,
   parseMeetingDate,
@@ -34,12 +35,6 @@ export interface GoldenBody {
   timezone: string;
   /** As in `bodies.meeting_source`; absent for a body nobody scans. */
   meeting_source?: MeetingSource;
-  /**
-   * Codes of the body-specific rules its transcripts follow, from
-   * BODY_RULE_SPECS in @open-minutes/core/rules, eg ["bill-number"]. Not a DB
-   * column.
-   */
-  _rules?: string[];
 }
 
 export interface GoldenPerson {
@@ -162,19 +157,17 @@ export function loadPeople(): GoldenPerson[] {
   return parseJsonl<GoldenPerson>(peoplePath);
 }
 
-/**
- * The codes of the body-specific rules a meeting's transcript follows: those
- * its bodies opt into with `_rules`.
- */
-export function bodyRuleCodes(
+/** The glossary of a meeting held by the given bodies of bodies.jsonl. */
+export function meetingGlossary(
   bodySlugs: readonly string[],
   root: string = TEST_DATA_ROOT,
-): string[] {
+): Promise<MeetingGlossary> {
   const bodies = parseJsonl<GoldenBody>(join(root, "bodies.jsonl"));
-  const codes = bodySlugs.flatMap(
-    (slug) => bodies.find((b) => b.slug === slug)?._rules ?? [],
+  return glossaryFor(
+    bodies
+      .filter((b) => bodySlugs.includes(b.slug))
+      .map((b) => ({ slug: b.slug, jurisdictionSlug: b.jurisdiction_slug })),
   );
-  return [...new Set(codes)];
 }
 
 /**

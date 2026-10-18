@@ -16,10 +16,12 @@ import {
   parseMeetingTime,
 } from "@open-minutes/core/meeting-date";
 import { hasTypographicDash } from "@open-minutes/core/text";
+import { glossaryFor } from "@open-minutes/glossary";
 import { transcriptFingerprint } from "@open-minutes/core/transcript-fingerprint";
 import { LAST_WORD_DURATION_SEC } from "@open-minutes/core/transcription";
 import { audioTools } from "./audio/tools";
 import { checkMeeting } from "./check";
+import { glossaryBodies } from "./glossary";
 import { loadChapters, loadSegments, round, speakerOf } from "./load";
 import { findMeeting, meetingRef } from "./meeting-ref";
 import { type Db, defineTool, type Tool, ToolError } from "./tool";
@@ -356,11 +358,24 @@ export const checkMeetingTool = defineTool({
   name: "check_meeting",
   label: "Check meeting",
   description:
-    "List problems in a meeting's data, by the same rules as the golden fixtures. Errors: no bodies, an empty segment, words or segments out of time order, a filler or stutter the clean stage removes, an invalid chapter. Warnings (probably wrong, or a broken convention): a speaker change inside a sentence near a longer pause, a chapter outside the size conventions, speech no chapter covers. Write tools don't check their changes: run this when done editing.",
+    "List problems in a meeting's data, by the same rules as the golden fixtures, including the body-specific rules get_glossary lists. Errors: no bodies, an empty segment, words or segments out of time order, a filler or stutter the clean stage removes, an invalid chapter. Warnings (probably wrong, or a broken convention): a speaker change inside a sentence near a longer pause, a chapter outside the size conventions, speech no chapter covers. Write tools don't check their changes: run this when done editing.",
   input: z.object({ meeting: meetingRef }),
   run: async (ctx, input) => {
     const db = await ctx.db();
     return checkMeeting(db, (await findMeeting(db, input.meeting)).id);
+  },
+});
+
+export const getGlossary = defineTool({
+  name: "get_glossary",
+  label: "Get glossary",
+  description:
+    "List the local words of the regions a meeting's bodies are in: each entry's correct spelling (headword), what it means, its other correct spellings (variants), and how speech recognition has misheard it. Also the body-specific rules check_meeting holds the meeting to.",
+  input: z.object({ meeting: meetingRef }),
+  run: async (ctx, input) => {
+    const db = await ctx.db();
+    const meeting = await findMeeting(db, input.meeting);
+    return glossaryFor(await glossaryBodies(db, meeting.id));
   },
 });
 
@@ -650,6 +665,7 @@ export const tools: Tool[] = [
   getTranscript,
   listSpeakers,
   findPeople,
+  getGlossary,
   checkMeetingTool,
   relabelSegments,
   splitSegment,

@@ -1,11 +1,18 @@
 import { describe, expect, test as plainTest } from "vitest";
 import { dbTest } from "@open-minutes/db/testing/vitest";
 import { eq } from "drizzle-orm";
-import { checkMeeting as checkMeetingData } from "@open-minutes/core/rules";
+import {
+  BODY_RULE_SPECS,
+  checkMeeting as checkMeetingData,
+  RULE_SPECS,
+} from "@open-minutes/core/rules";
 import { segmentsTable } from "@open-minutes/db";
 import { ruleMeeting } from "@open-minutes/fixtures/check";
 import { devData } from "@open-minutes/fixtures/dev-data";
-import { loadAllTestData } from "@open-minutes/fixtures/test-data";
+import {
+  loadAllTestData,
+  meetingGlossary,
+} from "@open-minutes/fixtures/test-data";
 import { checkMeeting } from "./check";
 import { toolContext } from "./context";
 import {
@@ -19,6 +26,7 @@ import {
   checkMeetingTool,
   findPeople,
   getChapters,
+  getGlossary,
   getTranscript,
   listMeetings,
   listSpeakers,
@@ -95,10 +103,49 @@ describe("reading", () => {
         code: string;
         message: string;
       }) => `${golden.slug}: ${i.severity} ${i.code}: ${i.message}`;
+      const { rules } = await meetingGlossary(golden.body_slugs);
+      const specs = [
+        ...RULE_SPECS,
+        ...BODY_RULE_SPECS.filter((spec) => rules.includes(spec.code)),
+      ];
       expect((await checkMeeting(db, id)).map(summary)).toEqual(
-        (await checkMeetingData(ruleMeeting(golden))).map(summary),
+        (await checkMeetingData(ruleMeeting(golden), specs)).map(summary),
       );
     }
+  });
+
+  test("holds a meeting to its bodies' body-specific rules", async ({ db }) => {
+    const { id } = await brianSegment(db);
+    const [row] = await db
+      .select({ words: segmentsTable.words })
+      .from(segmentsTable)
+      .where(eq(segmentsTable.id, id));
+    const [first, ...rest] = row!.words;
+    await db
+      .update(segmentsTable)
+      .set({ words: [{ ...first!, text: "AO2026-23" }, ...rest] })
+      .where(eq(segmentsTable.id, id));
+    expect(
+      await callTool(toolContext(db), checkMeetingTool, { meeting: GBOS }),
+    ).toContainEqual(
+      expect.objectContaining({ code: "bill-number", segmentId: id }),
+    );
+  });
+
+  test("gives a meeting the glossaries of its bodies", async ({ db }) => {
+    const glossary = await callTool(toolContext(db), getGlossary, {
+      meeting: GBOS,
+    });
+    expect(glossary.glossaries).toEqual([
+      "common",
+      "alaska",
+      "moa",
+      "girdwood",
+    ]);
+    expect(glossary.rules).toContain("bill-number");
+    expect(glossary.entries).toContainEqual(
+      expect.objectContaining({ headword: "GHEC" }),
+    );
   });
 
   test("reports a filler as an error", async ({ db }) => {

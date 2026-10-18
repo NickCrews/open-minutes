@@ -20,9 +20,9 @@ import {
 import { ruleMeeting, ruleSegment } from "./check";
 import { type GoldenSegment, parsePsv, serializePsv } from "./psv";
 import {
-  bodyRuleCodes,
   getMeetingData,
   type GoldenChapters,
+  meetingGlossary,
   transcriptPath,
 } from "./test-data";
 
@@ -85,10 +85,10 @@ export async function fixMeetingDir(dir: string): Promise<FileFix[]> {
     segments: labeled(golden.segments),
     chapters: golden.chapters?.chapters ?? null,
   };
-  const codes = bodyRuleCodes(golden.body_slugs, root);
+  const { rules } = await meetingGlossary(golden.body_slugs, root);
   const { meeting, fixed } = await fixMeeting(given, [
     ...RULE_SPECS,
-    ...BODY_RULE_SPECS.filter((spec) => codes.includes(spec.code)),
+    ...BODY_RULE_SPECS.filter((spec) => rules.includes(spec.code)),
   ]);
   const rewritten: FileFix[] = [];
   if (meeting.title !== given.title) {

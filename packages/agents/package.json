@@ -19,6 +19,7 @@
     "@open-minutes/audio": "workspace:*",
     "@open-minutes/core": "workspace:*",
     "@open-minutes/db": "workspace:*",
+    "@open-minutes/glossary": "workspace:*",
     "@open-minutes/ingest": "workspace:*",
     "citty": "^0.1.6",
     "drizzle-orm": "1.0.0-beta.21",

@@ -72,7 +72,7 @@ are `H:MM:SS.ss`, as psvtool prints them.
    - a roll call, including an unnamed answer placed by the body's fixed roll
      order or by elimination against the announced tally ("passes 4-1");
    - official minutes, which name movers, seconders, reporters and public
-     commenters (see [mishearings.md](mishearings.md) for where to find them).
+     commenters.
 
    Topic or tone is not evidence. Without evidence, leave the label alone and
    report it.
@@ -119,16 +119,14 @@ are `H:MM:SS.ss`, as psvtool prints them.
    bodies and acronyms, people's names (in the `people.jsonl` spelling), and
    plain mishearings ("low cloud" → "roll call"). Keep the fix local ("good
    wood" → "Girdwood" is one word), don't rewrite grammar, and leave a number
-   or a name alone when you aren't sure. [mishearings.md](mishearings.md)
-   lists the recurring ones.
+   or a name alone when you aren't sure. `get_glossary` lists the local
+   words of the meeting's bodies and how speech recognition mishears them.
 9. **Write numbers the house way.** Goldens write numbers, times, money and
    dates as `packages/core/src/rules/numbers.ts` describes:
    "7:30 p.m.", "$36,000", "3.79%", "March 19", "passes 5-0", and numerals
-   from 10 up. A body opts into body-specific rules for its own identifiers
-   with `_rules` in `bodies.jsonl`; Anchorage's bodies write "AO
-   2026-23", "AO 2025-144(S)", "AM 142-2026", "AMC 21.05.040G.2", "item
-   10.B.1" and "R-4". Collapse a spoken number into one word with one
-   `replace` op per number ("twenty twenty six dash twenty" → "2026-20"),
+   from 10 up. Local identifiers such as bill numbers follow the
+   body-specific rules `get_glossary` lists. Collapse a spoken number into
+   one word with one `replace` op per number ("twenty twenty six dash twenty" → "2026-20"),
    and write only what was said: a number you can't make out stays as heard.
    `fixtures:check` reports the rest.
 10. **Keep chapter text in step with labels.** After relabelling, check that
