@@ -17,9 +17,9 @@ _Avoid_: municipality, muni, city, town, government, org
 A deliberative group that holds meetings, such as the Girdwood Board of Supervisors, inside exactly one jurisdiction.
 _Avoid_: muni, board, council, committee, organization, group
 
-**Body slug**:
-A body's stable handle in lowercase kebab-case, such as `gbos`, stored in `bodies.slug`. Code, static data, the command line and file paths refer to a body by it; it doesn't change when the body is renamed. Jurisdictions have slugs too, such as `moa`.
-_Avoid_: muni slug, body id, short name
+**Slug**:
+A stable, unique handle in lowercase kebab-case that names a row the same way in every database, unlike its id, and doesn't change when it's renamed. Code, static data, the fixtures, the command line and file paths refer to a row by it. Every jurisdiction (`moa`) and body (`gbos`) has one; so does every known person (`margaret-tyler`), the key for their identity across meetings, and every golden fixture meeting (`gbos-2026-03-23`, its fixture directory's name). Other meetings and people have none and go by their id.
+_Avoid_: name, short name, handle, key, muni slug, body id, fixture name, meeting key
 
 **Meeting source**:
 Where a body's meetings are published, scanned for new ones: a YouTube channel or playlist, or an Alaska Legislature committee on akleg.gov. A body has at most one; bodies that share a YouTube channel each get a playlist on it.
@@ -38,10 +38,6 @@ _Avoid_: session, hearing, event, recording, video
 **Joint meeting**:
 A meeting held by several bodies together, such as the Girdwood Board of Supervisors and the Girdwood Land Use Committee. It counts as a meeting of each of them, and none of them comes first.
 _Avoid_: combined meeting, shared meeting, host body, co-host, primary body
-
-**Meeting slug**:
-A golden fixture meeting's stable, unique handle, such as `gbos-2026-03-23` (its fixture directory's name), that names it in every database; other meetings have none and go by their id.
-_Avoid_: fixture name, meeting key
 
 **Video**:
 The YouTube recording of a meeting, from which its audio comes. An akleg.gov meeting has an audio recording, which is what we transcribe, and usually a video too.
@@ -98,10 +94,6 @@ _Avoid_: speaker, user, member, voice, profile
 **Known person**:
 A person a human has established as a specific individual, and so has a slug.
 _Avoid_: identified person, seeded speaker
-
-**Slug**:
-A known person's stable, unique handle, such as `margaret-tyler`; the key for their identity across meetings.
-_Avoid_: name, id, handle
 
 **Name**:
 A person's human-entered display name. Empty until someone enters it, and never used as a key.
