@@ -9,6 +9,7 @@ import {
   meetingsTable,
   peopleTable,
   segmentsTable,
+  SLUG_PATTERN,
 } from "@open-minutes/db";
 import {
   parseMeetingDate,
@@ -491,7 +492,7 @@ export const updatePerson = defineTool({
     personId: id,
     slug: z
       .string()
-      .regex(/^[a-z0-9][a-z0-9-]*$/, "kebab-case, eg margaret-tyler")
+      .regex(SLUG_PATTERN, "kebab-case, eg margaret-tyler")
       .nullable()
       .optional(),
     name: personText.nullable().optional(),

@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "d4b4312e-4e42-45bb-b718-0fa374a6886a",
+  "id": "4eac8336-fb9d-42d9-92fa-8a8e668a5090",
   "prevIds": [
     "91767938-2b5e-42f7-9ade-42fbe7cf2775"
   ],
@@ -1283,6 +1283,13 @@
       "table": "meetings"
     },
     {
+      "value": "\"slug\" ~ '^[a-z0-9]+(-[a-z0-9]+)*$'",
+      "name": "meetings_slug_valid",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "meetings"
+    },
+    {
       "value": "\"slug\" !~ '^[0-9]+$'",
       "name": "meetings_slug_not_numeric",
       "entityType": "checks",
@@ -1295,6 +1302,13 @@
       "entityType": "checks",
       "schema": "public",
       "table": "meetings"
+    },
+    {
+      "value": "\"slug\" ~ '^[a-z0-9]+(-[a-z0-9]+)*$'",
+      "name": "people_slug_valid",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "people"
     },
     {
       "value": "jsonb_array_length(\"words\") > 0",

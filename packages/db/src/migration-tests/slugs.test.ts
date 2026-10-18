@@ -6,12 +6,12 @@ import { dbTest } from "../testing/vitest";
 // tests work.
 
 const BEFORE = "joint-meetings";
-const MIGRATION = "body-and-jurisdiction-slugs";
+const MIGRATION = "slugs";
 
 const test = dbTest({
   schemaVersion: BEFORE,
   data: sqlData(
-    "before-body-and-jurisdiction-slugs",
+    "before-slugs",
     `
     INSERT INTO jurisdictions (id, name, name_short) VALUES
       (1, 'Municipality of Anchorage', 'MOA'),
@@ -59,5 +59,21 @@ describe(MIGRATION, () => {
       sql`INSERT INTO bodies (id, jurisdiction_id, slug, timezone)
         VALUES (9, 1, 'GBOS', 'America/Anchorage')`,
     ).rejects.toThrow(/bodies_slug_valid/);
+  });
+
+  test("requires kebab-case people and meeting slugs", async ({ testDb }) => {
+    const sql = testDb.client;
+    await testDb.migrateTo(MIGRATION);
+    const vector = `[${Array(192).fill(0).join(",")}]`;
+    await sql`INSERT INTO people (slug, voice_embedding) VALUES (NULL, ${vector}), ('kyle-kelley', ${vector})`;
+    await expect(
+      sql`INSERT INTO people (slug, voice_embedding) VALUES ('kyle--kelley', ${vector})`,
+    ).rejects.toThrow(/people_slug_valid/);
+    await sql`INSERT INTO meetings (slug, site_kind, site_id, timezone)
+      VALUES ('gbos-2026-03-23', 'youtube', 'a', 'America/Anchorage')`;
+    await expect(
+      sql`INSERT INTO meetings (slug, site_kind, site_id, timezone)
+        VALUES ('GBOS 2026', 'youtube', 'b', 'America/Anchorage')`,
+    ).rejects.toThrow(/meetings_slug_valid/);
   });
 });
