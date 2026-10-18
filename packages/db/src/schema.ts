@@ -28,9 +28,12 @@ import type {
 
 const secondsInterval = () => interval({ fields: "second", precision: 3 });
 
-/** A check that a slug is lowercase kebab-case, eg "gbos" or "land-use". */
+/** Every slug column's format: lowercase kebab-case, eg "gbos" or "land-use". */
+export const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+
+/** A check that a slug column matches {@link SLUG_PATTERN}. */
 const kebabCase = (column: AnyPgColumn) =>
-  sql`${column} ~ '^[a-z0-9]+(-[a-z0-9]+)*$'`;
+  sql`${column} ~ '${sql.raw(SLUG_PATTERN.source)}'`;
 
 /**
  * A government: the Municipality of Anchorage, the City & Borough of Juneau.
@@ -162,6 +165,7 @@ export const meetingsTable = pgTable(
       "meetings_time_requires_date",
       sql`${table.time} IS NULL OR ${table.date} IS NOT NULL`,
     ),
+    check("meetings_slug_valid", kebabCase(table.slug)),
     check("meetings_slug_not_numeric", sql`${table.slug} !~ '^[0-9]+$'`),
     check(
       "meetings_site_kind_known",
@@ -237,6 +241,7 @@ export const peopleTable = pgTable(
     voice_embedding: vector({ dimensions: VOICE_N_DIMENSIONS }).notNull(),
   },
   (table) => [
+    check("people_slug_valid", kebabCase(table.slug)),
     index("idx_voice_embedding_l2").using(
       "hnsw",
       table.voice_embedding.op("vector_l2_ops"),
