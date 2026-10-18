@@ -20,7 +20,6 @@ export interface GoldenJurisdiction {
   /** As in `jurisdictions.slug`, eg "moa". */
   slug: string;
   name: string;
-  name_short: string;
   state: string;
 }
 

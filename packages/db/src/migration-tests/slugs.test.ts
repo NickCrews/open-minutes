@@ -27,7 +27,9 @@ const test = dbTest({
 });
 
 describe(MIGRATION, () => {
-  test("backfills kebab-case slugs from name_short", async ({ testDb }) => {
+  test("backfills kebab-case slugs from name_short, then drops jurisdictions.name_short", async ({
+    testDb,
+  }) => {
     const sql = testDb.client;
     expect(await testDb.migrateTo(MIGRATION)).toEqual([
       expect.stringMatching(new RegExp(`_${MIGRATION}$`)),
@@ -44,6 +46,10 @@ describe(MIGRATION, () => {
       { id: 3, slug: "gbos-3" },
       { id: 4, slug: "body-4" },
     ]);
+    expect(
+      await sql`SELECT column_name FROM information_schema.columns
+        WHERE table_name = 'jurisdictions' AND column_name = 'name_short'`,
+    ).toEqual([]);
   });
 
   test("requires a unique kebab-case slug", async ({ testDb }) => {

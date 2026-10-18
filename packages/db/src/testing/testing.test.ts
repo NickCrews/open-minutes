@@ -17,7 +17,6 @@ describe("createTestDb", () => {
     await db.insert(jurisdictionsTable).values({
       slug: "isolation-check",
       name: "Isolation Check",
-      name_short: "isolation-check",
     });
     const rows = await db.select().from(jurisdictionsTable);
     expect(rows).toHaveLength(1);
@@ -27,7 +26,6 @@ describe("createTestDb", () => {
     await db.insert(jurisdictionsTable).values({
       slug: "isolation-check",
       name: "Isolation Check",
-      name_short: "isolation-check",
     });
     const rows = await db.select().from(jurisdictionsTable);
     expect(rows).toHaveLength(1);
@@ -59,7 +57,7 @@ const seeded = dbTest({
     apply: async (db) => {
       await db
         .insert(jurisdictionsTable)
-        .values({ slug: "seeded", name: "Seeded", name_short: "seeded" });
+        .values({ slug: "seeded", name: "Seeded" });
     },
   },
 });
@@ -67,13 +65,13 @@ const seeded = dbTest({
 describe("dbTest({ data })", () => {
   seeded("clones start with the declared data", async ({ db }) => {
     const rows = await db.select().from(jurisdictionsTable);
-    expect(rows.map((r) => r.name_short)).toEqual(["seeded"]);
+    expect(rows.map((r) => r.slug)).toEqual(["seeded"]);
   });
 
   seeded("and stay isolated from each other", async ({ db }) => {
     await db
       .insert(jurisdictionsTable)
-      .values({ slug: "extra", name: "Extra", name_short: "extra" });
+      .values({ slug: "extra", name: "Extra" });
     const rows = await db.select().from(jurisdictionsTable);
     expect(rows).toHaveLength(2);
   });

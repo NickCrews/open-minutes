@@ -34,7 +34,6 @@ export function mapSnapshot(data: TestData): MappedRows {
       id,
       slug: j.slug,
       name: j.name,
-      name_short: j.name_short,
       state: j.state,
     };
   });

@@ -55,7 +55,7 @@ describe("goldenData", () => {
   goldenTest("new rows get fresh ids after a seed", async ({ db }) => {
     const [row] = await db
       .insert(jurisdictionsTable)
-      .values({ slug: "later", name: "Added Later", name_short: "later" })
+      .values({ slug: "later", name: "Added Later" })
       .returning({ id: jurisdictionsTable.id });
     expect(row!.id).toBe(snapshot.jurisdictions.length + 1);
   });

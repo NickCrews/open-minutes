@@ -47,12 +47,12 @@ async function sqlFor<T>(
   }
 }
 
-async function jurisdictionNames(name: string): Promise<string[]> {
+async function jurisdictionSlugs(name: string): Promise<string[]> {
   return sqlFor(name, async (sql) =>
     (
-      await sql<{ name_short: string }[]>`
-        SELECT name_short FROM jurisdictions ORDER BY name_short`
-    ).map((r) => r.name_short),
+      await sql<{ slug: string }[]>`
+        SELECT slug FROM jurisdictions ORDER BY slug`
+    ).map((r) => r.slug),
   );
 }
 
@@ -65,11 +65,9 @@ function markerData(fingerprint: string) {
     async apply(db) {
       state.runs++;
       await db.delete(jurisdictionsTable);
-      await db.insert(jurisdictionsTable).values({
-        slug: `marker-${fingerprint}`,
-        name: `Marker ${fingerprint}`,
-        name_short: fingerprint,
-      });
+      await db
+        .insert(jurisdictionsTable)
+        .values({ slug: fingerprint, name: `Marker ${fingerprint}` });
     },
   } satisfies DataState & { runs: number };
   return state;
@@ -127,7 +125,7 @@ describe("ensureDatabase", () => {
     });
     expect(result.clonedFrom).toBe(source);
     expect(result.applied).toEqual([]);
-    expect(await jurisdictionNames(branch)).toEqual(["main"]);
+    expect(await jurisdictionSlugs(branch)).toEqual(["main"]);
   });
 
   test("falls back to an empty database when the clone source is busy", async () => {
@@ -198,7 +196,7 @@ describe("ensureDatabase", () => {
     await expect(
       ensureDatabase(url, { ...quiet, schemaReset: "never" }),
     ).rejects.toThrow(/29990101000000_from_another_branch/);
-    expect(await jurisdictionNames(name)).toEqual(["keep"]);
+    expect(await jurisdictionSlugs(name)).toEqual(["keep"]);
   });
 
   test("the refusal on a local database points at up and wipe", async () => {
@@ -245,7 +243,7 @@ describe("ensureDatabase", () => {
     const url = urlForDatabase(base, name);
     await ensureDatabase(url, { ...quiet, data: markerData("before") });
     await sqlFor(name, async (sql) => {
-      await sql`UPDATE jurisdictions SET name_short = 'mine'`;
+      await sql`UPDATE jurisdictions SET slug = 'mine'`;
     });
 
     const after = markerData("after");
@@ -257,7 +255,7 @@ describe("ensureDatabase", () => {
     expect(result.schemaReset).toBe(true);
     expect(result.applied.length).toBe(localMigrations().length);
     expect(result.dataApplied).toBe(true);
-    expect(await jurisdictionNames(name)).toEqual(["after"]);
+    expect(await jurisdictionSlugs(name)).toEqual(["after"]);
   });
 
   test("schemaReset always: a new database is only created, not reset", async () => {
@@ -316,7 +314,7 @@ describe("ensureDatabase", () => {
     const result = await ensureDatabase(url, { ...quiet, data: after });
     expect(result.applied.length).toBe(localMigrations().length);
     expect(result.dataApplied).toBe(true);
-    expect(await jurisdictionNames(name)).toEqual(["after"]);
+    expect(await jurisdictionSlugs(name)).toEqual(["after"]);
   });
 
   test("wipeDatabase refuses a remote database", async () => {
@@ -374,7 +372,7 @@ describe("declared data", () => {
         })
       ).dataApplied,
     ).toBe(true);
-    expect(await jurisdictionNames(name)).toEqual(["v2"]);
+    expect(await jurisdictionSlugs(name)).toEqual(["v2"]);
     expect((await databaseStatus(url)).data).toMatchObject({
       name: "marker",
       fingerprint: "v2",
@@ -387,7 +385,7 @@ describe("declared data", () => {
     const data = markerData("v1");
     await ensureDatabase(url, { ...quiet, data });
     await sqlFor(name, async (sql) => {
-      await sql`UPDATE jurisdictions SET name_short = 'mine'`;
+      await sql`UPDATE jurisdictions SET slug = 'mine'`;
     });
 
     const result = await ensureDatabase(url, {
@@ -397,7 +395,7 @@ describe("declared data", () => {
     });
     expect(result.dataApplied).toBe(true);
     expect(data.runs).toBe(2);
-    expect(await jurisdictionNames(name)).toEqual(["v1"]);
+    expect(await jurisdictionSlugs(name)).toEqual(["v1"]);
   });
 
   test("dataReset never: seeds a new database, but never overwrites existing data", async () => {
@@ -410,7 +408,7 @@ describe("declared data", () => {
 
     // Your local edits, then the declared data changes upstream.
     await sqlFor(name, async (sql) => {
-      await sql`UPDATE jurisdictions SET name_short = 'mine'`;
+      await sql`UPDATE jurisdictions SET slug = 'mine'`;
     });
     const v2 = markerData("v2");
     const logs: string[] = [];
@@ -420,7 +418,7 @@ describe("declared data", () => {
     });
     expect(result.dataApplied).toBe(false);
     expect(v2.runs).toBe(0);
-    expect(await jurisdictionNames(name)).toEqual(["mine"]);
+    expect(await jurisdictionSlugs(name)).toEqual(["mine"]);
     expect(logs.join("\n")).toMatch(/Leaving your data alone/);
   });
 
@@ -443,7 +441,7 @@ describe("declared data", () => {
     const url = urlForDatabase(base, name);
     await ensureDatabase(url, quiet);
     await sqlFor(name, async (sql) => {
-      await sql`INSERT INTO jurisdictions (slug, name, name_short) VALUES ('mine', 'Mine', 'mine')`;
+      await sql`INSERT INTO jurisdictions (slug, name) VALUES ('mine', 'Mine')`;
     });
     const data = markerData("x");
     const result = await ensureDatabase(url, {
