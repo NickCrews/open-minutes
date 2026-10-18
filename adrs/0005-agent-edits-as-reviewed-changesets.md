@@ -15,9 +15,9 @@ before it lands.
 
 ## Decision
 
-An agent's work product is a **changeset**: a SQL file of data changes, plus
-preconditions, checked against the database without committing, and applied
-only after review.
+An agent's work product is a **changeset**: one SQL file of data changes and
+assertions, checked against the database without committing, and applied only
+after review.
 
 ### Data model
 
@@ -25,8 +25,8 @@ only after review.
 - An agent works on one changeset. Its **before** is main as it is when the
   harness checks the changeset; its **after** is before plus the changeset.
 - A changeset holds:
-  - `migration.sql`: the Postgres statements to apply, in order.
-  - `preconditions.sql`: optional queries that must hold before applying.
+  - `migration.sql`: the Postgres statements to apply, in order, with its
+    assertions among them.
   - `rationale.md`: optional notes for the reviewer.
   - The **row diff**: the rows `migration.sql` inserted, updated and deleted
     at its latest check, and when that check ran.
@@ -38,11 +38,10 @@ The harness computes after in a transaction on main that it always rolls
 back:
 
 1. `BEGIN`
-2. Run `preconditions.sql` (on before).
-3. Run `migration.sql`.
-4. Compute the row diff, run `check_meeting` and any other assertions, and
-   answer the agent's queries (on after).
-5. `ROLLBACK`
+2. Run `migration.sql`.
+3. Compute the row diff, run `check_meeting`, and answer the agent's queries
+   (on after).
+4. `ROLLBACK`
 
 This needs nothing but Postgres, so it works on any provider, locally and in
 tests. A check holds locks on the rows it touches until it rolls back;
@@ -53,17 +52,17 @@ agent's own access to the database is read-only.
 ### Agent UX
 
 The agent is an ordinary coding agent (bash, read, write, edit). It writes
-`migration.sql` and `preconditions.sql`. The harness takes those files as the
-final product.
+`migration.sql`, and optionally `rationale.md`. The harness takes those files
+as the final product.
 
-The agent works in a loop of editing the files and running the harness:
+The agent works in a loop of editing the file and running the harness:
 
-- `om changeset check`: runs a check and prints the precondition results, a
-  summary of the row diff, and the change in `check_meeting` results (issues
-  fixed and issues introduced).
+- `om changeset check`: runs a check and prints the first failed assertion if
+  any, else a summary of the row diff and the change in `check_meeting`
+  results (issues fixed and issues introduced).
 - `om changeset query '<sql>'`: runs the query on after, inside a check.
 
-After is always rebuilt from the files, so the files and the result can't
+After is always rebuilt from the file, so the file and the result can't
 drift apart. The agent also keeps read-only access to main and the read-only
 tools (transcript, people, audio).
 
@@ -84,18 +83,38 @@ Applying is a check that commits:
 1. `BEGIN`
 2. Insert the changeset's row into a `changesets` table, keyed by its id. A
    second apply fails on the key, so double-apply is impossible.
-3. Run `preconditions.sql`. Any failure aborts.
-4. Run `migration.sql`.
-5. Compute the row diff and compare it to the approved one. A mismatch rolls
-   back and marks the changeset conflicted, needing review again.
-6. `COMMIT`
+3. Run `migration.sql`. A failed assertion rolls back and marks the
+   changeset conflicted.
+4. Compute the row diff and compare it to the approved one. A mismatch rolls
+   back and marks the changeset conflicted.
+5. `COMMIT`
 
-### Preconditions
+A conflicted changeset needs review again.
 
-Each precondition is a query that returns the rows breaking it; zero rows
-passes. Returning rows instead of a boolean makes a failure explain itself.
-Preconditions express intent ("this person still has no slug"); the row diff
-comparison catches the rest.
+### Assertions
+
+An assertion is a statement in `migration.sql` that raises an error when a
+condition fails, which aborts the transaction. A function in the schema keeps
+them short:
+
+```sql
+SELECT om.assert(
+  NOT EXISTS (SELECT 1 FROM people WHERE id = 12 AND slug IS NOT NULL),
+  'person 12 already has a slug'
+);
+UPDATE people SET slug = 'jane-doe', name = 'Jane Doe' WHERE id = 12;
+SELECT om.assert(
+  (SELECT count(*) FROM segments WHERE person_id = 12) = 40,
+  'person 12 should have 40 segments'
+);
+```
+
+An assertion can go anywhere in the file: before the changes as a
+precondition, between them, or after them as a postcondition. `om.assert`
+raises with its own SQLSTATE, so the harness tells a failed assertion (the
+data isn't what the changeset expects) from any other error (a bug in the
+SQL). Assertions express intent ("this person still has no slug"); the row
+diff comparison catches the rest.
 
 ### Stable references to new rows
 
@@ -119,8 +138,9 @@ content and relationships, not id.
 ### What a changeset may do
 
 `migration.sql` changes data only. Schema changes stay in drizzle migrations.
-It runs as a role that can only insert, update and delete on the data tables:
-no DDL, `TRUNCATE`, `setval`, `SET ROLE` or transaction control.
+It runs as a role that can only read, insert, update and delete on the data
+tables and call `om.assert`: no DDL, `TRUNCATE`, `setval`, `SET ROLE` or
+transaction control.
 
 The diff comparison ignores columns filled by non-deterministic defaults (eg
 `chapter_generations.generated_at`).
@@ -153,6 +173,9 @@ superseded as the other outcomes.
   that has moved, and it overwrites concurrent changes to the same rows.
 - **Store only the SQL.** The same statements can change different rows on a
   moved main, and the reviewer would approve SQL, not its effect.
+- **Preconditions in their own file.** The harness could run them alone, but
+  inside a rolled-back transaction that saves nothing, and a separate file
+  can't express checks between changes or after them.
 - **Capture statements from the agent's session log.** Mixes exploration,
   failed attempts and reads into the record.
 - **Postgres functions for edit operations** (`SELECT om.split_segment(...)`).
