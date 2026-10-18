@@ -39,9 +39,16 @@ back:
 
 1. `BEGIN`
 2. Run `migration.sql`.
-3. Compute the row diff, run `check_meeting`, and answer the agent's queries
+3. Read the row diff, run `check_meeting`, and answer the agent's queries
    (on after).
 4. `ROLLBACK`
+
+`migration.sql` runs on its own connection as the `changeset` role, inside
+`om.run(sql)`, a plpgsql function that `EXECUTE`s it, where `COMMIT` and
+`ROLLBACK` raise instead of ending the transaction. An `AFTER` row trigger on
+each data table writes the old and new row to a log table when `session_user`
+is `changeset`, which the changeset's SQL can't change. The row diff is that
+log, read before the rollback.
 
 This needs nothing but Postgres, so it works on any provider, locally and in
 tests. A check holds locks on the rows it touches until it rolls back;
@@ -85,8 +92,9 @@ Applying is a check that commits:
    second apply fails on the key, so double-apply is impossible.
 3. Run `migration.sql`. A failed assertion rolls back and marks the
    changeset conflicted.
-4. Compute the row diff and compare it to the approved one. A mismatch rolls
-   back and marks the changeset conflicted.
+4. Compare the row diff to the approved one, as described under
+   [Row identity](#row-identity). A mismatch rolls back and marks the
+   changeset conflicted.
 5. `COMMIT`
 
 A conflicted changeset needs review again.
@@ -116,33 +124,37 @@ data isn't what the changeset expects) from any other error (a bug in the
 SQL). Assertions express intent ("this person still has no slug"); the row
 diff comparison catches the rest.
 
-### Stable references to new rows
+### Row identity
 
-Ids are `serial`. A row the changeset inserts can get a different id at apply
-time than at check time. A literal reference to a new row's id is a bug:
+The agent writes ordinary SQL and never handles ids. A new row is referred to
+however is natural: a CTE over `INSERT ... RETURNING`, a lookup by slug, or
+`currval`.
 
-```sql
-INSERT INTO people (name) VALUES ('Jane Doe');          -- id 57 at check time
-UPDATE segments SET person_id = 57 WHERE id IN (...);   -- another id at apply
-```
+Every check and every apply runs on main, so every new row's id comes from
+main's sequences, and the references within one run are consistent. Across
+runs a new row gets a different id, so the harness compares row diffs with
+each inserted row's id replaced by a placeholder (`<new people 1>`), there and
+in every foreign key column that points at it, found from the catalog.
 
-New rows are referenced through `INSERT ... RETURNING` in a CTE, or by slug.
+Sequences are not transactional: an id drawn in a rolled-back check is used
+up and never belongs to a committed row. So if an agent copies a new row's id
+out of a check's output into `migration.sql`, the next check fails on the
+foreign key. Every column that holds another row's id has a foreign key.
 
-Sequences are not transactional: a rolled-back check still uses up the ids it
-drew. So every check runs `migration.sql` twice, in two rolled-back
-transactions. The second run's new rows get different ids, so a hardcoded id
-points at a row that no longer exists and fails a foreign key, or shows up as
-a difference between the two diffs. The diff comparison matches new rows by
-content and relationships, not id.
+[Research](../docs/research/agent-changesets.md) covers how other systems
+handle this, and a prototype that tests it.
 
 ### What a changeset may do
 
 `migration.sql` changes data only. Schema changes stay in drizzle migrations.
-It runs as a role that can only read, insert, update and delete on the data
-tables and call `om.assert`: no DDL, `TRUNCATE`, `setval`, `SET ROLE` or
-transaction control.
+The `changeset` role reads every table, and its column-level grants let it
+insert and update only data columns: not `id`, not generated columns, not
+columns filled by defaults such as `created_at`. It has `USAGE` on the
+sequences, so defaults work, but not `UPDATE`, so it can't `setval`. It can't
+run DDL, `TRUNCATE`, `SET ROLE` to another role, or
+`session_replication_role` (which would disable the capture triggers).
 
-The diff comparison ignores columns filled by non-deterministic defaults (eg
+The diff comparison ignores columns filled by `now()` defaults (eg
 `chapter_generations.generated_at`).
 
 ### Domain invariants
@@ -168,9 +180,16 @@ superseded as the other outcomes.
   after the agent can open with any client, but ties the design to a provider
   with cheap branches or to copying the database. Copies can't use `TEMPLATE`
   on a live production database, which must be idle to be a template.
-- **Store only the row diff and apply it.** A diff is exact for the database
-  it was computed on but has no intent to replay: it can't adapt to a main
-  that has moved, and it overwrites concurrent changes to the same rows.
+- **UUID keys.** They help when ids are minted in several disconnected
+  places (branches, clones, offline clients). Here ids are minted only by
+  main's sequences, so serial ids work.
+- **Apply the approved row diff instead of replaying the SQL.** Each change
+  is guarded by its row's approved before-image, and new rows keep the ids
+  the check drew, which nobody else can have. It applies exactly what was
+  reviewed. But it can't re-run the changeset's assertions, so an assumption
+  about rows the changeset didn't touch goes unchecked. When main gains a row
+  the SQL's `WHERE` would now match, it applies without that row, where replay
+  flags a conflict.
 - **Store only the SQL.** The same statements can change different rows on a
   moved main, and the reviewer would approve SQL, not its effect.
 - **Preconditions in their own file.** The harness could run them alone, but
