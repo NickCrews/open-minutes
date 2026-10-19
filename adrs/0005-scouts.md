@@ -25,7 +25,7 @@ Ingestion stays a separate step.
 ### Contract (`@open-minutes/core/scout`)
 
 ```ts
-interface RecordingId {
+interface Recording {
   site: "youtube" | "akleg";
   id: string;
 }
@@ -40,7 +40,7 @@ interface Scout {
 
 interface ScoutContext {
   /** The ones not yet reported, by any scout, as a meeting or rejected. */
-  unseen(recordings: readonly RecordingId[]): Promise<RecordingId[]>;
+  unseen(recordings: readonly Recording[]): Promise<Recording[]>;
   log(message: string): void;
   signal: AbortSignal;
   now: Date;
@@ -48,11 +48,11 @@ interface ScoutContext {
 
 interface ScoutReport {
   meetings: FoundMeeting[];
-  rejected: Array<{ recording: RecordingId; reason: string }>;
+  rejected: Array<{ recording: Recording; reason: string }>;
 }
 
 interface FoundMeeting {
-  recording: RecordingId;
+  recording: Recording;
   bodies: string[]; // at least one
   title: string;
   description: string;
