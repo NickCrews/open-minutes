@@ -27,8 +27,8 @@ Ingestion stays a separate step.
 ```ts
 interface Recording {
   site: "youtube" | "akleg";
-  permalink: string | null;
   id: string;
+  permalink: string | null;
 }
 
 interface Scout {
@@ -69,7 +69,7 @@ interface FoundMeeting {
 
 ### Storage
 
-- `recordings`: `site`, `recording_id` (unique together), `scout_id`, `found_at`, `is_meeting`, `reason`, `title`, `description`, `date`, `time`, `timezone`, `meeting_id` (nullable FK).
+- `recordings`: `site`, `recording_id` (unique together), `permalink`, `scout_id`, `found_at`, `is_meeting`, `reason`, `title`, `description`, `date`, `time`, `timezone`, `meeting_id` (nullable FK).
 - `recording_bodies`: `recording_id`, `body_id`.
 - An available meeting is a recording with `is_meeting` and no `meeting_id`.
 - `ingestMeeting` reads bodies, title, description and date from the recording, and sets `recordings.meeting_id` in its transaction.
