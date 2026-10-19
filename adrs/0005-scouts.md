@@ -77,6 +77,7 @@ export const recordingsTable = pgTable(
     site: varchar().$type<Site>().notNull(),
     recording_id: varchar().notNull(),
     permalink: varchar(),
+    // The `Scout.id` that reported it, eg "moa-youtube". Scouts live in code, so not a foreign key.
     scout_id: varchar().notNull(),
     found_at: timestamp().notNull().defaultNow(),
     is_meeting: boolean().notNull(),
