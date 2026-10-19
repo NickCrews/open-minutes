@@ -49,7 +49,7 @@ interface ScoutContext {
 
 interface ScoutReport {
   meetings: FoundMeeting[];
-  rejected: Array<{ recording: Recording; reason: string }>;
+  rejected: Array<{ recording: Recording; notes: string }>;
 }
 
 interface FoundMeeting {
@@ -60,6 +60,7 @@ interface FoundMeeting {
   date: string | null;
   time: string | null;
   timezone?: string; // defaults to the first body's
+  notes?: string;
 }
 ```
 
@@ -81,8 +82,9 @@ export const recordingsTable = pgTable(
     scout_id: varchar().notNull(),
     found_at: timestamp().notNull().defaultNow(),
     is_meeting: boolean().notNull(),
-    // Why a scout rejected it; null for a meeting.
-    reason: varchar(),
+    // The scout's notes on its decision: why it rejected a recording, or how it
+    // read a meeting's bodies, date and time.
+    notes: varchar().notNull().default(""),
     title: varchar().notNull().default(""),
     description: varchar().notNull().default(""),
     date: date({ mode: "string" }),
@@ -98,10 +100,6 @@ export const recordingsTable = pgTable(
       table.recording_id,
     ),
     check("recordings_site_known", sql`${table.site} IN ('youtube', 'akleg')`),
-    check(
-      "recordings_meeting_or_reason",
-      sql`${table.is_meeting} = (${table.reason} IS NULL)`,
-    ),
     check(
       "recordings_meeting_has_timezone",
       sql`NOT ${table.is_meeting} OR ${table.timezone} IS NOT NULL`,
