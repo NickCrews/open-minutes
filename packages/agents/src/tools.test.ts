@@ -1,6 +1,12 @@
 import { describe, expect, test as plainTest } from "vitest";
 import { dbTest } from "@open-minutes/db/testing/vitest";
+import { eq } from "drizzle-orm";
+import { checkMeeting as checkMeetingData } from "@open-minutes/core/rules";
+import { segmentsTable } from "@open-minutes/db";
+import { ruleMeeting } from "@open-minutes/fixtures/check";
 import { devData } from "@open-minutes/fixtures/dev-data";
+import { loadAllTestData } from "@open-minutes/fixtures/test-data";
+import { checkMeeting } from "./check";
 import { toolContext } from "./context";
 import {
   callTool,
@@ -47,7 +53,7 @@ describe("reading", () => {
   test("lists meetings with their sizes", async ({ db }) => {
     const meetings = await callTool(toolContext(db), listMeetings, {});
     const gbos = meetings.find((m) => m.slug === GBOS);
-    expect(gbos).toMatchObject({ bodies: ["GBOS"], chapters: 34 });
+    expect(gbos).toMatchObject({ bodies: ["gbos"], chapters: 34 });
     expect(gbos!.segments).toBeGreaterThan(200);
   });
 
@@ -80,6 +86,45 @@ describe("reading", () => {
     ).toEqual([]);
   });
 
+  test("checks every golden by the same rules as its files", async ({ db }) => {
+    const meetings = await callTool(toolContext(db), listMeetings, {});
+    for (const golden of loadAllTestData().meetings) {
+      const { id } = meetings.find((m) => m.slug === golden.slug)!;
+      const summary = (i: {
+        severity: string;
+        code: string;
+        message: string;
+      }) => `${golden.slug}: ${i.severity} ${i.code}: ${i.message}`;
+      expect((await checkMeeting(db, id)).map(summary)).toEqual(
+        (await checkMeetingData(ruleMeeting(golden))).map(summary),
+      );
+    }
+  });
+
+  test("reports a filler as an error", async ({ db }) => {
+    const { id } = await brianSegment(db);
+    const [row] = await db
+      .select({ words: segmentsTable.words })
+      .from(segmentsTable)
+      .where(eq(segmentsTable.id, id));
+    const [first, ...rest] = row!.words;
+    await db
+      .update(segmentsTable)
+      .set({
+        words: [{ text: "Um,", start: first!.start - 0.1 }, first!, ...rest],
+      })
+      .where(eq(segmentsTable.id, id));
+    expect(
+      await callTool(toolContext(db), checkMeetingTool, { meeting: GBOS }),
+    ).toEqual([
+      expect.objectContaining({
+        severity: "error",
+        code: "filler-word",
+        segmentId: id,
+      }),
+    ]);
+  });
+
   test("takes a meeting by slug or by id", async ({ db }) => {
     const meetings = await callTool(toolContext(db), listMeetings, {});
     const { id } = meetings.find((m) => m.slug === GBOS)!;
@@ -110,28 +155,13 @@ describe("reading", () => {
 });
 
 describe("relabel_segments", () => {
-  test("a dry run saves nothing", async ({ db }) => {
-    const seg = await brianSegment(db);
-    const mike = await personId(db, "mike-edgington");
-    const out = await callTool(toolContext(db), relabelSegments, {
-      segmentIds: [seg.id],
-      speaker: { personId: mike },
-      dryRun: true,
-    });
-    expect(out.applied).toBe(false);
-    expect(out.issues).toEqual([]);
-    expect((await brianSegment(db)).speaker).toMatchObject({
-      slug: "brian-burnett",
-    });
-  });
-
   test("saves, and can make speech unattributed", async ({ db }) => {
     const seg = await brianSegment(db);
     const out = await callTool(toolContext(db), relabelSegments, {
       segmentIds: [seg.id],
       speaker: {},
     });
-    expect(out.applied).toBe(true);
+    expect(out).toEqual({ relabelled: 1 });
     expect((await brianSegment(db)).speaker).toBeNull();
   });
 });
@@ -144,21 +174,23 @@ describe("split_segment and merge_segments", () => {
       atWord: 3,
       speaker: { speakerNumber: 42 },
     });
-    expect(split.applied).toBe(true);
     const after = await callTool(toolContext(db), getTranscript, {
       meeting: GBOS,
     });
     const i = after.findIndex((s) => s.id === seg.id);
     expect(after[i]!.text).toBe("I have I");
     expect(after[i + 1]).toMatchObject({
-      id: split.result.newSegmentId,
+      id: split.newSegmentId,
       speaker: { speakerNumber: 42 },
     });
 
     const merged = await callTool(toolContext(db), mergeSegments, {
-      segmentIds: [split.result.newSegmentId, seg.id],
+      segmentIds: [split.newSegmentId, seg.id],
     });
-    expect(merged.applied).toBe(true);
+    expect(merged).toEqual({
+      segmentId: seg.id,
+      removed: [split.newSegmentId],
+    });
     expect((await brianSegment(db)).text).toBe(seg.text);
   });
 
@@ -191,7 +223,7 @@ describe("people", () => {
       personId: id,
       bio: "Landscape architect.",
     });
-    expect(out.result).toMatchObject({
+    expect(out).toMatchObject({
       slug: "bray-keefer",
       bio: "Landscape architect.",
     });
@@ -231,11 +263,10 @@ describe("people", () => {
       )!.segments;
     const expected = segs("kellie-okonek") + segs("brianna-sullivan");
 
-    const out = await callTool(toolContext(db), mergePeople, {
+    await callTool(toolContext(db), mergePeople, {
       keepId: keep,
       mergeId: merge,
     });
-    expect(out.applied).toBe(true);
     const after = await callTool(toolContext(db), listSpeakers, {
       meeting: GBOS,
     });
@@ -259,18 +290,17 @@ describe("update_meeting", () => {
     const bodiesOf = async () =>
       (await callTool(ctx, listMeetings, {})).find((m) => m.slug === GBOS)!
         .bodies;
-    expect(await bodiesOf()).toEqual(["GBOS"]);
+    expect(await bodiesOf()).toEqual(["gbos"]);
 
     const result = await callTool(ctx, updateMeeting, {
       meeting: GBOS,
       bodies: ["gbos", "LUC", "luc"],
     });
-    expect(result.applied).toBe(true);
-    expect(result.result.bodies).toEqual(["GBOS", "LUC"]);
-    expect(await bodiesOf()).toEqual(["GBOS", "LUC"]);
+    expect(result.bodies).toEqual(["gbos", "luc"]);
+    expect(await bodiesOf()).toEqual(["gbos", "luc"]);
 
     await callTool(ctx, updateMeeting, { meeting: GBOS, bodies: ["gbos"] });
-    expect(await bodiesOf()).toEqual(["GBOS"]);
+    expect(await bodiesOf()).toEqual(["gbos"]);
   });
 
   test("sets the fields given and leaves the rest", async ({ db }) => {
@@ -278,7 +308,7 @@ describe("update_meeting", () => {
     const before = (await callTool(ctx, listMeetings, {})).find(
       (m) => m.slug === GBOS,
     )!;
-    const { result } = await callTool(ctx, updateMeeting, {
+    const result = await callTool(ctx, updateMeeting, {
       meeting: GBOS,
       title: "Renamed",
       time: "19:00",
@@ -289,7 +319,7 @@ describe("update_meeting", () => {
       date: before.date,
       time: "19:00:00",
       timezone: "America/Juneau",
-      bodies: ["GBOS"],
+      bodies: ["gbos"],
     });
 
     // Clearing the date clears the time with it.
@@ -297,7 +327,7 @@ describe("update_meeting", () => {
       meeting: GBOS,
       date: null,
     });
-    expect(cleared.result).toMatchObject({ date: null, time: null });
+    expect(cleared).toMatchObject({ date: null, time: null });
   });
 
   test("refuses bad values", async ({ db }) => {
@@ -335,48 +365,35 @@ describe("replace_chapters", () => {
         chapter(5000, 9957, "Second half"),
       ],
     });
-    expect(out.applied).toBe(true);
+    expect(out.chapters).toBe(2);
     expect(
       (await callTool(toolContext(db), getChapters, { meeting: GBOS })).map(
         (c) => c.title,
       ),
     ).toEqual(["First half", "Second half"]);
-    // Two 80-minute chapters break the size convention: warned, still saved.
-    expect(out.issues.every((i) => i.severity === "warning")).toBe(true);
   });
 
-  test("refuses overlapping chapters before touching the database", async ({
+  test("saves chapters that break the rules, for check_meeting to report", async ({
     db,
   }) => {
-    await expect(
-      callTool(toolContext(db), replaceChapters, {
-        meeting: GBOS,
-        model: "human",
-        chapters: [chapter(0, 100), chapter(50, 200)],
-      }),
-    ).rejects.toThrow(
-      /chapter 2 \("50"\) starts before the previous chapter ends/,
-    );
-  });
-
-  test("rolls back a change that introduces an error", async ({ db }) => {
-    const before = await callTool(toolContext(db), getChapters, {
-      meeting: GBOS,
-    });
-    const out = await callTool(toolContext(db), replaceChapters, {
+    await callTool(toolContext(db), replaceChapters, {
       meeting: GBOS,
       model: "human",
       chapters: [chapter(0, 99_999, "Runs past the end")],
     });
-    expect(out.applied).toBe(false);
-    expect(out.newErrors).toEqual([
+    expect(
+      (await callTool(toolContext(db), getChapters, { meeting: GBOS })).map(
+        (c) => c.title,
+      ),
+    ).toEqual(["Runs past the end"]);
+    expect(
+      await callTool(toolContext(db), checkMeetingTool, { meeting: GBOS }),
+    ).toContainEqual(
       expect.objectContaining({
+        severity: "error",
         message: expect.stringMatching(/ends after the meeting does/),
       }),
-    ]);
-    expect(
-      await callTool(toolContext(db), getChapters, { meeting: GBOS }),
-    ).toEqual(before);
+    );
   });
 });
 

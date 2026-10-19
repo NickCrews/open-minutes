@@ -17,22 +17,29 @@ export const TEST_DATA_ROOT = new URL("../test-data/", import.meta.url)
 // Fields prefixed with _ are test-only and do not exist in the DB.
 
 export interface GoldenJurisdiction {
-  id: string;
+  /** As in `jurisdictions.slug`, eg "moa". */
+  slug: string;
   name: string;
-  name_short: string;
   state: string;
 }
 
 export interface GoldenBody {
-  id: string;
-  /** Snapshot id of the jurisdiction this body sits inside (eg "moa"). */
-  jurisdiction_id: string;
+  /** As in `bodies.slug`, eg "gbos". */
+  slug: string;
+  /** Slug of the jurisdiction this body sits inside (eg "moa"). */
+  jurisdiction_slug: string;
   name: string;
   name_short: string;
   /** IANA zone the body meets in, eg "America/Anchorage". */
   timezone: string;
   /** As in `bodies.meeting_source`; absent for a body nobody scans. */
   meeting_source?: MeetingSource;
+  /**
+   * Codes of the body-specific rules its transcripts follow, from
+   * BODY_RULE_SPECS in @open-minutes/core/rules, eg ["bill-number"]. Not a DB
+   * column.
+   */
+  _rules?: string[];
 }
 
 export interface GoldenPerson {
@@ -46,10 +53,10 @@ export interface GoldenMeeting {
   /** The fixture's directory name, eg "gbos-2026-03-23": `meetings.slug`. */
   slug: string;
   /**
-   * Snapshot ids of the bodies that held it (eg ["gbos"], or ["gbos", "luc"]
+   * Slugs of the bodies that held it (eg ["gbos"], or ["gbos", "luc"]
    * for a joint meeting), as in `meeting_bodies`. At least one.
    */
-  body_ids: string[];
+  body_slugs: string[];
   /** IANA zone `date` and `time` read in (eg "America/Anchorage"). */
   timezone: string;
   /** Every fixture meeting is a YouTube video: `meetings.site_id`. */
@@ -156,6 +163,21 @@ export function loadPeople(): GoldenPerson[] {
 }
 
 /**
+ * The codes of the body-specific rules a meeting's transcript follows: those
+ * its bodies opt into with `_rules`.
+ */
+export function bodyRuleCodes(
+  bodySlugs: readonly string[],
+  root: string = TEST_DATA_ROOT,
+): string[] {
+  const bodies = parseJsonl<GoldenBody>(join(root, "bodies.jsonl"));
+  const codes = bodySlugs.flatMap(
+    (slug) => bodies.find((b) => b.slug === slug)?._rules ?? [],
+  );
+  return [...new Set(codes)];
+}
+
+/**
  * Load just the bodies (bodies.jsonl), without parsing any transcripts. For
  * tests that need a golden body's identifiers but not the whole snapshot.
  */
@@ -164,6 +186,16 @@ export function loadBodies(): GoldenBody[] {
   if (!existsSync(bodiesPath))
     throw new Error(`Bodies file not found: ${bodiesPath}`);
   return parseJsonl<GoldenBody>(bodiesPath);
+}
+
+/**
+ * A meeting directory's transcript: golden.psv for a verified golden meeting,
+ * transcript.psv for an unverified one. Undefined when it has neither.
+ */
+export function transcriptPath(meetingDir: string): string | undefined {
+  return ["golden.psv", "transcript.psv"]
+    .map((file) => join(meetingDir, file))
+    .find((path) => existsSync(path));
 }
 
 export function getMeetingData(
@@ -178,17 +210,14 @@ export function getMeetingData(
     throw new Error(`Meeting file not found: ${meetingPath}`);
   const meeting = parseJson<GoldenMeeting>(meetingPath);
   const when = parseGoldenWhen(meeting, meetingPath);
-  const body_ids = parseGoldenBodies(meeting, meetingPath);
+  const body_slugs = parseGoldenBodies(meeting, meetingPath);
   const timezoneError =
     typeof meeting.timezone === "string"
       ? ianaTimezoneError(meeting.timezone)
       : "timezone must be a string";
   if (timezoneError) throw new Error(`${meetingPath}: ${timezoneError}`);
 
-  // Golden fixtures are verified (golden.psv); dev fixtures aren't (transcript.psv).
-  const psvPath = ["golden.psv", "transcript.psv"]
-    .map((file) => join(meetingDir, file))
-    .find((path) => existsSync(path));
+  const psvPath = transcriptPath(meetingDir);
   if (!psvPath)
     throw new Error(`No golden.psv or transcript.psv in ${meetingDir}`);
   const segments = parsePsv({ path: psvPath });
@@ -201,7 +230,7 @@ export function getMeetingData(
   return {
     ...meeting,
     ...when,
-    body_ids,
+    body_slugs,
     slug: meetingSlug,
     meetingDir,
     segments,
@@ -210,21 +239,21 @@ export function getMeetingData(
 }
 
 /**
- * Validate a meeting.json's `body_ids`: one or more distinct body ids. Whether
+ * Validate a meeting.json's `body_slugs`: one or more distinct body slugs. Whether
  * each names a body in bodies.jsonl is checked where they're resolved (see
  * `meetingBodyIds`).
  */
 export function parseGoldenBodies(
-  raw: { body_ids?: unknown },
+  raw: { body_slugs?: unknown },
   source: string,
 ): string[] {
-  const ids = raw.body_ids;
-  if (!Array.isArray(ids) || !ids.every((id) => typeof id === "string"))
-    throw new Error(`${source}: body_ids must be an array of strings`);
-  if (ids.length === 0) throw new Error(`${source}: body_ids is empty`);
-  if (new Set(ids).size !== ids.length)
-    throw new Error(`${source}: body_ids has duplicates`);
-  return ids;
+  const slugs = raw.body_slugs;
+  if (!Array.isArray(slugs) || !slugs.every((s) => typeof s === "string"))
+    throw new Error(`${source}: body_slugs must be an array of strings`);
+  if (slugs.length === 0) throw new Error(`${source}: body_slugs is empty`);
+  if (new Set(slugs).size !== slugs.length)
+    throw new Error(`${source}: body_slugs has duplicates`);
+  return slugs;
 }
 
 /**

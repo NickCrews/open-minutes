@@ -36,7 +36,7 @@
 
 import { readFileSync, writeFileSync } from "node:fs";
 
-import { LAST_WORD_DURATION_SEC } from "@open-minutes/core/transcription";
+import { formatClock } from "@open-minutes/core/clock";
 import type {
   SpeechSegment,
   TranscriptSegment,
@@ -100,18 +100,6 @@ type PsvEvent =
 
 const COLUMN_HEADER = "start_sec|event_type|event_data";
 
-/** Format seconds as `H:MM:SS.ss` (rounded to the nearest hundredth). */
-export function formatTimestamp(sec: number): string {
-  const totalCs = Math.round(sec * 100);
-  const cs = totalCs % 100;
-  const totalSec = Math.floor(totalCs / 100);
-  const s = totalSec % 60;
-  const totalMin = Math.floor(totalSec / 60);
-  const m = totalMin % 60;
-  const h = Math.floor(totalMin / 60);
-  return `${h}:${pad2(m)}:${pad2(s)}.${pad2(cs)}`;
-}
-
 /** Parse a `H:MM:SS.ss` timestamp into seconds. */
 export function parseTimestamp(str: string): number {
   const parts = str.split(":");
@@ -128,10 +116,6 @@ export function parseTimestamp(str: string): number {
   // The format stores centisecond precision; round away float-summation noise
   // (e.g. 60 + 14.96 -> 74.96000000000001) so round-trips compare exactly.
   return Math.round(seconds * 100) / 100;
-}
-
-function pad2(n: number): string {
-  return n.toString().padStart(2, "0");
 }
 
 function parseSpeaker(label: string): SpeakerLabel {
@@ -156,7 +140,7 @@ function parseSpeaker(label: string): SpeakerLabel {
   throw new Error(`Unknown speaker label: ${JSON.stringify(label)}`);
 }
 
-function formatSpeaker(speaker: SpeakerLabel): string {
+export function formatSpeaker(speaker: SpeakerLabel): string {
   switch (speaker.kind) {
     case "unlabeled":
       return "unlabeled";
@@ -283,10 +267,10 @@ export function serializePsv(
   for (const segment of segments) {
     const start = segment.words[0]?.start ?? 0;
     rows.push(
-      `${formatTimestamp(start)}|meta|${JSON.stringify({ begin_speaker: formatSpeaker(segment.speaker) })}`,
+      `${formatClock(start)}|meta|${JSON.stringify({ begin_speaker: formatSpeaker(segment.speaker) })}`,
     );
     for (const w of segment.words) {
-      rows.push(`${formatTimestamp(w.start)}|text|${w.text}`);
+      rows.push(`${formatClock(w.start)}|text|${w.text}`);
     }
   }
   const content = [COLUMN_HEADER, ...rows].join("\n") + "\n";
@@ -294,68 +278,6 @@ export function serializePsv(
     writeFileSync(options.path, content);
   }
   return content;
-}
-
-/**
- * Re-apply the speaker layer of an existing golden onto a freshly transcribed
- * word stream, preserving the golden's segment boundaries AND their speaker
- * labels (including hand-assigned `identified` people).
- *
- * This backs the transcription snapshot refresh: re-transcribing shifts word
- * text/timings slightly, but the diarization + identification layers are curated
- * by hand and must survive. So rather than re-diarizing, we keep the reference's
- * segments and redistribute the new words into them by time. Boundaries between
- * two adjacent same-speaker reference segments are preserved (words are bucketed
- * by segment index, not merged by label), so the refresh never collapses the
- * hand-curated structure. Words are placed into the reference segment whose
- * `[firstWord, lastWord + LAST_WORD_DURATION_SEC]` span contains them, or the
- * nearest by midpoint when none does. Empty segments are dropped.
- *
- * Unlike align.ts's `alignSpeakers`, this is golden-only and label-aware; the
- * live pipeline stays ignorant of the `identified` tier.
- */
-export function reapplySpeakerLayer(
-  words: readonly TranscriptWord[],
-  reference: readonly GoldenSegment[],
-): GoldenSegment[] {
-  const ref = reference.filter((s) => s.words.length > 0);
-  if (ref.length === 0) {
-    return words.length > 0
-      ? [{ speaker: { kind: "unlabeled" }, words: [...words] }]
-      : [];
-  }
-  const spans = ref.map((s) => ({
-    start: s.words[0]!.start,
-    end: s.words.at(-1)!.start + LAST_WORD_DURATION_SEC,
-  }));
-  const buckets: TranscriptWord[][] = ref.map(() => []);
-  for (const word of words) {
-    buckets[nearestSpanIndex(word.start, spans)]!.push(word);
-  }
-  return ref
-    .map((s, i) => ({ speaker: s.speaker, words: buckets[i]! }))
-    .filter((s) => s.words.length > 0);
-}
-
-/** Index of the span containing `t`, else the nearest span by midpoint. */
-function nearestSpanIndex(
-  t: number,
-  spans: readonly { start: number; end: number }[],
-): number {
-  for (let i = 0; i < spans.length; i++) {
-    if (t >= spans[i]!.start && t < spans[i]!.end) return i;
-  }
-  let best = 0;
-  let bestDist = Infinity;
-  for (let i = 0; i < spans.length; i++) {
-    const mid = (spans[i]!.start + spans[i]!.end) / 2;
-    const dist = Math.abs(t - mid);
-    if (dist < bestDist) {
-      bestDist = dist;
-      best = i;
-    }
-  }
-  return best;
 }
 
 /**
@@ -372,16 +294,16 @@ export function serializeVadRunsPsv(
 ): string {
   const rows: string[] = [];
   rows.push(
-    `${formatTimestamp(runs[0]?.start ?? 0)}|meta|${JSON.stringify({ begin_speaker: "unlabeled" })}`,
+    `${formatClock(runs[0]?.start ?? 0)}|meta|${JSON.stringify({ begin_speaker: "unlabeled" })}`,
   );
   runs.forEach((run, i) => {
     const data = {
       index: i,
       dur: Math.round((run.end - run.start) * 100) / 100,
     };
-    rows.push(`${formatTimestamp(run.start)}|vad|${JSON.stringify(data)}`);
+    rows.push(`${formatClock(run.start)}|vad|${JSON.stringify(data)}`);
     for (const w of run.words) {
-      rows.push(`${formatTimestamp(w.start)}|text|${w.text}`);
+      rows.push(`${formatClock(w.start)}|text|${w.text}`);
     }
   });
   const content = [COLUMN_HEADER, ...rows].join("\n") + "\n";

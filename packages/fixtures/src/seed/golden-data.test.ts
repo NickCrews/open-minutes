@@ -21,15 +21,13 @@ describe("goldenData", () => {
       const jurisdictions = await db.select().from(jurisdictionsTable);
       expect(jurisdictions).toHaveLength(snapshot.jurisdictions.length);
       for (const j of snapshot.jurisdictions) {
-        expect(jurisdictions.some((r) => r.name_short === j.name_short)).toBe(
-          true,
-        );
+        expect(jurisdictions.some((r) => r.slug === j.slug)).toBe(true);
       }
 
       const bodies = await db.select().from(bodiesTable);
       expect(bodies).toHaveLength(snapshot.bodies.length);
       for (const b of snapshot.bodies) {
-        expect(bodies.some((r) => r.name_short === b.name_short)).toBe(true);
+        expect(bodies.some((r) => r.slug === b.slug)).toBe(true);
       }
     },
   );
@@ -57,7 +55,7 @@ describe("goldenData", () => {
   goldenTest("new rows get fresh ids after a seed", async ({ db }) => {
     const [row] = await db
       .insert(jurisdictionsTable)
-      .values({ name: "Added Later", name_short: "later" })
+      .values({ slug: "later", name: "Added Later" })
       .returning({ id: jurisdictionsTable.id });
     expect(row!.id).toBe(snapshot.jurisdictions.length + 1);
   });

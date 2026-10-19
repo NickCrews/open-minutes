@@ -231,8 +231,9 @@ conventions so text search and agents can find it:
 - A chapter that ends in a formal vote says so, with the result, in its
   summary: "The board voted 4-1 to send the letter."
 - Dashes are plain hyphens ("4-1", "2019-2022"), never en or em dashes.
-  `chapterErrors` in @open-minutes/core refuses them, so `replace_chapters`
-  and `pnpm fixtures:check` do too.
+  The `typographic-dash` rule in @open-minutes/core reports them, so
+  `check_meeting` and `pnpm fixtures:check` do too, and its fix
+  (`pnpm fixtures:fix`) writes plain hyphens.
 - Procedural chapters get plain, predictable titles: "Call to order and roll
   call", "Approval of agenda and minutes", "Adjournment".
 
@@ -659,9 +660,10 @@ Notes on reconciling with existing tickets:
     matching meeting, and non-blank title, summary and bullets. Coverage and
     the size conventions span rows or are guidance, so they live in code (see
     below) and are reported as warnings.
-- **Rules** (`packages/core/src/chapters.ts`): validation (ordered,
-  non-overlapping, in bounds), the size conventions as warnings, uncovered
-  speech, the active chapter at a time, and the `?t=` snap rule.
+- **Rules** (`packages/core/src/rules/`): what chapters must follow, such
+  as being ordered and in bounds, checked in the database and in the golden
+  fixtures alike. The active chapter at a time and the `?t=` snap rule are
+  in `packages/core/src/chapters.ts`.
 - **Data**: `chapters.json` next to a golden meeting's transcript holds its
   chapters and their generation. The March 23, 2026 GBOS meeting has a set,
   written by Claude from the golden transcript and not yet reviewed by a

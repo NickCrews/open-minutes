@@ -107,7 +107,7 @@ export async function seedDevDatabase(db: DB): Promise<DevSeedSummary> {
   });
 
   const meetingBodies = snapshot.meetings.flatMap((m, i) =>
-    meetingBodyIds(m, mapped.bodyIdByKey).map((body_id) => ({
+    meetingBodyIds(m, mapped.bodyIdBySlug).map((body_id) => ({
       meeting_id: i + 1,
       body_id,
     })),

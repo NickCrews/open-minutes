@@ -1,102 +1,93 @@
 import { eq } from "drizzle-orm";
 import { meetingBodiesTable, meetingsTable } from "@open-minutes/db";
 import {
-  chapterErrors,
-  chapterWarnings,
-  uncoveredSpeech,
-} from "@open-minutes/core/chapters";
-import { LAST_WORD_DURATION_SEC } from "@open-minutes/core/transcription";
+  checkMeeting as checkMeetingData,
+  type MeetingIssue,
+} from "@open-minutes/core/rules";
 import { type Db, ToolError } from "./tool";
 import { intervalSecs, loadChapters, loadSegments } from "./load";
 
-/** Something wrong, or probably wrong, with a meeting's data. */
-export interface Issue {
-  /** error: the data is wrong. warning: probably wrong, or a broken convention. */
-  severity: "error" | "warning";
-  message: string;
-  segmentId?: number;
-  chapterId?: number;
-  /** Seconds into the meeting, where the problem is. */
-  at?: number;
-}
+/**
+ * Something wrong, or probably wrong, with a meeting's data: a result from
+ * @open-minutes/core/rules with its severity, and with the segment
+ * and chapter it names given by row id.
+ */
+export type Issue = Located<MeetingIssue>;
+
+type Located<I> = I extends unknown
+  ? Omit<I, "segmentIndex" | "chapterIndex" | "interleaves"> &
+      (I extends { segmentIndex: number } ? { segmentId: number } : unknown) &
+      (I extends { chapterIndex: number } ? { chapterId: number } : unknown) &
+      (I extends { interleaves: unknown }
+        ? {
+            interleaves: {
+              segmentId: number;
+              fromSecs: number;
+              toSecs: number;
+            }[];
+          }
+        : unknown)
+  : never;
 
 /**
- * Check a meeting's bodies, transcript and chapters: it has a body, and,
- * against the rules in @open-minutes/core, words in time order, segments not
- * interleaved, chapters valid, and every stretch of speech in a chapter.
+ * Check a meeting's bodies, transcript and chapters against the rules in
+ * @open-minutes/core/rules, the same ones the golden fixtures follow.
  */
 export async function checkMeeting(
   db: Db,
   meetingId: number,
 ): Promise<Issue[]> {
   const [meeting] = await db
-    .select({ duration: meetingsTable.duration_secs })
+    .select({
+      title: meetingsTable.title,
+      description: meetingsTable.description,
+      duration: meetingsTable.duration_secs,
+    })
     .from(meetingsTable)
     .where(eq(meetingsTable.id, meetingId));
   if (!meeting) throw new ToolError(`No meeting ${meetingId}`);
   const segments = await loadSegments(db, meetingId);
   const chapters = await loadChapters(db, meetingId);
-  const issues: Issue[] = [];
-
   const bodies = await db
     .select({ id: meetingBodiesTable.body_id })
     .from(meetingBodiesTable)
     .where(eq(meetingBodiesTable.meeting_id, meetingId));
-  if (bodies.length === 0)
-    issues.push({ severity: "error", message: "the meeting has no bodies" });
 
-  let prevLast = -Infinity;
-  let prevId: number | undefined;
-  for (const seg of segments) {
-    const onsets = seg.words.map((w) => w.start);
-    if (onsets.some((t, i) => i > 0 && t < onsets[i - 1]!))
-      issues.push({
-        severity: "error",
-        message: "words are out of time order within the segment",
-        segmentId: seg.id,
-        at: onsets[0],
-      });
-    if (onsets[0]! < prevLast)
-      issues.push({
-        severity: "error",
-        message: `starts before segment ${prevId} has finished speaking; the two interleave`,
-        segmentId: seg.id,
-        at: onsets[0],
-      });
-    prevLast = Math.max(prevLast, onsets.at(-1)!);
-    prevId = seg.id;
-  }
-
-  const speech = segments.map((s) => ({
-    start: s.words[0]!.start,
-    end: s.words.at(-1)!.start + LAST_WORD_DURATION_SEC,
-  }));
-  const duration = Math.max(
-    meeting.duration ? (intervalSecs(meeting.duration) ?? 0) : 0,
-    ...speech.map((s) => s.end),
-  );
-  const at = (i: number) => ({
-    chapterId: chapters[i]!.id,
-    at: chapters[i]!.start,
+  const issues = await checkMeetingData({
+    title: meeting.title,
+    description: meeting.description,
+    bodyCount: bodies.length,
+    durationSecs: meeting.duration ? intervalSecs(meeting.duration) : null,
+    segments: segments.map((s) => ({
+      speaker:
+        s.person_id != null
+          ? `person:${s.person_id}`
+          : s.speaker_number != null
+            ? `speaker:${s.speaker_number}`
+            : null,
+      words: s.words,
+    })),
+    chapters,
   });
-  for (const e of chapterErrors(chapters, duration))
-    issues.push({
-      severity: "error",
-      message: `chapter "${chapters[e.chapter]!.title}" ${e.message}`,
-      ...at(e.chapter),
-    });
-  for (const w of chapterWarnings(chapters))
-    issues.push({
-      severity: "warning",
-      message: `chapter "${chapters[w.chapter]!.title}" ${w.message}`,
-      ...at(w.chapter),
-    });
-  if (chapters.length)
-    for (const gap of uncoveredSpeech(speech, chapters))
-      issues.push({
-        severity: "warning",
-        message: `speech from ${gap.start.toFixed(2)}s to ${gap.end.toFixed(2)}s is in no chapter`,
-        at: gap.start,
-      });
-  return issues;
+  return issues.map((issue) => {
+    const { segmentIndex, chapterIndex, ...rest } = issue as MeetingIssue & {
+      segmentIndex?: number;
+      chapterIndex?: number;
+    };
+    return {
+      ...rest,
+      ...(issue.code === "segment-out-of-order" && {
+        interleaves: issue.interleaves.map(({ segmentIndex: i, ...at }) => ({
+          segmentId: segments[i]!.id,
+          ...at,
+        })),
+      }),
+      ...(segmentIndex !== undefined && {
+        segmentId: segments[segmentIndex]!.id,
+      }),
+      ...(chapterIndex !== undefined && {
+        chapterId: chapters[chapterIndex]!.id,
+      }),
+    } as Issue;
+  });
 }

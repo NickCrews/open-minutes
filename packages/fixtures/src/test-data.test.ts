@@ -45,25 +45,24 @@ describe("parseGoldenWhen", () => {
 
 describe("parseGoldenBodies", () => {
   it("keeps one body, or a joint meeting's several", () => {
-    expect(parseGoldenBodies({ body_ids: ["gbos"] }, "m.json")).toEqual([
+    expect(parseGoldenBodies({ body_slugs: ["gbos"] }, "m.json")).toEqual([
       "gbos",
     ]);
-    expect(parseGoldenBodies({ body_ids: ["gbos", "luc"] }, "m.json")).toEqual([
-      "gbos",
-      "luc",
-    ]);
+    expect(
+      parseGoldenBodies({ body_slugs: ["gbos", "luc"] }, "m.json"),
+    ).toEqual(["gbos", "luc"]);
   });
 
   it("rejects a missing or non-list, no bodies, and duplicates", () => {
     expect(() => parseGoldenBodies({}, "m.json")).toThrow(/array of strings/);
-    expect(() => parseGoldenBodies({ body_ids: "gbos" }, "m.json")).toThrow(
+    expect(() => parseGoldenBodies({ body_slugs: "gbos" }, "m.json")).toThrow(
       /array of strings/,
     );
-    expect(() => parseGoldenBodies({ body_ids: [] }, "m.json")).toThrow(
+    expect(() => parseGoldenBodies({ body_slugs: [] }, "m.json")).toThrow(
       /empty/,
     );
     expect(() =>
-      parseGoldenBodies({ body_ids: ["luc", "luc"] }, "m.json"),
+      parseGoldenBodies({ body_slugs: ["luc", "luc"] }, "m.json"),
     ).toThrow(/duplicates/);
   });
 });
@@ -76,13 +75,13 @@ describe("meetingBodyIds", () => {
 
   it("resolves the bodies to database ids", () => {
     expect(
-      meetingBodyIds({ slug: "m", body_ids: ["gbos", "luc"] }, ids),
+      meetingBodyIds({ slug: "m", body_slugs: ["gbos", "luc"] }, ids),
     ).toEqual([1, 2]);
   });
 
   it("refuses a body bodies.jsonl doesn't have", () => {
     expect(() =>
-      meetingBodyIds({ slug: "m", body_ids: ["gbos", "nope"] }, ids),
+      meetingBodyIds({ slug: "m", body_slugs: ["gbos", "nope"] }, ids),
     ).toThrow(/unknown body "nope"/);
   });
 });

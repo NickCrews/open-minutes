@@ -14,17 +14,19 @@ describe("createTestDb", () => {
   // Both isolation tests insert the same row; if they shared a database (like
   // the old one-db-per-run setup), whichever runs second would see 2 rows.
   test("isolates writes from other tests (a)", async ({ db }) => {
-    await db
-      .insert(jurisdictionsTable)
-      .values({ name: "Isolation Check", name_short: "isolation-check" });
+    await db.insert(jurisdictionsTable).values({
+      slug: "isolation-check",
+      name: "Isolation Check",
+    });
     const rows = await db.select().from(jurisdictionsTable);
     expect(rows).toHaveLength(1);
   });
 
   test("isolates writes from other tests (b)", async ({ db }) => {
-    await db
-      .insert(jurisdictionsTable)
-      .values({ name: "Isolation Check", name_short: "isolation-check" });
+    await db.insert(jurisdictionsTable).values({
+      slug: "isolation-check",
+      name: "Isolation Check",
+    });
     const rows = await db.select().from(jurisdictionsTable);
     expect(rows).toHaveLength(1);
   });
@@ -55,7 +57,7 @@ const seeded = dbTest({
     apply: async (db) => {
       await db
         .insert(jurisdictionsTable)
-        .values({ name: "Seeded", name_short: "seeded" });
+        .values({ slug: "seeded", name: "Seeded" });
     },
   },
 });
@@ -63,13 +65,13 @@ const seeded = dbTest({
 describe("dbTest({ data })", () => {
   seeded("clones start with the declared data", async ({ db }) => {
     const rows = await db.select().from(jurisdictionsTable);
-    expect(rows.map((r) => r.name_short)).toEqual(["seeded"]);
+    expect(rows.map((r) => r.slug)).toEqual(["seeded"]);
   });
 
   seeded("and stay isolated from each other", async ({ db }) => {
     await db
       .insert(jurisdictionsTable)
-      .values({ name: "Extra", name_short: "extra" });
+      .values({ slug: "extra", name: "Extra" });
     const rows = await db.select().from(jurisdictionsTable);
     expect(rows).toHaveLength(2);
   });

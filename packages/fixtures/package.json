@@ -9,11 +9,12 @@
     "./golden-data": "./src/seed/golden-data.ts",
     "./dev-data": "./src/seed/dev-data.ts",
     "./map": "./src/seed/map.ts",
-    "./clean": "./src/clean.ts"
+    "./fix": "./src/fix.ts",
+    "./check": "./src/check.ts"
   },
   "scripts": {
     "check": "tsx src/check-cli.ts",
-    "clean": "tsx src/clean-cli.ts",
+    "fix": "tsx src/fix-cli.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },

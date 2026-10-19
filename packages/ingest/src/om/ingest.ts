@@ -9,11 +9,11 @@ import {
   meetingBodiesTable,
   meetingsTable,
 } from "@open-minutes/db";
-import { bodySlug } from "@open-minutes/core/bodies";
 import { type SiteKind, siteKindOf } from "@open-minutes/core/meeting-source";
+import { cleanSpeechSegments } from "@open-minutes/core/rules";
+import { plainDashes } from "@open-minutes/core/text";
 import {
   alignSpeakers,
-  cleanSpeechSegments,
   type DiarizationTurn,
   segmentsToTurns,
   type SpeechSegment,
@@ -160,7 +160,7 @@ export async function ingestMeeting(
     bodyArg,
   );
 
-  const workDir = join(workRoot, workDirName(bodySlug(body), siteId));
+  const workDir = join(workRoot, workDirName(body.slug, siteId));
   await mkdir(workDir, { recursive: true });
 
   const audioPath = join(workDir, "audio.wav");
@@ -175,9 +175,9 @@ export async function ingestMeeting(
     join(workDir, "transcription.json"),
     () => transcribeAudio(audioPath),
   );
-  // Strip disfluencies (fillers, stutters, ...). Deliberately not cached:
+  // Apply the rules' fixes, eg dropping fillers. Deliberately not cached:
   // transcription.json stays the recognizer's verbatim output, so a new or
-  // changed cleaning rule applies on the next run without re-transcribing.
+  // changed rule applies on the next run without re-transcribing.
   const speechSegments = cleanSpeechSegments(rawSpeechSegments);
 
   // When the meeting happened: the title's date, the chair's gavel-in time.
@@ -234,8 +234,9 @@ export async function ingestMeeting(
       .values({
         site_kind: siteKind,
         site_id: siteId,
-        title: metadata.title,
-        description: metadata.description,
+        // Stored text writes a plain hyphen for a dash (see core/text.ts).
+        title: plainDashes(metadata.title),
+        description: plainDashes(metadata.description),
         // Where the body meets; ingestion can't tell if this meeting was
         // somewhere else.
         timezone: body.timezone,
@@ -321,6 +322,7 @@ async function resolveBody(
   const bodies = await db
     .select({
       id: bodiesTable.id,
+      slug: bodiesTable.slug,
       name: bodiesTable.name,
       name_short: bodiesTable.name_short,
       timezone: bodiesTable.timezone,
@@ -329,7 +331,7 @@ async function resolveBody(
     .from(bodiesTable);
 
   if (slug !== undefined) {
-    const body = bodies.find((b) => bodySlug(b) === slug.toLowerCase());
+    const body = bodies.find((b) => b.slug === slug.toLowerCase());
     if (!body) throw new Error(`No body with slug "${slug}"`);
     const source = body.meeting_source;
     if (source && siteKindOf(source) !== siteKind)
@@ -347,7 +349,7 @@ async function resolveBody(
   if (matches.length > 1)
     throw new Error(
       `${siteKind} meeting ${siteId} is from "${channelId}", the meeting source ` +
-        `of several bodies (${matches.map((b) => bodySlug(b)).join(", ")}). ` +
+        `of several bodies (${matches.map((b) => b.slug).join(", ")}). ` +
         `Say which body it belongs to.`,
     );
   throw new Error(

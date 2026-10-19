@@ -99,9 +99,12 @@ jobs:
         with:
           path: ${{ runner.temp }}/debs
           key: ${{ steps.debs.outputs.key }}
-      - name: Install yt-dlp, Cloudflare WARP and Tor
+      - name: Install yt-dlp
         if: steps.stored.outputs.hit != 'true'
-        run: .github/scripts/install-youtube-egress.sh "$RUNNER_TEMP/debs"
+        run: packages/youtube/install-ytdlp.sh
+      - name: Install Cloudflare WARP and Tor
+        if: steps.stored.outputs.hit != 'true'
+        run: packages/youtube/egress/install.sh "$RUNNER_TEMP/debs"
       # Saved right away rather than at the end of the job, so a failed
       # download doesn't lose it.
       - uses: actions/cache/save@v4

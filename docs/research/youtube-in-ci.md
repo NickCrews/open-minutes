@@ -103,7 +103,10 @@ bot checks on both WARP and Tor became much more common (one trial in four
 failed all its attempts), so expect the success rate to move.
 `ffprobe` is not on the `ubuntu-latest` image; install `ffmpeg` with apt.
 
-**Running WARP and Tor on a runner.** Lessons from making the setup fast:
+**Running WARP and Tor on a runner.** The scripts are in
+`packages/youtube/egress/` (`install.sh`, `up.sh`, `rotate.sh`, `down.sh`),
+and `.github/scripts/fetch-youtube-audio.sh` drives them. Lessons from making
+the setup fast:
 
 - `apt-get install cloudflare-warp` takes ~30 s, mostly the desktop app's
   dependencies (GTK, WebKit, GStreamer). `warp-svc` and `warp-cli` need only

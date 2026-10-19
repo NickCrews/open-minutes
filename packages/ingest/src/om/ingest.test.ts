@@ -28,15 +28,15 @@ import { getMeetingAudio } from "../test-utils/audio-cache";
 
 const VIDEO_ID = "test-video-1";
 
-/** The short names of the bodies that held a meeting, alphabetical. */
+/** The slugs of the bodies that held a meeting, alphabetical. */
 async function bodiesOf(db: DB, meetingId: number): Promise<string[]> {
   const rows = await db
-    .select({ name_short: bodiesTable.name_short })
+    .select({ slug: bodiesTable.slug })
     .from(meetingBodiesTable)
     .innerJoin(bodiesTable, eq(bodiesTable.id, meetingBodiesTable.body_id))
     .where(eq(meetingBodiesTable.meeting_id, meetingId))
-    .orderBy(asc(bodiesTable.name_short));
-  return rows.map((r) => r.name_short);
+    .orderBy(asc(bodiesTable.slug));
+  return rows.map((r) => r.slug);
 }
 
 const METADATA: VideoMetadata = {
@@ -211,7 +211,7 @@ describe("ingestMeeting", () => {
     expect(segments[1]!.person_id).not.toBeNull();
     expect(segments[0]!.person_id).not.toBe(segments[1]!.person_id);
 
-    // The cached transcription stays verbatim, so cleaning rules can change
+    // The cached transcription stays verbatim, so the rules can change
     // without re-transcribing.
     const cached = JSON.parse(
       await readFile(
@@ -312,7 +312,7 @@ describe("which body a meeting belongs to", () => {
       site_id: AKLEG_ID,
       url: "https://www.akleg.gov/basis/Meeting/Detail?Meeting=HRES%202018-09-10%2014:00:00",
     });
-    expect(await bodiesOf(db, meeting!.id)).toEqual(["HRES"]);
+    expect(await bodiesOf(db, meeting!.id)).toEqual(["hres"]);
   });
 
   test("records only the body it was found through", async ({
@@ -332,7 +332,7 @@ describe("which body a meeting belongs to", () => {
 
     await ingestMeeting(db, VIDEO_ID, { sites: { youtube }, workRoot });
     const [meeting] = await db.select().from(meetingsTable);
-    expect(await bodiesOf(db, meeting!.id)).toEqual(["GBOS"]);
+    expect(await bodiesOf(db, meeting!.id)).toEqual(["gbos"]);
   });
 
   test("a playlist's meeting needs its body named", async ({
@@ -341,7 +341,7 @@ describe("which body a meeting belongs to", () => {
   }) => {
     await insertBody(db, {
       name: "Town Council",
-      name_short: "TC",
+      slug: "tc",
       source: { type: "youtube_playlist", playlist_id: "PL_COUNCIL" },
     });
     await seedWorkDir(workRoot, `tc_${VIDEO_ID}`);
@@ -360,7 +360,7 @@ describe("which body a meeting belongs to", () => {
     );
     expect(result.status).toBe("ingested");
     const [meeting] = await db.select().from(meetingsTable);
-    expect(await bodiesOf(db, meeting!.id)).toEqual(["TC"]);
+    expect(await bodiesOf(db, meeting!.id)).toEqual(["tc"]);
   });
 
   test("a named body must publish on the meeting's site", async ({

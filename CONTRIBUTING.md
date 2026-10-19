@@ -25,7 +25,7 @@ the ones listed above it:
   code with no database or I/O: transcript and timeline types, transcript
   cleaning and speaker alignment, word error rate, chapter rules, reading a
   meeting's date from its title and transcript, the interface a video site
-  implements, voice-embedding constants, body slugs, and `.env.local` loading.
+  implements, voice-embedding constants, and `.env.local` loading.
 - **[`packages/db`](packages/db)** (`@open-minutes/db`): the
   [Drizzle](https://orm.drizzle.team) schema and migrations, the `pnpm db` CLI,
   and the per-test database helpers (`@open-minutes/db/testing/vitest`).
@@ -170,13 +170,21 @@ Shared test configuration is in `vitest.config.ts`, `vitest.shared.ts` and
 
 ### Checking hand-edited test data
 
-`pnpm fixtures:check` checks the files in `packages/fixtures/test-data/` and
-prints each problem as `file:line: severity: message`. Pass
-file paths to check only the meetings they belong to. Errors are data that is
-wrong, such as a speaker marker a line away from its first word, words out of
-time order, or overlapping chapters. Warnings are data that breaks a
-convention or is probably wrong, such as a chapter outside the size
-conventions or speech that no chapter covers. The test suite fails on either.
+Meetings in the database and in golden fixture files follow the same rules,
+one file each in [`packages/core/src/rules/`](packages/core/src/rules/).
+
+- Database: `check_meeting` in `@open-minutes/agents`. Write tools don't
+  check, so run it after editing.
+- Golden fixtures: `pnpm fixtures:check [file ...]` prints
+  `file:line: severity: message`, and also checks the file format. Errors
+  fail it and the test suite.
+
+Some rules have a fix, which rewrites the meeting to remove what the rule
+finds where the data alone says what the right rewrite is, such as dropping
+a filler word or writing a plain hyphen for an en or em dash.
+`pnpm fixtures:fix [file ...]` applies every
+fix to the golden fixtures, rewriting their meeting.json, transcript and
+chapters.json in place (`--help` lists the fixes, `--verbose` each violation fixed).
 
 [`.claude/settings.json`](.claude/settings.json) runs the same check as a
 Claude Code hook after every edit to those files, so an agent sees the
@@ -184,26 +192,23 @@ problem on the turn it makes it.
 
 ### Transcript cleaning
 
-The recognizer transcribes verbatim, so `om ingest` runs a **clean** stage
-right after transcription that strips disfluencies: filler words ("um",
-"uh"), stuttered function words ("the the"), and abandoned word fragments
-("six- sixteen"). The rules live in
-[`packages/core/src/transcription/clean.ts`](packages/core/src/transcription/clean.ts);
+Right after transcription, `om ingest` runs a **clean** stage that applies
+the fixes of the rules in `CLEANING_RULE_SPECS`
+([`packages/core/src/rules/clean.ts`](packages/core/src/rules/clean.ts)) to
+the recognizer's verbatim output, such as dropping filler words ("um", "uh")
+and stuttered function words ("the the");
 the cached `transcription.json` stays verbatim, so a rule change applies on
 the next run without re-transcribing.
 
 Golden transcripts must already be clean, or the pipeline's output would be
 scored against disfluencies it removed on purpose. `pnpm fixtures:check`
 reports any left in a golden as an error, so the tests and the hook above
-catch them in new goldens too. To remove them:
+catch them in new goldens too. `pnpm fixtures:fix` removes them, with the
+same fixes.
 
-```sh
-pnpm fixtures:clean              # rewrite every golden transcript in place
-pnpm fixtures:clean <file.psv>   # just one file (--verbose lists each word)
-```
-
-To add a cleanup, write a rule in `clean.ts`, add it to `CLEANING_RULES` with
-tests, then run `pnpm fixtures:clean` and review the golden diff.
+To add a cleanup, write a rule with a fix in `packages/core/src/rules/`, add
+it to `RULE_SPECS` and `CLEANING_RULE_SPECS` with tests, then run
+`pnpm fixtures:fix` and review the golden diff.
 
 ## Running the pipeline
 
@@ -253,8 +258,8 @@ To change the data, agents (and people) use the tools in
 [`packages/agents`](packages/agents/src/tools.ts) rather than raw SQL: `pnpm om
 tools` lists them, and `pnpm om tools <tool> '<json>'` calls one and prints
 JSON. The same tools are exported from `@open-minutes/agents`, with `toAgentTool` to
-hand them to an agent loop such as pi. Every write re-checks the meetings it
-touched and rolls back if it introduced an error. Guidance for agents doing
+hand them to an agent loop such as pi. Writes run no rule checks; run
+`check_meeting` after editing. Guidance for agents doing
 this work is in
 [`.claude/skills/transcript-cleanup`](.claude/skills/transcript-cleanup/SKILL.md).
 

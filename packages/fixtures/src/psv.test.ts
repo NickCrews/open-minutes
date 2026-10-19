@@ -1,9 +1,8 @@
 import { describe, it, expect } from "vitest";
+import { formatClock } from "@open-minutes/core/clock";
 import {
-  formatTimestamp,
   parseTimestamp,
   parsePsv,
-  reapplySpeakerLayer,
   serializePsv,
   serializeVadRunsPsv,
   type GoldenSegment,
@@ -11,16 +10,9 @@ import {
 import type { SpeechSegment } from "@open-minutes/core/transcription";
 
 describe("psv timestamps", () => {
-  it("formats seconds as H:MM:SS.ss", () => {
-    expect(formatTimestamp(0.08)).toBe("0:00:00.08");
-    expect(formatTimestamp(2)).toBe("0:00:02.00");
-    expect(formatTimestamp(2.56)).toBe("0:00:02.56");
-    expect(formatTimestamp(2 * 3600 + 45 * 60 + 21.28)).toBe("2:45:21.28");
-  });
-
   it("round-trips through parse/format", () => {
     for (const sec of [0, 0.08, 2.56, 65.4, 9921.28]) {
-      expect(parseTimestamp(formatTimestamp(sec))).toBeCloseTo(sec, 2);
+      expect(parseTimestamp(formatClock(sec))).toBeCloseTo(sec, 2);
     }
   });
 });
@@ -165,61 +157,5 @@ describe("psv parse/serialize", () => {
       },
     ];
     expect(parsePsv(serializePsv(segments))).toEqual(segments);
-  });
-});
-
-describe("reapplySpeakerLayer", () => {
-  const reference: GoldenSegment[] = [
-    {
-      speaker: { kind: "identified", person: "margaret-tyler" },
-      words: [
-        { text: "hello", start: 0.0 },
-        { text: "there", start: 0.5 },
-      ],
-    },
-    {
-      speaker: { kind: "segmented", cluster: 3 },
-      words: [{ text: "hi", start: 2.0 }],
-    },
-    {
-      // A second, adjacent margaret segment (eg two clusters a human merged into
-      // one person) — its boundary must be preserved, not collapsed.
-      speaker: { kind: "identified", person: "margaret-tyler" },
-      words: [{ text: "again", start: 3.0 }],
-    },
-  ];
-
-  it("redistributes fresh words into the reference's segments by time, keeping labels", () => {
-    const fresh = [
-      { text: "Hello", start: 0.02 },
-      { text: "there!", start: 0.55 },
-      { text: "Hi", start: 2.03 },
-      { text: "again.", start: 3.04 },
-    ];
-    const result = reapplySpeakerLayer(fresh, reference);
-    expect(result.map((s) => s.speaker)).toEqual([
-      { kind: "identified", person: "margaret-tyler" },
-      { kind: "segmented", cluster: 3 },
-      { kind: "identified", person: "margaret-tyler" }, // adjacent same-person boundary kept
-    ]);
-    expect(result[0]!.words.map((w) => w.text)).toEqual(["Hello", "there!"]);
-    expect(result[2]!.words.map((w) => w.text)).toEqual(["again."]);
-  });
-
-  it("drops reference segments that catch no fresh word", () => {
-    const fresh = [{ text: "hello", start: 0.0 }];
-    const result = reapplySpeakerLayer(fresh, reference);
-    expect(result).toHaveLength(1);
-    expect(result[0]!.speaker).toEqual({
-      kind: "identified",
-      person: "margaret-tyler",
-    });
-  });
-
-  it("falls back to a single unlabeled segment when the reference is empty", () => {
-    const fresh = [{ text: "hello", start: 0.0 }];
-    expect(reapplySpeakerLayer(fresh, [])).toEqual<GoldenSegment[]>([
-      { speaker: { kind: "unlabeled" }, words: fresh },
-    ]);
   });
 });

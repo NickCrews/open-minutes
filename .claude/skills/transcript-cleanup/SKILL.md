@@ -15,14 +15,16 @@ SQL:
   is JSON.
 - TypeScript: `import { tools, toAgentTool } from "@open-minutes/agents"`.
 
-Every write returns `issues` for the meetings it touched, and it rolls back
-if the change introduces an error. Read the issues each time. Pass
-`"dryRun": true` to preview a change.
+Writes apply the change and run no checks, so edit freely: a step may leave
+the meeting breaking a rule on its way to clean. When done editing, run
+`check_meeting`, fix every error, and read every warning.
 
 Golden fixtures (`packages/fixtures/test-data/`) are files. Check them with
-`pnpm fixtures:check`. In a PSV file, a speaker marker goes on the line just
+`pnpm fixtures:check`, which holds them to the same rules as `check_meeting`
+plus the rules of the file format. Fix every error; read every warning and
+fix it unless the data is right as it is. In a PSV file, a speaker marker goes on the line just
 before its first word, with the same onset. Transcripts carry no fillers
-("um", "uh") or stutters ("the the"): `pnpm fixtures:clean` removes them, so
+("um", "uh") or stutters ("the the"): `pnpm fixtures:fix` removes them, so
 never type one back in.
 
 Edit a golden with [scripts/psvtool.py](scripts/psvtool.py) rather than by
@@ -55,10 +57,6 @@ are `H:MM:SS.ss`, as psvtool prints them.
 - `speech_activity` shows the pauses in a stretch, which is where a turn
   can change.
 
-Running `transcribe.test.ts` with `SNAPSHOT_UPDATE=1` rewrites a golden's
-words from fresh recognition and keeps only its speaker layer, which discards
-every hand-corrected word.
-
 ## Rules
 
 1. **Relabel only on evidence.** Evidence is:
@@ -89,16 +87,19 @@ every hand-corrected word.
    word where the speaker changes, then relabel each part. Edges are usually
    off by one to five words, most often with the next segment starting on the
    previous speaker's last words ("Thank | you."), so check the first and last
-   words of every segment. `fixtures:check` warns about a marker inside a
-   sentence near a longer pause; the pause hints which way to move it, but
-   read the words to decide who said them.
+   words of every segment. `check_meeting` and `fixtures:check` warn about a
+   speaker change inside a sentence near a longer pause; the pause hints
+   which way to move it, but read the words to decide who said them.
 4. **Give every voice change its own segment.** The diarizer often folds
    short turns into the chair's segment: roll-call answers, "So moved." and
    "Second.", one-line questions inside a presentation, and the clerk reading
    a vote tally. In some meetings it folds most in-room speakers into the
    chair while online speakers get clean clusters. A long chair segment that
    holds a presentation usually starts after a first-name handoff ("item nine
-   … Jennifer."). Long runs with no punctuation usually hide a turn change.
+   … Jennifer."), or after the chair reads an agenda item that names its
+   sponsor ("GTC request … (Burnett)"). Long runs with no punctuation usually
+   hide a turn change. `check_meeting` and `fixtures:check` warn about a bare
+   "Yes." or "Second." left in the segment of whoever asked for it.
 5. **Check every segment of a cluster before labelling the whole cluster.**
    One `segmented:spk-N` can hold unrelated voices: a legislator and a police
    chief, or a member, a staffer and a presenter. Music before a meeting or
@@ -120,11 +121,21 @@ every hand-corrected word.
    wood" → "Girdwood" is one word), don't rewrite grammar, and leave a number
    or a name alone when you aren't sure. [mishearings.md](mishearings.md)
    lists the recurring ones.
-9. **Keep chapter text in step with labels.** After relabelling, check that
-   chapter titles and summaries name the right people. Chapters follow
-   `docs/chapters.md`. Write them with `replace_chapters`, with
-   `reviewedByHuman: false` unless a human checked them.
-10. **Voiceprints aren't recomputed.** Relabelling segments doesn't change
+9. **Write numbers the house way.** Goldens write numbers, times, money and
+   dates as `packages/core/src/rules/numbers.ts` describes:
+   "7:30 p.m.", "$36,000", "3.79%", "March 19", "passes 5-0", and numerals
+   from 10 up. A body opts into body-specific rules for its own identifiers
+   with `_rules` in `bodies.jsonl`; Anchorage's bodies write "AO
+   2026-23", "AO 2025-144(S)", "AM 142-2026", "AMC 21.05.040G.2", "item
+   10.B.1" and "R-4". Collapse a spoken number into one word with one
+   `replace` op per number ("twenty twenty six dash twenty" → "2026-20"),
+   and write only what was said: a number you can't make out stays as heard.
+   `fixtures:check` reports the rest.
+10. **Keep chapter text in step with labels.** After relabelling, check that
+    chapter titles and summaries name the right people. Chapters follow
+    `docs/chapters.md`. Write them with `replace_chapters`, with
+    `reviewedByHuman: false` unless a human checked them.
+11. **Voiceprints aren't recomputed.** Relabelling segments doesn't change
     anyone's voiceprint, so say so if recognition will depend on your fix.
 
 ## Report

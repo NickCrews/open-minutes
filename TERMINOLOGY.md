@@ -17,9 +17,9 @@ _Avoid_: municipality, muni, city, town, government, org
 A deliberative group that holds meetings, such as the Girdwood Board of Supervisors, inside exactly one jurisdiction.
 _Avoid_: muni, board, council, committee, organization, group
 
-**Body slug**:
-A body's short lowercased name, such as `gbos`, used to refer to it on the command line and in file paths.
-_Avoid_: muni slug, body id, short name
+**Slug**:
+A stable, unique handle in lowercase kebab-case that names a row the same way in every database, unlike its id, and doesn't change when it's renamed. Code, static data, the fixtures, the command line and file paths refer to a row by it. Every jurisdiction (`moa`) and body (`gbos`) has one; so does every known person (`margaret-tyler`), the key for their identity across meetings, and every golden fixture meeting (`gbos-2026-03-23`, its fixture directory's name). Other meetings and people have none and go by their id.
+_Avoid_: name, short name, handle, key, muni slug, body id, fixture name, meeting key
 
 **Site**:
 A website meetings are published on, YouTube or akleg.gov, from which we get a recording's metadata and audio.
@@ -43,10 +43,6 @@ _Avoid_: session, hearing, event, recording, video
 A meeting held by several bodies together, such as the Girdwood Board of Supervisors and the Girdwood Land Use Committee. It counts as a meeting of each of them, and none of them comes first.
 _Avoid_: combined meeting, shared meeting, host body, co-host, primary body
 
-**Meeting slug**:
-A golden fixture meeting's stable, unique handle, such as `gbos-2026-03-23` (its fixture directory's name), that names it in every database; other meetings have none and go by their id.
-_Avoid_: fixture name, meeting key
-
 **Video**:
 A recording on YouTube, from which a meeting's audio comes. An akleg.gov recording is a page with an audio file, which is what we transcribe, and usually a video too.
 _Avoid_: stream, clip, media
@@ -61,7 +57,7 @@ _Avoid_: start time, timestamp
 
 **Transcript**:
 The ordered segments of one meeting: everything that was said, who said it, and when.
-_Avoid_: minutes, captions, notes, transcription (for the artifact)
+_Avoid_: minutes, captions, notes, transcription (that is the verb)
 
 **Word**:
 One recognized word and its onset; the smallest unit of a transcript.
@@ -73,6 +69,9 @@ _Avoid_: timestamp, start time
 
 **Segment**:
 A run of consecutive words spoken by one speaker.
+The speaker's identity could be resolved
+No limit on length.
+If someone talks for 5 straight minutes, eg during a presentation, that is still one segment.
 _Avoid_: utterance, turn, block, paragraph, line, clip
 
 **Speaking time**:
@@ -99,10 +98,6 @@ _Avoid_: speaker, user, member, voice, profile
 **Known person**:
 A person a human has established as a specific individual, and so has a slug.
 _Avoid_: identified person, seeded speaker
-
-**Slug**:
-A known person's stable, unique handle, such as `margaret-tyler`; the key for their identity across meetings.
-_Avoid_: name, id, handle
 
 **Name**:
 A person's human-entered display name. Empty until someone enters it, and never used as a key.
@@ -147,10 +142,23 @@ A group of diarization turns believed to share one voice. Each cluster becomes a
 _Avoid_: speaker (inside the pipeline), group
 
 **Recognition**:
-Linking a speaker to the person whose voiceprint is nearest, or creating a new anonymous person when none is close enough.
+Linking an audio clip to a person.
+Can use voiceprints or context clues like "Thank you ms smith", doesn't rely just on audio.
+Two types: Partial and Full.
 _Avoid_: identification, matching, labeling
 
+**Partial Recognition**:
+We recognize this speaker as "speaker 4" in this meeting, and possibly that
+their name is "Bob", but we don't know the full identity of the person.
+
+**Full Recognition**:
+We recognize this speaker as an exact person, eg "Jennifer Wingard, the GBOS co-chair in 2026".
+
 ### Pipeline
+
+**Span**:
+A stretch of a meeting's audio, from start to end in seconds from the start of the file.
+_Avoid_: range, interval, from/to.
 
 **Ingestion**:
 Running one meeting's recording through transcription, diarization, alignment, and recognition, then storing the meeting and its segments all at once.
@@ -161,7 +169,9 @@ A recording a scout reported as a meeting that hasn't been ingested yet.
 _Avoid_: available video, new video, pending video, backlog
 
 **Transcription**:
-The stage that turns audio into words with onsets. The process, not the artifact; that's the transcript.
+The process of turning audio into a Transcript.
+Relies on the larger context of the database, eg when identifying a speaker in audio,
+it should be able to look up the voiceprints of the speakers already in the database.
 _Avoid_: ASR, speech-to-text, captioning
 
 **Speech run**:
@@ -217,3 +227,37 @@ _Avoid_: importing, populating
 **WER**:
 Word error rate: how far a pipeline transcript's words are from a golden transcript's, as a fraction of the golden transcript's word count.
 _Avoid_: accuracy, error
+
+### Meeting rules
+
+**Rule**:
+A requirement a meeting's data must meet, applied the same way to the database and to golden meetings, such as `split-sentence`. Each rule is a file in `packages/core/src/rules/`.
+_Avoid_: check, checker, validator, lint
+
+**Rule code**:
+A rule's kebab-case name. It says what is wrong, such as `word-out-of-order`, and reads naturally after "allow".
+_Avoid_: issue code, check name, rule id
+
+**Body-specific rule**:
+A rule only some bodies follow, such as Anchorage's `bill-number`. A body opts into each by its rule code; every other rule applies to every meeting.
+_Avoid_: local rule, style rule
+
+**Violation**:
+An instance of a meeting breaking a rule, with a rule code and message. It may be blamed on a single word, a segment, a set of segments, a chapter, a set of chapters, etc. If so, it has the diagnostic info needed to fix it.
+_Avoid_: check result, problem, error (that is a severity)
+
+**Severity**:
+How a rule's violations are reported; each rule gives a default. `error` means the data is wrong: a golden meeting with one fails the tests. `warning` means the data is probably wrong or breaks a convention, and wants a look.
+_Avoid_: level
+
+**Issue**:
+A violation with its severity and its location: row ids in the database, or file and line in the test data.
+_Avoid_: diagnostic, finding, problem
+
+**Check**:
+To run the rules over a meeting, as `check_meeting` and `pnpm fixtures:check` do. Only a verb; what it runs are rules.
+_Avoid_: lint, validate
+
+**Fix**:
+A rule's rewrite of a meeting that removes its violations where the data alone says what the right rewrite is, such as dropping a filler word. A violation whose fix depends on what someone meant or which of several plausible changes is right, such as two segments whose words interleave, is left for a person or agent. Only some rules have one.
+_Avoid_: autofix, repair, correction
