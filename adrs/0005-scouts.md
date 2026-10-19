@@ -69,8 +69,74 @@ interface FoundMeeting {
 
 ### Storage
 
-- `recordings`: `site`, `recording_id` (unique together), `permalink`, `scout_id`, `found_at`, `is_meeting`, `reason`, `title`, `description`, `date`, `time`, `timezone`, `meeting_id` (nullable FK).
-- `recording_bodies`: `recording_id`, `body_id`.
+```ts
+export const recordingsTable = pgTable(
+  "recordings",
+  {
+    id: serial().primaryKey(),
+    site: varchar().$type<Site>().notNull(),
+    recording_id: varchar().notNull(),
+    permalink: varchar(),
+    scout_id: varchar().notNull(),
+    found_at: timestamp().notNull().defaultNow(),
+    is_meeting: boolean().notNull(),
+    // Why a scout rejected it; null for a meeting.
+    reason: varchar(),
+    title: varchar().notNull().default(""),
+    description: varchar().notNull().default(""),
+    date: date({ mode: "string" }),
+    time: time(),
+    timezone: varchar(),
+    meeting_id: integer()
+      .unique()
+      .references(() => meetingsTable.id, { onDelete: "set null" }),
+  },
+  (table) => [
+    unique("recordings_site_recording_id_unique").on(
+      table.site,
+      table.recording_id,
+    ),
+    check("recordings_site_known", sql`${table.site} IN ('youtube', 'akleg')`),
+    check(
+      "recordings_meeting_or_reason",
+      sql`${table.is_meeting} = (${table.reason} IS NULL)`,
+    ),
+    check(
+      "recordings_meeting_has_timezone",
+      sql`NOT ${table.is_meeting} OR ${table.timezone} IS NOT NULL`,
+    ),
+    check(
+      "recordings_timezone_valid",
+      sql`${table.timezone} IS NULL OR iana_timezone_error(${table.timezone}) IS NULL`,
+    ),
+    check(
+      "recordings_time_requires_date",
+      sql`${table.time} IS NULL OR ${table.date} IS NOT NULL`,
+    ),
+    check(
+      "recordings_meeting_id_requires_meeting",
+      sql`${table.meeting_id} IS NULL OR ${table.is_meeting}`,
+    ),
+  ],
+);
+
+export const recordingBodiesTable = pgTable(
+  "recording_bodies",
+  {
+    recording_id: integer()
+      .notNull()
+      .references(() => recordingsTable.id, { onDelete: "cascade" }),
+    body_id: integer()
+      .notNull()
+      .references(() => bodiesTable.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    primaryKey({ columns: [table.recording_id, table.body_id] }),
+    index("idx_recording_bodies_body").on(table.body_id),
+  ],
+);
+```
+
 - An available meeting is a recording with `is_meeting` and no `meeting_id`.
 - `ingestMeeting` reads bodies, title, description and date from the recording, and sets `recordings.meeting_id` in its transaction.
 - A migration backfills a recording for each existing meeting, then drops `bodies.meeting_source`.
