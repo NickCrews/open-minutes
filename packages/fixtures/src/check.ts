@@ -19,9 +19,9 @@ import {
   parseTimestamp,
 } from "./psv";
 import {
+  bodyRuleCodes,
   type GoldenMeeting,
   getMeetingData,
-  meetingGlossary,
   parseGoldenChapters,
   TEST_DATA_ROOT,
   transcriptPath,
@@ -32,8 +32,8 @@ import {
 // A meeting's data follows the rules in @open-minutes/core/rules, the
 // same ones the database is checked against; this adds the rules for the
 // files themselves (PSV syntax, where a speaker marker goes, the directory
-// name), and holds each meeting to the body-specific rules of its bodies'
-// glossaries (Anchorage's bill and code numbers).
+// name), and holds each meeting to the body-specific rules its bodies opt
+// into with `_rules` in bodies.jsonl (Anchorage's bill and code numbers).
 // Errors fail the fixture tests and `pnpm fixtures:check`; warnings are
 // printed and want a look.
 
@@ -122,8 +122,17 @@ export async function checkMeetingDir(dir: string): Promise<Issue[]> {
     : [];
   const chapters = meeting.chapters?.chapters ?? null;
   const root = resolve(dir, "../..");
-  const { rules } = await meetingGlossary(meeting.body_slugs, root);
-  const bodySpecs = BODY_RULE_SPECS.filter((spec) => rules.includes(spec.code));
+  const codes = bodyRuleCodes(meeting.body_slugs, root);
+  const bodySpecs = BODY_RULE_SPECS.filter((spec) => codes.includes(spec.code));
+  const unknown = codes.filter(
+    (c) => !BODY_RULE_SPECS.some((spec) => spec.code === c),
+  );
+  if (unknown.length)
+    issues.push({
+      file: join(root, "bodies.jsonl"),
+      severity: "error",
+      message: `unknown _rules ${JSON.stringify(unknown)}; body-specific rules: ${JSON.stringify(BODY_RULE_SPECS.map((spec) => spec.code))}`,
+    });
   const placed = (
     await checkMeeting(ruleMeeting(meeting), [...RULE_SPECS, ...bodySpecs])
   ).map((i) =>

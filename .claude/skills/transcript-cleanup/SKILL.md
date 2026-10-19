@@ -124,10 +124,12 @@ are `H:MM:SS.ss`, as psvtool prints them.
 9. **Write numbers the house way.** Goldens write numbers, times, money and
    dates as `packages/core/src/rules/numbers.ts` describes:
    "7:30 p.m.", "$36,000", "3.79%", "March 19", "passes 5-0", and numerals
-   from 10 up. Local identifiers such as bill numbers follow the
-   body-specific rules `get_glossary` lists. Collapse a spoken number into
-   one word with one `replace` op per number ("twenty twenty six dash
-   twenty" → "2026-20"), and write only what was said: a number you can't make out stays as heard.
+   from 10 up. A body opts into body-specific rules for its own identifiers
+   with `_rules` in `bodies.jsonl`; Anchorage's bodies write "AO
+   2026-23", "AO 2025-144(S)", "AM 142-2026", "AMC 21.05.040G.2", "item
+   10.B.1" and "R-4". Collapse a spoken number into one word with one
+   `replace` op per number ("twenty twenty six dash twenty" → "2026-20"),
+   and write only what was said: a number you can't make out stays as heard.
    `fixtures:check` reports the rest.
 10. **Keep chapter text in step with labels.** After relabelling, check that
     chapter titles and summaries name the right people. Chapters follow

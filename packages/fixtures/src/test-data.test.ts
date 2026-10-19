@@ -1,13 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { hasTypographicDash } from "@open-minutes/core/text";
 import { meetingBodyIds } from "./seed/map";
-import { GLOSSARIES } from "@open-minutes/glossary";
-import {
-  loadBodies,
-  loadPeople,
-  parseGoldenBodies,
-  parseGoldenWhen,
-} from "./test-data";
+import { loadPeople, parseGoldenBodies, parseGoldenWhen } from "./test-data";
 
 describe("people.jsonl", () => {
   it("uses a plain hyphen, not an en or em dash, in names and bios", () => {
@@ -15,22 +9,6 @@ describe("people.jsonl", () => {
       .filter((p) => hasTypographicDash(`${p.name} ${p.bio ?? ""}`))
       .map((p) => p.slug);
     expect(withDash).toEqual([]);
-  });
-});
-
-describe("glossaries", () => {
-  it("name only bodies and jurisdictions in the test data", () => {
-    const bodies = loadBodies();
-    const known = new Set([
-      ...bodies.map((b) => b.slug),
-      ...bodies.map((b) => b.jurisdiction_slug),
-    ]);
-    const named = GLOSSARIES.flatMap((g) =>
-      g.appliesTo === "everywhere"
-        ? []
-        : [...(g.appliesTo.jurisdictions ?? []), ...(g.appliesTo.bodies ?? [])],
-    );
-    expect(named.filter((slug) => !known.has(slug))).toEqual([]);
   });
 });
 

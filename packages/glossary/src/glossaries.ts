@@ -76,7 +76,6 @@ const anchorage: Glossary = {
   slug: "moa",
   extends: ["alaska"],
   appliesTo: { jurisdictions: ["moa"] },
-  rules: ["bill-number", "code-section", "agenda-item", "zoning-district"],
   entries: [
     { headword: "Anchorage", misheard: ["acridge"] },
     {

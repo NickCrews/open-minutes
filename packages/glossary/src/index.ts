@@ -1,20 +1,15 @@
 // Glossaries: the local words a body's meetings use, what they mean and how
-// speech recognition mishears them, and the body-specific rules its
-// transcripts follow. A glossary covers a region (Anchorage, Girdwood) rather
-// than one body, and builds on the glossaries of the regions around it, so a
-// word is listed once for everyone likely to say it. A meeting's glossary
-// merges the glossaries of every body that held it.
+// speech recognition mishears them. A glossary covers a region (Anchorage,
+// Girdwood) rather than one body, and builds on the glossaries of the regions
+// around it, so a word is listed once for everyone likely to say it. A
+// meeting's glossary merges the glossaries of every body that held it.
 //
 // For now the glossaries are static data in ./glossaries.ts. They are plain
 // objects shaped like the rows they would be in a database, and callers only
 // see them through the async glossaryFor, so they can move into the database
 // without the callers changing.
 
-import type { BODY_RULE_SPECS } from "@open-minutes/core/rules";
 import { GLOSSARIES } from "./glossaries";
-
-/** The code of a rule only some bodies follow, eg "bill-number". */
-export type BodyRuleCode = (typeof BODY_RULE_SPECS)[number]["code"];
 
 /** One word or phrase in a glossary. */
 export interface GlossaryEntry {
@@ -28,7 +23,7 @@ export interface GlossaryEntry {
   misheard?: string[];
 }
 
-/** The words and rules of one region. */
+/** The words of one region. */
 export interface Glossary {
   /** Eg "girdwood". */
   slug: string;
@@ -36,8 +31,6 @@ export interface Glossary {
   extends?: string[];
   /** Where it applies: everywhere, or in these jurisdictions and bodies, by slug. */
   appliesTo: "everywhere" | { jurisdictions?: string[]; bodies?: string[] };
-  /** The body-specific rules transcripts follow where it applies. */
-  rules?: BodyRuleCode[];
   entries: GlossaryEntry[];
 }
 
@@ -51,7 +44,6 @@ export interface GlossaryBody {
 export interface MeetingGlossary {
   /** Slugs of the glossaries that apply, the most general first. */
   glossaries: string[];
-  rules: BodyRuleCode[];
   entries: GlossaryEntry[];
 }
 
@@ -87,7 +79,6 @@ export function mergeGlossaries(
     if (bodies.some((body) => appliesTo(glossary, body))) add(glossary);
   return {
     glossaries: applied.map((g) => g.slug),
-    rules: [...new Set(applied.flatMap((g) => g.rules ?? []))],
     entries: applied.flatMap((g) => g.entries),
   };
 }

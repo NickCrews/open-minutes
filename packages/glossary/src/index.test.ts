@@ -11,12 +11,6 @@ describe("glossaryFor", () => {
   it("gives a Girdwood body every glossary from common to Girdwood's", async () => {
     const g = await glossaryFor([gbos]);
     expect(g.glossaries).toEqual(["common", "alaska", "moa", "girdwood"]);
-    expect(g.rules).toEqual([
-      "bill-number",
-      "code-section",
-      "agenda-item",
-      "zoning-district",
-    ]);
     expect(headwords(g)).toEqual(
       expect.arrayContaining(["roll call", "Dena'ina", "AMC", "GHEC"]),
     );
@@ -29,10 +23,9 @@ describe("glossaryFor", () => {
     expect(headwords(g)).not.toContain("GHEC");
   });
 
-  it("gives a Legislature committee Alaska's words and no rules", async () => {
+  it("gives a Legislature committee Alaska's words", async () => {
     const g = await glossaryFor([hres]);
     expect(g.glossaries).toEqual(["common", "alaska"]);
-    expect(g.rules).toEqual([]);
   });
 
   it("gives a body no glossary names only the common one", async () => {

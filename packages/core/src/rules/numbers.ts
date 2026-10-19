@@ -17,7 +17,7 @@
 //     isn't said. Months capitalized: "in July".
 //   - Tallies: "passes 5-0", "on a vote of 12 to 0".
 //
-// And in Anchorage, whose glossary names these as body-specific rules (see
+// And in Anchorage, whose bodies opt into these as body-specific rules (see
 // BODY_RULE_SPECS in ./index.ts), since other places number their bills, code
 // and agendas their own way:
 //

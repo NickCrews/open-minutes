@@ -31,8 +31,7 @@ the ones listed above it:
   and the per-test database helpers (`@open-minutes/db/testing/vitest`).
 - **[`packages/glossary`](packages/glossary)** (`@open-minutes/glossary`): the
   local words of each region (Anchorage, Girdwood), what they mean and how
-  speech recognition mishears them, and the body-specific rules meetings
-  there follow. Kept as static data for now.
+  speech recognition mishears them. Kept as static data for now.
 - **[`packages/fixtures`](packages/fixtures)** (`@open-minutes/fixtures`): the
   data that seeds local and test databases. `test-data/` holds the real,
   hand-verified jurisdictions, bodies, people and golden meetings. Nothing here

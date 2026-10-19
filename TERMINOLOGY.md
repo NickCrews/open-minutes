@@ -22,7 +22,7 @@ A stable, unique handle in lowercase kebab-case that names a row the same way in
 _Avoid_: name, short name, handle, key, muni slug, body id, fixture name, meeting key
 
 **Glossary**:
-The local words of a region, such as Anchorage or Girdwood: what each means and how speech recognition mishears it, plus the body-specific rules transcripts there follow. It applies to bodies by jurisdiction or by body, and builds on the glossaries of the regions around it. A meeting's glossary merges those of all its bodies. People's names aren't in it.
+The local words of a region, such as Anchorage or Girdwood: what each means and how speech recognition mishears it. It applies to bodies by jurisdiction or by body, and builds on the glossaries of the regions around it. A meeting's glossary merges those of all its bodies. People's names aren't in it.
 _Avoid_: jargon, dictionary, vocabulary, mishearings
 
 **Glossary entry**:
@@ -243,7 +243,7 @@ A rule's kebab-case name. It says what is wrong, such as `word-out-of-order`, an
 _Avoid_: issue code, check name, rule id
 
 **Body-specific rule**:
-A rule only some bodies follow, such as Anchorage's `bill-number`. A body follows those its glossaries name by rule code; every other rule applies to every meeting.
+A rule only some bodies follow, such as Anchorage's `bill-number`. A body opts into each by its rule code; every other rule applies to every meeting.
 _Avoid_: local rule, style rule
 
 **Violation**:
