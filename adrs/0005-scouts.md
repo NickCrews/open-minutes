@@ -27,6 +27,7 @@ Ingestion stays a separate step.
 ```ts
 interface Recording {
   site: "youtube" | "akleg";
+  permalink: string | null;
   id: string;
 }
 
