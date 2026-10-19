@@ -1,5 +1,5 @@
 import { describe, expect } from "vitest";
-import type { ListedVideo } from "@open-minutes/core/video-lister";
+import type { ListedRecording } from "@open-minutes/core/recording-lister";
 import type { MeetingSource } from "@open-minutes/core/meeting-source";
 import { loadBodies } from "@open-minutes/fixtures/test-data";
 import { listAvailable } from "./available";
@@ -16,10 +16,10 @@ import {
  * A `sourceFor` whose sources list `videos(source)` and record which sources
  * were scraped, in `scraped`, as their JSON.
  */
-function fakeSources(videos: (source: MeetingSource) => ListedVideo[]) {
+function fakeSources(videos: (source: MeetingSource) => ListedRecording[]) {
   const scraped: string[] = [];
   const sourceFor = (source: MeetingSource) => ({
-    listVideos: async () => {
+    listRecordings: async () => {
       scraped.push(JSON.stringify(source));
       return videos(source);
     },
@@ -126,7 +126,7 @@ describe("listAvailable", () => {
 
   goldenTest("rejects an unknown body slug", async ({ db }) => {
     const { sourceFor } = fakeSources(() => {
-      throw new Error("unexpected listVideos call");
+      throw new Error("unexpected listRecordings call");
     });
     await expect(
       listAvailable(db, { body: "atlantis", sourceFor }),

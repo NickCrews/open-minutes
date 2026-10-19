@@ -176,7 +176,7 @@ describe("getMeeting", () => {
 });
 
 describe("getMetadata", () => {
-  it("maps a meeting onto VideoMetadata", async () => {
+  it("maps a meeting onto RecordingMetadata", async () => {
     const { source } = fake(MEETINGS_ON_DATE);
     expect(await source.getMetadata("HRES 2018-09-10 14:00:00")).toEqual({
       id: "HRES 2018-09-10 14:00:00",
@@ -202,7 +202,7 @@ describe("mainAudio", () => {
 });
 
 describe("aklegSource", () => {
-  it("lists a committee's meetings as videos", async () => {
+  it("lists a committee's meetings as recordings", async () => {
     const requests: string[] = [];
     const source = aklegSource(
       { committee: "HRES", legislature: 30 },
@@ -213,7 +213,7 @@ describe("aklegSource", () => {
         }) as typeof fetch,
       },
     );
-    expect(await source.listVideos()).toEqual([
+    expect(await source.listRecordings()).toEqual([
       {
         id: "HRES 2018-09-10 15:30:00",
         title: "House RESOURCES - 2018-09-10 15:30:00",

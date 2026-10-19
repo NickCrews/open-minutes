@@ -311,7 +311,7 @@ function describeError(error: unknown): string {
 /**
  * A body that held a meeting: the one with slug `slug` if given, else the
  * one whose meeting source is the meeting's channel (a YouTube channel ID, or
- * an akleg.gov committee: see VideoMetadata.channelId).
+ * an akleg.gov committee: see RecordingMetadata.channelId).
  */
 async function resolveBody(
   db: DB,

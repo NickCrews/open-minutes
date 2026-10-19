@@ -35,7 +35,10 @@ describe("YouTube Module", () => {
     // scraping it takes about a minute.
     { tags: ["slow"] },
     async ({ id, minVideos }) => {
-      const videos = await youtubeSource({ kind: "channel", id }).listVideos();
+      const videos = await youtubeSource({
+        kind: "channel",
+        id,
+      }).listRecordings();
       expect(videos).toBeInstanceOf(Array);
       expect(videos.length).toBeGreaterThan(minVideos);
       expect(videos[0]).toHaveProperty("id");
@@ -259,13 +262,13 @@ describe("yt-dlp through proxies", () => {
         entries: [{ id: "QUF1uLgzL-s", title: "Short" }],
       }),
     }));
-    // listVideos takes no config, so even YOUTUBE_PROXY can't reach it.
+    // listRecordings takes no config, so even YOUTUBE_PROXY can't reach it.
     vi.stubEnv("YOUTUBE_PROXY", WARP);
     try {
       const videos = await youtubeSource({
         kind: "playlist",
         id: "PL123",
-      }).listVideos();
+      }).listRecordings();
       expect(videos).toEqual([{ id: "QUF1uLgzL-s", title: "Short" }]);
     } finally {
       vi.unstubAllEnvs();

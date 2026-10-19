@@ -3,7 +3,7 @@ import type {
   MeetingSource,
   SiteKind,
 } from "@open-minutes/core/meeting-source";
-import type { VideoLister } from "@open-minutes/core/video-lister";
+import type { RecordingLister } from "@open-minutes/core/recording-lister";
 import { akleg, aklegSource, parseMeetingId } from "@open-minutes/akleg";
 import { videoId, youtubeFromEnv, youtubeSource } from "@open-minutes/youtube";
 
@@ -28,8 +28,8 @@ export function withDefaultSites(sites: Partial<Sites> = {}): Sites {
   };
 }
 
-/** The {@link VideoLister} for a body's meeting source. */
-export function listerFor(source: MeetingSource): VideoLister {
+/** The {@link RecordingLister} for a body's meeting source. */
+export function listerFor(source: MeetingSource): RecordingLister {
   switch (source.type) {
     case "youtube_channel":
       return youtubeSource({ kind: "channel", id: source.channel_id });

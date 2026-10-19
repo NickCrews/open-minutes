@@ -10,7 +10,7 @@ import {
   segmentsTable,
 } from "@open-minutes/db";
 import { asc, eq } from "drizzle-orm";
-import type { VideoMetadata } from "@open-minutes/core/audio-provider";
+import type { RecordingMetadata } from "@open-minutes/core/audio-provider";
 import type { SpeechSegment } from "@open-minutes/core/transcription";
 import { N_DIMENSIONS } from "@open-minutes/core/voice_embeddings";
 import { getMeetingData } from "@open-minutes/fixtures/test-data";
@@ -39,7 +39,7 @@ async function bodiesOf(db: DB, meetingId: number): Promise<string[]> {
   return rows.map((r) => r.slug);
 }
 
-const METADATA: VideoMetadata = {
+const METADATA: RecordingMetadata = {
   id: VIDEO_ID,
   channelId: GOLDEN_GBOS.channelId,
   title: "Regular Meeting",
@@ -272,7 +272,7 @@ describe("ingestMeeting", () => {
 
 describe("which body a meeting belongs to", () => {
   const AKLEG_ID = "HRES 2018-09-10 14:00:00";
-  const AKLEG_METADATA: VideoMetadata = {
+  const AKLEG_METADATA: RecordingMetadata = {
     id: AKLEG_ID,
     channelId: "HRES",
     title: "House RESOURCES - 2018-09-10 14:00:00",

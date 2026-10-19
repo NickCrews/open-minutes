@@ -43,7 +43,7 @@ describe("akleg.gov, live", { timeout: 60_000 }, () => {
   it("lists the current Legislature's meetings", async () => {
     // Early in a new Legislature this may be empty; it must still parse.
     await expect(
-      aklegSource({ committee: "HRES" }).listVideos(),
+      aklegSource({ committee: "HRES" }).listRecordings(),
     ).resolves.toBeInstanceOf(Array);
   });
 

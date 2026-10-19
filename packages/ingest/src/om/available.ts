@@ -4,17 +4,17 @@ import {
   meetingSourceUrl,
   siteKindOf,
 } from "@open-minutes/core/meeting-source";
-import type { VideoLister } from "@open-minutes/core/video-lister";
+import type { RecordingLister } from "@open-minutes/core/recording-lister";
 import { listerFor, type SiteMeeting } from "./sites";
 
 export interface ListAvailableOptions {
   /** Restrict the scrape to the body with this slug (eg "gbos"). */
   body?: string;
   /**
-   * The {@link VideoLister} for a body's meeting source; injectable for tests.
+   * The {@link RecordingLister} for a body's meeting source; injectable for tests.
    * Defaults to {@link listerFor}.
    */
-  sourceFor?: (source: MeetingSource) => VideoLister;
+  sourceFor?: (source: MeetingSource) => RecordingLister;
 }
 
 /** A meeting on a body's meeting source that isn't in the database yet. */
@@ -66,7 +66,7 @@ export async function listAvailable(
     if (!source) continue;
     const siteKind = siteKindOf(source);
     console.error(`Scraping ${body.name_short} ${meetingSourceUrl(source)}...`);
-    const meetings = await sourceFor(source).listVideos();
+    const meetings = await sourceFor(source).listRecordings();
     for (const { id } of meetings) {
       if (!ingested.has(key(siteKind, id)))
         available.push({ siteKind, siteId: id, body: body.slug });
