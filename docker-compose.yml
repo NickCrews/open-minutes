@@ -1,5 +1,7 @@
 services:
   postgres:
+    # Match prod's major version. To see prod's version, run
+    # `SELECT version();` on console.neon.tech.
     image: pgvector/pgvector:pg18
     environment:
       POSTGRES_DB: open_minutes
