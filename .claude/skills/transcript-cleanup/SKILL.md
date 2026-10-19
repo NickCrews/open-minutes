@@ -126,8 +126,8 @@ are `H:MM:SS.ss`, as psvtool prints them.
    "7:30 p.m.", "$36,000", "3.79%", "March 19", "passes 5-0", and numerals
    from 10 up. Local identifiers such as bill numbers follow the
    body-specific rules `get_glossary` lists. Collapse a spoken number into
-   one word with one `replace` op per number ("twenty twenty six dash twenty" → "2026-20"),
-   and write only what was said: a number you can't make out stays as heard.
+   one word with one `replace` op per number ("twenty twenty six dash
+   twenty" → "2026-20"), and write only what was said: a number you can't make out stays as heard.
    `fixtures:check` reports the rest.
 10. **Keep chapter text in step with labels.** After relabelling, check that
     chapter titles and summaries name the right people. Chapters follow
