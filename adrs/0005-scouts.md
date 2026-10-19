@@ -40,7 +40,6 @@ interface Scout {
 
 interface ScoutContext {
   seen(recording: RecordingId): boolean;
-  bodies: ReadonlyArray<{ slug: string; name: string; timezone: string }>;
   log(message: string): void;
   signal: AbortSignal;
   now: Date;
