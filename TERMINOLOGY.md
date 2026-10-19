@@ -26,8 +26,8 @@ A website meetings are published on, YouTube or akleg.gov, from which we get a r
 _Avoid_: platform, provider, host
 
 **Recording**:
-One item published on a site that may be a meeting: a YouTube video, or a meeting page on akleg.gov. It has an ID on its site, its recording ID: a YouTube video ID, or an akleg.gov meeting ID like `HRES 2018-09-10 14:00:00`. A scout decides whether it is a meeting; a meeting has exactly one.
-_Avoid_: video (unless it is one), item, post, listing, site ref
+One item published on a site that may be a meeting: a YouTube video, or a meeting page on akleg.gov with an audio file and usually a video. Its audio is what we transcribe. It has an ID on its site, its recording ID: a YouTube video ID, or an akleg.gov meeting ID like `HRES 2018-09-10 14:00:00`. A scout decides whether it is a meeting; a meeting has exactly one.
+_Avoid_: video (unless it is one), stream, clip, media, item, post, listing, site ref
 
 **Scout**:
 A scheduled job that watches one place on a site, such as the Municipality of Anchorage's YouTube channel or akleg.gov's committee meetings, and reports each new recording as a meeting of one or more of the bodies it covers, or as not a meeting.
@@ -42,10 +42,6 @@ _Avoid_: session, hearing, event, recording, video
 **Joint meeting**:
 A meeting held by several bodies together, such as the Girdwood Board of Supervisors and the Girdwood Land Use Committee. It counts as a meeting of each of them, and none of them comes first.
 _Avoid_: combined meeting, shared meeting, host body, co-host, primary body
-
-**Video**:
-A recording on YouTube, from which a meeting's audio comes. An akleg.gov recording is a page with an audio file, which is what we transcribe, and usually a video too.
-_Avoid_: stream, clip, media
 
 **Meeting date**:
 The local calendar day a meeting took place, in the meeting's own timezone. May be unknown.

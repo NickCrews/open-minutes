@@ -3,16 +3,19 @@ import { dirname } from "node:path";
 import { z } from "zod";
 import type {
   AudioProvider,
-  VideoMetadata,
+  RecordingMetadata,
 } from "@open-minutes/core/audio-provider";
-import type { VideoLister } from "@open-minutes/core/video-lister";
+import type { RecordingLister } from "@open-minutes/core/recording-lister";
 import { mp3ToWav } from "./mp3";
 
 export type {
   AudioProvider,
-  VideoMetadata,
+  RecordingMetadata,
 } from "@open-minutes/core/audio-provider";
-export type { ListedVideo, VideoLister } from "@open-minutes/core/video-lister";
+export type {
+  ListedRecording,
+  RecordingLister,
+} from "@open-minutes/core/recording-lister";
 
 const BASE = "https://www.akleg.gov";
 
@@ -199,14 +202,14 @@ export function mainAudio(meeting: AkLegMeeting): MediaFile | undefined {
 }
 
 /**
- * {@link VideoMetadata} for a meeting. akleg.gov has no channels: the
+ * {@link RecordingMetadata} for a meeting. akleg.gov has no channels: the
  * chamber and committee code ("HRES") stand in for one, as they're what a
  * body's meetings share. The title ends with the scheduled start as
  * "YYYY-MM-DD hh:mm:ss", which the pipeline reads the meeting's date and time
  * from. akleg.gov gives no publication date, so the meeting's own date stands
  * in for it.
  */
-export function toMetadata(meeting: AkLegMeeting): VideoMetadata {
+export function toMetadata(meeting: AkLegMeeting): RecordingMetadata {
   const audio = mainAudio(meeting);
   return {
     id: meeting.id,
@@ -347,14 +350,14 @@ export interface AkLegSource {
 
 /**
  * Lists the meetings with audio in `source`, newest first, using `config`.
- * Does no I/O until {@link VideoLister.listVideos} is called.
+ * Does no I/O until {@link RecordingLister.listRecordings} is called.
  */
 export function aklegSource(
   source: AkLegSource,
   config: AkLegConfig = {},
-): VideoLister {
+): RecordingLister {
   return {
-    async listVideos() {
+    async listRecordings() {
       const legislature =
         source.legislature ?? legislatureOf(new Date().getFullYear());
       const meetings = await akleg(config).meetingsOfCommittee(

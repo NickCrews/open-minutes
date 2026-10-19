@@ -3,9 +3,12 @@ import { mkdir, access, readFile, rm } from "node:fs/promises";
 import { dirname } from "node:path";
 import type {
   AudioProvider,
-  VideoMetadata,
+  RecordingMetadata,
 } from "@open-minutes/core/audio-provider";
-import type { ListedVideo, VideoLister } from "@open-minutes/core/video-lister";
+import type {
+  ListedRecording,
+  RecordingLister,
+} from "@open-minutes/core/recording-lister";
 import { webmOpusToWav } from "./opus";
 import {
   type StoredFile,
@@ -171,7 +174,7 @@ function flattenVideos(node: FlatEntry, seen = new Set<string>()): FlatEntry[] {
  * The videos in a channel or playlist. A channel's span all its tabs
  * ("Videos", "Live", ...).
  */
-async function listVideos(source: YouTubeSource): Promise<ListedVideo[]> {
+async function listVideos(source: YouTubeSource): Promise<ListedRecording[]> {
   const { stdout } = await ytDlp(["--flat-playlist", "-J", sourceUrl(source)]);
   return flattenVideos(JSON.parse(stdout) as FlatEntry).map(
     ({ id, title }) => ({ id, title }),
@@ -186,7 +189,7 @@ async function listVideos(source: YouTubeSource): Promise<ListedVideo[]> {
 async function getMetadata(
   config: YouTubeConfig,
   videoIdOrUrl: string,
-): Promise<VideoMetadata> {
+): Promise<RecordingMetadata> {
   const raw =
     (await fetchStored(config, videoId(videoIdOrUrl), (f) => f.infoJson)) ??
     (JSON.parse(
@@ -361,10 +364,10 @@ export type YouTube = AudioProvider;
 /**
  * Lists the videos in `source` (via yt-dlp, never through a proxy: listing
  * works from datacenter IPs). Does no I/O until
- * {@link VideoLister.listVideos} is called.
+ * {@link RecordingLister.listRecordings} is called.
  */
-export function youtubeSource(source: YouTubeSource): VideoLister {
-  return { listVideos: () => listVideos(source) };
+export function youtubeSource(source: YouTubeSource): RecordingLister {
+  return { listRecordings: () => listVideos(source) };
 }
 
 /** A {@link YouTube} that uses `config`. Does no I/O until a method is called. */
