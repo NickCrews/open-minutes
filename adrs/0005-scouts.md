@@ -39,7 +39,8 @@ interface Scout {
 }
 
 interface ScoutContext {
-  seen(recording: RecordingId): boolean;
+  /** The ones not yet reported, by any scout, as a meeting or rejected. */
+  unseen(recordings: readonly RecordingId[]): Promise<RecordingId[]>;
   log(message: string): void;
   signal: AbortSignal;
   now: Date;
@@ -83,7 +84,7 @@ interface FoundMeeting {
 
 ### YouTube
 
-- List with `yt-dlp --flat-playlist -J`, then `yt-dlp --skip-download -J` for each recording not yet seen.
+- List with `yt-dlp --flat-playlist -J`, then `yt-dlp --skip-download -J` for each recording `unseen` returns.
 - In CI, yt-dlp goes through the WARP/Tor egress in `packages/youtube/egress`.
 - Classification uses the Anthropic SDK, called inside the scout behind `classify(recordings, bodies): ScoutReport`.
   The API key comes from an env var.
