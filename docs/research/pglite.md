@@ -27,8 +27,8 @@ const pg = await PGlite.create({ extensions: { vector, btree_gist } });
 
 Differences from our Postgres:
 
-- PGlite 0.5.10 is Postgres 18.6, 32-bit WASM. docker-compose runs
-  `pgvector/pgvector:pg17`.
+- PGlite 0.5.10 is Postgres 18.6, the same major version as docker-compose's
+  `pgvector/pgvector:pg18` and Neon prod, but compiled to 32-bit WASM.
 - One connection per instance. Advisory locks succeed but lock nothing, so
   `ensure.test.ts`'s "concurrent ensures of one database migrate it exactly
   once" can't be tested on it.
@@ -95,8 +95,13 @@ outlives a test file. Four workers then hold ~3.2 GB.
 
 Rollback-per-test has its own costs, on either backend:
 
-- Non-test code calls `db.transaction()` in four places. Inside an outer
-  `BEGIN` these need savepoints, or they commit the outer transaction.
+- Two `db.transaction()` calls run inside tests: `agents/src/tools.ts` and
+  `ingest/src/om/ingest.ts`. (The other two, in the `golden` and `dev`
+  seeders, run only when a template is built.) drizzle already turns
+  `tx.transaction()` into a savepoint, so these work if the test passes its
+  outer `tx` in as `db`. That `tx` isn't typed as `DB`, though. On
+  postgres.js, `db.transaction()` on a pooled `db` takes a different
+  connection, which can't see the test's uncommitted rows.
 - Migration tests start at older schema versions and run `migrateTo`, so they
   still need a database of their own.
 
@@ -122,7 +127,7 @@ Rollback-per-test has its own costs, on either backend:
 - `ensure.ts` and `TestDb`: identified by URL throughout; would need to accept
   a PGlite handle too.
 - `getDb()`: `drizzle-orm/pglite` for local targets.
-- Six migration-test files use `testDb.client` as a postgres.js tagged
+- All nine migration-test files use `testDb.client` as a postgres.js tagged
   template.
 - `pnpm db prune` and the legacy `open_minutes` rename.
 
@@ -131,6 +136,6 @@ Rollback-per-test has its own costs, on either backend:
 Benchmarks were throwaway scripts: PGlite in a scratch npm project applying
 each `migration.sql` split on `--> statement-breakpoint`, and `createTestDb`
 from `@open-minutes/db/testing` run under `tsx` against docker-compose's
-Postgres. Suite timings are `vitest run` over the files matching
+Postgres, then `pgvector/pgvector:pg17`. Suite timings are `vitest run` over the files matching
 `dbTest|goldenTest|createTestDb|testing/vitest`, with the JSON reporter for
 per-test durations.
