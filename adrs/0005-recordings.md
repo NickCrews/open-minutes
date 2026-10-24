@@ -19,6 +19,21 @@ Everything that finds, judges or ingests recordings reads and writes that table.
 ### Storage
 
 ```ts
+// @open-minutes/core, replacing SiteKind and SITE_KINDS
+export const SITES = ["youtube", "akleg"] as const;
+export type Site = (typeof SITES)[number];
+
+// packages/db/src/schema.ts, beside kebabCase. bodies and meetings switch to
+// these too.
+const oneOf = (column: AnyPgColumn, values: readonly string[]) =>
+  sql`${column} IN (${sql.raw(values.map((v) => `'${v}'`).join(", "))})`;
+const ianaTimezone = (column: AnyPgColumn) =>
+  sql`${column} IS NULL OR iana_timezone_error(${column}) IS NULL`;
+const timeRequiresDate = (time: AnyPgColumn, date: AnyPgColumn) =>
+  sql`${time} IS NULL OR ${date} IS NOT NULL`;
+```
+
+```ts
 export const recordingsTable = pgTable(
   "recordings",
   {
@@ -43,18 +58,15 @@ export const recordingsTable = pgTable(
   },
   (table) => [
     unique("recordings_site_site_id_unique").on(table.site, table.site_id),
-    check("recordings_site_known", sql`${table.site} IN ('youtube', 'akleg')`),
+    check("recordings_site_known", oneOf(table.site, SITES)),
     check(
       "recordings_meeting_has_timezone",
       sql`NOT ${table.is_meeting} OR ${table.timezone} IS NOT NULL`,
     ),
-    check(
-      "recordings_timezone_valid",
-      sql`${table.timezone} IS NULL OR iana_timezone_error(${table.timezone}) IS NULL`,
-    ),
+    check("recordings_timezone_valid", ianaTimezone(table.timezone)),
     check(
       "recordings_time_requires_date",
-      sql`${table.time} IS NULL OR ${table.date} IS NOT NULL`,
+      timeRequiresDate(table.time, table.date),
     ),
   ],
 );
@@ -101,7 +113,7 @@ A harness runs scouts on a schedule and writes their reports to `recordings`.
 ```ts
 /** A recording's key: `recordings.site` and `recordings.site_id`. */
 interface RecordingKey {
-  site: Site;
+  site: Site; // see SITES
   site_id: string;
 }
 
