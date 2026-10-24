@@ -13,8 +13,8 @@ Deciding which recordings are meetings, and of which bodies, needs judgment, oft
 ## Decision
 
 Recordings get their own table, written when a recording is found, before and independent of any meeting.
-A meeting points at its recording.
-Everything that finds, judges or ingests recordings reads and writes that table.
+A meeting points at its recording, and exists from the moment a recording is judged to be one, before it is transcribed.
+Everything that finds, judges or ingests recordings reads and writes these tables.
 
 ### Storage
 
@@ -23,17 +23,10 @@ Everything that finds, judges or ingests recordings reads and writes that table.
 export const SITES = ["youtube", "akleg"] as const;
 export type Site = (typeof SITES)[number];
 
-// packages/db/src/schema.ts, beside kebabCase. bodies and meetings switch to
-// these too.
+// packages/db/src/schema.ts, beside kebabCase
 const oneOf = (column: AnyPgColumn, values: readonly string[]) =>
   sql`${column} IN (${sql.raw(values.map((v) => `'${v}'`).join(", "))})`;
-const ianaTimezone = (column: AnyPgColumn) =>
-  sql`${column} IS NULL OR iana_timezone_error(${column}) IS NULL`;
-const timeRequiresDate = (time: AnyPgColumn, date: AnyPgColumn) =>
-  sql`${time} IS NULL OR ${date} IS NOT NULL`;
-```
 
-```ts
 export const recordingsTable = pgTable(
   "recordings",
   {
@@ -50,57 +43,37 @@ export const recordingsTable = pgTable(
     // The scout's notes on its decision: why it rejected a recording, or how it
     // read a meeting's bodies, date and time.
     notes: varchar().notNull().default(""),
-    title: varchar().notNull().default(""),
-    description: varchar().notNull().default(""),
-    date: date({ mode: "string" }),
-    time: time(),
-    timezone: varchar(),
   },
   (table) => [
     unique("recordings_site_site_id_unique").on(table.site, table.site_id),
     check("recordings_site_known", oneOf(table.site, SITES)),
-    check(
-      "recordings_meeting_has_timezone",
-      sql`NOT ${table.is_meeting} OR ${table.timezone} IS NOT NULL`,
-    ),
-    check("recordings_timezone_valid", ianaTimezone(table.timezone)),
-    check(
-      "recordings_time_requires_date",
-      timeRequiresDate(table.time, table.date),
-    ),
   ],
 );
 
-export const recordingBodiesTable = pgTable(
-  "recording_bodies",
-  {
-    recording_id: integer()
-      .notNull()
-      .references(() => recordingsTable.id, { onDelete: "cascade" }),
-    body_id: integer()
-      .notNull()
-      .references(() => bodiesTable.id, { onDelete: "cascade" }),
-  },
-  (table) => [
-    primaryKey({ columns: [table.recording_id, table.body_id] }),
-    index("idx_recording_bodies_body").on(table.body_id),
-  ],
-);
+// meetings: replaces site_kind, site_id and url, and adds transcribed_at.
+recording_id: integer()
+  .notNull()
+  .unique()
+  .references(() => recordingsTable.id),
+// When ingestion stored its transcript; null until then.
+transcribed_at: timestamp(),
 ```
 
-- A recording is a meeting candidate when `is_meeting`, and rejected otherwise.
+- A recording is a meeting when `is_meeting`, and rejected otherwise.
   Rejected recordings stay, so nothing judges them twice.
-- `meetings.recording_id` (non-null, unique, FK to `recordings.id`) replaces `meetings.site_kind`, `site_id` and the generated `url`.
-- An available meeting is a recording with `is_meeting` and no meeting pointing at it.
-- Ingestion reads the recording's bodies, title, description and date, and creates the meeting pointing at it in one transaction.
-- A migration creates a recording for each existing meeting, points the meeting at it, then drops `meetings.site_kind`, `site_id`, `url` and `bodies.meeting_source`.
+- For a meeting, the harness also creates its `meetings` row (title, description, date, time, timezone) and its `meeting_bodies` rows, in the same transaction as the recording.
+- An available meeting is a meeting with no `transcribed_at`.
+- Ingestion stores a meeting's segments and sets `transcribed_at` in one transaction.
+  It may still refine the meeting's time from the gavel-in.
+- Everything that shows transcripts (the web app, search, `llms.txt`, agent tools, the DuckDB export) reads only meetings with `transcribed_at`.
+- A migration creates a recording for each existing meeting, points the meeting at it, sets `transcribed_at` to the meeting's `created_at`, then drops `meetings.site_kind`, `site_id`, `url` and `bodies.meeting_source`.
 - `MeetingSource`, `listerFor` and `resolveBody` go away.
 
 ### Scouts
 
 Recordings are written by **scouts**.
 A scout watches one place on a site and reports each new recording as a meeting of one or more of the bodies it covers, or as not a meeting.
-A harness runs scouts on a schedule and writes their reports to `recordings`.
+A harness runs scouts on a schedule and writes their reports to `recordings`, `meetings` and `meeting_bodies`.
 
 | id             | Watches                                 | Bodies                             | Schedule                      | Classifies with |
 | -------------- | --------------------------------------- | ---------------------------------- | ----------------------------- | --------------- |
@@ -118,9 +91,10 @@ interface RecordingKey {
 }
 
 /**
- * What a scout reports for one recording: a `recordings` row without the
- * columns the harness fills in (`id`, `scout_id`, `found_at`), plus its
- * bodies as slugs, which the harness turns into `recording_bodies` rows.
+ * What a scout reports for one recording: its `recordings` columns, minus the
+ * ones the harness fills in (`id`, `scout_id`, `found_at`), and, for a
+ * meeting, its `meetings` columns and its bodies as slugs, which the harness
+ * turns into `meeting_bodies` rows.
  */
 interface ScoutedRecording extends RecordingKey {
   permalink: string | null;
@@ -157,9 +131,9 @@ interface ScoutContext {
 
 #### Harness
 
-- `om scout [--scout <id>] [--dry-run]` runs scouts and writes `recordings`.
+- `om scout [--scout <id>] [--dry-run]` runs scouts and writes `recordings`, `meetings` and `meeting_bodies`.
   It validates bodies against the scout's `bodies`.
-- `om available` reads `recordings`.
+- `om available` lists meetings with no `transcribed_at`.
 - `.github/workflows/scout.yml` runs hourly, and runs each scout whose cron fell in the past hour.
 
 #### YouTube
@@ -178,7 +152,3 @@ interface ScoutContext {
 
 - An LLM in `ScoutContext`.
 - Ingesting automatically after scouting.
-
-### Open questions
-
-- Should scouting create the meeting row, leaving it untranscribed, so a meeting's bodies, date and time live only on `meetings` and `meeting_bodies`?
