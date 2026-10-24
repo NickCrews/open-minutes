@@ -21,17 +21,17 @@ _Avoid_: muni, board, council, committee, organization, group
 A stable, unique handle in lowercase kebab-case that names a row the same way in every database, unlike its id, and doesn't change when it's renamed. Code, static data, the fixtures, the command line and file paths refer to a row by it. Every jurisdiction (`moa`) and body (`gbos`) has one; so does every known person (`margaret-tyler`), the key for their identity across meetings, and every golden fixture meeting (`gbos-2026-03-23`, its fixture directory's name). Other meetings and people have none and go by their id.
 _Avoid_: name, short name, handle, key, muni slug, body id, fixture name, meeting key
 
+**Meeting source**:
+Where a body's meetings are published, scanned for new ones: a YouTube channel or playlist, or an Alaska Legislature committee on akleg.gov. A body has at most one; bodies that share a YouTube channel each get a playlist on it.
+_Avoid_: video source, feed, playlist, channel (unless it really is one)
+
 **Site**:
 A website meetings are published on, YouTube or akleg.gov, from which we get a recording's metadata and audio.
 _Avoid_: platform, provider, host
 
 **Recording**:
-One item published on a site that may be a meeting: a YouTube video, or a meeting page on akleg.gov with an audio file and usually a video. Its audio is what we transcribe. It has an ID on its site, its recording ID: a YouTube video ID, or an akleg.gov meeting ID like `HRES 2018-09-10 14:00:00`. A scout decides whether it is a meeting; a meeting has exactly one.
+One item published on a site that may be a meeting: a YouTube video, or a meeting page on akleg.gov with an audio file and usually a video. Its audio is what we transcribe. It has an ID on its site, its recording ID: a YouTube video ID, or an akleg.gov meeting ID like `HRES 2018-09-10 14:00:00`. A meeting has exactly one.
 _Avoid_: video (unless it is one), stream, clip, media, item, post, listing, site ref
-
-**Scout**:
-A scheduled job that watches one place on a site, such as the Municipality of Anchorage's YouTube channel or akleg.gov's committee meetings, and reports each new recording as a meeting of one or more of the bodies it covers, or as not a meeting.
-_Avoid_: ingestor, scraper, crawler, meeting source, feed
 
 ### Meetings and transcripts
 
@@ -161,7 +161,7 @@ Running one meeting's recording through transcription, diarization, alignment, a
 _Avoid_: import, processing, scraping, sync
 
 **Available meeting**:
-A recording a scout reported as a meeting that hasn't been ingested yet.
+A meeting on a body's meeting source that hasn't been ingested yet.
 _Avoid_: available video, new video, pending video, backlog
 
 **Transcription**:
