@@ -166,15 +166,15 @@ interface ScoutContext {
 
 - List with `yt-dlp --flat-playlist -J`, then `yt-dlp --skip-download -J` for each recording `unseen` returns.
 - In CI, yt-dlp goes through the WARP/Tor egress in `packages/youtube/egress`.
-- Classification uses an LLM called inside the scout, behind `classify(recordings, bodies): ScoutedRecording[]`.
+- Classification happens inside the scout.
 
 #### Tests
 
-- Each scout, with a faked listing and a faked `classify`.
+- Each scout, with a faked listing and a faked LLM.
 - The harness rejecting unknown bodies.
 - `om scout --dry-run` against a seeded database.
 - The migration's backfill.
-- An on-demand eval of `classify` on the golden meetings plus saved non-meeting recordings.
+- An on-demand eval of the YouTube scouts on the golden meetings plus saved non-meeting recordings.
 
 ### Out of scope
 
