@@ -8,13 +8,12 @@ Status: Proposed
 A **recording** (see `TERMINOLOGY.md`) exists in the database only as two columns on the meeting made from it, `meetings.site_kind` and `meetings.site_id`.
 Nothing records a recording we found but haven't ingested, or one we decided isn't a meeting, so every scan of a site rediscovers and rejudges both.
 One place on a site can carry several bodies' meetings: the GBOS channel carries GBOS and Girdwood committee meetings, and the MOA channel carries the Assembly, PZC and committees.
-Deciding which recordings are meetings, and of which bodies, needs judgment, often an LLM's.
 
 ## Decision
 
 Recordings get their own table, written when a recording is found, before and independent of any meeting.
-A meeting points at its recording, and exists from the moment a recording is judged to be one, before it is transcribed.
-Everything that finds, judges or ingests recordings reads and writes these tables.
+A meeting points at its recording.
+Finding recordings and judging them are separate jobs: **scouts** find recordings and may judge them, and **ingestion** judges whatever a scout left open.
 
 ### Storage
 
@@ -35,13 +34,18 @@ export const recordingsTable = pgTable(
     // Its ID on its site: a YouTube video ID, or an akleg.gov meeting ID.
     site_id: varchar().notNull(),
     permalink: varchar(),
+    // As the site gives them.
+    title: varchar().notNull().default(""),
+    description: varchar().notNull().default(""),
+    upload_date: date({ mode: "string" }),
+    duration_secs: secondsInterval(),
     // The `Scout.id` that reported it, eg "moa-youtube"; null for one added by
     // hand or backfilled. Scouts live in code, so not a foreign key.
     scout_id: varchar(),
     found_at: timestamp().notNull().defaultNow(),
-    is_meeting: boolean().notNull(),
-    // The scout's notes on its decision: why it rejected a recording, or how it
-    // read a meeting's bodies, date and time.
+    // Whether it is a meeting. Null until a scout or ingestion decides.
+    is_meeting: boolean(),
+    // Notes on that decision, from whoever made it.
     notes: varchar().notNull().default(""),
   },
   (table) => [
@@ -50,36 +54,54 @@ export const recordingsTable = pgTable(
   ],
 );
 
-// meetings: replaces site_kind, site_id and url, and adds transcribed_at.
+// Bodies a scout says a recording belongs to; a hint for ingestion.
+export const recordingBodiesTable = pgTable(
+  "recording_bodies",
+  {
+    recording_id: integer()
+      .notNull()
+      .references(() => recordingsTable.id, { onDelete: "cascade" }),
+    body_id: integer()
+      .notNull()
+      .references(() => bodiesTable.id, { onDelete: "cascade" }),
+  },
+  (table) => [primaryKey({ columns: [table.recording_id, table.body_id] })],
+);
+
+// meetings: replaces site_kind, site_id and url.
 recording_id: integer()
   .notNull()
   .unique()
   .references(() => recordingsTable.id),
-// When ingestion stored its transcript; null until then.
-transcribed_at: timestamp(),
 ```
 
-- A recording is a meeting when `is_meeting`, and rejected otherwise.
-  Rejected recordings stay, so nothing judges them twice.
-- For a meeting, the harness also creates its `meetings` row (title, description, date, time, timezone) and its `meeting_bodies` rows, in the same transaction as the recording.
-- An available meeting is a meeting with no `transcribed_at`.
-- Ingestion stores a meeting's segments and sets `transcribed_at` in one transaction.
-  It may still refine the meeting's time from the gavel-in.
-- Everything that shows transcripts (the web app, search, `llms.txt`, agent tools, the DuckDB export) reads only meetings with `transcribed_at`.
-- A migration creates a recording for each existing meeting, points the meeting at it, sets `transcribed_at` to the meeting's `created_at`, then drops `meetings.site_kind`, `site_id`, `url` and `bodies.meeting_source`.
+- An available recording is one with `is_meeting` not false and no meeting pointing at it.
+- A migration creates a recording for each existing meeting, with `is_meeting` true, points the meeting at it, then drops `meetings.site_kind`, `site_id`, `url` and `bodies.meeting_source`.
 - `MeetingSource`, `listerFor` and `resolveBody` go away.
+
+### Ingestion
+
+1. If the recording's `is_meeting` is null, decide it, before downloading anything, from the title, description and duration.
+   A recording that isn't a meeting gets `is_meeting` false and `notes`, and ingestion stops.
+2. Transcribe, diarize, align and recognize, as now.
+3. Decide the bodies, date and time from the title and the opening of the transcript, starting from the scout's `recording_bodies` if it gave any.
+   A body ingestion can't determine is left off; the meeting is stored without it and flagged for a person or agent to fill in.
+4. Store the meeting, its `meeting_bodies` and segments, set `is_meeting` true, all in one transaction.
 
 ### Scouts
 
-Recordings are written by **scouts**.
-A scout watches one place on a site and reports each new recording as a meeting of one or more of the bodies it covers, or as not a meeting.
-A harness runs scouts on a schedule and writes their reports to `recordings`, `meetings` and `meeting_bodies`.
+A scout watches one place on a site and reports each new recording.
+How much it decides is up to it: the minimum is the recording and what the site says about it, and it may also decide whether it is a meeting and suggest its bodies.
+A harness runs scouts on a schedule and writes their reports.
 
-| id             | Watches                                 | Bodies                             | Schedule                      | Classifies with |
-| -------------- | --------------------------------------- | ---------------------------------- | ----------------------------- | --------------- |
-| `gbos-youtube` | GBOS channel `UCOUlNInprZEjhbpVPiJOlEA` | `gbos`, LUC, other Girdwood bodies | daily, weekdays               | LLM             |
-| `moa-youtube`  | MOA channel                             | `assembly`, `pzc`, `ced`, …        | several times a day, weekdays | LLM             |
-| `akleg`        | akleg.gov committees                    | `hres`, …                          | daily                         | committee code  |
+| id             | Watches                                 | Bodies                             | Schedule                      |
+| -------------- | --------------------------------------- | ---------------------------------- | ----------------------------- |
+| `gbos-youtube` | GBOS channel `UCOUlNInprZEjhbpVPiJOlEA` | `gbos`, LUC, other Girdwood bodies | daily, weekdays               |
+| `moa-youtube`  | MOA channel                             | `assembly`, `pzc`, `ced`, …        | several times a day, weekdays |
+| `akleg`        | akleg.gov committees                    | `hres`, …                          | daily                         |
+
+The akleg.gov scout knows each recording's body from its committee code and that every one is a meeting.
+The YouTube scouts start with title rules, eg "test" in the title means not a meeting, and leave the rest null.
 
 #### Contract (`@open-minutes/core/scout`)
 
@@ -91,21 +113,20 @@ interface RecordingKey {
 }
 
 /**
- * What a scout reports for one recording: its `recordings` columns, minus the
- * ones the harness fills in (`id`, `scout_id`, `found_at`), and, for a
- * meeting, its `meetings` columns and its bodies as slugs, which the harness
- * turns into `meeting_bodies` rows.
+ * What a scout reports for one recording: its `recordings` columns, minus
+ * the ones the harness fills in (`id`, `scout_id`, `found_at`), plus any
+ * bodies it can name, as slugs, which the harness writes to
+ * `recording_bodies`.
  */
 interface ScoutedRecording extends RecordingKey {
   permalink: string | null;
-  is_meeting: boolean;
-  notes: string;
   title: string;
   description: string;
-  date: string | null;
-  time: string | null;
-  timezone: string | null; // null on a meeting means the first body's
-  bodies: string[]; // at least one when is_meeting, none otherwise
+  upload_date: string | null;
+  duration_secs: number | null;
+  is_meeting: boolean | null; // null leaves it to ingestion
+  notes: string;
+  bodies: string[]; // may be empty
 }
 
 interface Scout {
@@ -127,25 +148,24 @@ interface ScoutContext {
 
 - Scouts don't touch the database.
   They may shell out, use the filesystem and read env vars.
-- Every recording a scout examines is reported, as a meeting or not.
 
 #### Harness
 
-- `om scout [--scout <id>] [--dry-run]` runs scouts and writes `recordings`, `meetings` and `meeting_bodies`.
+- `om scout [--scout <id>] [--dry-run]` runs scouts and writes `recordings` and `recording_bodies`.
   It validates bodies against the scout's `bodies`.
-- `om available` lists meetings with no `transcribed_at`.
+- `om available` lists available recordings.
 - `.github/workflows/scout.yml` runs hourly, and runs each scout whose cron fell in the past hour.
 
 #### YouTube
 
 - List with `yt-dlp --flat-playlist -J`, then `yt-dlp --skip-download -J` for each recording `unseen` returns.
 - In CI, yt-dlp goes through the WARP/Tor egress in `packages/youtube/egress`.
-- Classification happens inside the scout.
 
 #### Tests
 
 - Each scout end to end against its live site, YouTube or akleg.gov, with as little mocking as possible: run it and check it reports real recordings correctly.
 - The harness, with fake scouts: which scouts run for a given hour's crons, and the database before and after a run (rows written, `unseen` skipping recordings already reported, unknown bodies rejected).
+- Ingestion deciding `is_meeting` and bodies for recordings a scout left open.
 - The migration's backfill.
 
 ### Out of scope
