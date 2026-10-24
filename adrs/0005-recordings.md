@@ -47,6 +47,9 @@ export const recordingsTable = pgTable(
     is_meeting: boolean(),
     // Notes on that decision, from whoever made it.
     notes: varchar().notNull().default(""),
+    // When its audio reached the object store, at
+    // recordings/<site>/<site_id>/speech.webm; null until then.
+    audio_stored_at: timestamp(),
   },
   (table) => [
     unique("recordings_site_site_id_unique").on(table.site, table.site_id),
@@ -75,15 +78,16 @@ recording_id: integer()
   .references(() => recordingsTable.id),
 ```
 
-- An available recording is one with `is_meeting` not false and no meeting pointing at it.
+- An available recording is one with `is_meeting` not false, `audio_stored_at` set, and no meeting pointing at it.
 - A migration creates a recording for each existing meeting, with `is_meeting` true, points the meeting at it, then drops `meetings.site_kind`, `site_id`, `url` and `bodies.meeting_source`.
 - `MeetingSource`, `listerFor` and `resolveBody` go away.
 
 ### Ingestion
 
-1. If the recording's `is_meeting` is null, decide it, before downloading anything, from the title, description and duration.
+1. If the recording's `is_meeting` is null, decide it, before transcribing, from the title, description and duration.
    A recording that isn't a meeting gets `is_meeting` false and `notes`, and ingestion stops.
-2. Transcribe, diarize, align and recognize, as now.
+2. Read the audio from the object store, then transcribe, diarize, align and recognize, as now.
+   Ingestion never touches a recording's site.
 3. Decide the bodies, date and time from the title and the opening of the transcript, starting from the scout's `recording_bodies` if it gave any.
    A body ingestion can't determine is left off; the meeting is stored without it and flagged for a person or agent to fill in.
 4. Store the meeting, its `meeting_bodies` and segments, set `is_meeting` true, all in one transaction.
@@ -135,6 +139,12 @@ interface Scout {
   bodies: readonly string[]; // slugs it may report
   schedule: string; // cron, UTC
   scan(ctx: ScoutContext): Promise<ScoutedRecording[]>;
+  /** Download the recording's audio to `dest` as Opus, converting if the site serves another format. */
+  fetchAudio(
+    recording: RecordingKey,
+    dest: string,
+    signal: AbortSignal,
+  ): Promise<void>;
 }
 
 interface ScoutContext {
@@ -153,18 +163,23 @@ interface ScoutContext {
 
 - `om scout [--scout <id>] [--dry-run]` runs scouts and writes `recordings` and `recording_bodies`.
   It validates bodies against the scout's `bodies`.
+- After writing a run's reports, the harness fetches audio eagerly: for each recording with `is_meeting` not false and no `audio_stored_at`, newest first and up to a cap per run, it calls `fetchAudio` into a temporary file, encodes it for speech (`.github/scripts/encode-speech-audio.sh`), uploads it to `recordings/<site>/<site_id>/speech.webm` and sets `audio_stored_at`.
+  A failed fetch is logged and retried on the next run.
 - `om available` lists available recordings.
 - `.github/workflows/scout.yml` runs hourly, and runs each scout whose cron fell in the past hour.
 
 #### YouTube
 
 - List with `yt-dlp --flat-playlist -J`, then `yt-dlp --skip-download -J` for each recording `unseen` returns.
+- `fetchAudio` downloads YouTube's Opus stream (format 251) with yt-dlp.
 - In CI, yt-dlp goes through the WARP/Tor egress in `packages/youtube/egress`.
+- `fetch-youtube-audio.yml` goes away; the scout workflow does its job.
 
 #### Tests
 
 - Each scout end to end against its live site, YouTube or akleg.gov, with as little mocking as possible: run it and check it reports real recordings correctly.
-- The harness, with fake scouts: which scouts run for a given hour's crons, and the database before and after a run (rows written, `unseen` skipping recordings already reported, unknown bodies rejected).
+- Each scout's `fetchAudio` against its live site, on one short recording.
+- The harness, with fake scouts: which scouts run for a given hour's crons, and the database and object store before and after a run (rows written, `unseen` skipping recordings already reported, unknown bodies rejected, audio uploaded, the per-run cap, a failed fetch retried next run).
 - Ingestion deciding `is_meeting` and bodies for recordings a scout left open.
 - The migration's backfill.
 
