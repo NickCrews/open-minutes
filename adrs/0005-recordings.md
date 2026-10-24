@@ -154,8 +154,7 @@ interface ScoutContext {
 
 - List with `yt-dlp --flat-playlist -J`, then `yt-dlp --skip-download -J` for each recording `unseen` returns.
 - In CI, yt-dlp goes through the WARP/Tor egress in `packages/youtube/egress`.
-- Classification uses the Anthropic SDK, called inside the scout behind `classify(recordings, bodies): ScoutedRecording[]`.
-  The API key comes from an env var.
+- Classification uses an LLM called inside the scout, behind `classify(recordings, bodies): ScoutedRecording[]`.
 
 #### Tests
 
