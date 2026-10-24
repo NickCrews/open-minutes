@@ -9,7 +9,7 @@ import {
   youtubeFromEnv,
   youtubeSource,
 } from ".";
-import { rmSync, existsSync } from "node:fs";
+import { existsSync } from "node:fs";
 
 // yt-dlp runs for real unless a test replaces execFile's implementation.
 vi.mock("node:child_process", async (importOriginal) => {
@@ -18,8 +18,6 @@ vi.mock("node:child_process", async (importOriginal) => {
 });
 
 describe("YouTube Module", () => {
-  const yt = youtubeFromEnv();
-
   // A channel expands into one nested playlist per tab ("Videos", "Live", ...),
   // so these assert we walk down to the videos rather than handing back the
   // tabs. MOA is the regression case: it has both tabs, and returning them
@@ -33,7 +31,7 @@ describe("YouTube Module", () => {
     "should fetch videos in the $name channel",
     // MOA's flat playlist is thousands of entries and several MB of JSON, so
     // scraping it takes about a minute.
-    { tags: ["slow"] },
+    { tags: ["ytdlp"] },
     async ({ id, minVideos }) => {
       const videos = await youtubeSource({
         kind: "channel",
@@ -50,29 +48,36 @@ describe("YouTube Module", () => {
     },
   );
 
-  // YouTube makes datacenter IPs (like GitHub's runners) "sign in to confirm
-  // you're not a bot", so in CI this reads from the object store
-  // (OBJECT_STORE_PUBLIC_URL; see fetchStored). A run without it skips.
-  it.skipIf(process.env.CI && !process.env.OBJECT_STORE_PUBLIC_URL)(
-    "should download video audio",
-    async () => {
-      // A 5 sec video for testing
-      const sampleVideo = "https://www.youtube.com/watch?v=QUF1uLgzL-s";
-      const path = new URL("./test_audio/short.wav", import.meta.url).pathname;
-      // Clean up any existing file before test
-      rmSync(path, { force: true });
-      expect(existsSync(path)).toBe(false);
-      let result = await yt.ensureAudioDownloaded(sampleVideo, path, {
-        overwrite: true,
-      });
+  // A 5 sec video, in the object store.
+  const sampleVideo = "https://www.youtube.com/watch?v=QUF1uLgzL-s";
+
+  /** Downloads sampleVideo's audio with `yt` twice: once fetched, once already there. */
+  async function expectDownloads(yt: ReturnType<typeof youtube>) {
+    const dir = await mkdtemp(join(tmpdir(), "youtube-download-"));
+    try {
+      const path = join(dir, "short.wav");
+      let result = await yt.ensureAudioDownloaded(sampleVideo, path);
       expect(existsSync(path)).toBe(true);
       expect(result).toHaveProperty("downloaded", true);
       result = await yt.ensureAudioDownloaded(sampleVideo, path);
       expect(result).toHaveProperty("downloaded", false);
-    },
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  }
+
+  // YouTube makes datacenter IPs (like GitHub's runners) "sign in to confirm
+  // you're not a bot", so CI reads from the object store (see fetchStored).
+  it.skipIf(!process.env.OBJECT_STORE_PUBLIC_URL)(
+    "should download video audio from the object store",
+    () => expectDownloads(youtubeFromEnv()),
     // The sample is in the store, so this takes a second or two. A miss waits
     // on a fetch-youtube-audio run, which takes 2-6 minutes.
     5 * 60_000,
+  );
+
+  it("should download video audio with yt-dlp", { tags: ["ytdlp"] }, () =>
+    expectDownloads(youtube({ proxies: youtubeConfigFromEnv().proxies })),
   );
 });
 

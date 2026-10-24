@@ -98,8 +98,10 @@ You need:
 - **Node 22** and **pnpm 10.33.0** (pinned in `package.json`;
   `corepack enable` picks it up).
 - **Docker** with Compose, for the local Postgres.
-- **yt-dlp** and **[deno](https://deno.com)** on your `PATH`, for videos not
-  yet in the object store (below); yt-dlp runs YouTube's player JS with deno.
+- **yt-dlp** on your `PATH`, for videos not yet in the object store (below);
+  `packages/youtube/install-ytdlp.sh` installs it. yt-dlp runs YouTube's
+  player JS with node, or with [deno](https://deno.com) if it's on your
+  `PATH`, which sandboxes it more tightly.
 
 Then:
 
@@ -155,7 +157,8 @@ and one-time setup.
 pnpm check       # typecheck + format:check + lint + test (run this before committing)
 pnpm test        # fast tests only
 pnpm test:slow   # only the tests tagged `slow`
-pnpm test:all    # everything, including slow tests
+pnpm test:ytdlp  # only the tests tagged `ytdlp`
+pnpm test:all    # everything, including slow and ytdlp tests
 pnpm bench       # time the audio models per minute of audio (*.bench.ts)
 pnpm format      # prettier --write over the repo
 ```
@@ -163,7 +166,11 @@ pnpm format      # prettier --write over the repo
 Tests that need a database clone a cached, pre-seeded template. Tests
 tagged `slow` run full-meeting transcription and diarization and take roughly
 10–20 minutes each on CPU. They're skipped unless `SLOW=1`, which `test:slow`
-and `test:all` set for you.
+and `test:all` set for you. Tests tagged `ytdlp` run yt-dlp against YouTube;
+they're skipped unless `YTDLP=1`, which `test:ytdlp` and `test:all` set, and
+then yt-dlp is installed into `.cache/bin` if it isn't on your `PATH`. From a
+datacenter IP they need `YOUTUBE_PROXY` (see the
+[youtube README](packages/youtube/README.md)).
 
 Shared test configuration is in `vitest.config.ts`, `vitest.shared.ts` and
 `test-setup.ts` at the repository root.
