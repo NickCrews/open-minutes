@@ -170,9 +170,8 @@ interface ScoutContext {
 
 #### Tests
 
-- Each scout, with a faked listing.
-- The harness rejecting unknown bodies.
-- `om scout --dry-run` against a seeded database.
+- Each scout end to end against its live site, YouTube or akleg.gov, with as little mocking as possible: run it and check it reports real recordings correctly.
+- The harness, with fake scouts: which scouts run for a given hour's crons, and the database before and after a run (rows written, `unseen` skipping recordings already reported, unknown bodies rejected).
 - The migration's backfill.
 
 ### Out of scope
