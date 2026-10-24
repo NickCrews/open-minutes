@@ -151,4 +151,4 @@ interface ScoutContext {
 ### Out of scope
 
 - An LLM in `ScoutContext`.
-- Ingesting automatically after scouting.
+- Starting ingestion (transcription, chapters, summaries) automatically after scouting.
