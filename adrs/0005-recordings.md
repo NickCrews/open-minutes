@@ -170,11 +170,10 @@ interface ScoutContext {
 
 #### Tests
 
-- Each scout, with a faked listing and a faked LLM.
+- Each scout, with a faked listing.
 - The harness rejecting unknown bodies.
 - `om scout --dry-run` against a seeded database.
 - The migration's backfill.
-- An on-demand eval of the YouTube scouts on the golden meetings plus saved non-meeting recordings.
 
 ### Out of scope
 
