@@ -1,0 +1,17 @@
+{
+  "name": "@open-minutes/glossary",
+  "version": "0.1.0",
+  "description": "Open Minutes glossaries: the local words a body's meetings use, what they mean and how speech recognition mishears them",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.17",
+    "vitest": "^4.0.18"
+  }
+}

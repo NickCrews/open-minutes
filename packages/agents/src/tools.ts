@@ -16,10 +16,12 @@ import {
   parseMeetingTime,
 } from "@open-minutes/core/meeting-date";
 import { hasTypographicDash } from "@open-minutes/core/text";
+import { glossaryFor } from "@open-minutes/glossary";
 import { transcriptFingerprint } from "@open-minutes/core/transcript-fingerprint";
 import { LAST_WORD_DURATION_SEC } from "@open-minutes/core/transcription";
 import { audioTools } from "./audio/tools";
 import { checkMeeting } from "./check";
+import { glossaryBodies } from "./glossary";
 import { loadChapters, loadSegments, round, speakerOf } from "./load";
 import { findMeeting, meetingRef } from "./meeting-ref";
 import { type Db, defineTool, type Tool, ToolError } from "./tool";
@@ -364,6 +366,19 @@ export const checkMeetingTool = defineTool({
   },
 });
 
+export const getGlossary = defineTool({
+  name: "get_glossary",
+  label: "Get glossary",
+  description:
+    "List the local words of the regions a meeting's bodies are in: each entry's correct spelling (headword), what it means, its other correct spellings (variants), and how speech recognition has misheard it.",
+  input: z.object({ meeting: meetingRef }),
+  run: async (ctx, input) => {
+    const db = await ctx.db();
+    const meeting = await findMeeting(db, input.meeting);
+    return glossaryFor(await glossaryBodies(db, meeting.id));
+  },
+});
+
 export const relabelSegments = defineTool({
   name: "relabel_segments",
   label: "Relabel segments",
@@ -650,6 +665,7 @@ export const tools: Tool[] = [
   getTranscript,
   listSpeakers,
   findPeople,
+  getGlossary,
   checkMeetingTool,
   relabelSegments,
   splitSegment,
