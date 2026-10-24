@@ -99,10 +99,27 @@ A harness runs scouts on a schedule and writes their reports to `recordings`.
 #### Contract (`@open-minutes/core/scout`)
 
 ```ts
-interface Recording {
-  site: "youtube" | "akleg";
-  id: string;
+/** A recording's key: `recordings.site` and `recordings.site_id`. */
+interface RecordingKey {
+  site: Site;
+  site_id: string;
+}
+
+/**
+ * What a scout reports for one recording: a `recordings` row without the
+ * columns the harness fills in (`id`, `scout_id`, `found_at`), plus its
+ * bodies as slugs, which the harness turns into `recording_bodies` rows.
+ */
+interface ScoutedRecording extends RecordingKey {
   permalink: string | null;
+  is_meeting: boolean;
+  notes: string;
+  title: string;
+  description: string;
+  date: string | null;
+  time: string | null;
+  timezone: string | null; // null on a meeting means the first body's
+  bodies: string[]; // at least one when is_meeting, none otherwise
 }
 
 interface Scout {
@@ -110,37 +127,21 @@ interface Scout {
   name: string;
   bodies: readonly string[]; // slugs it may report
   schedule: string; // cron, UTC
-  scan(ctx: ScoutContext): Promise<ScoutReport>;
+  scan(ctx: ScoutContext): Promise<ScoutedRecording[]>;
 }
 
 interface ScoutContext {
-  /** The ones not yet reported, by any scout, as a meeting or rejected. */
-  unseen(recordings: readonly Recording[]): Promise<Recording[]>;
+  /** The ones no scout has reported yet. */
+  unseen(recordings: readonly RecordingKey[]): Promise<RecordingKey[]>;
   log(message: string): void;
   signal: AbortSignal;
   now: Date;
-}
-
-interface ScoutReport {
-  meetings: FoundMeeting[];
-  rejected: Array<{ recording: Recording; notes: string }>;
-}
-
-interface FoundMeeting {
-  recording: Recording;
-  bodies: string[]; // at least one
-  title: string;
-  description: string;
-  date: string | null;
-  time: string | null;
-  timezone?: string; // defaults to the first body's
-  notes?: string;
 }
 ```
 
 - Scouts don't touch the database.
   They may shell out, use the filesystem and read env vars.
-- Every recording a scout examines is reported as a meeting or as rejected.
+- Every recording a scout examines is reported, as a meeting or not.
 
 #### Harness
 
@@ -153,7 +154,7 @@ interface FoundMeeting {
 
 - List with `yt-dlp --flat-playlist -J`, then `yt-dlp --skip-download -J` for each recording `unseen` returns.
 - In CI, yt-dlp goes through the WARP/Tor egress in `packages/youtube/egress`.
-- Classification uses the Anthropic SDK, called inside the scout behind `classify(recordings, bodies): ScoutReport`.
+- Classification uses the Anthropic SDK, called inside the scout behind `classify(recordings, bodies): ScoutedRecording[]`.
   The API key comes from an env var.
 
 #### Tests
