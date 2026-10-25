@@ -76,12 +76,19 @@ export interface YouTubeConfig {
   proxies?: string[];
 }
 
+/**
+ * Lets yt-dlp solve YouTube's JS challenges with the node running this, so
+ * deno is optional. yt-dlp still prefers deno when it's on PATH, since deno
+ * sandboxes the player JS more tightly. Needs node 22+.
+ */
+const JS_RUNTIME_ARGS = ["--js-runtimes", `node:${process.execPath}`];
+
 /** Runs yt-dlp. A failure's error carries yt-dlp's stdout and stderr. */
 function ytDlp(args: string[]): Promise<{ stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
     execFile(
       "yt-dlp",
-      args,
+      [...JS_RUNTIME_ARGS, ...args],
       // A busy channel's flat playlist runs to several MB.
       { maxBuffer: 100 * 1024 * 1024 },
       (error, stdout, stderr) => {
