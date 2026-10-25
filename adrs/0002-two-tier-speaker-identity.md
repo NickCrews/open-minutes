@@ -97,12 +97,13 @@ coincidental.
 
 ### End-to-end seeding
 
-`seedGoldenMeeting()` seeds a hand-verified golden as established truth: it inserts
-the meeting and its segments, and builds one voiceprint per `identified` person
-from the audio spans they speak (reusing the pipeline's own
-`computeSpeakerEmbeddings`, so seeded voiceprints live in the same embedding space
-the pipeline matches against). People are upserted by slug, so a person recurring
-across seed meetings is a single row.
+The `goldenMeetingsData` dataset seeds hand-verified goldens as established truth:
+`seedGoldenMeetings()` (in `@open-minutes/fixtures`) inserts the meetings, their
+segments and one person per `identified` slug, and `audioVoiceprints()` (in
+`@open-minutes/ingest`) builds each person's voiceprint from the audio spans they
+speak (reusing the pipeline's own `computeSpeakerEmbeddings`, so seeded
+voiceprints live in the same embedding space the pipeline matches against). A
+person recurring across seed meetings is a single row.
 
 The e2e test then ingests a third meeting through the unmodified `ingestVideo`
 pipeline — which sees only audio — and scores the result against the third golden:

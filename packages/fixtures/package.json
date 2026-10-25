@@ -9,6 +9,7 @@
     "./audio": "./src/audio.ts",
     "./golden-data": "./src/seed/golden-data.ts",
     "./dev-data": "./src/seed/dev-data.ts",
+    "./golden-meetings": "./src/seed/golden-meetings.ts",
     "./map": "./src/seed/map.ts",
     "./fix": "./src/fix.ts",
     "./check": "./src/check.ts"
