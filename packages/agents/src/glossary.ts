@@ -4,17 +4,17 @@ import {
   jurisdictionsTable,
   meetingBodiesTable,
 } from "@open-minutes/db";
-import { type GlossaryBody } from "@open-minutes/glossary";
+import { type BodyRef } from "@open-minutes/glossary";
 import type { Db } from "./tool";
 
-/** The bodies that held a meeting, as glossaries pick their bodies. */
+/** The bodies that held a meeting. */
 export async function glossaryBodies(
   db: Db,
   meetingId: number,
-): Promise<GlossaryBody[]> {
+): Promise<BodyRef[]> {
   return db
     .select({
-      slug: bodiesTable.slug,
+      bodySlug: bodiesTable.slug,
       jurisdictionSlug: jurisdictionsTable.slug,
     })
     .from(meetingBodiesTable)

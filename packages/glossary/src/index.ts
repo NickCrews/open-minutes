@@ -34,9 +34,12 @@ export interface Glossary {
   entries: GlossaryEntry[];
 }
 
-/** A body a meeting was held by, as glossaries pick their bodies. */
-export interface GlossaryBody {
-  slug: string;
+/**
+ * A body, named by its slug and its jurisdiction's slug: the two things a
+ * glossary's `appliesTo` can match.
+ */
+export interface BodyRef {
+  bodySlug: string;
   jurisdictionSlug: string;
 }
 
@@ -52,7 +55,7 @@ export interface MeetingGlossary {
  * any of them, and every glossary those build on, merged.
  */
 export async function glossaryFor(
-  bodies: readonly GlossaryBody[],
+  bodies: readonly BodyRef[],
 ): Promise<MeetingGlossary> {
   return mergeGlossaries(GLOSSARIES, bodies);
 }
@@ -60,7 +63,7 @@ export async function glossaryFor(
 /** {@link glossaryFor} over the given glossaries. */
 export function mergeGlossaries(
   glossaries: readonly Glossary[],
-  bodies: readonly GlossaryBody[],
+  bodies: readonly BodyRef[],
 ): MeetingGlossary {
   const bySlug = new Map(glossaries.map((g) => [g.slug, g]));
   const applied: Glossary[] = [];
@@ -83,12 +86,12 @@ export function mergeGlossaries(
   };
 }
 
-function appliesTo(glossary: Glossary, body: GlossaryBody): boolean {
+function appliesTo(glossary: Glossary, body: BodyRef): boolean {
   const where = glossary.appliesTo;
   if (where === "everywhere") return true;
   return (
     !!where.jurisdictions?.includes(body.jurisdictionSlug) ||
-    !!where.bodies?.includes(body.slug)
+    !!where.bodies?.includes(body.bodySlug)
   );
 }
 

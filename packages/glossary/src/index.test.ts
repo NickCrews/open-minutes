@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { GLOSSARIES, glossaryFor, mergeGlossaries } from "./index";
 
-const gbos = { slug: "gbos", jurisdictionSlug: "moa" };
-const assembly = { slug: "assembly", jurisdictionSlug: "moa" };
-const hres = { slug: "hres", jurisdictionSlug: "ak" };
+const gbos = { bodySlug: "gbos", jurisdictionSlug: "moa" };
+const assembly = { bodySlug: "assembly", jurisdictionSlug: "moa" };
+const hres = { bodySlug: "hres", jurisdictionSlug: "ak" };
 const headwords = (g: { entries: { headword: string }[] }) =>
   g.entries.map((e) => e.headword);
 
@@ -29,7 +29,7 @@ describe("glossaryFor", () => {
   });
 
   it("gives a body no glossary names no glossary", async () => {
-    const g = await glossaryFor([{ slug: "x", jurisdictionSlug: "y" }]);
+    const g = await glossaryFor([{ bodySlug: "x", jurisdictionSlug: "y" }]);
     expect(g).toEqual({ glossaries: [], entries: [] });
   });
 
