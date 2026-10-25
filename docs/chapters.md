@@ -667,7 +667,7 @@ Notes on reconciling with existing tickets:
 - **Data**: `chapters.json` next to a golden meeting's transcript holds its
   chapters and their generation. The March 23, 2026 GBOS meeting has a set,
   written by Claude from the golden transcript and not yet reviewed by a
-  human, so it is not yet the gold chaptering #27 asks for. The `dev` dataset
+  human, so it is not yet the gold chaptering #27 asks for. The `all` dataset
   seeds it, and `pnpm fixtures:check` (run by the tests) holds it to the
   rules above.
 - **Web**: the scrubber, the Chapters tab, chapter headings in the transcript,

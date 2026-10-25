@@ -37,6 +37,10 @@ the ones listed above it:
   hand-verified jurisdictions, bodies, people and golden meetings, and
   `@open-minutes/fixtures/audio` gets a golden meeting's audio, checked against
   the audio its transcript was timed to. Nothing here ships to production.
+- **[`packages/datasets`](packages/datasets)** (`@open-minutes/datasets`): the
+  datasets that seed local and test databases, each a JSON spec in `specs/`
+  naming which test-data rows to seed, and the seeder that loads them (see
+  [db.md](docs/contributing/db.md)).
 - **[`packages/audio`](packages/audio)** (`@open-minutes/audio`): speech
   processing, run locally with
   [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx). It transcribes a

@@ -8,8 +8,8 @@ import type { TranscriptWord } from "@open-minutes/core/transcription";
 import { getMeetingData } from "@open-minutes/fixtures/test-data";
 import type { GoldenSegment } from "@open-minutes/fixtures/psv";
 import { compareTranscripts } from "@open-minutes/core/transcription";
-import { goldenMeetingsData } from "../seed/golden-meetings-data";
-import { GOLDEN_GBOS, fakeSite } from "./testing";
+import { dataset, loadSpec } from "@open-minutes/datasets";
+import { GBOS, fakeSite } from "./testing";
 import { ingestMeeting } from "./ingest";
 import { getMeetingAudio } from "@open-minutes/fixtures/audio";
 
@@ -22,7 +22,7 @@ import { getMeetingAudio } from "@open-minutes/fixtures/audio";
 //
 // The test:
 //   1. Start from a database already holding two goldens (transcripts + a
-//      voiceprint per identified person): the goldenMeetingsData dataset.
+//      voiceprint per identified person): the "recognition" dataset.
 //   2. Ingest a THIRD golden's audio through the real pipeline (transcribe →
 //      diarize → align → identify). Ingestion sees only audio, never the third
 //      golden's labels; its diarizer invents anonymous clusters, and identify.ts
@@ -35,8 +35,9 @@ import { getMeetingAudio } from "@open-minutes/fixtures/audio";
 // transcript, to be hand-cleaned (and hand-labeled with identified people) later.
 // This exercises the full machinery end to end today; tighten as the data firms.
 
-const SEED_SLUGS = ["gbos-2026-03-23", "gbos-2026-05-18"];
 const HELD_OUT_SLUG = "gbos-2026-06-15";
+if (loadSpec("recognition").meetings.includes(HELD_OUT_SLUG))
+  throw new Error(`${HELD_OUT_SLUG} must not be in the "recognition" dataset`);
 
 // Ingesting the held-out meeting re-runs transcription + diarization, which take
 // the better part of an hour on a ~2.7h recording. Persist the pipeline's
@@ -49,10 +50,10 @@ const E2E_WORK_ROOT = fileURLToPath(
 
 // Step 1 as a declared dataset. Seeding computes real voiceprints from the two
 // meetings' audio (a minute or so, cold), so the harness does it once per
-// change to the fixtures (or the embedding model) and caches the result as a
+// change to the test data (or the embedding model) and caches the result as a
 // template; every later run clones it in milliseconds.
 const test = dbTest({
-  data: goldenMeetingsData(SEED_SLUGS),
+  data: dataset("recognition"),
   setupTimeoutMs: 5 * 60_000,
 });
 
@@ -82,7 +83,7 @@ describe("e2e cross-meeting speaker recognition", () => {
       const youtube = fakeSite({
         getMetadata: async (id: string) => ({
           id,
-          channelId: GOLDEN_GBOS.channelId,
+          channelId: GBOS.channelId,
           title: held.title,
           description: "",
           durationSecs: null,

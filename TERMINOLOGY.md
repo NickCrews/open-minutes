@@ -228,6 +228,10 @@ _Avoid_: speaker tag, speaker id
 Loading test data into a database as established truth, including building each known person's voiceprint from their golden segments.
 _Avoid_: importing, populating
 
+**Dataset**:
+A named selection of the test data that seeding loads, declared by a spec in `packages/datasets/specs/`, such as `bodies` (only jurisdictions and bodies) or `all` (every golden meeting, with placeholder voiceprints). `pnpm db up --data <name>` and `dbTest` take one.
+_Avoid_: seed, fixture set, golden data, dev data
+
 **WER**:
 Word error rate: how far a pipeline transcript's words are from a golden transcript's, as a fraction of the golden transcript's word count.
 _Avoid_: accuracy, error

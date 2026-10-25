@@ -17,10 +17,10 @@ import { getMeetingData } from "@open-minutes/fixtures/test-data";
 import { ingestMeeting, ingestMeetings, parseMeetingLines } from "./ingest";
 import { listIngested } from "./ingested";
 import {
-  GOLDEN_GBOS,
+  GBOS,
   fakeSite,
-  goldenGbosId,
-  goldenTest as test,
+  gbosId,
+  bodiesTest as test,
   insertBody,
   insertMeeting,
 } from "./testing";
@@ -41,7 +41,7 @@ async function bodiesOf(db: DB, meetingId: number): Promise<string[]> {
 
 const METADATA: RecordingMetadata = {
   id: VIDEO_ID,
-  channelId: GOLDEN_GBOS.channelId,
+  channelId: GBOS.channelId,
   title: "Regular Meeting",
   description: "Agenda: everything",
   durationSecs: 3600,
@@ -105,7 +105,7 @@ describe("ingestMeeting", () => {
     db,
     workRoot,
   }) => {
-    await insertMeeting(db, await goldenGbosId(db), VIDEO_ID);
+    await insertMeeting(db, await gbosId(db), VIDEO_ID);
 
     // Every fake YouTube call throws, so success proves nothing was fetched.
     const result = await ingestMeeting(db, VIDEO_ID, {
@@ -446,7 +446,7 @@ describe("listIngested", () => {
     const youtube = fakeSite({ getMetadata: async () => METADATA });
     await ingestMeeting(db, VIDEO_ID, { sites: { youtube }, workRoot });
     // An older meeting with no segments.
-    await insertMeeting(db, await goldenGbosId(db), "older-video", {
+    await insertMeeting(db, await gbosId(db), "older-video", {
       date: "2020-01-01",
     });
 

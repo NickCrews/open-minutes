@@ -1,0 +1,6 @@
+{
+  "description": "The shortest golden meeting with real voiceprints for its speakers, to test audio voiceprinting without a long cold start.",
+  "meetings": ["pzc-2026-06-08"],
+  "people": "speakers",
+  "voiceprints": "audio"
+}

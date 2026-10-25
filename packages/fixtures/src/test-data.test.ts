@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { hasTypographicDash } from "@open-minutes/core/text";
-import { meetingBodyIds } from "./seed/map";
 import { loadPeople, parseGoldenBodies, parseGoldenWhen } from "./test-data";
 
 describe("people.jsonl", () => {
@@ -64,24 +63,5 @@ describe("parseGoldenBodies", () => {
     expect(() =>
       parseGoldenBodies({ body_slugs: ["luc", "luc"] }, "m.json"),
     ).toThrow(/duplicates/);
-  });
-});
-
-describe("meetingBodyIds", () => {
-  const ids = new Map([
-    ["gbos", 1],
-    ["luc", 2],
-  ]);
-
-  it("resolves the bodies to database ids", () => {
-    expect(
-      meetingBodyIds({ slug: "m", body_slugs: ["gbos", "luc"] }, ids),
-    ).toEqual([1, 2]);
-  });
-
-  it("refuses a body bodies.jsonl doesn't have", () => {
-    expect(() =>
-      meetingBodyIds({ slug: "m", body_slugs: ["gbos", "nope"] }, ids),
-    ).toThrow(/unknown body "nope"/);
   });
 });

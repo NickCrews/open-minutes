@@ -128,7 +128,7 @@ jobs:
           pnpm db status --check
           pnpm db wipe
           pnpm db migrate   # applies every migration to the wiped database
-          pnpm db up --data golden --data-reset if-needed
+          pnpm db up --data bodies --data-reset if-needed
           pnpm db status --check
 
   # Applies this PR's migrations to a throwaway copy-on-write fork of

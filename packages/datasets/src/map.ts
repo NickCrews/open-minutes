@@ -1,5 +1,9 @@
 import { bodiesTable, jurisdictionsTable } from "@open-minutes/db";
-import type { GoldenMeeting, TestData } from "../test-data";
+import type {
+  GoldenBody,
+  GoldenJurisdiction,
+  GoldenMeeting,
+} from "@open-minutes/fixtures/test-data";
 
 type JurisdictionInsert = typeof jurisdictionsTable.$inferInsert;
 type BodyInsert = typeof bodiesTable.$inferInsert;
@@ -8,26 +12,29 @@ export interface MappedRows {
   jurisdictions: JurisdictionInsert[];
   bodies: BodyInsert[];
   /**
-   * Resolves a body slug (e.g. "gbos") to its assigned serial primary key. This is the seam later slices use to wire up foreign keys (meetings →
-   * bodies) without a database round-trip.
+   * Resolves a body slug (e.g. "gbos") to its assigned serial primary key,
+   * so meetings can reference bodies without a database round-trip.
    */
   bodyIdBySlug: ReadonlyMap<string, number>;
 }
 
 /**
- * Convert the in-memory `test-data/` snapshot into insert-ready rows. Pure: no
- * database access, no I/O.
+ * Convert the test data's jurisdictions and bodies into insert-ready rows.
+ * Pure: no database access, no I/O.
  *
- * Serial primary keys are assigned explicitly here, 1-based in snapshot (file)
- * order, so that (a) foreign keys can be resolved before anything is inserted
- * and (b) the same snapshot always produces the same keys across reseeds —
- * `/meetings/1` keeps pointing at the same meeting. The seeder truncates with
+ * Serial primary keys are assigned explicitly here, 1-based in file order, so
+ * that (a) foreign keys can be resolved before anything is inserted and (b)
+ * the same files always produce the same keys across reseeds —
+ * `/bodies/1` keeps pointing at the same body. The seeder truncates with
  * `RESTART IDENTITY` before inserting, so these explicit ids start from a clean
  * sequence rather than colliding with leftover serial state.
  */
-export function mapSnapshot(data: TestData): MappedRows {
+export function bodyRows(
+  jurisdictionsIn: readonly GoldenJurisdiction[],
+  bodiesIn: readonly GoldenBody[],
+): MappedRows {
   const jurisdictionIdBySlug = new Map<string, number>();
-  const jurisdictions = data.jurisdictions.map((j, i): JurisdictionInsert => {
+  const jurisdictions = jurisdictionsIn.map((j, i): JurisdictionInsert => {
     const id = i + 1;
     jurisdictionIdBySlug.set(j.slug, id);
     return {
@@ -39,7 +46,7 @@ export function mapSnapshot(data: TestData): MappedRows {
   });
 
   const bodyIdBySlug = new Map<string, number>();
-  const bodies = data.bodies.map((b, i): BodyInsert => {
+  const bodies = bodiesIn.map((b, i): BodyInsert => {
     const id = i + 1;
     bodyIdBySlug.set(b.slug, id);
     const jurisdictionId = jurisdictionIdBySlug.get(b.jurisdiction_slug);

@@ -4,6 +4,7 @@ import {
   bodiesTable,
   chapterGenerationsTable,
   chaptersTable,
+  jurisdictionsTable,
   meetingBodiesTable,
   meetingsTable,
   peopleTable,
@@ -11,47 +12,27 @@ import {
 } from "@open-minutes/db";
 import { LAST_WORD_DURATION_SEC } from "@open-minutes/core/transcription";
 import { transcriptFingerprint } from "@open-minutes/core/transcript-fingerprint";
-import type { GoldenMeeting, GoldenPerson } from "../test-data";
-import { meetingBodyIds } from "./map";
+import {
+  getMeetingData,
+  loadBodies,
+  loadJurisdictions,
+  loadPeople,
+} from "@open-minutes/fixtures/test-data";
+import { bodyRows, meetingBodyIds } from "./map";
 import { advanceIdSequences } from "./sequences";
-
-// Seeds golden meetings on top of the golden rows (goldenData): the meetings,
-// their speaker-attributed segments, chapters, and people. Datasets differ only
-// in where voiceprints come from, so the caller supplies them: the dev dataset
-// uses placeholders, @open-minutes/ingest computes real ones from the audio
-// (which needs @open-minutes/audio, a package fixtures can't depend on).
+import type { DatasetSpec } from "./spec";
+import { placeholderVoiceprints } from "./voiceprints";
 
 /**
- * Bump when seedGoldenMeetings' behavior changes in a way the fixture files
- * don't capture. Datasets built on it include it in their fingerprints.
+ * Bump when seedDataset's behavior changes in a way the specs and test data
+ * don't capture. Every dataset's fingerprint includes it.
  */
-export const GOLDEN_MEETINGS_SEED_VERSION = 1;
-
-/**
- * A voiceprint for each of `slugs`, from `meetings`. Every person needs one,
- * so a slug left out of the result isn't seeded, and its segments are seeded
- * with no person.
- */
-export type Voiceprints = (
-  slugs: readonly string[],
-  meetings: readonly GoldenMeeting[],
-) => Promise<ReadonlyMap<string, ArrayLike<number>>>;
-
-export interface SeedGoldenMeetingsOptions {
-  /** people.jsonl: names and bios for the people seeded. */
-  registry: readonly GoldenPerson[];
-  /**
-   * "registry": everyone in `registry`, plus anyone the meetings identify who
-   * isn't listed. "speakers": only the people the meetings identify.
-   */
-  people: "registry" | "speakers";
-  voiceprints: Voiceprints;
-}
+export const SEED_VERSION = 1;
 
 /** Per-table count of rows inserted by a seed. */
 export type SeedSummary = Record<string, number>;
 
-// Every table the seeder owns, truncated together. Not meeting_bodies, which
+// Every table a dataset owns, truncated together. Not meeting_bodies, which
 // has no id sequence for advanceIdSequences, and goes with its meetings.
 const SEEDED_TABLES = [
   chaptersTable,
@@ -59,24 +40,33 @@ const SEEDED_TABLES = [
   segmentsTable,
   meetingsTable,
   peopleTable,
+  bodiesTable,
+  jurisdictionsTable,
 ];
 
 const INSERT_CHUNK = 500;
 
 /**
- * Replace the meetings, people, segments and chapters with `meetings`, in one
- * transaction. The meetings' bodies must already be seeded. Ids are assigned
- * in order (meetings in `meetings` order, people in registry order, then
- * speakers in order of appearance), so URLs like `/meetings/1` stay stable
- * across reseeds.
+ * Replace every table the dataset covers with the rows `spec` declares, in one
+ * transaction. Ids are assigned in order (meetings in `spec.meetings` order,
+ * people in people.jsonl order, then speakers in order of appearance), so URLs
+ * like `/meetings/1` stay stable across reseeds.
+ *
+ * Every person needs a voiceprint, so a speaker with too little speech to
+ * embed isn't seeded, and their segments are seeded with no person.
  */
-export async function seedGoldenMeetings(
+export async function seedDataset(
   db: DB,
-  meetings: readonly GoldenMeeting[],
-  options: SeedGoldenMeetingsOptions,
+  spec: DatasetSpec,
 ): Promise<SeedSummary> {
-  const slugs =
-    options.people === "registry" ? options.registry.map((p) => p.slug) : [];
+  const { jurisdictions, bodies, bodyIdBySlug } = bodyRows(
+    loadJurisdictions(),
+    loadBodies(),
+  );
+  const meetings = spec.meetings.map((slug) => getMeetingData(slug));
+  const registry = loadPeople();
+
+  const slugs = spec.people === "all" ? registry.map((p) => p.slug) : [];
   for (const meeting of meetings) {
     for (const seg of meeting.segments) {
       if (
@@ -87,8 +77,13 @@ export async function seedGoldenMeetings(
         slugs.push(seg.speaker.person);
     }
   }
-  const voiceprints = await options.voiceprints(slugs, meetings);
-  const personBySlug = new Map(options.registry.map((p) => [p.slug, p]));
+  const voiceprints =
+    spec.voiceprints === "audio"
+      ? await (
+          await import("./audio-voiceprints")
+        ).audioVoiceprints(slugs, meetings)
+      : placeholderVoiceprints(slugs);
+  const personBySlug = new Map(registry.map((p) => [p.slug, p]));
   const people = slugs.flatMap((slug) => {
     const voiceprint = voiceprints.get(slug);
     if (!voiceprint) return [];
@@ -103,6 +98,13 @@ export async function seedGoldenMeetings(
   });
   const personIdBySlug = new Map(people.map((p, i) => [p.slug, i + 1]));
   const personRows = people.map((p, i) => ({ id: i + 1, ...p }));
+
+  const meetingBodies = meetings.flatMap((m, i) =>
+    meetingBodyIds(m, bodyIdBySlug).map((body_id) => ({
+      meeting_id: i + 1,
+      body_id,
+    })),
+  );
 
   const meetingRows = meetings.map((m, i) => {
     const lastWord = m.segments.flatMap((s) => s.words).at(-1);
@@ -164,25 +166,13 @@ export async function seedGoldenMeetings(
   });
 
   return await db.transaction(async (tx) => {
-    const bodyIdBySlug = new Map(
-      (
-        await tx
-          .select({ id: bodiesTable.id, slug: bodiesTable.slug })
-          .from(bodiesTable)
-      ).map((b) => [b.slug, b.id]),
-    );
-    const meetingBodies = meetings.flatMap((m, i) =>
-      meetingBodyIds(m, bodyIdBySlug).map((body_id) => ({
-        meeting_id: i + 1,
-        body_id,
-      })),
-    );
-
     const tables = sql.join(
       SEEDED_TABLES.map((t) => sql`${t}`),
       sql.raw(", "),
     );
     await tx.execute(sql`TRUNCATE TABLE ${tables} RESTART IDENTITY CASCADE`);
+    await tx.insert(jurisdictionsTable).values(jurisdictions);
+    await tx.insert(bodiesTable).values(bodies);
     if (personRows.length) await tx.insert(peopleTable).values(personRows);
     if (meetingRows.length) await tx.insert(meetingsTable).values(meetingRows);
     if (meetingBodies.length)
@@ -198,6 +188,8 @@ export async function seedGoldenMeetings(
     }
     await advanceIdSequences(tx, SEEDED_TABLES);
     return {
+      jurisdictions: jurisdictions.length,
+      bodies: bodies.length,
       people: personRows.length,
       meetings: meetingRows.length,
       meeting_bodies: meetingBodies.length,

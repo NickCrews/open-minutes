@@ -35,7 +35,7 @@ Tests ignore all of this and create their own throwaway databases.
 | See what state a database is in                        | `pnpm db status`                                  |
 | Start over with a fresh database and fresh sample data | `pnpm db up --schema-reset always`                |
 | Throw away my edits to the sample data                 | `pnpm db up --data-reset always`                  |
-| Use the small `golden` dataset instead of `dev`        | `pnpm db up --data golden --data-reset if-needed` |
+| Use the small `bodies` dataset instead of `all`        | `pnpm db up --data bodies --data-reset if-needed` |
 | Get an empty, migrated database with no data           | `pnpm db up --schema-reset always --data none`    |
 | Change the schema                                      | edit `schema.ts`, then `pnpm db generate`         |
 | Deploy the web app (see [deploy.md](deploy.md))        | comment `/deploy` on a merged PR                  |
@@ -47,7 +47,7 @@ flag.
 ## `pnpm db up`: make it match this checkout
 
 `up`, which `pnpm dev` runs, takes the state you want: a schema (default
-latest) and a dataset (default `dev`). It gets the database there, changing as
+latest) and a dataset (default `all`). It gets the database there, changing as
 little as possible. On a local database it does these steps in order, skipping
 any that aren't needed:
 
@@ -75,27 +75,49 @@ And two choose the target state:
 
 | Flag               | Values                                                                                                 | Default  |
 | ------------------ | ------------------------------------------------------------------------------------------------------ | -------- |
-| `--data`           | `dev`, `golden`, or `none`                                                                             | `dev`    |
+| `--data`           | a dataset (below), or `none`                                                                           | `all`    |
 | `--schema-version` | `latest`, or a migration by folder name, timestamp or tag, e.g. `20260719061307` or `panoramic_dagger` | `latest` |
 
 Seeders write the current schema, so an older `--schema-version` defaults to
 `--data none`.
 
+Each dataset is a JSON file in
+[`packages/datasets/specs/`](../../packages/datasets/specs/), named for the
+dataset, that says which rows of `packages/fixtures/test-data/` to seed. Every
+dataset has all the jurisdictions and bodies (with their meeting sources); a
+spec picks the rest:
+
+```jsonc
+{
+  "description": "What it's for.",
+  "meetings": ["gbos-2026-03-23"], // golden meeting slugs, or "all"
+  "people": "speakers", // or "all": everyone in people.jsonl
+  "voiceprints": "audio", // or "placeholder"
+}
+```
+
+A spec with `"meetings": []` leaves out `people` and `voiceprints`. Real
+(`"audio"`) voiceprints are computed from each meeting's audio, which takes a
+while the first time; placeholders are instant but useless for recognition.
 The datasets are:
 
-- **`dev`**: what `pnpm dev` runs on. The golden rows plus the golden
-  meetings' full transcripts, chapters and people. Voiceprints are
-  placeholders.
-- **`golden`**: only the hand-verified rows from
-  `packages/fixtures/test-data/` (jurisdictions, and bodies with their meeting sources).
+- **`all`**: what `pnpm dev` runs on. Every golden meeting with its transcript
+  and chapters, and everyone in people.jsonl. Voiceprints are placeholders.
+- **`bodies`**: only the jurisdictions and bodies.
+- **`recognition`**: two GBOS meetings with real voiceprints, for the e2e
+  speaker-recognition test.
+- **`quick-voiceprints`**: the shortest golden meeting with real voiceprints.
 
-[`dbranch.config.ts`](../../dbranch.config.ts) at the repository root lists the
-datasets `--data` can name and picks the default, so `@open-minutes/db` imports
-no data itself. The CLI uses the nearest `dbranch.config.ts` at or above the
-current directory (`DBRANCH_CONFIG` overrides that).
+To add one, add a spec. [`dbranch.config.ts`](../../dbranch.config.ts) at the
+repository root offers every spec to `--data` and picks the default, so
+`@open-minutes/db` imports no data itself. The CLI uses the nearest
+`dbranch.config.ts` at or above the current directory (`DBRANCH_CONFIG`
+overrides that).
 
-The seeders live in `packages/fixtures/src/seed/`. They assign fixed ids (so
-URLs are stable), then advance the id sequences past them.
+The seeder (`packages/datasets/src/seed.ts`) assigns fixed ids (so URLs are
+stable), then advances the id sequences past them. A dataset's fingerprint
+hashes its spec and every test-data file it reads, so editing a meeting's
+transcript reseeds only the datasets that include that meeting.
 
 ## The other commands
 
@@ -206,20 +228,20 @@ which takes tens of milliseconds:
 
 ```ts
 import { dbTest } from "@open-minutes/db/testing/vitest";
-import { goldenData } from "@open-minutes/fixtures/golden-data";
+import { dataset } from "@open-minutes/datasets";
 
-const test = dbTest({ data: goldenData });
+const test = dbTest({ data: dataset("bodies") });
 
 test("…", async ({ testDb }) => {
-  // testDb starts at the latest schema with the golden rows
+  // testDb starts at the latest schema with the jurisdictions and bodies
 });
 ```
 
 `dbTest` takes the same `schemaVersion` and `data` as `pnpm db up`. Each
 (schema version, dataset) pair gets a template, rebuilt only when the
-migrations or dataset change. The pipeline's tests use `goldenTest`
-(`dbTest({ data: goldenData })` plus helpers). The e2e test uses
-`goldenMeetingsData(slugs)`, whose real voiceprints take minutes to compute;
+migrations or dataset change. The pipeline's tests use `bodiesTest`
+(`dbTest({ data: dataset("bodies") })` plus helpers). The e2e test uses
+`dataset("recognition")`, whose real voiceprints take minutes to compute;
 pass `setupTimeoutMs` for slow datasets like that.
 
 ## How it works

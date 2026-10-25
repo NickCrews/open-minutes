@@ -188,6 +188,14 @@ export function loadBodies(): GoldenBody[] {
   return parseJsonl<GoldenBody>(bodiesPath);
 }
 
+/** Load just the jurisdictions (jurisdictions.jsonl). */
+export function loadJurisdictions(): GoldenJurisdiction[] {
+  const path = join(TEST_DATA_ROOT, "jurisdictions.jsonl");
+  if (!existsSync(path))
+    throw new Error(`Jurisdictions file not found: ${path}`);
+  return parseJsonl<GoldenJurisdiction>(path);
+}
+
 /**
  * A meeting directory's transcript: golden.psv for a verified golden meeting,
  * transcript.psv for an unverified one. Undefined when it has neither.

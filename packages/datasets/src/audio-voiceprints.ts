@@ -3,21 +3,25 @@ import {
   type DiarizationTurn,
 } from "@open-minutes/core/transcription";
 import { computeSpeakerEmbeddings } from "@open-minutes/audio/embed";
-import type { Voiceprints } from "@open-minutes/fixtures/golden-meetings";
 import { getMeetingAudio } from "@open-minutes/fixtures/audio";
+import type { GoldenMeeting } from "@open-minutes/fixtures/test-data";
+import type { Voiceprints } from "./voiceprints";
 
 // Real voiceprints for golden meetings, computed from their audio: the "known
 // past" an end-to-end test recognizes a later, unseen meeting against. The
 // same person (by slug) learned here must be re-identified there purely from
-// their voice. Lives in ingest, not fixtures, because it needs
-// @open-minutes/audio.
+// their voice. seed.ts imports this module only for a dataset that asks for
+// it, since @open-minutes/audio/embed loads sherpa-onnx's native module.
 
 /**
  * One voiceprint per person, from the audio spans they speak in the first
  * meeting where they have enough speech to embed reliably. A meeting's audio
  * (a ~600 MB wav) is only loaded when it has someone left to embed.
  */
-export const audioVoiceprints: Voiceprints = async (slugs, meetings) => {
+export async function audioVoiceprints(
+  slugs: readonly string[],
+  meetings: readonly GoldenMeeting[],
+): Promise<Voiceprints> {
   const wanted = new Set(slugs);
   const voiceprints = new Map<string, Float32Array>();
   for (const meeting of meetings) {
@@ -51,4 +55,4 @@ export const audioVoiceprints: Voiceprints = async (slugs, meetings) => {
     }
   }
   return voiceprints;
-};
+}

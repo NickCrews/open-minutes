@@ -23,16 +23,17 @@
     "deploy:prod": "pnpm --filter @open-minutes/web run deploy"
   },
   "devDependencies": {
+    "@eslint/js": "^9.36.0",
+    "@open-minutes/datasets": "workspace:*",
     "@open-minutes/db": "workspace:*",
     "@open-minutes/fixtures": "workspace:*",
+    "@open-minutes/ytdlp": "workspace:*",
     "@types/node": "^22",
-    "@eslint/js": "^9.36.0",
     "eslint": "^9.36.0",
     "prettier": "^3.7.4",
+    "tsx": "^4.21.0",
     "typescript": "5.9.3",
     "typescript-eslint": "^8.45.0",
-    "vitest": "^4.0.18",
-    "@open-minutes/ytdlp": "workspace:*",
-    "tsx": "^4.21.0"
+    "vitest": "^4.0.18"
   }
 }

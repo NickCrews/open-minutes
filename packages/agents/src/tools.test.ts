@@ -1,10 +1,10 @@
 import { describe, expect, test as plainTest } from "vitest";
 import { dbTest } from "@open-minutes/db/testing/vitest";
+import { dataset } from "@open-minutes/datasets";
 import { eq } from "drizzle-orm";
 import { checkMeeting as checkMeetingData } from "@open-minutes/core/rules";
 import { segmentsTable } from "@open-minutes/db";
 import { ruleMeeting } from "@open-minutes/fixtures/check";
-import { devData } from "@open-minutes/fixtures/dev-data";
 import { loadAllTestData } from "@open-minutes/fixtures/test-data";
 import { checkMeeting } from "./check";
 import { toolContext } from "./context";
@@ -33,7 +33,7 @@ import {
   updatePerson,
 } from "./tools";
 
-const test = dbTest({ data: devData });
+const test = dbTest({ data: dataset("all") });
 /** The March 23, 2026 GBOS golden meeting, the one with chapters. */
 const GBOS = "gbos-2026-03-23";
 

@@ -3,25 +3,25 @@ import { sql } from "drizzle-orm";
 import { meetingsTable, peopleTable, segmentsTable } from "@open-minutes/db";
 import { dbTest } from "@open-minutes/db/testing/vitest";
 import { getMeetingData } from "@open-minutes/fixtures/test-data";
-import { goldenMeetingsData } from "./golden-meetings-data";
+import { dataset, loadSpec } from "./index";
 
-// Seeding a golden computes a voiceprint per identified person, from the
+// Seeding with real voiceprints computes a voiceprint per identified person, from the
 // meeting's audio. That audio comes from the blob store, so the cold path
 // is ~10 MB to download and some seconds to decode and embed; after that the
-// harness caches the seeded database as a template. The shortest golden keeps
-// the cold path short. Tests that don't need the database belong in
-// golden-meetings-data.fingerprint.test.ts, so they don't wait on the audio.
-const SLUG = "pzc-2026-06-08";
+// harness caches the seeded database as a template. The dataset's one meeting
+// is the shortest golden, which keeps the cold path short. Tests that don't
+// need the database belong in spec.test.ts, so they don't wait on the audio.
+const [SLUG] = loadSpec("quick-voiceprints").meetings as [string];
 
 const test = dbTest({
-  data: goldenMeetingsData([SLUG]),
+  data: dataset("quick-voiceprints"),
   // ~10 s on CI, cold. Every golden's audio is in the store; a miss waits on
   // a fetch-youtube-audio run, which can take longer than this.
   setupTimeoutMs: 5 * 60_000,
 });
 
-describe("goldenMeetingsData", () => {
-  test("seeds the golden rows, the meeting's transcript, and voiceprints", async ({
+describe("audio voiceprints", () => {
+  test("seeds the meeting's transcript, and its speakers with voiceprints", async ({
     db,
   }) => {
     const meeting = getMeetingData(SLUG);
@@ -36,8 +36,8 @@ describe("goldenMeetingsData", () => {
       meeting.segments.filter((s) => s.words.length > 0).length,
     );
 
-    // "golden" seeds no people, so each person here was voiceprinted from
-    // this meeting's audio.
+    // The dataset seeds only speakers, so each person here was voiceprinted
+    // from this meeting's audio.
     const identified = new Set(
       meeting.segments.flatMap((s) =>
         s.speaker.kind === "identified" ? [s.speaker.person] : [],

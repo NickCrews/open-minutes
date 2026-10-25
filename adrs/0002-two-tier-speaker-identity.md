@@ -97,11 +97,10 @@ coincidental.
 
 ### End-to-end seeding
 
-The `goldenMeetingsData` dataset seeds hand-verified goldens as established truth:
-`seedGoldenMeetings()` (in `@open-minutes/fixtures`) inserts the meetings, their
-segments and one person per `identified` slug, and `audioVoiceprints()` (in
-`@open-minutes/ingest`) builds each person's voiceprint from the audio spans they
-speak (reusing the pipeline's own `computeSpeakerEmbeddings`, so seeded
+The `recognition` dataset (`packages/datasets/specs/recognition.json`) seeds
+hand-verified goldens as established truth: the meetings, their segments and one
+person per `identified` slug, with each person's voiceprint built from the audio
+spans they speak (reusing the pipeline's own `computeSpeakerEmbeddings`, so seeded
 voiceprints live in the same embedding space the pipeline matches against). A
 person recurring across seed meetings is a single row.
 

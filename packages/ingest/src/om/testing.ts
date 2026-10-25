@@ -15,7 +15,7 @@ import type {
   SiteKind,
 } from "@open-minutes/core/meeting-source";
 import { dbTest } from "@open-minutes/db/testing/vitest";
-import { goldenData } from "@open-minutes/fixtures/golden-data";
+import { dataset } from "@open-minutes/datasets";
 import { loadBodies } from "@open-minutes/fixtures/test-data";
 
 // Test helpers for the om API tests (not collected by vitest — no .test suffix).
@@ -45,7 +45,7 @@ export function fakeSite(
 /**
  * Insert a body, with its meeting source, under a throwaway jurisdiction of the
  * same name. Returns its id. For tests that need a second body alongside the
- * golden GBOS one (see {@link goldenTest}).
+ * test data's GBOS (see {@link bodiesTest}).
  */
 export async function insertBody(
   db: DB,
@@ -114,30 +114,30 @@ const workRootFixture = {
 export const test = dbTest().extend<{ workRoot: string }>(workRootFixture);
 
 /**
- * A database starting from the golden dataset (the jurisdictions and their
+ * A database starting from the "bodies" dataset (the jurisdictions and their
  * bodies with their meeting sources, from test-data/), plus a work root.
  * Tests layer their own scenario rows on top.
  */
-export const goldenTest = dbTest({ data: goldenData }).extend<{
+export const bodiesTest = dbTest({ data: dataset("bodies") }).extend<{
   workRoot: string;
 }>(workRootFixture);
 
-const goldenGbos = loadBodies().find((b) => b.slug === "gbos")!;
-if (goldenGbos.meeting_source?.type !== "youtube_channel")
-  throw new Error("Golden GBOS's meeting source should be a YouTube channel");
+const gbos = loadBodies().find((b) => b.slug === "gbos")!;
+if (gbos.meeting_source?.type !== "youtube_channel")
+  throw new Error("GBOS's meeting source should be a YouTube channel");
 
 /** GBOS as test-data/bodies.jsonl declares it: the one source of truth. */
-export const GOLDEN_GBOS = {
-  slug: goldenGbos.slug,
-  channelId: goldenGbos.meeting_source.channel_id,
+export const GBOS = {
+  slug: gbos.slug,
+  channelId: gbos.meeting_source.channel_id,
 };
 
-/** The golden GBOS body's id in a database seeded with {@link goldenData}. */
-export async function goldenGbosId(db: DB): Promise<number> {
+/** GBOS's id in a {@link bodiesTest} database. */
+export async function gbosId(db: DB): Promise<number> {
   const [row] = await db
     .select({ id: bodiesTable.id })
     .from(bodiesTable)
-    .where(eq(bodiesTable.slug, GOLDEN_GBOS.slug));
-  if (!row) throw new Error("No GBOS body: is this a goldenTest database?");
+    .where(eq(bodiesTable.slug, GBOS.slug));
+  if (!row) throw new Error("No GBOS body: is this a bodiesTest database?");
   return row.id;
 }

@@ -4,7 +4,8 @@ import sherpa_onnx, {
   type WaveForm,
 } from "sherpa-onnx-node";
 
-import { ensureDownloaded, type ModelSpec } from "./model.js";
+import { EMBEDDING_MODEL_SPEC } from "./embed-model.js";
+import { ensureDownloaded } from "./model.js";
 import { ensureWaveAudio } from "./wav.js";
 import type { DiarizationTurn } from "@open-minutes/core/transcription";
 
@@ -13,22 +14,7 @@ import type { DiarizationTurn } from "@open-minutes/core/transcription";
 // primitives — its post-clustering merge collapses over-split clusters by
 // comparing their voiceprints (see mergeSpeakers there).
 
-// 3D-Speaker CAM++ (zh_en-common_advanced) — produces 192-dim voice embeddings.
-// Used both by the diarizer internally (for clustering) and by us directly (for
-// centroids + diarize.ts's post-clustering merge). We deliberately use the
-// "common_advanced" variant rather than en_voxceleb: on GBOS audio it separates
-// speakers far more cleanly (different speakers ~0.1-0.25 cosine vs en_voxceleb's
-// muddy 0.45-0.5), which is what makes both clustering and identify.ts reliable.
-// NOTE: the release tag "speaker-recongition-models" is misspelled upstream;
-// that misspelling is the correct, canonical URL.
-export const EMBEDDING_MODEL_SPEC = {
-  name: "3dspeaker_speech_campplus_sv_zh_en_16k-common_advanced",
-  url: "https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-recongition-models/3dspeaker_speech_campplus_sv_zh_en_16k-common_advanced.onnx",
-  single_file: true,
-  files: {
-    "3dspeaker_speech_campplus_sv_zh_en_16k-common_advanced.onnx": true,
-  },
-} as const satisfies ModelSpec;
+export { EMBEDDING_MODEL_SPEC };
 
 // Centroid construction. We embed a speaker's longest turns and average them.
 const LONGEST_SEGMENTS = 3; // how many turns per speaker feed the centroid

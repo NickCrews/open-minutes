@@ -1,0 +1,24 @@
+{
+  "name": "@open-minutes/datasets",
+  "version": "0.1.0",
+  "description": "Open Minutes datasets: named sets of test-data rows, declared in specs/, that `pnpm db up --data` and dbTest seed",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@open-minutes/audio": "workspace:*",
+    "@open-minutes/core": "workspace:*",
+    "@open-minutes/db": "workspace:*",
+    "@open-minutes/fixtures": "workspace:*",
+    "drizzle-orm": "1.0.0-beta.21"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "vitest": "^4.0.18"
+  }
+}

@@ -9,12 +9,14 @@ import {
   segmentsTable,
 } from "@open-minutes/db";
 import { dbTest } from "@open-minutes/db/testing/vitest";
-import { devData, loadDevSnapshot, placeholderVoiceprint } from "./dev-data";
+import { loadAllTestData } from "@open-minutes/fixtures/test-data";
+import { dataset } from "./index";
+import { placeholderVoiceprint } from "./voiceprints";
 
-const snapshot = loadDevSnapshot();
-const test = dbTest({ data: devData });
+const snapshot = loadAllTestData();
+const test = dbTest({ data: dataset("all") });
 
-describe("devData", () => {
+describe('the "all" dataset', () => {
   test("seeds every golden meeting, with transcripts", async ({ db }) => {
     const meetings = await db.select().from(meetingsTable);
     expect(meetings.map((m) => m.site_id).sort()).toEqual(
@@ -59,7 +61,7 @@ describe("devData", () => {
   });
 });
 
-describe("devData chapters", () => {
+describe('the "all" dataset\'s chapters', () => {
   const chaptered = snapshot.meetings.findIndex((m) => m.chapters);
   const meetingId = chaptered + 1;
   const golden = snapshot.meetings[chaptered]!.chapters!;

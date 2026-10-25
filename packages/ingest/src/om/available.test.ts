@@ -4,9 +4,9 @@ import type { MeetingSource } from "@open-minutes/core/meeting-source";
 import { loadBodies } from "@open-minutes/fixtures/test-data";
 import { listAvailable } from "./available";
 import {
-  GOLDEN_GBOS,
-  goldenGbosId,
-  goldenTest,
+  GBOS,
+  gbosId,
+  bodiesTest,
   insertBody,
   insertMeeting,
   test,
@@ -29,20 +29,20 @@ function fakeSources(videos: (source: MeetingSource) => ListedRecording[]) {
 
 const GBOS_SOURCE: MeetingSource = {
   type: "youtube_channel",
-  channel_id: GOLDEN_GBOS.channelId,
+  channel_id: GBOS.channelId,
 };
 
 describe("listAvailable", () => {
-  goldenTest(
+  bodiesTest(
     "returns scraped meetings minus ingested ones, newest first",
     async ({ db }) => {
-      await insertMeeting(db, await goldenGbosId(db), "already-in-db");
+      await insertMeeting(db, await gbosId(db), "already-in-db");
 
       const { sourceFor } = fakeSources((source) =>
         // Source order is newest-first; listAvailable must preserve it. The
         // other golden bodies' playlists have nothing new.
         source.type === "youtube_channel" &&
-        source.channel_id === GOLDEN_GBOS.channelId
+        source.channel_id === GBOS.channelId
           ? [{ id: "newest" }, { id: "already-in-db" }, { id: "oldest" }]
           : [],
       );
@@ -54,7 +54,7 @@ describe("listAvailable", () => {
     },
   );
 
-  goldenTest(
+  bodiesTest(
     "scrapes only bodies that have a meeting source",
     async ({ db }) => {
       await insertBody(db, { name: "No Channel Town", slug: "nct" });
@@ -108,7 +108,7 @@ describe("listAvailable", () => {
     ]);
   });
 
-  goldenTest("--body restricts the scrape to that body", async ({ db }) => {
+  bodiesTest("--body restricts the scrape to that body", async ({ db }) => {
     await insertBody(db, {
       name: "Other Town Council",
       slug: "ot",
@@ -124,7 +124,7 @@ describe("listAvailable", () => {
     ]);
   });
 
-  goldenTest("rejects an unknown body slug", async ({ db }) => {
+  bodiesTest("rejects an unknown body slug", async ({ db }) => {
     const { sourceFor } = fakeSources(() => {
       throw new Error("unexpected listRecordings call");
     });
