@@ -21,6 +21,7 @@
     "sherpa-onnx-node": "^1.12.39"
   },
   "devDependencies": {
+    "@open-minutes/fixtures": "workspace:*",
     "@types/node": "^22.19.17",
     "vitest": "^4.0.18"
   }

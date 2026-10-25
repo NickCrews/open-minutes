@@ -49,7 +49,7 @@ cache (`~/.cache/open-minutes/meetings/<youtubeId>/`) on first use, and speech
 runs, which are slow to compute, are cached there too. Times are `H:MM:SS.ss`
 like golden PSV files, so they go straight into a psvtool op. The tools call
 the models in `@open-minutes/audio` directly, and get a meeting's audio from
-`@open-minutes/ingest/audio-cache`.
+`@open-minutes/meeting-audio`.
 
 - `speech_activity`: speech runs and pauses in a stretch, from voice activity
   detection.

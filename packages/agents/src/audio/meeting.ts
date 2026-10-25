@@ -1,10 +1,7 @@
 import { asc, eq } from "drizzle-orm";
 import { peopleTable, segmentsTable } from "@open-minutes/db";
 import { readWave, type WaveForm } from "@open-minutes/audio/wav";
-import {
-  getCachedAudio,
-  meetingCacheDir,
-} from "@open-minutes/ingest/audio-cache";
+import { getCachedAudio, meetingCacheDir } from "@open-minutes/meeting-audio";
 import {
   LAST_WORD_DURATION_SEC,
   type TranscriptWord,

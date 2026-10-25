@@ -5,13 +5,10 @@
  * those fetchers only open URLs they've been shown. See
  * https://llmstxt.org and issue #120.
  */
+import { blobStore } from "@open-minutes/blobstore";
 import { type DB, meetingsTable } from "@open-minutes/db";
 import { max } from "drizzle-orm";
 import { getAllBodies } from "../bodies";
-
-/** The DuckDB export's public URL; see skills/open-minutes-data/SKILL.md. */
-export const DUCKDB_EXPORT_URL =
-  "https://pub-ac21478ae97547c5a797c710cdc9df3d.r2.dev/exports/open-minutes.duckdb";
 
 export type LlmsTxtBody = {
   id: number;
@@ -96,6 +93,6 @@ Cite every claim with a link to the moment it was said: \`${origin}/meetings/<id
 
 - [About Open Minutes](${origin}/about): what it is, and its limits, for people.
 - [All meetings](${origin}/meetings)
-- [DuckDB export](${DUCKDB_EXPORT_URL}): all of the data in one file, rebuilt nightly, for agents that can run SQL. Its tables and example queries: https://github.com/nickcrews/open-minutes/blob/main/skills/open-minutes-data/SKILL.md
+- [DuckDB export](${blobStore().duckdbExport.url}): all of the data in one file, rebuilt nightly, for agents that can run SQL. Its tables and example queries: https://github.com/nickcrews/open-minutes/blob/main/skills/open-minutes-data/SKILL.md
 `;
 }

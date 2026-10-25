@@ -53,10 +53,3 @@ the last completed stage; to fully reprocess a meeting, delete its DB row and
 its work directory. The CLI is a thin wrapper over the exported API
 (`listIngested`, `listAvailable`, `ingestMeeting` from
 `@open-minutes/ingest/om`), so scripts and tests reuse the same logic.
-
-## Meeting audio cache
-
-`@open-minutes/ingest/audio-cache` downloads a meeting's audio into the
-per-machine cache (`~/.cache/open-minutes/meetings/<youtubeId>/`) and reads it
-back. The audio tools in `@open-minutes/agents` use it to open a meeting; they
-call the models in `@open-minutes/audio` directly.

@@ -1,0 +1,23 @@
+{
+  "name": "@open-minutes/meeting-audio",
+  "version": "0.1.0",
+  "description": "Open Minutes meeting audio: YouTube by way of the blob store, and a per-machine cache of meetings' decoded WAV",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@open-minutes/blobstore": "workspace:*",
+    "@open-minutes/codecs": "workspace:*",
+    "@open-minutes/core": "workspace:*",
+    "@open-minutes/youtube": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.17",
+    "vitest": "^4.0.18"
+  }
+}

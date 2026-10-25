@@ -24,7 +24,7 @@ import {
   insertBody,
   insertMeeting,
 } from "./testing";
-import { getMeetingAudio } from "../test-utils/audio-cache";
+import { getMeetingAudio } from "@open-minutes/fixtures/audio";
 
 const VIDEO_ID = "test-video-1";
 

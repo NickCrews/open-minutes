@@ -6,7 +6,7 @@ import type {
 import type { RecordingLister } from "@open-minutes/core/recording-lister";
 import { akleg, aklegSource, parseMeetingId } from "@open-minutes/akleg";
 import { videoId, youtubeSource } from "@open-minutes/youtube";
-import { storedYoutubeFromEnv } from "./stored-youtube";
+import { storedYoutubeFromEnv } from "@open-minutes/meeting-audio";
 
 /** Each site's {@link AudioProvider}: where a meeting's metadata and audio come from. */
 export type Sites = Record<SiteKind, AudioProvider>;

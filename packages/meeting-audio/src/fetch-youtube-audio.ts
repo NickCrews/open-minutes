@@ -1,30 +1,8 @@
-import type { BlobStore } from "@open-minutes/blobstore";
-
-/**
- * YouTube blocks datacenter IPs (CI, servers), so the fetch-youtube-audio
- * workflow (.github/workflows/fetch-youtube-audio.yml) gets past that and
- * stores what the pipeline needs from each video in the blob store, at these
- * keys. Keep them in step with the workflow (and the web app's
- * hidden-player.ts, which plays `speechWebm`).
- *
- * Keyed by video ID, so a video edited in place on YouTube (trimmed, or audio
- * muted over a copyright claim) keeps its old audio there. That's rare for
- * meetings, and the golden fixtures' sha256 checks would catch it.
- */
-export function youtubeVideoKeys(youtubeId: string) {
-  const prefix = `youtube/${encodeURIComponent(youtubeId)}`;
-  return {
-    /** yt-dlp's info JSON for the video (minus its stream URLs). */
-    infoJson: `${prefix}/info.json`,
-    /**
-     * YouTube's Opus audio re-encoded to 16 kHz mono Opus in WebM at 24 kbps
-     * (~11 MB per hour), plenty for the models, which take 16 kHz mono.
-     */
-    speechWebm: `${prefix}/speech.webm`,
-    /** A {@link FetchFailure}, written instead when the workflow fails. */
-    errorJson: `${prefix}/error.json`,
-  };
-}
+import type {
+  BlobFile,
+  BlobStore,
+  YoutubeVideoFiles,
+} from "@open-minutes/blobstore";
 
 /** What the workflow writes when it can't fetch a video. */
 interface FetchFailure {
@@ -43,7 +21,7 @@ const FETCH_YOUTUBE_AUDIO_TIMEOUT_MS = 20 * 60_000;
 
 /**
  * The contents of one of `youtubeId`'s files in `store`, the one `pick`
- * chooses (see {@link youtubeVideoKeys}), or null if it isn't stored.
+ * chooses, or null if it isn't stored.
  *
  * On a miss, with `dispatchToken` (a GitHub token allowed to run the
  * fetch-youtube-audio workflow), this triggers the workflow and waits for the
@@ -53,29 +31,30 @@ const FETCH_YOUTUBE_AUDIO_TIMEOUT_MS = 20 * 60_000;
 export async function fetchYoutubeVideoFile(
   store: BlobStore,
   youtubeId: string,
-  pick: (keys: ReturnType<typeof youtubeVideoKeys>) => string,
+  pick: (files: YoutubeVideoFiles) => BlobFile,
   dispatchToken?: string,
 ): Promise<Uint8Array | null> {
-  const keys = youtubeVideoKeys(youtubeId);
-  const key = pick(keys);
-  const first = await store.get(key);
+  const files = store.youtube(youtubeId);
+  const file = pick(files);
+  const first = await file.get();
   if (first) return first;
 
+  dispatchToken = makeDispatchToken(dispatchToken);
   if (!dispatchToken) return null;
   // The runner's clock and ours may differ; a minute's slack keeps a failure
   // from this run from looking like an old one.
   const requestedAt = Date.now() - 60_000;
   await requestFetch(youtubeId, dispatchToken);
   console.error(
-    `Waiting for the fetch-youtube-audio workflow to store ${store.url(key)}...`,
+    `Waiting for the fetch-youtube-audio workflow to store ${file.url}...`,
   );
   const deadline = Date.now() + FETCH_YOUTUBE_AUDIO_TIMEOUT_MS;
   while (Date.now() < deadline) {
     await new Promise((r) => setTimeout(r, FETCH_YOUTUBE_AUDIO_POLL_MS));
     // Bypassing the cache, so a 404 from before the upload isn't served again.
-    const stored = await store.get(key, { bypassCache: true });
+    const stored = await file.get({ bypassCache: true });
     if (stored) return stored;
-    const error = await store.get(keys.errorJson, { bypassCache: true });
+    const error = await files.errorJson.get({ bypassCache: true });
     const failure = error && (parseJson(error) as FetchFailure);
     if (failure && Date.parse(failure.failed_at) >= requestedAt) {
       throw new Error(
@@ -84,7 +63,7 @@ export async function fetchYoutubeVideoFile(
     }
   }
   throw new Error(
-    `Timed out waiting for fetch-youtube-audio to store ${store.url(key)}; see https://github.com/${FETCH_YOUTUBE_AUDIO_REPO}/actions/workflows/fetch-youtube-audio.yml`,
+    `Timed out waiting for fetch-youtube-audio to store ${file.url}; see https://github.com/${FETCH_YOUTUBE_AUDIO_REPO}/actions/workflows/fetch-youtube-audio.yml`,
   );
 }
 
@@ -111,4 +90,8 @@ async function requestFetch(youtubeId: string, token: string) {
       `Triggering fetch-youtube-audio for ${youtubeId}: HTTP ${res.status} ${await res.text()}`,
     );
   }
+}
+
+function makeDispatchToken(token?: string | null): string | undefined {
+  return token || process.env.YOUTUBE_AUDIO_DISPATCH_TOKEN || undefined;
 }

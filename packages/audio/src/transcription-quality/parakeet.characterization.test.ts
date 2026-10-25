@@ -19,7 +19,7 @@ import {
   compareTranscripts,
   type TranscriptWord,
 } from "@open-minutes/core/transcription";
-import { getMeetingAudio } from "../test-utils/audio-cache";
+import { getMeetingAudio } from "@open-minutes/fixtures/audio";
 
 const SLUG = "gbos-2026-06-15";
 

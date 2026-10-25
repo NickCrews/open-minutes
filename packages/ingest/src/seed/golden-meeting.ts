@@ -15,7 +15,7 @@ import type {
   GoldenMeeting,
   GoldenPerson,
 } from "@open-minutes/fixtures/test-data";
-import { getMeetingAudio } from "../test-utils/audio-cache";
+import { getMeetingAudio } from "@open-minutes/fixtures/audio";
 
 // Seed a hand-verified golden meeting into the database as established ground
 // truth: the meeting row, its speaker-attributed segments, and a voiceprint per

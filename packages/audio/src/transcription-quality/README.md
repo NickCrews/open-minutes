@@ -1,7 +1,7 @@
 # Transcription quality
 
-How well `transcribeAudio` (in `@open-minutes/audio`) does, and why it's built
-the way it is. The tests here form a hierarchy:
+How well [`transcribeAudio`](../transcribe.ts) does, and why it's built the
+way it is. The tests here form a hierarchy:
 
 1. **[north-star.test.ts](north-star.test.ts): what we optimize.** Word
    error rate against the hand-corrected golden meetings, and runtime as a
@@ -19,15 +19,16 @@ the way it is. The tests here form a hierarchy:
    improves the north star and breaks one of these, update or delete the
    characterization.
 
-3. **Unit tests next to the code** (`packages/audio/src/transcribe.test.ts`
+3. **Unit tests next to the code** ([transcribe.test.ts](../transcribe.test.ts)
    and friends): that the implementation does what it says, eg that
    `tokensToWords` joins the recognizer's tokens into words. They support the
    design of the day and change with it.
 
-Everything here is tagged `slow`: it needs the meetings' audio and the
-models. Run it with `pnpm test:slow transcription-quality`, or just the north
-star with `pnpm test:slow north-star`, and compare the logged `WER=` and `RTF=`
-lines before and after a change.
+Everything here is tagged `slow`: it needs the models and the meetings' audio,
+which `getMeetingAudio` (`@open-minutes/fixtures/audio`) downloads into a
+per-machine cache. Run it with `pnpm test:slow transcription-quality`, or just
+the north star with `pnpm test:slow north-star`, and compare the logged `WER=`
+and `RTF=` lines before and after a change.
 
 The goldens are the reference, so a word the goldens are missing counts
 against a transcriber that hears it. When the north star shows a stretch the

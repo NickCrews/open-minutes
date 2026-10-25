@@ -11,7 +11,7 @@ import { compareTranscripts } from "@open-minutes/core/transcription";
 import { goldenMeetingsData } from "../seed/golden-meetings-data";
 import { GOLDEN_GBOS, fakeSite } from "./testing";
 import { ingestMeeting } from "./ingest";
-import { getMeetingAudio } from "../test-utils/audio-cache";
+import { getMeetingAudio } from "@open-minutes/fixtures/audio";
 
 // End-to-end cross-meeting speaker recognition.
 //

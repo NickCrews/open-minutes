@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { transcribeAudio } from "@open-minutes/audio/transcribe";
 import { serializeVadRunsPsv } from "@open-minutes/fixtures/psv";
 import { getMeetingData } from "@open-minutes/fixtures/test-data";
-import { getMeetingAudio } from "../test-utils/audio-cache";
+import { getMeetingAudio } from "@open-minutes/fixtures/audio";
 import { cleanSpeechSegments } from "@open-minutes/core/rules";
 import { compareTranscripts } from "@open-minutes/core/transcription";
 

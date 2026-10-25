@@ -4,13 +4,12 @@
 #   youtube/<video id>/speech.webm YouTube's Opus audio, re-encoded to 16 kHz
 #                                  mono Opus at 24 kbps (~11 MB per hour); see
 #                                  .github/scripts/encode-speech-audio.sh
-# Clients (storedYoutube in packages/ingest/src/om/stored-youtube.ts) trigger
+# Clients (storedYoutube in packages/meeting-audio/src/stored-youtube.ts) trigger
 # this when a file is missing and poll for it; they decode the Opus themselves,
 # so nothing else is stored. YouTube's original audio isn't kept. If every
 # download attempt fails, youtube/<video id>/error.json is written instead, so
-# clients stop waiting. Readers find these files with youtubeVideoKeys in
-# packages/ingest/src/om/fetch-youtube-audio.ts, so keep its layout in step
-# with this one.
+# clients stop waiting. Readers find these files with blobStore().youtube() in
+# packages/blobstore/src/index.ts, so keep its layout in step with this one.
 #
 # Trigger it by hand with `gh workflow run fetch-youtube-audio.yml -f video_id=<id>`.
 #

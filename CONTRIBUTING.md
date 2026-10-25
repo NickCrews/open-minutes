@@ -18,7 +18,7 @@ YouTube ──yt-dlp──▶ pipeline (om ingest) ──▶ Postgres + pgvector
                     align / recognize
 ```
 
-A [pnpm](https://pnpm.io) workspace with ten packages. Each depends only on
+A [pnpm](https://pnpm.io) workspace of these packages. Each depends only on
 the ones listed above it:
 
 - **[`packages/core`](packages/core)** (`@open-minutes/core`): shared domain
@@ -34,8 +34,9 @@ the ones listed above it:
   speech recognition mishears them. Kept as static data for now.
 - **[`packages/fixtures`](packages/fixtures)** (`@open-minutes/fixtures`): the
   data that seeds local and test databases. `test-data/` holds the real,
-  hand-verified jurisdictions, bodies, people and golden meetings. Nothing here
-  ships to production.
+  hand-verified jurisdictions, bodies, people and golden meetings, and
+  `@open-minutes/fixtures/audio` gets a golden meeting's audio, checked against
+  the audio its transcript was timed to. Nothing here ships to production.
 - **[`packages/audio`](packages/audio)** (`@open-minutes/audio`): speech
   processing, run locally with
   [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx). It transcribes a
@@ -60,9 +61,13 @@ the ones listed above it:
   source. It lists a committee's recorded meetings and gets a meeting's
   metadata and MP3 audio. See the
   [akleg README](packages/akleg/README.md).
+- **[`packages/meeting-audio`](packages/meeting-audio)**
+  (`@open-minutes/meeting-audio`): YouTube's audio by way of the blob store,
+  and a per-machine cache of meetings' decoded audio. See the
+  [meeting-audio README](packages/meeting-audio/README.md).
 - **[`packages/ingest`](packages/ingest)** (`@open-minutes/ingest`): the
   offline ingestion pipeline. It gets a meeting's audio from
-  `@open-minutes/youtube` (by way of the blob store, where it can) or
+  `@open-minutes/meeting-audio` (YouTube, by way of the blob store) or
   `@open-minutes/akleg`, runs it through `@open-minutes/audio`, aligns turns to words, recognizes speakers
   against known voiceprints, and writes the meeting to the database. See the
   [ingest README](packages/ingest/README.md).

@@ -1,6 +1,7 @@
 # Nightly, copies production's public data into a DuckDB file and stores it in
 # the blob store, publicly readable at
 #   $BLOB_STORE_PUBLIC_URL/exports/open-minutes.duckdb
+# (blobStore().duckdbExport in packages/blobstore, so keep the two in step)
 # for querying production's data without Postgres or its credentials. How to
 # use it: skills/open-minutes-data/SKILL.md. What's copied:
 # .github/scripts/export-duckdb.sh.

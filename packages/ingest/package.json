@@ -4,8 +4,7 @@
   "description": "Open Minutes meeting ingestion: download a meeting, run it through @open-minutes/audio, identify speakers and write it to the database",
   "type": "module",
   "exports": {
-    "./om": "./src/om/index.ts",
-    "./audio-cache": "./src/test-utils/audio-cache.ts"
+    "./om": "./src/om/index.ts"
   },
   "scripts": {
     "test": "vitest run",
@@ -15,10 +14,9 @@
     "@neondatabase/serverless": "^1.1.0",
     "@open-minutes/akleg": "workspace:*",
     "@open-minutes/audio": "workspace:*",
-    "@open-minutes/blobstore": "workspace:*",
-    "@open-minutes/codecs": "workspace:*",
     "@open-minutes/core": "workspace:*",
     "@open-minutes/db": "workspace:*",
+    "@open-minutes/meeting-audio": "workspace:*",
     "@open-minutes/youtube": "workspace:*",
     "drizzle-orm": "1.0.0-beta.21"
   },

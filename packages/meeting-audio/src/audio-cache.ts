@@ -6,13 +6,11 @@ import {
   writeFileSync,
 } from "node:fs";
 import { createHash } from "node:crypto";
-import { rm, symlink } from "node:fs/promises";
+import { rm, stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { readWave } from "@open-minutes/audio/wav";
-import { decodeToWav } from "@open-minutes/codecs";
-import type { GoldenMeeting } from "@open-minutes/fixtures/test-data";
-import { storedYoutubeFromEnv } from "../om/stored-youtube";
+import { decodeToWav, SAMPLE_RATE } from "@open-minutes/codecs";
+import { storedYoutubeFromEnv } from "./stored-youtube";
 
 const CACHE_ROOT = join(homedir(), ".cache", "open-minutes", "meetings");
 
@@ -32,11 +30,16 @@ export function meetingCacheDir(youtube_id: string): string {
   return join(CACHE_ROOT, youtube_id);
 }
 
-export async function getCachedAudio(fixture: {
+/**
+ * A YouTube video's audio as 16 kHz mono WAV, from the per-machine cache,
+ * downloaded and decoded on first use. With `sha256`, throws unless the WAV
+ * has that hash.
+ */
+export async function getCachedAudio(video: {
   youtubeId: string;
   sha256?: string;
 }): Promise<CachedAudio> {
-  const dir = meetingCacheDir(fixture.youtubeId);
+  const dir = meetingCacheDir(video.youtubeId);
   const audioPath = join(dir, "audio.wav");
   const manifestPath = join(dir, "manifest.json");
   mkdirSync(dir, { recursive: true });
@@ -51,20 +54,20 @@ export async function getCachedAudio(fixture: {
         `Cached audio sha256 ${actual} does not match manifest ${manifest.sha256}; delete ${dir} to re-download.`,
       );
     }
-    if (fixture.sha256 && manifest.sha256 !== fixture.sha256) {
+    if (video.sha256 && manifest.sha256 !== video.sha256) {
       throw new Error(
-        `Cached audio sha256 ${manifest.sha256} does not match golden _audio_sha256 ${fixture.sha256} for ${fixture.youtubeId}.`,
+        `Cached audio sha256 ${manifest.sha256} does not match the expected ${video.sha256} for ${video.youtubeId}.`,
       );
     }
     return { path: audioPath, manifest };
   }
 
-  // Golden fixtures' sha256 are of the decoded WAV, so the download is
-  // decoded here and only the WAV kept.
+  // `sha256` is of the decoded WAV, so the download is decoded here and only
+  // the WAV kept.
   const youtube = storedYoutubeFromEnv();
   const sourcePath = join(dir, `audio.${youtube.audioExtension}`);
   try {
-    await youtube.ensureAudioDownloaded(fixture.youtubeId, sourcePath, {
+    await youtube.ensureAudioDownloaded(video.youtubeId, sourcePath, {
       overwrite: true,
     });
     await decodeToWav(sourcePath, audioPath);
@@ -73,18 +76,19 @@ export async function getCachedAudio(fixture: {
   }
 
   const sha256 = await sha256File(audioPath);
-  if (fixture.sha256 && sha256 !== fixture.sha256) {
+  if (video.sha256 && sha256 !== video.sha256) {
     throw new Error(
-      `Downloaded audio sha256 ${sha256} does not match golden _audio_sha256 ${fixture.sha256} for ${fixture.youtubeId}. Did the YouTube source change?`,
+      `Downloaded audio sha256 ${sha256} does not match the expected ${video.sha256} for ${video.youtubeId}. Did the YouTube source change?`,
     );
   }
 
-  const wave = readWave(audioPath);
+  // decodeToWav writes a 44-byte header and 16-bit mono samples.
+  const { size } = await stat(audioPath);
   const manifest: AudioManifest = {
-    youtube_id: fixture.youtubeId,
+    youtube_id: video.youtubeId,
     sha256,
-    sample_rate: wave.sampleRate,
-    duration_sec: wave.samples.length / wave.sampleRate,
+    sample_rate: SAMPLE_RATE,
+    duration_sec: (size - 44) / 2 / SAMPLE_RATE,
   };
   writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
   return { path: audioPath, manifest };
@@ -105,24 +109,4 @@ async function sha256File(path: string): Promise<string> {
     stream.on("end", () => resolve(hash.digest("hex")));
     stream.on("error", reject);
   });
-}
-
-/**
- * The audio for a golden meeting, from the cache (downloaded on first use), also
- * symlinked into the meeting's fixture directory for inspection.
- */
-export async function getMeetingAudio(
-  meeting: GoldenMeeting,
-): Promise<CachedAudio> {
-  const audio = await getCachedAudio({
-    youtubeId: meeting.youtube_id,
-    sha256: meeting._audio_sha256,
-  });
-
-  const symlinkPath = join(meeting.meetingDir, "audio.gen.wav");
-  if (!existsSync(symlinkPath)) {
-    await symlink(audio.path, symlinkPath);
-  }
-
-  return audio;
 }

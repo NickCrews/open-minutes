@@ -1,11 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { ensureWaveAudio } from "@open-minutes/audio/wav";
-import { BLOB_STORE_PUBLIC_URL } from "@open-minutes/blobstore";
+import { decodeToWav, SAMPLE_RATE } from "@open-minutes/codecs";
 import type { YouTube } from "@open-minutes/youtube";
-import { blobStoreConfigFromEnv, storedYoutube } from "./stored-youtube";
+import { storedYoutube } from "./stored-youtube";
 
 // A YouTube that fails, so a video missing from the store fails the test
 // instead of falling back to yt-dlp.
@@ -18,7 +17,7 @@ const unreachable: YouTube = {
     throw new Error("unexpected ensureAudioDownloaded call");
   },
 };
-const yt = storedYoutube(unreachable, { url: BLOB_STORE_PUBLIC_URL });
+const yt = storedYoutube(unreachable);
 
 describe("storedYoutube", () => {
   it("gets a video's metadata from the blob store", async () => {
@@ -41,9 +40,11 @@ describe("storedYoutube", () => {
       expect(await yt.ensureAudioDownloaded(url, path)).toEqual({
         downloaded: true,
       });
-      const wave = await ensureWaveAudio(path);
-      expect(wave.sampleRate).toBe(16_000);
-      expect(wave.samples.length / 16_000).toBeCloseTo(5, 0);
+      const wavPath = join(dir, "short.wav");
+      await decodeToWav(path, wavPath);
+      // A 44-byte header and 16-bit mono samples.
+      const { size } = await stat(wavPath);
+      expect((size - 44) / 2 / SAMPLE_RATE).toBeCloseTo(5, 0);
       expect(await yt.ensureAudioDownloaded(url, path)).toEqual({
         downloaded: false,
       });
@@ -53,40 +54,20 @@ describe("storedYoutube", () => {
   });
 
   it("falls back to YouTube for a video missing from the store", async () => {
-    const fallback = storedYoutube(
-      {
-        ...unreachable,
-        getMetadata: async (id) => ({
-          id,
-          channelId: "",
-          title: "from YouTube",
-          description: "",
-          durationSecs: null,
-          uploadDate: null,
-        }),
-      },
-      { url: BLOB_STORE_PUBLIC_URL },
-    );
+    const fallback = storedYoutube({
+      ...unreachable,
+      getMetadata: async (id) => ({
+        id,
+        channelId: "",
+        title: "from YouTube",
+        description: "",
+        durationSecs: null,
+        uploadDate: null,
+      }),
+    });
     // A well-formed ID no video has.
     expect((await fallback.getMetadata("zzzzzzzzzzz")).title).toBe(
       "from YouTube",
     );
-  });
-});
-
-describe("blobStoreConfigFromEnv", () => {
-  it("is null without BLOB_STORE_PUBLIC_URL", () => {
-    expect(
-      blobStoreConfigFromEnv({ YOUTUBE_AUDIO_DISPATCH_TOKEN: "t" }),
-    ).toBeNull();
-  });
-
-  it("reads the URL and dispatch token", () => {
-    expect(
-      blobStoreConfigFromEnv({
-        BLOB_STORE_PUBLIC_URL: "https://example.com",
-        YOUTUBE_AUDIO_DISPATCH_TOKEN: "t",
-      }),
-    ).toEqual({ url: "https://example.com", dispatchToken: "t" });
   });
 });

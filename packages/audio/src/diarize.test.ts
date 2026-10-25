@@ -18,7 +18,7 @@ import {
 } from "@open-minutes/fixtures/psv";
 import { getMeetingData } from "@open-minutes/fixtures/test-data";
 import { N_DIMENSIONS } from "@open-minutes/core/voice_embeddings";
-import { getMeetingAudio } from "./test-utils/audio-cache";
+import { getMeetingAudio } from "@open-minutes/fixtures/audio";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const RUNS_DIR = join(HERE, "..", "test-runs");
