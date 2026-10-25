@@ -18,7 +18,7 @@ first time each is used, or all at once with `pnpm models`.
 
 `@open-minutes/audio/vad` finds where someone is talking (Silero VAD,
 with pauses down to 0.2 s), as a list of `Span`s from
-`@open-minutes/audio/span`, which also clips, merges, subtracts and totals
+`@open-minutes/core/span`, which also clips, merges, subtracts and totals
 them and finds the gaps between them (the pauses). `@open-minutes/audio/coverage`
 compares those runs with a transcript's words, to find speech no word
 accounts for. Neither caches anything:

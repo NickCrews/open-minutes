@@ -1,5 +1,10 @@
 import type { TranscriptWord } from "@open-minutes/core/transcription";
-import { mergeSpans, type Span, subtract, totalSecs } from "./span.js";
+import {
+  mergeSpans,
+  type Span,
+  subtract,
+  totalSecs,
+} from "@open-minutes/core/span";
 
 // How much of the detected speech (from `detectSpeech`) a transcript's words
 // account for, and where the speech no word covers is.

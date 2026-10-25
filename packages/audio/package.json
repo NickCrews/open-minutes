@@ -10,7 +10,6 @@
     "./embed-model": "./src/embed-model.ts",
     "./models": "./src/all-models.ts",
     "./vad": "./src/vad.ts",
-    "./span": "./src/span.ts",
     "./coverage": "./src/coverage.ts",
     "./wav": "./src/wav.ts"
   },

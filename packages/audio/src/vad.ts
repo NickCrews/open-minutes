@@ -3,7 +3,7 @@ import sherpa, { type WaveForm } from "sherpa-onnx-node";
 import { ensureDownloaded } from "./model.js";
 import { VAD_MODEL_SPEC } from "./transcribe.js";
 import { EXPECTED_SAMPLE_RATE } from "./embed.js";
-import type { Span } from "./span.js";
+import type { Span } from "@open-minutes/core/span";
 
 // Where in the audio someone is talking, by Silero VAD, independent of any
 // transcript. The transcriber runs the same model to cut the audio into

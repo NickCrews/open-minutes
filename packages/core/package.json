@@ -16,7 +16,8 @@
     "./rules": "./src/rules/index.ts",
     "./transcript-fingerprint": "./src/transcript-fingerprint.ts",
     "./text": "./src/text.ts",
-    "./timezone": "./src/timezone.ts"
+    "./timezone": "./src/timezone.ts",
+    "./span": "./src/span.ts"
   },
   "scripts": {
     "test": "vitest run",

@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import type { TranscriptWord } from "@open-minutes/core/transcription";
 import { halfUntranscribedRollCall } from "@open-minutes/fixtures/clips";
 import { untranscribedSpeech, wordCoverage } from "./coverage";
-import type { Span } from "./span";
+import type { Span } from "@open-minutes/core/span";
 import { detectSpeech } from "./vad";
 import { readWave } from "./wav";
 
