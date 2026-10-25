@@ -106,12 +106,7 @@ describe("reading", () => {
     const glossary = await callTool(toolContext(db), getGlossary, {
       meeting: GBOS,
     });
-    expect(glossary.glossaries).toEqual([
-      "common",
-      "alaska",
-      "moa",
-      "girdwood",
-    ]);
+    expect(glossary.glossaries).toEqual(["alaska", "moa", "girdwood"]);
     expect(glossary.entries).toContainEqual(
       expect.objectContaining({ headword: "GHEC" }),
     );

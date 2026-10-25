@@ -1,48 +1,15 @@
 import type { Glossary } from "./index";
 
-// Each glossary lists the words of a region that anyone meeting there is
-// likely to say, not only the words of one body: the Assembly talks about
-// Girdwood, so "Girdwood" is in Anchorage's glossary, while Girdwood's own
-// committees are in Girdwood's. People's names aren't here; they are in the
-// people records.
-
-const common: Glossary = {
-  slug: "common",
-  appliesTo: "everywhere",
-  entries: [
-    {
-      headword: "roll call",
-      misheard: ["low cloud", "a local", "all course", "well quote"],
-    },
-    { headword: "I'll second", misheard: ["All seconds"] },
-    { headword: "Mr. Chair", misheard: ["Mr. Terry", "Mr. Cheerio"] },
-    {
-      headword: "dais",
-      meaning: "The raised platform the members sit at",
-      misheard: ["the diet", "the diocese"],
-    },
-    { headword: "hydrant", misheard: ["hybrid"] },
-    { headword: "culvert", misheard: ["covert"] },
-    { headword: "levee", misheard: ["levy"] },
-    {
-      headword: "the Corps",
-      meaning: "The U.S. Army Corps of Engineers",
-      misheard: ["the core"],
-    },
-    { headword: "land use plan", misheard: ["language plan"] },
-    { headword: "graders", misheard: ["creators"] },
-    { headword: "berms", misheard: ["burns", "farms"] },
-    {
-      headword: "as-built",
-      meaning: "A drawing of a project as it was actually built",
-      misheard: ["As Bill"],
-    },
-  ],
-};
+// Each glossary lists only words an agent is unlikely to know: local
+// acronyms, committees, places and events. Words any English speaker or any
+// model knows (culvert, Chugach, Iditarod) stay out, even when speech
+// recognition mishears them. A word goes in the glossary of the region
+// everyone likely to say it is in: the Assembly talks about GBOS, so "GBOS" is
+// in Anchorage's glossary, while Girdwood's own committees are in Girdwood's.
+// People's names aren't here; they are in the people records.
 
 const alaska: Glossary = {
   slug: "alaska",
-  extends: ["common"],
   appliesTo: { jurisdictions: ["ak"] },
   entries: [
     {
@@ -55,20 +22,6 @@ const alaska: Glossary = {
       meaning: "The Alaska Native people of the Gulf of Alaska coast",
       misheard: ["Elkick"],
     },
-    {
-      headword: "Chugach",
-      misheard: ["Tree Gatch", "Shu Gach", "Chu Getch", "Tugetch"],
-    },
-    {
-      headword: "Turnagain",
-      misheard: ["Turing", "Turning", "Tornigan", "turning an arm"],
-    },
-    { headword: "Iditarod", misheard: ["Diderot", "editor on"] },
-    { headword: "Whittier", misheard: ["Woody", "wittier", "WIDIA"] },
-    {
-      headword: "Glenn Highway",
-      misheard: ["Glen Highway", "old lane highway", "gun highway"],
-    },
   ],
 };
 
@@ -77,7 +30,6 @@ const anchorage: Glossary = {
   extends: ["alaska"],
   appliesTo: { jurisdictions: ["moa"] },
   entries: [
-    { headword: "Anchorage", misheard: ["acridge"] },
     {
       headword: "AMC",
       meaning: "Anchorage Municipal Code",
@@ -95,22 +47,6 @@ const anchorage: Glossary = {
     },
     { headword: "FCC", meaning: "Federation of Community Councils" },
     {
-      headword: "Girdwood",
-      misheard: [
-        "Gridwood",
-        "Goodwood",
-        "good wood",
-        "Girtwood",
-        "Guardwood",
-        "Gerwood",
-        "Birdwood",
-        "Gergher",
-        "Grid",
-        "Grim",
-        "Girdle",
-      ],
-    },
-    {
       headword: "GBOS",
       meaning: "Girdwood Board of Supervisors",
       misheard: [
@@ -126,12 +62,10 @@ const anchorage: Glossary = {
         "Goss",
       ],
     },
-    { headword: "Alyeska", misheard: ["Alias", "Aliaska", "LSC"] },
     {
       headword: "Chugiak",
       misheard: ["Touge", "Chugyak", "Chugia", "Shuyak"],
     },
-    { headword: "Muldoon", misheard: ["Moldum"] },
     {
       headword: "Rondy",
       meaning: "Fur Rendezvous, Anchorage's winter festival",
@@ -200,9 +134,4 @@ const girdwood: Glossary = {
 };
 
 /** Every glossary, the most general first. */
-export const GLOSSARIES: readonly Glossary[] = [
-  common,
-  alaska,
-  anchorage,
-  girdwood,
-];
+export const GLOSSARIES: readonly Glossary[] = [alaska, anchorage, girdwood];

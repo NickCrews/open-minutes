@@ -8,34 +8,34 @@ const headwords = (g: { entries: { headword: string }[] }) =>
   g.entries.map((e) => e.headword);
 
 describe("glossaryFor", () => {
-  it("gives a Girdwood body every glossary from common to Girdwood's", async () => {
+  it("gives a Girdwood body every glossary from Alaska's to Girdwood's", async () => {
     const g = await glossaryFor([gbos]);
-    expect(g.glossaries).toEqual(["common", "alaska", "moa", "girdwood"]);
+    expect(g.glossaries).toEqual(["alaska", "moa", "girdwood"]);
     expect(headwords(g)).toEqual(
-      expect.arrayContaining(["roll call", "Dena'ina", "AMC", "GHEC"]),
+      expect.arrayContaining(["Dena'ina", "AMC", "GHEC"]),
     );
   });
 
-  it("gives an Anchorage body Girdwood's name but not its committees", async () => {
+  it("gives an Anchorage body GBOS but not Girdwood's committees", async () => {
     const g = await glossaryFor([assembly]);
-    expect(g.glossaries).toEqual(["common", "alaska", "moa"]);
-    expect(headwords(g)).toContain("Girdwood");
+    expect(g.glossaries).toEqual(["alaska", "moa"]);
+    expect(headwords(g)).toContain("GBOS");
     expect(headwords(g)).not.toContain("GHEC");
   });
 
   it("gives a Legislature committee Alaska's words", async () => {
     const g = await glossaryFor([hres]);
-    expect(g.glossaries).toEqual(["common", "alaska"]);
+    expect(g.glossaries).toEqual(["alaska"]);
   });
 
-  it("gives a body no glossary names only the common one", async () => {
+  it("gives a body no glossary names no glossary", async () => {
     const g = await glossaryFor([{ slug: "x", jurisdictionSlug: "y" }]);
-    expect(g.glossaries).toEqual(["common"]);
+    expect(g).toEqual({ glossaries: [], entries: [] });
   });
 
   it("merges a joint meeting's glossaries once each", async () => {
     const g = await glossaryFor([gbos, assembly]);
-    expect(g.glossaries).toEqual(["common", "alaska", "moa", "girdwood"]);
+    expect(g.glossaries).toEqual(["alaska", "moa", "girdwood"]);
   });
 
   it("applies the glossaries a glossary extends wherever it applies", () => {
