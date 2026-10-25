@@ -9,6 +9,7 @@ import {
   type RuleMeeting,
   RULE_SPECS_BY_CODE,
   type RuleSegment,
+  type Severity,
   TRANSCRIPT_RULE_SPECS,
 } from "@open-minutes/core/rules";
 import { formatClock } from "@open-minutes/core/clock";
@@ -36,8 +37,6 @@ import {
 // into with `_rules` in bodies.jsonl (Anchorage's bill and code numbers).
 // Errors fail the fixture tests and `pnpm fixtures:check`; warnings are
 // printed and want a look.
-
-export type Severity = "error" | "warning";
 
 export interface Issue {
   file: string;
