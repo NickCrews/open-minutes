@@ -11,6 +11,7 @@ export default defineConfig({
       "./packages/agents/vitest.config.ts",
       "./packages/youtube/vitest.config.ts",
       "./packages/akleg/vitest.config.ts",
+      "./packages/glossary/vitest.config.ts",
       "./packages/web/vitest.config.ts",
     ],
   },

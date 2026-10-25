@@ -19,6 +19,7 @@ import {
   checkMeetingTool,
   findPeople,
   getChapters,
+  getGlossary,
   getTranscript,
   listMeetings,
   listSpeakers,
@@ -99,6 +100,16 @@ describe("reading", () => {
         (await checkMeetingData(ruleMeeting(golden))).map(summary),
       );
     }
+  });
+
+  test("gives a meeting the glossaries of its bodies", async ({ db }) => {
+    const glossary = await callTool(toolContext(db), getGlossary, {
+      meeting: GBOS,
+    });
+    expect(glossary.glossaries).toEqual(["alaska", "moa", "girdwood"]);
+    expect(glossary.entries).toContainEqual(
+      expect.objectContaining({ headword: "GHEC" }),
+    );
   });
 
   test("reports a filler as an error", async ({ db }) => {

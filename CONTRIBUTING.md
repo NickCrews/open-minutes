@@ -18,7 +18,7 @@ YouTube ──yt-dlp──▶ pipeline (om ingest) ──▶ Postgres + pgvector
                     align / recognize
 ```
 
-A [pnpm](https://pnpm.io) workspace with nine packages. Each depends only on
+A [pnpm](https://pnpm.io) workspace with ten packages. Each depends only on
 the ones listed above it:
 
 - **[`packages/core`](packages/core)** (`@open-minutes/core`): shared domain
@@ -29,6 +29,9 @@ the ones listed above it:
 - **[`packages/db`](packages/db)** (`@open-minutes/db`): the
   [Drizzle](https://orm.drizzle.team) schema and migrations, the `pnpm db` CLI,
   and the per-test database helpers (`@open-minutes/db/testing/vitest`).
+- **[`packages/glossary`](packages/glossary)** (`@open-minutes/glossary`): the
+  local words of each region (Anchorage, Girdwood), what they mean and how
+  speech recognition mishears them. Kept as static data for now.
 - **[`packages/fixtures`](packages/fixtures)** (`@open-minutes/fixtures`): the
   data that seeds local and test databases. `test-data/` holds the real,
   hand-verified jurisdictions, bodies, people and golden meetings. Nothing here

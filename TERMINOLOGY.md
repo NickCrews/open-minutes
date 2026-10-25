@@ -21,6 +21,14 @@ _Avoid_: muni, board, council, committee, organization, group
 A stable, unique handle in lowercase kebab-case that names a row the same way in every database, unlike its id, and doesn't change when it's renamed. Code, static data, the fixtures, the command line and file paths refer to a row by it. Every jurisdiction (`moa`) and body (`gbos`) has one; so does every known person (`margaret-tyler`), the key for their identity across meetings, and every golden fixture meeting (`gbos-2026-03-23`, its fixture directory's name). Other meetings and people have none and go by their id.
 _Avoid_: name, short name, handle, key, muni slug, body id, fixture name, meeting key
 
+**Glossary**:
+The local words of a region, such as Anchorage or Girdwood: what each means and how speech recognition mishears it. It applies to bodies by jurisdiction or by body, and builds on the glossaries of the regions around it. A meeting's glossary merges those of all its bodies. People's names aren't in it.
+_Avoid_: jargon, dictionary, vocabulary, mishearings
+
+**Glossary entry**:
+One word or phrase in a glossary: its headword (the correct spelling), its meaning, its variants (other correct spellings) and how it has been misheard.
+_Avoid_: term, word (that is a word of a transcript)
+
 **Meeting source**:
 Where a body's meetings are published, scanned for new ones: a YouTube channel or playlist, or an Alaska Legislature committee on akleg.gov. A body has at most one; bodies that share a YouTube channel each get a playlist on it.
 _Avoid_: video source, feed, playlist, channel (unless it really is one)
