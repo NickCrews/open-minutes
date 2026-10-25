@@ -99,7 +99,7 @@ jobs:
           key: ${{ steps.debs.outputs.key }}
       - name: Install Cloudflare WARP and Tor
         if: steps.stored.outputs.hit != 'true'
-        run: packages/ytdlp/egress/install.sh "$RUNNER_TEMP/debs"
+        run: pnpm exec ytdlp install-egress "$RUNNER_TEMP/debs"
       # Saved right away rather than at the end of the job, so a failed
       # download doesn't lose it.
       - uses: actions/cache/save@v4
@@ -109,13 +109,20 @@ jobs:
           key: ${{ steps.debs.outputs.key }}
 
       # Installs yt-dlp too. YouTube always refuses a runner's own IP, so
-      # direct isn't tried.
+      # direct isn't tried. The output is YouTube's Opus audio as-is (format
+      # 251, ~50 MB per hour), with yt-dlp's metadata beside it in
+      # original.info.json. --no-continue and --force-overwrites make each
+      # route's attempt start over rather than resume another exit's partial
+      # file. On failure, logs/last-error.txt says why.
       - name: Download the audio and metadata
         if: steps.stored.outputs.hit != 'true'
         env:
-          YOUTUBE_EGRESS: warp,tor
           YOUTUBE_EGRESS_STATE: ${{ runner.temp }}/youtube-egress
-        run: pnpm exec tsx .github/scripts/fetch-youtube-audio.ts "$VIDEO_ID" "$RUNNER_TEMP/audio/original.webm"
+        run: |
+          pnpm exec ytdlp run --routes warp,tor --logs "$RUNNER_TEMP/audio/logs" -- \
+            -f 'bestaudio[ext=webm]' --no-playlist --no-continue --force-overwrites \
+            --write-info-json -o "$RUNNER_TEMP/audio/original.webm" \
+            "https://www.youtube.com/watch?v=$VIDEO_ID"
       # ffmpeg isn't on the ubuntu-latest image.
       - name: Install ffmpeg
         if: steps.stored.outputs.hit != 'true'

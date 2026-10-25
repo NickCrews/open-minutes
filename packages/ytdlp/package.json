@@ -6,9 +6,15 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "bin": {
+    "ytdlp": "./src/cli.ts"
+  },
   "scripts": {
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "citty": "^0.1.6"
   },
   "devDependencies": {
     "@types/node": "^22.19.17",
