@@ -6,12 +6,13 @@ import {
   writeFileSync,
 } from "node:fs";
 import { createHash } from "node:crypto";
-import { symlink } from "node:fs/promises";
+import { rm, symlink } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { readWave } from "@open-minutes/audio/wav";
+import { decodeToWav } from "@open-minutes/codecs";
 import type { GoldenMeeting } from "@open-minutes/fixtures/test-data";
-import { youtubeFromEnv } from "@open-minutes/youtube";
+import { storedYoutubeFromEnv } from "../om/stored-youtube";
 
 const CACHE_ROOT = join(homedir(), ".cache", "open-minutes", "meetings");
 
@@ -58,7 +59,18 @@ export async function getCachedAudio(fixture: {
     return { path: audioPath, manifest };
   }
 
-  await youtubeFromEnv().ensureAudioDownloaded(fixture.youtubeId, audioPath);
+  // Golden fixtures' sha256 are of the decoded WAV, so the download is
+  // decoded here and only the WAV kept.
+  const youtube = storedYoutubeFromEnv();
+  const sourcePath = join(dir, `audio.${youtube.audioExtension}`);
+  try {
+    await youtube.ensureAudioDownloaded(fixture.youtubeId, sourcePath, {
+      overwrite: true,
+    });
+    await decodeToWav(sourcePath, audioPath);
+  } finally {
+    await rm(sourcePath, { force: true });
+  }
 
   const sha256 = await sha256File(audioPath);
   if (fixture.sha256 && sha256 !== fixture.sha256) {

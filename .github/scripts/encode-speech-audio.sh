@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Re-encodes YouTube's Opus audio to the speech-quality Opus the object store
+# Re-encodes YouTube's Opus audio to the speech-quality Opus the blob store
 # keeps: 16 kHz mono at 24 kbps in WebM, ~11 MB per hour against ~50 MB for
 # YouTube's ~110 kbps stereo. The pipeline's models take 16 kHz mono, so
 # nothing they can use is lost.
 # Usage: encode-speech-audio.sh <input> <output .webm>
 #
-# On speech, decoding this with webmOpusToWav gives the same length as the
+# On speech, decoding this with webmOpusToWav (@open-minutes/codecs) gives the same length as the
 # original, at zero lag, with correlation ~0.997.
 set -euo pipefail
 in="$1"

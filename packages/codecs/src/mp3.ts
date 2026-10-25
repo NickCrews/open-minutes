@@ -1,8 +1,7 @@
 import { open, rename, rm } from "node:fs/promises";
 import { MPEGDecoder } from "mpg123-decoder";
+import { SAMPLE_RATE, toInt16, wavHeader } from "./wav";
 
-/** The sample rate the transcription model wants. */
-const SAMPLE_RATE = 16_000;
 /** Input fed to the decoder at a time, so a large buffer isn't one huge call. */
 const CHUNK = 1 << 16;
 
@@ -193,39 +192,4 @@ export class Resampler {
 
 function gcd(a: number, b: number): number {
   return b === 0 ? a : gcd(b, a % b);
-}
-
-// toInt16 and wavHeader are copies of @open-minutes/youtube's (opus.ts). If a
-// third source needs them, they belong in @open-minutes/core.
-
-/** Float samples in [-1, 1] as 16-bit PCM, rounded and clipped as ffmpeg does. */
-function toInt16(samples: Float32Array): Uint8Array {
-  const pcm = new Int16Array(samples.length);
-  for (let i = 0; i < samples.length; i++) {
-    pcm[i] = Math.max(-32768, Math.min(32767, Math.round(samples[i]! * 32768)));
-  }
-  return new Uint8Array(pcm.buffer);
-}
-
-/** A canonical 44-byte header for `samples` of 16-bit mono PCM. */
-function wavHeader(samples: number): Uint8Array {
-  const header = new Uint8Array(44);
-  const view = new DataView(header.buffer);
-  const ascii = (offset: number, s: string) => {
-    for (let i = 0; i < s.length; i++) header[offset + i] = s.charCodeAt(i);
-  };
-  ascii(0, "RIFF");
-  view.setUint32(4, 36 + samples * 2, true);
-  ascii(8, "WAVE");
-  ascii(12, "fmt ");
-  view.setUint32(16, 16, true); // fmt chunk size
-  view.setUint16(20, 1, true); // PCM
-  view.setUint16(22, 1, true); // mono
-  view.setUint32(24, SAMPLE_RATE, true);
-  view.setUint32(28, SAMPLE_RATE * 2, true); // byte rate
-  view.setUint16(32, 2, true); // block align
-  view.setUint16(34, 16, true); // bits per sample
-  ascii(36, "data");
-  view.setUint32(40, samples * 2, true);
-  return header;
 }

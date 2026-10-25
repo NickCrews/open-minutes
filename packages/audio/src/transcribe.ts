@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { availableParallelism } from "node:os";
 import { ensureDownloaded, ModelSpec } from "./model.js";
 import { EXPECTED_SAMPLE_RATE } from "./embed.js";
+import { ensureWaveAudio } from "./wav.js";
 
 import sherpa_onnx, {
   type OfflineRecognizer,
@@ -126,7 +127,7 @@ export async function transcribeAudio(
   options: TranscribeOptions = {},
 ): Promise<SpeechSegment[]> {
   const wallStart = Date.now();
-  const wave = ensureWaveAudio(audio);
+  const wave = await ensureWaveAudio(audio);
   assertSampleRate(wave.sampleRate);
   const duration = wave.samples.length / wave.sampleRate;
   const { tracing } = options;
@@ -333,13 +334,6 @@ async function mapWithConcurrency<T, R>(
     Array.from({ length: Math.min(limit, items.length) }, worker),
   );
   return results;
-}
-
-function ensureWaveAudio(audio: string | WaveForm): WaveForm {
-  if (typeof audio === "string") {
-    return sherpa_onnx.readWave(audio);
-  }
-  return audio;
 }
 
 function assertSampleRate(actual: number): void {

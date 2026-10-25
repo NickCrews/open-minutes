@@ -16,10 +16,10 @@ import { createServerFn } from "@tanstack/solid-start";
 /** Configuration the browser needs. Never put a secret here. */
 export type PublicConfig = {
   /**
-   * The object store's public base URL, which excerpts play audio from (see
-   * `@open-minutes/youtube/store`). Always set: wrangler.jsonc has it.
+   * The blob store's public base URL, which excerpts play audio from (see
+   * `@open-minutes/blobstore`). Always set: wrangler.jsonc has it.
    */
-  objectStorePublicUrl: string;
+  blobStorePublicUrl: string;
 };
 
 /**
@@ -28,7 +28,7 @@ export type PublicConfig = {
  */
 export const fetchPublicConfig = createServerFn({ method: "GET" }).handler(
   (): PublicConfig => ({
-    objectStorePublicUrl: required("OBJECT_STORE_PUBLIC_URL"),
+    blobStorePublicUrl: required("BLOB_STORE_PUBLIC_URL"),
   }),
 );
 

@@ -12,7 +12,7 @@
 import { defineCommand, runMain } from "citty";
 import { loadRootDotEnv } from "@open-minutes/core/dotenv";
 
-// Settings like OBJECT_STORE_PUBLIC_URL (which the audio tools use to
+// Settings like BLOB_STORE_PUBLIC_URL (which the audio tools use to
 // download a meeting's audio) come from the repo's .env.
 loadRootDotEnv();
 

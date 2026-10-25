@@ -1,16 +1,14 @@
 import { open, rename, rm } from "node:fs/promises";
 import { OpusDecoder } from "opus-decoder";
+import { SAMPLE_RATE, toInt16, wavHeader } from "./wav";
 
-/** The sample rate the transcription model wants. */
-const SAMPLE_RATE = 16_000;
 /** Opus timestamps (pre-skip) are always in 48 kHz samples. */
 const OPUS_RATE = 48_000;
 /** Packets decoded per batch: ~20 s of audio, so memory stays flat. */
 const BATCH = 1_000;
 
 /**
- * Decodes Opus-in-WebM audio (YouTube's format 251, or the object store's
- * speech-quality re-encode of it) to `dest` as 16 kHz mono 16-bit WAV, the
+ * Decodes Opus-in-WebM audio to `dest` as 16 kHz mono 16-bit WAV, the
  * format the transcription model wants.
  *
  * Decoding is libopus compiled to WebAssembly (opus-decoder), asked for 16 kHz
@@ -68,38 +66,6 @@ export async function webmOpusToWav(webm: Uint8Array, dest: string) {
     await file.close().catch(() => {});
     await rm(part, { force: true });
   }
-}
-
-/** Float samples in [-1, 1] as 16-bit PCM, rounded and clipped as ffmpeg does. */
-function toInt16(samples: Float32Array): Uint8Array {
-  const pcm = new Int16Array(samples.length);
-  for (let i = 0; i < samples.length; i++) {
-    pcm[i] = Math.max(-32768, Math.min(32767, Math.round(samples[i]! * 32768)));
-  }
-  return new Uint8Array(pcm.buffer);
-}
-
-/** A canonical 44-byte header for `samples` of 16-bit mono PCM. */
-function wavHeader(samples: number): Uint8Array {
-  const header = new Uint8Array(44);
-  const view = new DataView(header.buffer);
-  const ascii = (offset: number, s: string) => {
-    for (let i = 0; i < s.length; i++) header[offset + i] = s.charCodeAt(i);
-  };
-  ascii(0, "RIFF");
-  view.setUint32(4, 36 + samples * 2, true);
-  ascii(8, "WAVE");
-  ascii(12, "fmt ");
-  view.setUint32(16, 16, true); // fmt chunk size
-  view.setUint16(20, 1, true); // PCM
-  view.setUint16(22, 1, true); // mono
-  view.setUint32(24, SAMPLE_RATE, true);
-  view.setUint32(28, SAMPLE_RATE * 2, true); // byte rate
-  view.setUint16(32, 2, true); // block align
-  view.setUint16(34, 16, true); // bits per sample
-  ascii(36, "data");
-  view.setUint32(40, samples * 2, true);
-  return header;
 }
 
 // Matroska element IDs (https://www.matroska.org/technical/elements.html).

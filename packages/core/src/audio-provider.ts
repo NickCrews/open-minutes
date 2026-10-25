@@ -8,10 +8,14 @@
 export interface AudioProvider {
   /** The recording's title, publisher and so on. */
   getMetadata(recordingIdOrUrl: string): Promise<RecordingMetadata>;
+  /** The extension of the files {@link ensureAudioDownloaded} saves, for naming them. */
+  readonly audioExtension: "mp3" | "webm";
   /**
-   * Makes sure `path` holds the recording's audio as 16 kHz mono WAV, which is
-   * what the transcription model wants. An existing file at `path` is kept
-   * unless `overwrite` is set. Returns whether it downloaded anything.
+   * Makes sure `path` holds the recording's audio, as the site serves it
+   * (WebM/Opus for YouTube, MP3 for akleg.gov), undecoded. `ensureWaveAudio`
+   * in `@open-minutes/audio/wav` decodes it for the models. An existing file
+   * at `path` is kept unless `overwrite` is set. Returns whether it downloaded
+   * anything.
    */
   ensureAudioDownloaded(
     recordingIdOrUrl: string,

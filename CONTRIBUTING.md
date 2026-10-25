@@ -38,24 +38,32 @@ the ones listed above it:
   ships to production.
 - **[`packages/audio`](packages/audio)** (`@open-minutes/audio`): speech
   processing, run locally with
-  [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx). It transcribes a WAV
-  (NeMo Parakeet ASR + Silero VAD) and diarizes it into speaker turns (pyannote
+  [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx). It transcribes a
+  meeting's audio (NeMo Parakeet ASR + Silero VAD) and diarizes it into speaker turns (pyannote
   segmentation + CAM++ voice embeddings). No GPU or external API is needed;
   models are downloaded on first use (or all at once with `pnpm om models`).
   See the [audio README](packages/audio/README.md).
 - **[`packages/youtube`](packages/youtube)** (`@open-minutes/youtube`): the
   YouTube source. It lists a channel's or playlist's videos and gets a video's
-  metadata and audio, with yt-dlp or from the object store (see below), and
-  decodes YouTube's Opus audio to WAV. See the
+  metadata and Opus audio with yt-dlp. See the
   [youtube README](packages/youtube/README.md).
+- **[`packages/codecs`](packages/codecs)** (`@open-minutes/codecs`): decodes
+  the WebM/Opus and MP3 audio sites serve to the 16 kHz mono WAV the models
+  want, in WebAssembly with no ffmpeg. See the
+  [codecs README](packages/codecs/README.md).
+- **[`packages/blobstore`](packages/blobstore)** (`@open-minutes/blobstore`): the
+  blob store (see below): reads a file from the bucket by key, from Node or
+  the browser. See the
+  [blobstore README](packages/blobstore/README.md).
 - **[`packages/akleg`](packages/akleg)** (`@open-minutes/akleg`): the source
   for the Alaska Legislature's meetings on akleg.gov, a peer of the YouTube
   source. It lists a committee's recorded meetings and gets a meeting's
-  metadata and audio, decoding its MP3 to WAV. See the
+  metadata and MP3 audio. See the
   [akleg README](packages/akleg/README.md).
 - **[`packages/ingest`](packages/ingest)** (`@open-minutes/ingest`): the
   offline ingestion pipeline. It gets a meeting's audio from
-  `@open-minutes/youtube` or `@open-minutes/akleg`, runs it through `@open-minutes/audio`, aligns turns to words, recognizes speakers
+  `@open-minutes/youtube` (by way of the blob store, where it can) or
+  `@open-minutes/akleg`, runs it through `@open-minutes/audio`, aligns turns to words, recognizes speakers
   against known voiceprints, and writes the meeting to the database. See the
   [ingest README](packages/ingest/README.md).
 - **[`packages/agents`](packages/agents)** (`@open-minutes/agents`): the
@@ -101,7 +109,7 @@ You need:
 - **Node 22** and **pnpm 10.33.0** (pinned in `package.json`;
   `corepack enable` picks it up).
 - **Docker** with Compose, for the local Postgres.
-- Nothing for yt-dlp, which fetches videos not yet in the object store
+- Nothing for yt-dlp, which fetches videos not yet in the blob store
   (below): it's installed into `.cache/bin` the first time it's needed, if
   it isn't on your `PATH`. It runs YouTube's player JS with node, or with
   [deno](https://deno.com) if that's on your `PATH`, which sandboxes it more
@@ -232,9 +240,9 @@ pnpm om models          # download every ML model up front (~650MB)
 ```
 
 From a server or CI runner, YouTube answers yt-dlp with "sign in to confirm
-you're not a bot". Metadata and audio come from the object store instead: the
+you're not a bot". Metadata and audio come from the blob store instead: the
 project's S3-compatible bucket (Cloudflare R2), public at
-`OBJECT_STORE_PUBLIC_URL`, where the
+`BLOB_STORE_PUBLIC_URL`, where the
 [`fetch-youtube-audio`](.github/workflows/fetch-youtube-audio.yml) workflow
 stores each video's yt-dlp metadata and audio under `youtube/<video id>/`
 after downloading them through Cloudflare WARP or Tor. The audio is re-encoded

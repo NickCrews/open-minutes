@@ -13,12 +13,12 @@ import {
   computeSpeakerEmbeddings,
   cosineSimilarity,
   EMBEDDING_MODEL_SPEC,
-  ensureWaveAudio,
   getEmbeddingExtractor,
   groupBySpeaker,
   NUM_THREADS,
   speakerCentroid,
 } from "./embed.js";
+import { ensureWaveAudio } from "./wav.js";
 import type { DiarizationTurn } from "@open-minutes/core/transcription";
 
 // Ported from OpenWhispr's offline speaker-diarization path. This module owns
@@ -63,8 +63,10 @@ const MERGE_THRESHOLD = 0.5;
  * sherpa's raw clustering over-splits long meetings, so we re-merge clusters
  * whose voiceprints are too similar to be different people (see mergeSpeakers).
  */
-export function diarizeAudio(audio: string | WaveForm): DiarizationTurn[] {
-  const wave = ensureWaveAudio(audio);
+export async function diarizeAudio(
+  audio: string | WaveForm,
+): Promise<DiarizationTurn[]> {
+  const wave = await ensureWaveAudio(audio);
   const diarizer = getDiarizer();
   assertSampleRate(wave.sampleRate, diarizer.sampleRate);
 
@@ -228,15 +230,17 @@ function getDiarizer(): OfflineSpeakerDiarization {
 async function cli() {
   const audioPath = process.argv[2];
   if (!audioPath) {
-    console.error("Usage: tsx diarize.ts <path-to-16khz-mono-wav>");
+    console.error("Usage: tsx diarize.ts <path-to-wav-webm-or-mp3>");
     process.exit(1);
   }
-  const turns = diarizeAudio(audioPath);
+  // Decoded once, for both stages.
+  const wave = await ensureWaveAudio(audioPath);
+  const turns = await diarizeAudio(wave);
   const speakers = new Set(turns.map((t) => t.speakerNum));
   console.log(
     `Found ${speakers.size} speaker(s) across ${turns.length} turn(s).`,
   );
-  const embeddings = computeSpeakerEmbeddings(audioPath, turns);
+  const embeddings = await computeSpeakerEmbeddings(wave, turns);
   for (const turn of turns) {
     console.log(
       `${turn.start.toFixed(2)} -- ${turn.end.toFixed(2)} speaker_${turn.speakerNum}`,

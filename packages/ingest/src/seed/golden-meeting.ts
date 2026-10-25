@@ -125,7 +125,7 @@ async function seedIdentifiedPeople(
     });
   }
 
-  const centroids = computeSpeakerEmbeddings(audioPath, turns);
+  const centroids = await computeSpeakerEmbeddings(audioPath, turns);
   const slugToPersonId = new Map<string, number>();
   for (const [slug, index] of slugToIndex) {
     const centroid = centroids.get(index);

@@ -3,8 +3,8 @@ import { mkdtempSync, readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { readWave } from "@open-minutes/audio/wav";
 import { mp3ToWav, Resampler } from "./mp3";
+import { readCanonicalWav } from "./wav";
 
 // 1.5 s of stereo MP3 at 24 kHz and 64 kbps, like akleg.gov's recordings:
 // 440 Hz on the left, 1000 Hz on the right. Made with: ffmpeg -f lavfi -i
@@ -64,7 +64,7 @@ describe("mp3ToWav", () => {
 
   it("decodes to 16 kHz mono with both channels mixed in", async () => {
     await mp3ToWav(readFileSync(TONES), dest);
-    const wave = readWave(dest);
+    const wave = await readCanonicalWav(dest);
     expect(wave.sampleRate).toBe(16_000);
     // 1.5 s, give or take the encoder's padding.
     expect(wave.samples.length / 16_000).toBeCloseTo(1.5, 1);

@@ -22,12 +22,16 @@ import { loadBodies } from "@open-minutes/fixtures/test-data";
 
 /**
  * A site (YouTube, akleg.gov) where every call throws unless overridden, so a
- * test both avoids the network and proves which calls were (not) made.
+ * test both avoids the network and proves which calls were (not) made. It
+ * names its audio like YouTube's; tests that hand the pipeline the golden
+ * fixtures' cached WAV still work, since `ensureWaveAudio` reads the format
+ * from a file's bytes, not its name.
  */
 export function fakeSite(
   overrides: Partial<AudioProvider> = {},
 ): AudioProvider {
   return {
+    audioExtension: "webm",
     getMetadata: async () => {
       throw new Error("unexpected getMetadata call");
     },

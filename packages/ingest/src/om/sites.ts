@@ -5,7 +5,8 @@ import type {
 } from "@open-minutes/core/meeting-source";
 import type { RecordingLister } from "@open-minutes/core/recording-lister";
 import { akleg, aklegSource, parseMeetingId } from "@open-minutes/akleg";
-import { videoId, youtubeFromEnv, youtubeSource } from "@open-minutes/youtube";
+import { videoId, youtubeSource } from "@open-minutes/youtube";
+import { storedYoutubeFromEnv } from "./stored-youtube";
 
 /** Each site's {@link AudioProvider}: where a meeting's metadata and audio come from. */
 export type Sites = Record<SiteKind, AudioProvider>;
@@ -20,7 +21,7 @@ export function withDefaultSites(sites: Partial<Sites> = {}): Sites {
   let aklegSite = sites.akleg;
   return {
     get youtube() {
-      return (youtube ??= youtubeFromEnv());
+      return (youtube ??= storedYoutubeFromEnv());
     },
     get akleg() {
       return (aklegSite ??= akleg());

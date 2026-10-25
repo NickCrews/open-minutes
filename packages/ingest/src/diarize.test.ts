@@ -35,7 +35,7 @@ describe("diarize", () => {
 
       const audioPath = await getMeetingAudio(meeting).then((a) => a.path);
       const wave = readWave(audioPath);
-      const turns = diarizeAudio(wave);
+      const turns = await diarizeAudio(wave);
 
       // Keep the transcription slice from the existing golden; relabel speakers.
       // The golden has no VAD run structure, so each of its segments stands in
@@ -63,7 +63,7 @@ describe("diarize", () => {
       }
 
       // Every speaker that talks long enough gets an N_DIMENSIONS-dim centroid.
-      const embeddings = computeSpeakerEmbeddings(wave, turns);
+      const embeddings = await computeSpeakerEmbeddings(wave, turns);
       expect(embeddings.size).toBeGreaterThan(0);
       for (const [, embedding] of embeddings) {
         expect(embedding.length).toBe(N_DIMENSIONS);

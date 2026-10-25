@@ -91,7 +91,7 @@ const EMBEDDINGS = [
 async function seedWorkDir(workRoot: string, dirName: string): Promise<void> {
   const dir = join(workRoot, dirName);
   await mkdir(dir, { recursive: true });
-  await writeFile(join(dir, "audio.wav"), "not really audio");
+  await writeFile(join(dir, "audio.webm"), "not really audio");
   await writeFile(
     join(dir, "transcription.json"),
     JSON.stringify(TRANSCRIPTION, null, 2),

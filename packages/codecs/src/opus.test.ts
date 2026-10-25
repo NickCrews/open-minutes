@@ -3,8 +3,8 @@ import { mkdtempSync, readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { readWave } from "@open-minutes/audio/wav";
 import { webmOpusToWav } from "./opus";
+import { readCanonicalWav } from "./wav";
 
 // 1.5 s of stereo Opus in WebM: 440 Hz on the left, 1000 Hz on the right.
 // Made with: ffmpeg -f lavfi -i sine=frequency=440:duration=1.5 -f lavfi -i
@@ -30,7 +30,7 @@ describe("webmOpusToWav", () => {
 
   it("decodes to 16 kHz mono with both channels mixed in", async () => {
     await webmOpusToWav(readFileSync(TONES), dest);
-    const wave = readWave(dest);
+    const wave = await readCanonicalWav(dest);
     expect(wave.sampleRate).toBe(16_000);
     // Pre-skip and end padding trimmed: exactly 1.5 s, as ffmpeg decodes it.
     expect(wave.samples.length).toBe(24_000);

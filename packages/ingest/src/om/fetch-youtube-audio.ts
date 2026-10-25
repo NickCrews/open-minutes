@@ -1,0 +1,114 @@
+import type { BlobStore } from "@open-minutes/blobstore";
+
+/**
+ * YouTube blocks datacenter IPs (CI, servers), so the fetch-youtube-audio
+ * workflow (.github/workflows/fetch-youtube-audio.yml) gets past that and
+ * stores what the pipeline needs from each video in the blob store, at these
+ * keys. Keep them in step with the workflow (and the web app's
+ * hidden-player.ts, which plays `speechWebm`).
+ *
+ * Keyed by video ID, so a video edited in place on YouTube (trimmed, or audio
+ * muted over a copyright claim) keeps its old audio there. That's rare for
+ * meetings, and the golden fixtures' sha256 checks would catch it.
+ */
+export function youtubeVideoKeys(youtubeId: string) {
+  const prefix = `youtube/${encodeURIComponent(youtubeId)}`;
+  return {
+    /** yt-dlp's info JSON for the video (minus its stream URLs). */
+    infoJson: `${prefix}/info.json`,
+    /**
+     * YouTube's Opus audio re-encoded to 16 kHz mono Opus in WebM at 24 kbps
+     * (~11 MB per hour), plenty for the models, which take 16 kHz mono.
+     */
+    speechWebm: `${prefix}/speech.webm`,
+    /** A {@link FetchFailure}, written instead when the workflow fails. */
+    errorJson: `${prefix}/error.json`,
+  };
+}
+
+/** What the workflow writes when it can't fetch a video. */
+interface FetchFailure {
+  /** ISO 8601. */
+  failed_at: string;
+  error: string;
+  /** The workflow run that failed. */
+  run_url: string;
+}
+
+/** The repo whose fetch-youtube-audio workflow fills the blob store. */
+const FETCH_YOUTUBE_AUDIO_REPO = "NickCrews/open-minutes";
+const FETCH_YOUTUBE_AUDIO_POLL_MS = 5_000;
+/** A fetch-youtube-audio run takes 2-6 minutes; this allows for a queue. */
+const FETCH_YOUTUBE_AUDIO_TIMEOUT_MS = 20 * 60_000;
+
+/**
+ * The contents of one of `youtubeId`'s files in `store`, the one `pick`
+ * chooses (see {@link youtubeVideoKeys}), or null if it isn't stored.
+ *
+ * On a miss, with `dispatchToken` (a GitHub token allowed to run the
+ * fetch-youtube-audio workflow), this triggers the workflow and waits for the
+ * file, throwing if the workflow fails or times out. Without the token, a
+ * miss returns null.
+ */
+export async function fetchYoutubeVideoFile(
+  store: BlobStore,
+  youtubeId: string,
+  pick: (keys: ReturnType<typeof youtubeVideoKeys>) => string,
+  dispatchToken?: string,
+): Promise<Uint8Array | null> {
+  const keys = youtubeVideoKeys(youtubeId);
+  const key = pick(keys);
+  const first = await store.get(key);
+  if (first) return first;
+
+  if (!dispatchToken) return null;
+  // The runner's clock and ours may differ; a minute's slack keeps a failure
+  // from this run from looking like an old one.
+  const requestedAt = Date.now() - 60_000;
+  await requestFetch(youtubeId, dispatchToken);
+  console.error(
+    `Waiting for the fetch-youtube-audio workflow to store ${store.url(key)}...`,
+  );
+  const deadline = Date.now() + FETCH_YOUTUBE_AUDIO_TIMEOUT_MS;
+  while (Date.now() < deadline) {
+    await new Promise((r) => setTimeout(r, FETCH_YOUTUBE_AUDIO_POLL_MS));
+    // Bypassing the cache, so a 404 from before the upload isn't served again.
+    const stored = await store.get(key, { bypassCache: true });
+    if (stored) return stored;
+    const error = await store.get(keys.errorJson, { bypassCache: true });
+    const failure = error && (parseJson(error) as FetchFailure);
+    if (failure && Date.parse(failure.failed_at) >= requestedAt) {
+      throw new Error(
+        `fetch-youtube-audio failed for ${youtubeId}: ${failure.error} (${failure.run_url})`,
+      );
+    }
+  }
+  throw new Error(
+    `Timed out waiting for fetch-youtube-audio to store ${store.url(key)}; see https://github.com/${FETCH_YOUTUBE_AUDIO_REPO}/actions/workflows/fetch-youtube-audio.yml`,
+  );
+}
+
+/** A stored JSON file's contents. */
+export function parseJson(bytes: Uint8Array): unknown {
+  return JSON.parse(new TextDecoder().decode(bytes));
+}
+
+async function requestFetch(youtubeId: string, token: string) {
+  const res = await fetch(
+    `https://api.github.com/repos/${FETCH_YOUTUBE_AUDIO_REPO}/actions/workflows/fetch-youtube-audio.yml/dispatches`,
+    {
+      method: "POST",
+      headers: {
+        Accept: "application/vnd.github+json",
+        Authorization: `Bearer ${token}`,
+        "X-GitHub-Api-Version": "2022-11-28",
+      },
+      body: JSON.stringify({ ref: "main", inputs: { video_id: youtubeId } }),
+    },
+  );
+  if (!res.ok) {
+    throw new Error(
+      `Triggering fetch-youtube-audio for ${youtubeId}: HTTP ${res.status} ${await res.text()}`,
+    );
+  }
+}

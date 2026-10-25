@@ -1,7 +1,7 @@
 {
   "name": "@open-minutes/akleg",
   "version": "0.1.0",
-  "description": "Open Minutes' Alaska Legislature source: list a committee's meetings on akleg.gov, read their metadata and get their audio as WAV",
+  "description": "Open Minutes' Alaska Legislature source: list a committee's meetings on akleg.gov, read their metadata and download their audio",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
@@ -12,8 +12,7 @@
   },
   "dependencies": {
     "@open-minutes/core": "workspace:*",
-    "zod": "^4.3.6",
-    "mpg123-decoder": "^1.0.3"
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@open-minutes/audio": "workspace:*",

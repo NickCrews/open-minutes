@@ -21,6 +21,7 @@ import {
 import { transcribeAudio } from "@open-minutes/audio/transcribe";
 import { computeSpeakerEmbeddings } from "@open-minutes/audio/embed";
 import { diarizeAudio } from "@open-minutes/audio/diarize";
+import { ensureWaveAudio, type WaveForm } from "@open-minutes/audio/wav";
 import { identifyAndInsertSegments } from "../identify";
 import {
   type MeetingDateTime,
@@ -163,17 +164,22 @@ export async function ingestMeeting(
   const workDir = join(workRoot, workDirName(body.slug, siteId));
   await mkdir(workDir, { recursive: true });
 
-  const audioPath = join(workDir, "audio.wav");
+  const audioFile = `audio.${provider.audioExtension}`;
+  const audioPath = join(workDir, audioFile);
   if (existsSync(audioPath)) {
-    console.error(`${tag} audio.wav exists, skipping download`);
+    console.error(`${tag} ${audioFile} exists, skipping download`);
   } else {
     await provider.ensureAudioDownloaded(siteId, audioPath);
   }
+  // Decoded once for every stage that needs it, and only if one does: a
+  // resumed run whose stages are all cached never decodes.
+  let wave: Promise<WaveForm> | undefined;
+  const audio = () => (wave ??= ensureWaveAudio(audioPath));
 
   const rawSpeechSegments = await cachedStage<SpeechSegment[]>(
     tag,
     join(workDir, "transcription.json"),
-    () => transcribeAudio(audioPath),
+    async () => transcribeAudio(await audio()),
   );
   // Apply the rules' fixes, eg dropping fillers. Deliberately not cached:
   // transcription.json stays the recognizer's verbatim output, so a new or
@@ -198,7 +204,7 @@ export async function ingestMeeting(
   const diarization = await cachedStage<DiarizationArtifact>(
     tag,
     join(workDir, "diarization.json"),
-    () => ({ turns: diarizeAudio(audioPath) }),
+    async () => ({ turns: await diarizeAudio(await audio()) }),
   );
 
   // Transcription and diarization are both raw, and both wrong in places: the
@@ -213,11 +219,19 @@ export async function ingestMeeting(
   const embeddings = await cachedStage<EmbeddingsArtifact>(
     tag,
     join(workDir, "embeddings.json"),
-    () =>
-      [...computeSpeakerEmbeddings(audioPath, segmentsToTurns(segments))].map(
-        ([speaker, centroid]) => ({ speaker, centroid: Array.from(centroid) }),
-      ),
+    async () =>
+      [
+        ...(await computeSpeakerEmbeddings(
+          await audio(),
+          segmentsToTurns(segments),
+        )),
+      ].map(([speaker, centroid]) => ({
+        speaker,
+        centroid: Array.from(centroid),
+      })),
   );
+  // No stage after this needs the audio; a 3-hour meeting's is ~700 MB.
+  wave = undefined;
   const speakerEmbeddings = new Map(
     embeddings.map(({ speaker, centroid }) => [
       speaker,

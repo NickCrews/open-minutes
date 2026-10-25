@@ -1,4 +1,7 @@
-import { access, mkdir } from "node:fs/promises";
+import { createWriteStream } from "node:fs";
+import { access, mkdir, rename, rm } from "node:fs/promises";
+import { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
 import { dirname } from "node:path";
 import { z } from "zod";
 import type {
@@ -6,7 +9,6 @@ import type {
   RecordingMetadata,
 } from "@open-minutes/core/audio-provider";
 import type { RecordingLister } from "@open-minutes/core/recording-lister";
-import { mp3ToWav } from "./mp3";
 
 export type {
   AudioProvider,
@@ -236,6 +238,8 @@ export interface AkLegConfig {
  * where YouTube's take a video ID or URL.
  */
 export interface AkLeg extends AudioProvider {
+  /** The extension of the files {@link ensureAudioDownloaded} saves, for naming them. */
+  readonly audioExtension: "mp3";
   /**
    * The meetings of a committee (by chamber and code, "HRES") in a Legislature
    * (34 for 2025-2026; see {@link legislatureOf}) that have audio, newest
@@ -293,6 +297,7 @@ export function akleg(config: AkLegConfig = {}): AkLeg {
   }
 
   return {
+    audioExtension: "mp3",
     async meetingsOfCommittee(committee, legislature) {
       const chamber = committee.slice(0, 1);
       const code = committee.slice(1);
@@ -330,8 +335,18 @@ export function akleg(config: AkLegConfig = {}): AkLeg {
       console.error(`Downloading audio from ${audio.url} to ${path}...`);
       const res = await get(audio.url);
       if (!res.body) throw new Error(`GET ${audio.url}: no body`);
-      // Decoded as it downloads; see mp3ToWav.
-      await mp3ToWav(chunksOf(res.body), path);
+      // Written beside `path` and moved into place, so an interrupted download
+      // never leaves a partial file at `path`.
+      const part = `${path}.part`;
+      try {
+        await pipeline(
+          Readable.from(chunksOf(res.body)),
+          createWriteStream(part),
+        );
+        await rename(part, path);
+      } finally {
+        await rm(part, { force: true });
+      }
       return { downloaded: true };
     },
   };

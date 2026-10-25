@@ -8,7 +8,7 @@
 // docs/research/youtube-in-ci.md.
 //
 // The output is YouTube's Opus audio as-is (format 251, ~50 MB per hour);
-// encode-speech-audio.sh then shrinks it for the object store. On failure,
+// encode-speech-audio.sh then shrinks it for the blob store. On failure,
 // <output dir>/logs/last-error.txt says why, and WARP's and Tor's logs are
 // copied beside it.
 import { copyFile, mkdir, readdir, rm, writeFile } from "node:fs/promises";

@@ -5,6 +5,7 @@ import sherpa_onnx, {
 } from "sherpa-onnx-node";
 
 import { ensureDownloaded, type ModelSpec } from "./model.js";
+import { ensureWaveAudio } from "./wav.js";
 import type { DiarizationTurn } from "@open-minutes/core/transcription";
 
 // Speaker-embedding toolkit (Tier B): one CAM++ voiceprint per speaker, for
@@ -45,11 +46,11 @@ export const NUM_THREADS = 4;
  * (≥ MIN_SEGMENT_SECONDS, up to LONGEST_SEGMENTS), embed each, and average into
  * a centroid. Speakers with no qualifying turn are omitted.
  */
-export function computeSpeakerEmbeddings(
+export async function computeSpeakerEmbeddings(
   audio: string | WaveForm,
   turns: DiarizationTurn[],
-): Map<number, Float32Array> {
-  const wave = ensureWaveAudio(audio);
+): Promise<Map<number, Float32Array>> {
+  const wave = await ensureWaveAudio(audio);
   const extractor = getEmbeddingExtractor();
   assertSampleRate(wave.sampleRate, EXPECTED_SAMPLE_RATE);
 
@@ -134,10 +135,6 @@ export function groupBySpeaker(
     bySpeaker.set(turn.speakerNum, list);
   }
   return bySpeaker;
-}
-
-export function ensureWaveAudio(audio: string | WaveForm): WaveForm {
-  return typeof audio === "string" ? sherpa_onnx.readWave(audio) : audio;
 }
 
 export function assertSampleRate(actual: number, expected: number): void {

@@ -29,7 +29,7 @@ script rotates exits, the TypeScript one only walks a fixed list of proxies.
 ### A new package, `@open-minutes/ytdlp`
 
 It owns everything needed to run the yt-dlp CLI from any machine, and nothing
-about YouTube's data model, the object store or the database.
+about YouTube's data model, the blob store or the database.
 
 ```ts
 import { ensureYtDlpInstalled, runWithEgress } from "@open-minutes/ytdlp";
@@ -128,7 +128,7 @@ workflow's yt-dlp and deno steps go. Its other steps (re-encoding, upload,
 - One retry policy, in TypeScript. Its unit tests use a fake yt-dlp and fake
   routes.
 - An end-to-end test fetches a short video's metadata and audio from YouTube
-  through `runWithEgress` with the default routes, skipping the object store.
+  through `runWithEgress` with the default routes, skipping the blob store.
   It is tagged `ytdlp`, runs with `pnpm test:ytdlp` on a home connection, where
   `direct` works, and in a CI job that runs `installWarpAndTor` first, where `direct`
   is blocked and WARP or Tor takes over. The test is the same on both. The CI

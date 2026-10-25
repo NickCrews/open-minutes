@@ -1,13 +1,13 @@
 # Nightly, copies production's public data into a DuckDB file and stores it in
-# the object store, publicly readable at
-#   $OBJECT_STORE_PUBLIC_URL/exports/open-minutes.duckdb
+# the blob store, publicly readable at
+#   $BLOB_STORE_PUBLIC_URL/exports/open-minutes.duckdb
 # for querying production's data without Postgres or its credentials. How to
 # use it: skills/open-minutes-data/SKILL.md. What's copied:
 # .github/scripts/export-duckdb.sh.
 #
 # Trigger it by hand with `gh workflow run export-duckdb.yml`.
 #
-# Configuration: the object store's variables and object-store-writer secrets
+# Configuration: the blob store's variables and object-store-writer secrets
 # (see fetch-youtube-audio.yml), plus NEON_PROJECT_ID and NEON_API_KEY (see
 # production.yml). Production is only read: the export attaches it read-only,
 # and the run wakes its compute for about a minute.
@@ -32,7 +32,7 @@ jobs:
     environment: object-store-writer
     timeout-minutes: 30
     env:
-      OBJECT_STORE_BUCKET: ${{ vars.OBJECT_STORE_BUCKET }}
+      BLOB_STORE_BUCKET: ${{ vars.OBJECT_STORE_BUCKET }}
       AWS_ENDPOINT_URL: ${{ vars.OBJECT_STORE_ENDPOINT }}
       AWS_ACCESS_KEY_ID: ${{ secrets.OBJECT_STORE_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.OBJECT_STORE_SECRET_ACCESS_KEY }}
@@ -80,5 +80,5 @@ jobs:
       # don't mix a cached old file with the new one.
       - name: Upload
         run: |
-          aws s3 cp "$RUNNER_TEMP/open-minutes.duckdb" "s3://$OBJECT_STORE_BUCKET/exports/open-minutes.duckdb" \
+          aws s3 cp "$RUNNER_TEMP/open-minutes.duckdb" "s3://$BLOB_STORE_BUCKET/exports/open-minutes.duckdb" \
             --content-type application/octet-stream --cache-control no-cache --no-progress

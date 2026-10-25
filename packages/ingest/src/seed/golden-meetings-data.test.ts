@@ -6,7 +6,7 @@ import { getMeetingData } from "@open-minutes/fixtures/test-data";
 import { goldenMeetingsData } from "./golden-meetings-data";
 
 // Seeding a golden computes a voiceprint per identified person, from the
-// meeting's audio. That audio comes from the object store, so the cold path
+// meeting's audio. That audio comes from the blob store, so the cold path
 // is ~10 MB to download and some seconds to decode and embed; after that the
 // harness caches the seeded database as a template. The shortest golden keeps
 // the cold path short. Tests that don't need the database belong in

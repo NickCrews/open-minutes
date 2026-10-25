@@ -1,0 +1,21 @@
+{
+  "name": "@open-minutes/codecs",
+  "version": "0.1.0",
+  "description": "Open Minutes audio decoding: WebM/Opus and MP3 to 16 kHz mono WAV, in WebAssembly with no ffmpeg",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "mpg123-decoder": "^1.0.3",
+    "opus-decoder": "^0.7.12"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.17",
+    "vitest": "^4.0.18"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "name": "@open-minutes/blobstore",
+  "version": "0.1.0",
+  "description": "Open Minutes' blob store: read a file from the project's public bucket by key, from Node or the browser",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}

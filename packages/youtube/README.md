@@ -3,17 +3,14 @@
 Where Open Minutes gets meetings published on YouTube. It implements
 `@open-minutes/core`'s `RecordingLister` for a channel or playlist (`youtubeSource`:
 the videos in it) and `AudioProvider` for a video (`youtube`: its metadata, and
-its audio as 16 kHz mono WAV).
-It knows nothing about the database or what happens to the audio next;
-`@open-minutes/ingest` does that.
+its original Opus-in-WebM audio). `metadataFromYtDlpInfo` reads yt-dlp's info
+JSON, which `@open-minutes/ingest` also uses on the copies in the blob store
+([`@open-minutes/blobstore`](../blobstore/README.md)).
 
-Metadata and audio come from yt-dlp, or, where YouTube blocks yt-dlp (CI,
-servers), from the project's object store, which the
-[`fetch-youtube-audio`](../../.github/workflows/fetch-youtube-audio.yml)
-workflow fills. yt-dlp runs through
+Metadata and audio come from yt-dlp, which runs through
 [`@open-minutes/ytdlp`](../ytdlp/README.md), which installs it and, for a
 video's metadata and audio, routes it through WARP or Tor when YouTube
 refuses a direct request. Listing a channel or playlist always goes direct,
-since that works from any IP. YouTube's Opus audio is decoded to WAV here with
-libopus compiled to WebAssembly (`opus-decoder`), so no ffmpeg is needed. See
+since that works from any IP. The audio is saved as YouTube serves it;
+[`@open-minutes/codecs`](../codecs/README.md) decodes it, with no ffmpeg. See
 `youtubeConfigFromEnv` for the environment variables it reads.

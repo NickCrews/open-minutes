@@ -1,6 +1,6 @@
 import { getRouteApi } from "@tanstack/solid-router";
 import { createSignal, onCleanup } from "solid-js";
-import { youtubeVideoFiles } from "@open-minutes/youtube/store";
+import { blobStore } from "@open-minutes/blobstore";
 import type { AudioPlayer } from "./audio-player";
 import { createStoredAudioPlayer } from "./stored-audio-player";
 import { createYouTubeAudioPlayers } from "./youtube-audio-player";
@@ -14,7 +14,7 @@ export type PlayableMeeting = { id: number; youtubeId: string };
  *
  * It plays each meeting through a player of its own, of one of two kinds, and is what the page
  * sees: which meeting is playing, where, and whether it's playing.
- * - The object store's copy of the audio (`createStoredAudioPlayer`) where
+ * - The blob store's copy of the audio (`createStoredAudioPlayer`) where
  *   there is one and the browser can play WebM Opus (not Safari before 17,
  *   eg): it starts in well under a second.
  * - A hidden YouTube embed (`createYouTubeAudioPlayer`) otherwise, including
@@ -68,8 +68,11 @@ export function createHiddenPlayer() {
     player = canPlayWebmOpus()
       ? createStoredAudioPlayer({
           ...reportsFor(youtubeId),
-          url: youtubeVideoFiles(youtubeId, config().objectStorePublicUrl)
-            .speechWebm.url,
+          // Where the fetch-youtube-audio workflow stores a video's audio; see
+          // youtubeVideoKeys in packages/ingest/src/om/fetch-youtube-audio.ts.
+          url: blobStore(config().blobStorePublicUrl).url(
+            `youtube/${encodeURIComponent(youtubeId)}/speech.webm`,
+          ),
           onUnavailable: () => fallBack(youtubeId),
         })
       : youtube.player({ ...reportsFor(youtubeId), youtubeId });

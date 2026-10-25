@@ -87,9 +87,6 @@ importers:
       '@open-minutes/core':
         specifier: workspace:*
         version: link:../core
-      mpg123-decoder:
-        specifier: ^1.0.3
-        version: 1.0.3
       zod:
         specifier: ^4.3.6
         version: 4.3.6
@@ -106,12 +103,33 @@ importers:
 
   packages/audio:
     dependencies:
+      '@open-minutes/codecs':
+        specifier: workspace:*
+        version: link:../codecs
       '@open-minutes/core':
         specifier: workspace:*
         version: link:../core
       sherpa-onnx-node:
         specifier: ^1.12.39
         version: 1.12.39
+    devDependencies:
+      '@types/node':
+        specifier: ^22.19.17
+        version: 22.19.17
+      vitest:
+        specifier: ^4.0.18
+        version: 4.1.4(@types/node@22.19.17)(vite@7.3.2(@types/node@22.19.17)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.21.0))
+
+  packages/blobstore: {}
+
+  packages/codecs:
+    dependencies:
+      mpg123-decoder:
+        specifier: ^1.0.3
+        version: 1.0.3
+      opus-decoder:
+        specifier: ^0.7.12
+        version: 0.7.12
     devDependencies:
       '@types/node':
         specifier: ^22.19.17
@@ -203,6 +221,12 @@ importers:
       '@open-minutes/audio':
         specifier: workspace:*
         version: link:../audio
+      '@open-minutes/blobstore':
+        specifier: workspace:*
+        version: link:../blobstore
+      '@open-minutes/codecs':
+        specifier: workspace:*
+        version: link:../codecs
       '@open-minutes/core':
         specifier: workspace:*
         version: link:../core
@@ -234,15 +258,15 @@ importers:
       '@neondatabase/serverless':
         specifier: ^1.1.0
         version: 1.1.0
+      '@open-minutes/blobstore':
+        specifier: workspace:*
+        version: link:../blobstore
       '@open-minutes/core':
         specifier: workspace:*
         version: link:../core
       '@open-minutes/db':
         specifier: workspace:*
         version: link:../db
-      '@open-minutes/youtube':
-        specifier: workspace:*
-        version: link:../youtube
       '@tailwindcss/vite':
         specifier: ^4.3.3
         version: 4.3.3(vite@7.3.2(@types/node@25.6.0)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.21.0))
@@ -295,9 +319,6 @@ importers:
       '@open-minutes/ytdlp':
         specifier: workspace:*
         version: link:../ytdlp
-      opus-decoder:
-        specifier: ^0.7.12
-        version: 0.7.12
     devDependencies:
       '@open-minutes/audio':
         specifier: workspace:*

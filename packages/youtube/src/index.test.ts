@@ -2,29 +2,14 @@ import { describe, expect, it } from "vitest";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { readWave } from "@open-minutes/audio/wav";
-import { type YouTube, youtube, youtubeConfigFromEnv, youtubeSource } from ".";
-import { OBJECT_STORE_PUBLIC_URL } from "./store";
+import { ensureWaveAudio } from "@open-minutes/audio/wav";
+import { youtube, youtubeConfigFromEnv, youtubeSource } from ".";
 
-// Each source is tested for real, with the same expectations: the object
-// store (works from anywhere, so it runs in the default suite) and yt-dlp
-// (tagged `ytdlp`; from a datacenter IP it needs WARP or Tor installed).
-const sources: { name: string; yt: YouTube; tags: string[] }[] = [
-  {
-    name: "the object store",
-    // No routes, so a video missing from the store fails instead of falling
-    // back to yt-dlp.
-    yt: youtube({ objectStoreUrl: OBJECT_STORE_PUBLIC_URL, routes: [] }),
-    tags: [],
-  },
-  {
-    name: "yt-dlp",
-    yt: youtube({}),
-    tags: ["ytdlp"],
-  },
-];
+// Tagged `ytdlp`: from a datacenter IP it needs WARP or Tor installed.
+const tags = ["ytdlp"];
+const yt = youtube({});
 
-describe.each(sources)("from $name", ({ yt, tags }) => {
+describe("youtube", () => {
   it("gets a video's metadata", { tags }, async () => {
     expect(await yt.getMetadata("9HoIM5INxpI")).toEqual({
       id: "9HoIM5INxpI",
@@ -36,16 +21,16 @@ describe.each(sources)("from $name", ({ yt, tags }) => {
     });
   });
 
-  it("downloads a video's audio as 16 kHz WAV, once", { tags }, async () => {
+  it("downloads a video's WebM audio, once", { tags }, async () => {
     const dir = await mkdtemp(join(tmpdir(), "youtube-audio-"));
     try {
-      const path = join(dir, "short.wav");
+      const path = join(dir, "short.webm");
       // A 5 s video.
       const url = "https://www.youtube.com/watch?v=QUF1uLgzL-s";
       expect(await yt.ensureAudioDownloaded(url, path)).toEqual({
         downloaded: true,
       });
-      const wave = readWave(path);
+      const wave = await ensureWaveAudio(path);
       expect(wave.sampleRate).toBe(16_000);
       expect(wave.samples.length / 16_000).toBeCloseTo(5, 0);
       expect(await yt.ensureAudioDownloaded(url, path)).toEqual({

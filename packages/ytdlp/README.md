@@ -2,9 +2,8 @@
 
 Runs the [yt-dlp](https://github.com/yt-dlp/yt-dlp) CLI from any machine. It
 installs yt-dlp, and gets it past YouTube's bot check on datacenter IPs by
-routing it through Cloudflare WARP or Tor. It knows nothing about YouTube's
-data model, the object store or the database; `@open-minutes/youtube` builds
-on it. See [ADR 0005](../../adrs/0005-ytdlp-package-and-egress.md) for why.
+routing it through Cloudflare WARP or Tor. `@open-minutes/youtube` builds on
+it. See [ADR 0005](../../adrs/0005-ytdlp-package-and-egress.md) for why.
 
 ```ts
 import { ensureYtDlpInstalled, runWithEgress } from "@open-minutes/ytdlp";

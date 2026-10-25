@@ -1,7 +1,7 @@
 {
   "name": "@open-minutes/audio",
   "version": "0.1.0",
-  "description": "Open Minutes speech processing: transcribe, diarize and embed a WAV file with local ONNX models",
+  "description": "Open Minutes speech processing: transcribe, diarize and embed meeting audio with local ONNX models",
   "type": "module",
   "exports": {
     "./transcribe": "./src/transcribe.ts",
@@ -16,6 +16,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@open-minutes/codecs": "workspace:*",
     "@open-minutes/core": "workspace:*",
     "sherpa-onnx-node": "^1.12.39"
   },

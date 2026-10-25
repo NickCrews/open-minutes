@@ -1,4 +1,4 @@
-import { mkdir, access, readFile, rm } from "node:fs/promises";
+import { mkdir, access, rename, rm } from "node:fs/promises";
 import { dirname } from "node:path";
 import type {
   AudioProvider,
@@ -15,14 +15,6 @@ import {
   run,
   runWithEgress,
 } from "@open-minutes/ytdlp";
-import { webmOpusToWav } from "./opus";
-import {
-  type StoredFile,
-  type YoutubeVideoFiles,
-  type YtDlpInfo,
-  youtubeVideoFiles,
-} from "./store";
-
 /**
  * A channel (all its videos) or one playlist, as a body's meeting source.
  * Bodies that share a channel with their siblings (the Assembly, P&Z and the
@@ -64,21 +56,9 @@ function videoUrl(videoIdOrUrl: string) {
 /** How to reach YouTube. See {@link youtubeConfigFromEnv} for where each comes from. */
 export interface YouTubeConfig {
   /**
-   * The object store's public base URL. With it, metadata and audio come
-   * from the store (see {@link fetchStored}) instead of from YouTube.
-   */
-  objectStoreUrl?: string;
-  /**
-   * A GitHub token allowed to run the fetch-youtube-audio workflow. With it,
-   * a video missing from the object store is fetched into it by that
-   * workflow; without it, yt-dlp fetches it locally.
-   */
-  dispatchToken?: string;
-  /**
    * The routes yt-dlp tries for a video's metadata and audio (see
    * `runWithEgress` in `@open-minutes/ytdlp`; by default `YOUTUBE_EGRESS`,
-   * else direct, then WARP, then Tor). They apply only when yt-dlp fetches a
-   * video locally, not to the object store or the workflow.
+   * else direct, then WARP, then Tor).
    */
   routes?: Route[];
 }
@@ -132,26 +112,19 @@ async function listVideos(source: YouTubeSource): Promise<ListedRecording[]> {
   );
 }
 
-/**
- * With an object store configured, reads the info JSON the fetch-youtube-audio
- * workflow stored (see {@link fetchStored}), so this works where YouTube
- * blocks yt-dlp. Otherwise, or when the store can't supply it, asks yt-dlp.
- */
-async function getMetadata(
-  config: YouTubeConfig,
-  videoIdOrUrl: string,
-): Promise<RecordingMetadata> {
-  const raw =
-    (await fetchStored(config, videoId(videoIdOrUrl), (f) => f.infoJson)) ??
-    (JSON.parse(
-      (
-        await ytDlpWithEgress(config, [
-          "--skip-download",
-          "-J",
-          videoUrl(videoIdOrUrl),
-        ])
-      ).stdout,
-    ) as YtDlpInfo);
+/** The fields of yt-dlp's info JSON (`-J`) that the pipeline uses. */
+export interface YtDlpInfo {
+  id: string;
+  channel_id?: string;
+  title?: string;
+  description?: string;
+  duration?: number | null;
+  /** "YYYYMMDD". */
+  upload_date?: string | null;
+}
+
+/** The {@link RecordingMetadata} in a video's yt-dlp info JSON. */
+export function metadataFromYtDlpInfo(raw: YtDlpInfo): RecordingMetadata {
   return {
     id: raw.id,
     channelId: raw.channel_id ?? "",
@@ -162,6 +135,18 @@ async function getMetadata(
   };
 }
 
+async function getMetadata(
+  config: YouTubeConfig,
+  videoIdOrUrl: string,
+): Promise<RecordingMetadata> {
+  const { stdout } = await ytDlpWithEgress(config, [
+    "--skip-download",
+    "-J",
+    videoUrl(videoIdOrUrl),
+  ]);
+  return metadataFromYtDlpInfo(JSON.parse(stdout) as YtDlpInfo);
+}
+
 /** yt-dlp's "YYYYMMDD" as "YYYY-MM-DD"; null if absent or malformed. */
 function isoDate(yyyymmdd: string | null | undefined): string | null {
   const m = /^(\d{4})(\d{2})(\d{2})$/.exec(yyyymmdd ?? "");
@@ -169,13 +154,8 @@ function isoDate(yyyymmdd: string | null | undefined): string | null {
 }
 
 /**
- * Gets a video's Opus audio and decodes it to 16 kHz mono WAV with
- * {@link webmOpusToWav}, which needs no ffmpeg. With an object store
- * configured, the audio is the speech-quality copy stored there (see
- * {@link fetchStored}). Otherwise, or when the store can't supply it, yt-dlp
- * downloads YouTube's original Opus audio and that is decoded instead. The two
- * WAVs are very close (correlation ~0.997 on speech, same length, no lag) but
- * not byte-identical, so golden fixtures' sha256 are of the stored audio.
+ * Downloads a video's original Opus-in-WebM audio to `path` with yt-dlp. A
+ * single format needs no ffmpeg to download.
  */
 async function ensureAudioDownloaded(
   config: YouTubeConfig,
@@ -193,111 +173,25 @@ async function ensureAudioDownloaded(
   const url = videoUrl(videoIdOrUrl);
   // Progress goes to stderr so callers' stdout stays machine-readable.
   console.error(`Downloading audio for ${url} to ${path}...`);
-  const stored = await fetchStored(
-    config,
-    videoId(videoIdOrUrl),
-    (f) => f.speechWebm,
-  );
-  if (stored) {
-    await webmOpusToWav(stored, path);
-    return { downloaded: true };
-  }
-  const webm = `${path}.webm`;
+  // Downloaded beside `path` and moved into place, so an interrupted download
+  // never leaves a partial file at `path`.
+  const webm = `${path}.download.webm`;
   const removeWebm = async () => {
     await rm(webm, { force: true });
     await rm(`${webm}.part`, { force: true });
   };
   try {
-    // The format the fetch-youtube-audio workflow re-encodes from. A single
-    // format needs no ffmpeg to download.
+    // The format the fetch-youtube-audio workflow re-encodes from.
     await ytDlpWithEgress(
       config,
       ["-f", "bestaudio[ext=webm]", "--no-playlist", "-o", webm, url],
       removeWebm,
     );
-    await webmOpusToWav(await readFile(webm), path);
+    await rename(webm, path);
   } finally {
     await removeWebm();
   }
   return { downloaded: true };
-}
-
-/** The repo whose fetch-youtube-audio workflow fills the object store. */
-const FETCH_YOUTUBE_AUDIO_REPO = "NickCrews/open-minutes";
-const FETCH_YOUTUBE_AUDIO_POLL_MS = 5_000;
-/** A fetch-youtube-audio run takes 2-6 minutes; this allows for a queue. */
-const FETCH_YOUTUBE_AUDIO_TIMEOUT_MS = 20 * 60_000;
-
-/**
- * The contents of one of a video's files in the object store, the one `pick`
- * chooses (see {@link youtubeVideoFiles}), or null if the store isn't
- * configured or can't supply it.
- *
- * The object store is the project's S3-compatible bucket of blobs, publicly
- * readable under {@link YouTubeConfig.objectStoreUrl}. YouTube blocks
- * datacenter IPs (CI, servers), so the fetch-youtube-audio workflow
- * (.github/workflows/fetch-youtube-audio.yml) gets past that and stores what
- * the pipeline needs from YouTube. On a miss, with
- * {@link YouTubeConfig.dispatchToken} set, this triggers the workflow and
- * waits for the file. Without the token, a miss returns null, so a caller on a
- * residential connection falls back to yt-dlp.
- */
-async function fetchStored<T>(
-  config: YouTubeConfig,
-  id: string,
-  pick: (files: YoutubeVideoFiles) => StoredFile<T>,
-): Promise<T | null> {
-  if (!config.objectStoreUrl) return null;
-  const files = youtubeVideoFiles(id, config.objectStoreUrl);
-  const file = pick(files);
-  const first = await file.fetch();
-  if (first) return first;
-
-  const token = config.dispatchToken;
-  if (!token) return null;
-  // The runner's clock and ours may differ; a minute's slack keeps a failure
-  // from this run from looking like an old one.
-  const requestedAt = Date.now() - 60_000;
-  await requestFetch(id, token);
-  console.error(
-    `Waiting for the fetch-youtube-audio workflow to store ${file.url}...`,
-  );
-  const deadline = Date.now() + FETCH_YOUTUBE_AUDIO_TIMEOUT_MS;
-  while (Date.now() < deadline) {
-    await new Promise((r) => setTimeout(r, FETCH_YOUTUBE_AUDIO_POLL_MS));
-    // Bypassing the cache, so a 404 from before the upload isn't served again.
-    const stored = await file.fetch({ bypassCache: true });
-    if (stored) return stored;
-    const failure = await files.errorJson.fetch({ bypassCache: true });
-    if (failure && Date.parse(failure.failed_at) >= requestedAt) {
-      throw new Error(
-        `fetch-youtube-audio failed for ${id}: ${failure.error} (${failure.run_url})`,
-      );
-    }
-  }
-  throw new Error(
-    `Timed out waiting for fetch-youtube-audio to store ${file.url}; see https://github.com/${FETCH_YOUTUBE_AUDIO_REPO}/actions/workflows/fetch-youtube-audio.yml`,
-  );
-}
-
-async function requestFetch(id: string, token: string) {
-  const res = await fetch(
-    `https://api.github.com/repos/${FETCH_YOUTUBE_AUDIO_REPO}/actions/workflows/fetch-youtube-audio.yml/dispatches`,
-    {
-      method: "POST",
-      headers: {
-        Accept: "application/vnd.github+json",
-        Authorization: `Bearer ${token}`,
-        "X-GitHub-Api-Version": "2022-11-28",
-      },
-      body: JSON.stringify({ ref: "main", inputs: { video_id: id } }),
-    },
-  );
-  if (!res.ok) {
-    throw new Error(
-      `Triggering fetch-youtube-audio for ${id}: HTTP ${res.status} ${await res.text()}`,
-    );
-  }
 }
 
 /**
@@ -305,7 +199,9 @@ async function requestFetch(id: string, token: string) {
  * {@link youtube} or {@link youtubeFromEnv} and pass it around; tests pass a
  * fake instead (see the pipeline's `om/testing.ts`).
  */
-export type YouTube = AudioProvider;
+export type YouTube = AudioProvider & {
+  readonly audioExtension: "webm";
+};
 
 /**
  * Lists the videos in `source` (via yt-dlp, always direct: listing works from
@@ -319,6 +215,7 @@ export function youtubeSource(source: YouTubeSource): RecordingLister {
 /** A {@link YouTube} that uses `config`. Does no I/O until a method is called. */
 export function youtube(config: YouTubeConfig = {}): YouTube {
   return {
+    audioExtension: "webm",
     getMetadata: (videoIdOrUrl) => getMetadata(config, videoIdOrUrl),
     ensureAudioDownloaded: (videoIdOrUrl, path, options) =>
       ensureAudioDownloaded(config, videoIdOrUrl, path, options),
@@ -327,17 +224,11 @@ export function youtube(config: YouTubeConfig = {}): YouTube {
 
 /**
  * A {@link YouTubeConfig} from environment variables:
- * - OBJECT_STORE_PUBLIC_URL: {@link YouTubeConfig.objectStoreUrl}
- * - YOUTUBE_AUDIO_DISPATCH_TOKEN: {@link YouTubeConfig.dispatchToken}
  * - YOUTUBE_EGRESS: {@link YouTubeConfig.routes}, comma-separated
  */
 export function youtubeConfigFromEnv(env = process.env): YouTubeConfig {
   const routes = parseRoutes(env.YOUTUBE_EGRESS ?? "");
-  return {
-    objectStoreUrl: env.OBJECT_STORE_PUBLIC_URL || undefined,
-    dispatchToken: env.YOUTUBE_AUDIO_DISPATCH_TOKEN || undefined,
-    routes: routes.length ? routes : undefined,
-  };
+  return { routes: routes.length ? routes : undefined };
 }
 
 /** A {@link YouTube} configured by {@link youtubeConfigFromEnv}. */
