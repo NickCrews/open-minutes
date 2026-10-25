@@ -239,7 +239,7 @@ _Avoid_: accuracy, error
 ### Meeting rules
 
 **Rule**:
-A requirement a meeting's data must meet, applied the same way to the database and to golden meetings, such as `split-sentence`. Each rule is a file in `packages/core/src/rules/`.
+A requirement a meeting's data must meet, such as `split-sentence`. Each rule is a file in `packages/core/src/rules/`.
 _Avoid_: check, checker, validator, lint
 
 **Rule code**:
@@ -259,11 +259,11 @@ How a rule's violations are reported; each rule gives a default. `error` means t
 _Avoid_: level
 
 **Issue**:
-A violation with its severity and its location: row ids in the database, or file and line in the test data.
+A violation with its severity and its location: file and line in the test data.
 _Avoid_: diagnostic, finding, problem
 
 **Check**:
-To run the rules over a meeting, as `check_meeting` and `pnpm fixtures:check` do. Only a verb; what it runs are rules.
+To run the rules over a meeting, as `pnpm fixtures:check` does. Only a verb; what it runs are rules.
 _Avoid_: lint, validate
 
 **Fix**:

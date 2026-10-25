@@ -95,10 +95,10 @@ outlives a test file. Four workers then hold ~3.2 GB.
 
 Rollback-per-test has its own costs, on either backend:
 
-- Two `db.transaction()` calls run inside tests: `agents/src/tools.ts` and
-  `ingest/src/om/ingest.ts`. (The other two, in the `golden` and `dev`
+- One `db.transaction()` call runs inside tests, in
+  `ingest/src/om/ingest.ts`. (The others, in the `golden` and `dev`
   seeders, run only when a template is built.) drizzle already turns
-  `tx.transaction()` into a savepoint, so these work if the test passes its
+  `tx.transaction()` into a savepoint, so it works if the test passes its
   outer `tx` in as `db`. That `tx` isn't typed as `DB`, though. On
   postgres.js, `db.transaction()` on a pooled `db` takes a different
   connection, which can't see the test's uncommitted rows.

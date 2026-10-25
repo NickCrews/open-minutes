@@ -320,8 +320,7 @@ describe("which body a meeting belongs to", () => {
     workRoot,
   }) => {
     await seedWorkDir(workRoot, `gbos_${VIDEO_ID}`);
-    // Even a title naming another body adds nothing: an agent sets a joint
-    // meeting's bodies afterwards.
+    // Even a title naming another body adds nothing.
     const youtube = fakeSite({
       getMetadata: async () => ({
         ...METADATA,

@@ -75,10 +75,6 @@ the ones listed above it:
   `@open-minutes/akleg`, runs it through `@open-minutes/audio`, aligns turns to words, recognizes speakers
   against known voiceprints, and writes the meeting to the database. See the
   [ingest README](packages/ingest/README.md).
-- **[`packages/agents`](packages/agents)** (`@open-minutes/agents`): tools
-  for agents that clean up meetings: reading and editing the data (speaker
-  labels, people, chapters) and listening to the audio, as typed tool
-  definitions for agent loops.
 - **[`packages/cli`](packages/cli)** (`@open-minutes/cli`): the `om` CLI, for
   development: `om ingest` and friends over `@open-minutes/ingest`, and
   `om models`. It only parses arguments and wires stdio; the logic lives in
@@ -99,7 +95,7 @@ Docker via [`docker-compose.yml`](docker-compose.yml). Production is on
 committee) that is scanned for new meetings. **Meetings** are held by one or
 more bodies (`meeting_bodies`), all equal: a **joint meeting**, held by several,
 counts as a meeting of each. Ingestion records the one body whose source
-published a meeting; the `update_meeting` tool sets a joint meeting's bodies.
+published a meeting.
 Meetings record their timezone, the site they were published on (YouTube or
 akleg.gov), and each meeting's
 transcript is a sequence of **segments** (a run of words by one speaker, with
@@ -202,14 +198,10 @@ Shared test configuration is in `vitest.config.ts`, `vitest.shared.ts` and
 
 ### Checking hand-edited test data
 
-Meetings in the database and in golden fixture files follow the same rules,
-one file each in [`packages/core/src/rules/`](packages/core/src/rules/).
-
-- Database: `check_meeting` in `@open-minutes/agents`. Write tools don't
-  check, so run it after editing.
-- Golden fixtures: `pnpm fixtures:check [file ...]` prints
-  `file:line: severity: message`, and also checks the file format. Errors
-  fail it and the test suite.
+Golden fixture files follow the rules in
+[`packages/core/src/rules/`](packages/core/src/rules/), one file each.
+`pnpm fixtures:check [file ...]` prints `file:line: severity: message`, and
+also checks the file format. Errors fail it and the test suite.
 
 Some rules have a fix, which rewrites the meeting to remove what the rule
 finds where the data alone says what the right rewrite is, such as dropping
@@ -285,14 +277,6 @@ LEFT JOIN people p ON p.id = s.person_id
 WHERE s.text ILIKE '%snow removal%'
 ORDER BY m.start_time, s.start_secs;
 ```
-
-To change the data, agents (and people) use the tools in
-[`packages/agents`](packages/agents/src/tools.ts) rather than raw SQL. They
-are exported from `@open-minutes/agents`, with `toAgentTool` to hand them to
-an agent loop such as pi. Writes run no rule checks; run
-`check_meeting` after editing. Guidance for agents doing
-this work is in
-[`.claude/skills/transcript-cleanup`](.claude/skills/transcript-cleanup/SKILL.md).
 
 `pnpm db studio` opens a browser UI on it. The pipeline's API (`listIngested`,
 `listAvailable`, `ingestVideo` from `@open-minutes/ingest/om`) and `om`'s

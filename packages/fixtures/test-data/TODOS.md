@@ -1,8 +1,7 @@
 # Golden follow-ups
 
 Open questions in the golden meetings that the text alone can't settle. Most
-need the audio (`find_untranscribed_speech`, `transcribe_range`; see the
-`transcript-cleanup` skill) or an official source. Times are `H:MM:SS` in the
+need the audio or an official source. Times are `H:MM:SS` in the
 meeting's `golden.psv`. Remove an item once it is resolved.
 
 ## Numbers written from an inference, not heard
@@ -90,7 +89,7 @@ meeting's `golden.psv`. Remove an item once it is resolved.
 
 ## Words the transcript may be missing
 
-Run `find_untranscribed_speech` on each:
+Listen for each:
 
 - **gbos-2026-03-23 0:02:36:** Jennifer Wingard's motion to approve the
   agenda. The minutes give it as JW/BB, but only Brian's second is in the

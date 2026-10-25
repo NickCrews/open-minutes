@@ -30,9 +30,7 @@ akleg.gov committee; a meeting from a playlist needs its body named with
 `--body <slug>`, since a video doesn't say which playlists it's on.
 
 That body becomes the meeting's one body (in `meeting_bodies`), and its
-timezone the meeting's. A joint meeting, held by several bodies together, gets
-its other bodies afterwards, with the `update_meeting` tool in
-`@open-minutes/agents`.
+timezone the meeting's.
 
 To scan a new body, set its source, eg:
 

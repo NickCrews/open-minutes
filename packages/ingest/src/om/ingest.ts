@@ -265,8 +265,7 @@ export async function ingestMeeting(
             : sql`make_interval(secs => ${metadata.durationSecs})`,
       })
       .returning({ id: meetingsTable.id });
-    // Only the body found above. A joint meeting's other bodies are added
-    // afterwards, eg with the update_meeting tool.
+    // Only the body found above.
     await tx
       .insert(meetingBodiesTable)
       .values({ meeting_id: meeting!.id, body_id: body.id });

@@ -70,8 +70,8 @@ export const bodiesTable = pgTable(
       .notNull()
       .references(() => jurisdictionsTable.id),
     // Stable handle (eg "gbos") that means the same body in every database:
-    // what `--body` CLI filters, the update_meeting tool, per-meeting
-    // work-directory names and the fixtures name a body by. Unlike `name` and
+    // what `--body` CLI filters, per-meeting work-directory names and the
+    // fixtures name a body by. Unlike `name` and
     // `name_short`, it doesn't change when the body is renamed. Lowercase
     // kebab-case.
     slug: varchar().notNull().unique(),
@@ -223,8 +223,7 @@ export const peopleTable = pgTable(
     //
     // Within one database, segments across meetings share a person through
     // `person_id`, slug or no slug. Null for an anonymous voice that recognition
-    // created; giving one a slug (eg with the update_person tool) makes them a
-    // known person. Renaming a slug breaks the link to the fixtures, so rename
+    // created; giving one a slug makes them a known person. Renaming a slug breaks the link to the fixtures, so rename
     // it everywhere it's used.
     slug: varchar().unique(),
     // Null until a human identifies this voice. Nullable rather than "" so the

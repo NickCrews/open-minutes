@@ -53,7 +53,6 @@ describe("per minute of audio", () => {
 });
 
 describe("finding untranscribed speech on the clip", () => {
-  // What the find_untranscribed_speech agent tool does on a fresh meeting.
   bench(
     "speech runs + decoding the one stretch it finds",
     async () => {

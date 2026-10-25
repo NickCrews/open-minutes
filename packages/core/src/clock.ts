@@ -1,6 +1,6 @@
 /**
  * Seconds as "H:MM:SS.ss", rounded to the hundredth: how golden PSV files,
- * psvtool.py, the agent tools and their messages write times.
+ * psvtool.py and rule messages write times.
  */
 export function formatClock(secs: number): string {
   const totalCs = Math.round(secs * 100);
