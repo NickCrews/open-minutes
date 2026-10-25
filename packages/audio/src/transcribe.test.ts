@@ -13,10 +13,16 @@ import {
   MERGE_WINDOW_SEC,
   tokensToWords,
   transcribeAudio,
+  transcribeRange,
   type TranscribeWindowEndEvent,
   VAD_MIN_SILENCE_SEC,
 } from "./transcribe";
-import { MAX_WORD_SEC } from "@open-minutes/core/transcription";
+import {
+  MAX_WORD_SEC,
+  type TranscriptWord,
+} from "@open-minutes/core/transcription";
+import { halfUntranscribedRollCall } from "@open-minutes/fixtures/clips";
+import { readWave } from "./wav";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const RUNS_DIR = join(HERE, "..", "test-runs");
@@ -203,4 +209,79 @@ describe("transcribe", () => {
     );
     expect(decodeSpan).toBeLessThan(sumPerChunk);
   });
+});
+
+/** Words as lowercase text without punctuation, for loose matching. */
+const plain = (words: readonly TranscriptWord[]) =>
+  words.map((w) => w.text.toLowerCase().replace(/[^\p{L}\p{N}']/gu, ""));
+
+/** Whether `phrase` occurs as consecutive words in `words`. */
+function hears(words: readonly TranscriptWord[], phrase: string): boolean {
+  return ` ${plain(words).join(" ")} `.includes(` ${phrase} `);
+}
+
+// Decoding a stretch takes about a second on a laptop; leave CI headroom.
+const DECODE_TIMEOUT = 60_000;
+
+describe("transcribeRange on the GBOS roll call", () => {
+  // Its transcript is missing the first half of the roll call, at 0:12–0:21.
+  const wave = readWave(halfUntranscribedRollCall().wavPath);
+
+  beforeAll(() => {
+    loadTranscriptionModels();
+  }, 10 * 60_000);
+
+  it(
+    "recovers the roll call the full-meeting pass dropped",
+    async () => {
+      // Exact spellings shift with where the window starts ("Burnett" or
+      // "Brunett", "connected" or "connecting"), so match loosely.
+      const words = plain(await transcribeRange(wave, 11, 21.5));
+      expect(words).toContain("brian");
+      expect(words).toContain("sullivan");
+      expect(words.filter((w) => w === "present")).toHaveLength(2);
+    },
+    DECODE_TIMEOUT,
+  );
+
+  it(
+    "returns only words starting in the range",
+    async () => {
+      const words = await transcribeRange(wave, 15, 18);
+      expect(words.length).toBeGreaterThan(0);
+      for (const w of words) {
+        expect(w.start).toBeGreaterThanOrEqual(15);
+        expect(w.start).toBeLessThan(18);
+      }
+      // "Thanks." (0:20.5) is decoded as context but left out.
+      expect(plain(words)).toContain("brian");
+      expect(plain(words)).not.toContain("thanks");
+    },
+    DECODE_TIMEOUT,
+  );
+
+  it(
+    "decodes words at the range's edge with the audio around it",
+    async () => {
+      // The chair: "...future peoples. Thank you very much, Brian. Staff,
+      // would you like to do the roll call", cut off at 0:10 mid-request.
+      // Given only [5, 10) the model drops the half-heard request (it ends
+      // at "Thank you very much."); with the audio around it, it hears it.
+      const words = await transcribeRange(wave, 5, 10);
+      expect(words.filter((w) => w.start > 8).length).toBeGreaterThan(2);
+      expect(words.at(-1)!.start).toBeLessThan(10);
+    },
+    DECODE_TIMEOUT,
+  );
+
+  it(
+    "clamps context at the start and end of the audio",
+    async () => {
+      const words = await transcribeRange(wave, 0, 3);
+      expect(hears(words, "wider community")).toBe(true);
+      const end = await transcribeRange(wave, 58, 60);
+      expect(hears(end, "thank you")).toBe(true);
+    },
+    DECODE_TIMEOUT,
+  );
 });

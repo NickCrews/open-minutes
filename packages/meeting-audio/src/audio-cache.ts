@@ -26,7 +26,7 @@ export interface CachedAudio {
   manifest: AudioManifest;
 }
 
-export function meetingCacheDir(youtube_id: string): string {
+function meetingCacheDir(youtube_id: string): string {
   return join(CACHE_ROOT, youtube_id);
 }
 

@@ -15,3 +15,18 @@ read and write WAV files through `@open-minutes/audio/wav`, whose
 
 The ONNX models (~650MB) are downloaded into `src/models/` (gitignored) the
 first time each is used, or all at once with `pnpm om models`.
+
+`@open-minutes/audio/vad` finds where someone is talking (Silero VAD,
+with pauses down to 0.2 s), as a list of `Span`s from
+`@open-minutes/audio/span`, which also clips, merges, subtracts and totals
+them and finds the gaps between them (the pauses). `@open-minutes/audio/coverage`
+compares those runs with a transcript's words, to find speech no word
+accounts for. Neither caches anything:
+callers that reuse speech runs keep them themselves.
+
+A checked-in minute of real meeting audio from
+`@open-minutes/fixtures/clips` tests what VAD and `transcribeRange` hear
+(`vad.test.ts`, `coverage.test.ts`, `transcribe.test.ts`), and
+`src/audio.bench.ts` times the models on it. Because the clip is one minute
+long, `pnpm bench` reports each model's time per minute of audio, so a model
+swap shows what it costs.

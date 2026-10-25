@@ -9,12 +9,15 @@
     "./embed": "./src/embed.ts",
     "./embed-model": "./src/embed-model.ts",
     "./models": "./src/all-models.ts",
-    "./speech-runs": "./src/speech-runs.ts",
+    "./vad": "./src/vad.ts",
+    "./span": "./src/span.ts",
+    "./coverage": "./src/coverage.ts",
     "./wav": "./src/wav.ts"
   },
   "scripts": {
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "bench": "vitest bench --run"
   },
   "dependencies": {
     "@open-minutes/codecs": "workspace:*",

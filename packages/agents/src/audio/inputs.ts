@@ -20,7 +20,7 @@ export const time = z
   })
   .describe('Seconds (eg 3723.4) or "H:MM:SS.ss" (eg "1:02:03.40").');
 
-/** Check a [from, to] range and that it fits in `maxSecs`. */
+/** Check a [from, to) range and that it fits in `maxSecs`. */
 export function checkRange(from: number, to: number, maxSecs: number): void {
   if (to <= from)
     throw new ToolError(

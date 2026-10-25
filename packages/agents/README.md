@@ -34,12 +34,13 @@ const agentTools = tools.map((t) => toAgentTool(t, ctx));
 Diarization and recognition make mistakes the transcript's text can't show:
 two people folded under one label, or speech the recognizer skipped. The
 tools in `src/audio/` look at the audio itself, for any meeting with a YouTube
-video. Its audio is downloaded into the per-machine
-cache (`~/.cache/open-minutes/meetings/<youtubeId>/`) on first use, and speech
-runs, which are slow to compute, are cached there too. Times are `H:MM:SS.ss`
-like golden PSV files, so they go straight into a psvtool op. The tools call
-the models in `@open-minutes/audio` directly, and get a meeting's audio from
-`@open-minutes/meeting-audio`.
+video. Its audio is downloaded into the per-machine cache
+(`~/.cache/open-minutes/meetings/<youtubeId>/`) on first use. Speech runs,
+which take about 35 s for three hours of audio, are computed once per opened
+meeting and kept in memory. Times are `H:MM:SS.ss` like golden PSV files, so
+they go straight into a psvtool op. The tools call the models, span
+arithmetic and coverage in `@open-minutes/audio` directly, and get a
+meeting's audio from `@open-minutes/meeting-audio`.
 
 - `speech_activity`: speech runs and pauses in a stretch, from voice activity
   detection.
@@ -48,7 +49,6 @@ the models in `@open-minutes/audio` directly, and get a meeting's audio from
 - `transcribe_range`: recognize one short stretch on its own, next to what the
   transcript has there.
 
-`src/audio/audio.test.ts` runs them on a checked-in minute of real meeting
-audio (`src/audio/testdata/`), and `src/audio/audio.bench.ts` times the
-models on it. Because the clip is one minute long, `pnpm bench` reports each
-model's time per minute of audio, so a model swap shows what it costs.
+`src/audio/tools.test.ts` runs them on a checked-in minute of real meeting
+audio from `@open-minutes/fixtures/clips`. What the models hear on that clip
+is tested, and timed, in the audio package.

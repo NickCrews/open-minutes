@@ -8,8 +8,7 @@
   },
   "scripts": {
     "test": "vitest run",
-    "typecheck": "tsc --noEmit",
-    "bench": "vitest bench --run"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@open-minutes/audio": "workspace:*",

@@ -2,14 +2,8 @@ import { z } from "zod";
 import { cleanWords } from "@open-minutes/core/rules";
 import type { TranscriptWord } from "@open-minutes/core/transcription";
 import { transcribeRange } from "@open-minutes/audio/transcribe";
-import {
-  clip,
-  pauses,
-  round,
-  speechRuns,
-  totalSecs,
-  untranscribedSpeech,
-} from "./activity";
+import { untranscribedSpeech } from "@open-minutes/audio/coverage";
+import { clip, gaps, totalSecs } from "@open-minutes/audio/span";
 import { formatClock } from "@open-minutes/core/clock";
 import { defineTool } from "../tool";
 import { checkRange, meetingRef, time } from "./inputs";
@@ -18,7 +12,8 @@ import type { AudioMeeting, LabeledSegment } from "./meeting";
 // Tools that listen to a meeting's audio, for what the transcript's text can't
 // show: two people folded under one label, or speech the recognizer skipped.
 // They run on any meeting in the database with a YouTube video, whose audio is
-// downloaded into the per-machine cache on first use.
+// downloaded into the per-machine cache on first use. The span arithmetic and
+// the models are in @open-minutes/audio.
 
 /** The longest range transcribe_range decodes in one pass. */
 const MAX_TRANSCRIBE_SECS = 120;
@@ -38,7 +33,13 @@ function wordsText(words: readonly TranscriptWord[]): string {
   return out;
 }
 
-/** The transcript's segments overlapping [from, to], each with its words in range. */
+/** Seconds to two decimals, so the tools' JSON stays readable. */
+const round = (secs: number) => Math.round(secs * 100) / 100;
+
+const wordsOf = (segments: readonly LabeledSegment[]) =>
+  segments.flatMap((s) => s.words);
+
+/** The transcript's segments overlapping [from, to), each with its words in range. */
 function transcriptIn(meeting: AudioMeeting, from: number, to: number) {
   return meeting.segments
     .filter((s) => s.end > from && s.start < to)
@@ -81,8 +82,8 @@ export const speechActivity = defineTool({
   run: async (ctx, input) => {
     checkRange(input.from, input.to, 30 * 60);
     const meeting = await ctx.meeting(input.meeting);
-    const runs = clip(speechRuns(meeting), input.from, input.to);
-    const gaps = untranscribedSpeech(runs, meeting.segments, {
+    const runs = clip(meeting.speechRuns(), input.from, input.to);
+    const uncovered = untranscribedSpeech(runs, wordsOf(meeting.segments), {
       minSpeechSecs: 0.5,
     });
     const span = input.to - input.from;
@@ -92,15 +93,13 @@ export const speechActivity = defineTool({
       speechSecs: round(totalSecs(runs)),
       speechFraction: round(totalSecs(runs) / span),
       untranscribedSpeechSecs: round(
-        gaps.reduce((n, g) => n + g.speechSecs, 0),
+        uncovered.reduce((n, u) => n + u.speechSecs, 0),
       ),
-      pauses: pauses(runs, input.from, input.to, input.minPauseSecs).map(
-        (p) => ({
-          from: formatClock(p.start),
-          to: formatClock(p.end),
-          secs: round(p.end - p.start),
-        }),
-      ),
+      pauses: gaps(runs, input.from, input.to, input.minPauseSecs).map((p) => ({
+        from: formatClock(p.start),
+        to: formatClock(p.end),
+        secs: round(p.end - p.start),
+      })),
       ...(runs.length <= 200 && {
         speechRuns: runs.map((r) => [formatClock(r.start), formatClock(r.end)]),
       }),
@@ -134,10 +133,10 @@ export const findUntranscribedSpeech = defineTool({
     const meeting = await ctx.meeting(input.meeting);
     const from = input.from ?? 0;
     const to = input.to ?? Infinity;
-    const runs = speechRuns(meeting).filter(
-      (r) => r.end > from && r.start < to,
-    );
-    const stretches = untranscribedSpeech(runs, meeting.segments, {
+    const runs = meeting
+      .speechRuns()
+      .filter((r) => r.end > from && r.start < to);
+    const stretches = untranscribedSpeech(runs, wordsOf(meeting.segments), {
       minSpeechSecs: input.minSpeechSecs,
     });
     const shown = stretches.slice(0, input.limit);
@@ -156,7 +155,7 @@ export const findUntranscribedSpeech = defineTool({
       results.push({
         from: formatClock(s.start),
         to: formatClock(s.end),
-        speechSecs: s.speechSecs,
+        speechSecs: round(s.speechSecs),
         before: before && {
           segment: before.seg.id,
           label: before.seg.label,

@@ -1,7 +1,9 @@
 import { asc, eq } from "drizzle-orm";
 import { peopleTable, segmentsTable } from "@open-minutes/db";
+import type { Span } from "@open-minutes/audio/span";
+import { detectSpeech } from "@open-minutes/audio/vad";
 import { readWave, type WaveForm } from "@open-minutes/audio/wav";
-import { getCachedAudio, meetingCacheDir } from "@open-minutes/meeting-audio";
+import { getCachedAudio } from "@open-minutes/meeting-audio";
 import {
   LAST_WORD_DURATION_SEC,
   type TranscriptWord,
@@ -37,11 +39,34 @@ export interface AudioMeeting {
   youtubeId: string;
   /** 16 kHz mono WAV. */
   audioPath: string;
-  /** Where derived artifacts (speech runs, voice timelines) are cached. */
-  cacheDir: string;
   segments: LabeledSegment[];
   /** The decoded audio, read on first use and kept. */
   wave(): WaveForm;
+  /**
+   * Every speech run in the audio, in time order, detected on first use and
+   * kept (about 35 s for three hours of audio).
+   */
+  speechRuns(): Span[];
+}
+
+/** An {@link AudioMeeting} whose audio is the WAV at `audioPath`. */
+export function audioMeeting(
+  fields: Omit<AudioMeeting, "wave" | "speechRuns">,
+): AudioMeeting {
+  let wave: WaveForm | null = null;
+  let runs: Span[] | null = null;
+  const meeting: AudioMeeting = {
+    ...fields,
+    wave: () => (wave ??= readWave(fields.audioPath)),
+    speechRuns: () => {
+      if (!runs) {
+        console.error(`Finding speech in ${fields.ref}...`);
+        runs = detectSpeech(meeting.wave());
+      }
+      return runs;
+    },
+  };
+  return meeting;
 }
 
 /**
@@ -56,15 +81,12 @@ export async function openMeeting(
   // No sha256 check: the audio only has to line up in time with the
   // transcript, and the store's audio does.
   const audio = await getCachedAudio({ youtubeId });
-  let wave: WaveForm | null = null;
-  return {
+  return audioMeeting({
     ref: String(ref),
     youtubeId,
     audioPath: audio.path,
-    cacheDir: meetingCacheDir(youtubeId),
     segments,
-    wave: () => (wave ??= readWave(audio.path)),
-  };
+  });
 }
 
 async function loadFromDb(db: Db, ref: MeetingRef) {

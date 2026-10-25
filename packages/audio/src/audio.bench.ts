@@ -1,13 +1,13 @@
 import { bench, describe } from "vitest";
-import { detectSpeech } from "@open-minutes/audio/speech-runs";
+import { halfUntranscribedRollCall } from "@open-minutes/fixtures/clips";
+import { untranscribedSpeech } from "./coverage.js";
+import { detectSpeech } from "./vad.js";
 import {
   loadTranscriptionModels,
   transcribeAudio,
   transcribeRange,
-} from "@open-minutes/audio/transcribe";
-import { callTool } from "../tool";
-import { findUntranscribedSpeech } from "./tools";
-import { clipContext, halfUntranscribedRollCallClip } from "./testdata/clips";
+} from "./transcribe.js";
+import { readWave } from "./wav.js";
 
 // How long the audio models take per minute of meeting audio, so swapping a
 // model (or its settings) shows what it costs. The clip is exactly one minute,
@@ -16,7 +16,9 @@ import { clipContext, halfUntranscribedRollCallClip } from "./testdata/clips";
 //
 // Models load before timing starts; loading isn't per minute of audio.
 
-const rollCall = halfUntranscribedRollCallClip();
+const rollCall = halfUntranscribedRollCall();
+const wave = readWave(rollCall.wavPath);
+const words = rollCall.segments.flatMap((s) => s.words);
 const opts = {
   // Each run takes a second or more, so a handful is plenty.
   iterations: 5,
@@ -28,7 +30,7 @@ describe("per minute of audio", () => {
   bench(
     "speech runs (Silero VAD, 0.2 s pauses)",
     () => {
-      detectSpeech(rollCall.wave);
+      detectSpeech(wave);
     },
     opts,
   );
@@ -36,7 +38,7 @@ describe("per minute of audio", () => {
   bench(
     "transcribeRange, one pass",
     async () => {
-      await transcribeRange(rollCall.wave, 0, 60);
+      await transcribeRange(wave, 0, 60);
     },
     opts,
   );
@@ -44,21 +46,20 @@ describe("per minute of audio", () => {
   bench(
     "transcribeAudio, the pipeline's VAD + windowed pass",
     async () => {
-      await transcribeAudio(rollCall.wave);
+      await transcribeAudio(wave);
     },
     opts,
   );
 });
 
-describe("find_untranscribed_speech on the clip", () => {
-  // Fresh each run, so the speech runs aren't served from the cache.
+describe("finding untranscribed speech on the clip", () => {
+  // What the find_untranscribed_speech agent tool does on a fresh meeting.
   bench(
     "speech runs + decoding the one stretch it finds",
     async () => {
-      const clip = halfUntranscribedRollCallClip();
-      await callTool(clipContext(clip), findUntranscribedSpeech, {
-        meeting: clip.meeting.ref,
-      });
+      for (const s of untranscribedSpeech(detectSpeech(wave), words)) {
+        await transcribeRange(wave, s.start, s.end);
+      }
     },
     opts,
   );
