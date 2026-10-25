@@ -116,20 +116,17 @@ through a small TypeScript script in place of `fetch-youtube-audio.sh`, after
 `installWarpAndTor`. Its other steps (re-encoding, upload, `error.json`) are
 unchanged.
 
-### Not decided here
-
-- **Whether a scout lists and reads metadata through the YouTube Data API.**
-  A scout will own audio ingestion, so it runs yt-dlp for the audio either
-  way. Listing and metadata (the title and description that say whether a
-  video is a meeting) could instead come from the YouTube Data API v3, with an
-  API key, no bot check and a free quota far above our use. That belongs with
-  the scout's design.
-
 ## Consequences
 
-- One retry policy, in TypeScript, tested with a fake yt-dlp and fake egress.
-  The real egress is exercised only on runners, through the
-  `fetch-youtube-audio` workflow.
+- One retry policy, in TypeScript. Its unit tests use a fake yt-dlp and fake
+  routes.
+- An end-to-end test fetches a short video's metadata and audio from YouTube
+  through `runWithEgress` with the default routes, skipping the object store.
+  It is tagged `ytdlp`, runs with `pnpm test:ytdlp` on a home connection, where
+  `direct` works, and in a CI job that runs `installWarpAndTor` first, where `direct`
+  is blocked and WARP or Tor takes over. The test is the same on both. The CI
+  job runs on PRs that touch `@open-minutes/ytdlp` or `@open-minutes/youtube`,
+  and daily on `main` to catch changes on YouTube's side.
 - `@open-minutes/youtube` no longer shells out directly, so its tests mock one
   module instead of `node:child_process`.
 - Downloading from YouTube is supported only from a residential connection
