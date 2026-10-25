@@ -1,8 +1,9 @@
 #!/usr/bin/env tsx
-// The `om` CLI: composable meeting-ingestion commands, model downloads, and the
-// meeting-cleanup tools. A thin wrapper over the exported APIs of
-// @open-minutes/ingest/om, @open-minutes/audio and ../tools — commands only
-// parse arguments and wire stdio.
+// The `om` CLI, for development: composable meeting-ingestion commands and
+// model downloads. A thin wrapper over the exported APIs of
+// @open-minutes/ingest/om and @open-minutes/audio — commands only parse
+// arguments and wire stdio, so any logic worth keeping belongs in those
+// packages, not here.
 // Unix conventions: machine-readable results on stdout, human progress/logs on
 // stderr, so pipes like `om available | head -5 | om ingest` stay clean.
 //
@@ -12,8 +13,8 @@
 import { defineCommand, runMain } from "citty";
 import { loadRootDotEnv } from "@open-minutes/core/dotenv";
 
-// Settings like BLOB_STORE_PUBLIC_URL (which the audio tools use to
-// download a meeting's audio) come from the repo's .env.
+// Settings like BLOB_STORE_PUBLIC_URL (where ingestion downloads a meeting's
+// audio from) come from the repo's .env.
 loadRootDotEnv();
 
 // A downstream pipe closing early (eg `om available | head -3`) raises EPIPE
@@ -25,7 +26,6 @@ process.stdout.on("error", (error: NodeJS.ErrnoException) => {
 import { getDb, resolveDatabaseUrl, type DB } from "@open-minutes/db";
 import { prepareDatabase } from "@open-minutes/db/ensure";
 import type { IngestedMeeting, MeetingToIngest } from "@open-minutes/ingest/om";
-import { runTools } from "./tools";
 
 // Ingestion and the model downloads are heavy, so they are imported only by
 // the commands that need them.
@@ -205,20 +205,6 @@ const models = defineCommand({
   },
 });
 
-const toolsCommand = defineCommand({
-  meta: {
-    name: "tools",
-    description:
-      "The meeting-cleanup tools (data and audio) as a JSON CLI: no arguments lists them, " +
-      "`<tool> --schema` prints a tool's input, `<tool> '<json>'` calls it " +
-      "(input may also come on stdin), and --describe prints every tool " +
-      "with its schema. --db <name> picks the database.",
-  },
-  async run({ rawArgs }) {
-    await runTools(rawArgs);
-  },
-});
-
 async function readStdin(): Promise<string> {
   let data = "";
   for await (const chunk of process.stdin) {
@@ -230,9 +216,9 @@ async function readStdin(): Promise<string> {
 const main = defineCommand({
   meta: {
     name: "om",
-    description: "Manage the open-minutes meeting database",
+    description: "Ingest meetings and download models, for development",
   },
-  subCommands: { status, available, ingest, models, tools: toolsCommand },
+  subCommands: { status, available, ingest, models },
 });
 
 await runMain(main);

@@ -1,6 +1,6 @@
 // Agent-facing tools for cleaning up Open Minutes data: reading and editing
-// it, and listening to the audio. See ./tool.ts for the shape, ./tools.ts for
-// the list, and ./cli/tools.ts for the shell interface (`om tools`).
+// it, and listening to the audio. See ./tool.ts for the shape and ./tools.ts
+// for the list.
 export { tools } from "./tools";
 export * from "./tools";
 export {

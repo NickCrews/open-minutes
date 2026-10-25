@@ -3,7 +3,8 @@
 Every tool an agent uses to clean up a meeting, in one list with one API:
 reading the transcript, fixing who said what, naming people, replacing
 chapters, and listening to the audio. Add new agent-facing tools here
-(summaries, say) rather than in a CLI of their own.
+(summaries, say). The tools are a TypeScript API for agent loops; they have
+no command line.
 
 Each tool is a name, a description written for the model, a zod input schema
 (exported as JSON Schema), and `run(ctx, input)`. The context
@@ -15,17 +16,6 @@ Every tool that takes a meeting takes `"meeting"`: its slug (eg
 database) or its id in this database (eg `12`). `list_meetings` shows both.
 The tools read only the database, never the fixture files, so they work the
 same wherever the database is: locally, in tests, or in production.
-
-```sh
-pnpm om tools                                # list the tools
-pnpm om tools <tool> --schema                # a tool's input, as JSON Schema
-pnpm om tools --describe                     # every tool with its schema, as JSON
-pnpm om tools list_meetings
-pnpm om tools find_untranscribed_speech '{"meeting":"gbos-2026-03-23"}'
-pnpm om tools transcribe_range '{"meeting":"gbos-2026-03-23","from":"0:01:56","to":"0:02:07"}'
-```
-
-From TypeScript:
 
 ```ts
 import {

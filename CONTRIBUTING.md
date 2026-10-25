@@ -75,11 +75,14 @@ the ones listed above it:
   `@open-minutes/akleg`, runs it through `@open-minutes/audio`, aligns turns to words, recognizes speakers
   against known voiceprints, and writes the meeting to the database. See the
   [ingest README](packages/ingest/README.md).
-- **[`packages/agents`](packages/agents)** (`@open-minutes/agents`): the
-  interface for agents and people. Tools for editing the data (speaker
-  labels, people, chapters) as typed tool definitions for agent loops, and
-  the `om` CLI: `om ingest` and friends over `@open-minutes/ingest`,
-  `om models`, and `om tools`, the tools as a JSON CLI.
+- **[`packages/agents`](packages/agents)** (`@open-minutes/agents`): tools
+  for agents that clean up meetings: reading and editing the data (speaker
+  labels, people, chapters) and listening to the audio, as typed tool
+  definitions for agent loops.
+- **[`packages/cli`](packages/cli)** (`@open-minutes/cli`): the `om` CLI, for
+  development: `om ingest` and friends over `@open-minutes/ingest`, and
+  `om models`. It only parses arguments and wires stdio; the logic lives in
+  the packages it calls.
 - **[`packages/web`](packages/web)** (`@open-minutes/web`): the public
   transcript browser, built with [SolidJS](https://www.solidjs.com) +
   [TanStack Start](https://tanstack.com/start), Kobalte and Tailwind, deployed
@@ -263,7 +266,7 @@ waits for it; without it, a missing video is downloaded with yt-dlp, which
 works from a home connection. See [`.env.example`](.env.example) and
 [docs/research/youtube-in-ci.md](docs/research/youtube-in-ci.md).
 
-`om` (in [`packages/agents`](packages/agents/src/cli/om.ts)) writes to the
+`om` (in [`packages/cli`](packages/cli/src/om.ts)) writes to the
 same database as everything else (`DB=prod pnpm om ingest <id>` to ingest
 into production). See [`packages/ingest/README.md`](packages/ingest/README.md)
 for details.
@@ -284,10 +287,9 @@ ORDER BY m.start_time, s.start_secs;
 ```
 
 To change the data, agents (and people) use the tools in
-[`packages/agents`](packages/agents/src/tools.ts) rather than raw SQL: `pnpm om
-tools` lists them, and `pnpm om tools <tool> '<json>'` calls one and prints
-JSON. The same tools are exported from `@open-minutes/agents`, with `toAgentTool` to
-hand them to an agent loop such as pi. Writes run no rule checks; run
+[`packages/agents`](packages/agents/src/tools.ts) rather than raw SQL. They
+are exported from `@open-minutes/agents`, with `toAgentTool` to hand them to
+an agent loop such as pi. Writes run no rule checks; run
 `check_meeting` after editing. Guidance for agents doing
 this work is in
 [`.claude/skills/transcript-cleanup`](.claude/skills/transcript-cleanup/SKILL.md).

@@ -4,8 +4,8 @@ The offline processing pipeline that turns raw meeting audio into speaker-attrib
 
 ## The `om` CLI
 
-The `om` CLI, in `@open-minutes/agents`, has three composable commands over
-this package. Run it as `pnpm om <command>` from anywhere in the repository. Machine-readable results
+The `om` CLI, in `@open-minutes/cli`, is a development tool with three
+composable commands over this package. Run it as `pnpm om <command>` from anywhere in the repository. Machine-readable results
 go to stdout and all human progress/logs go to stderr, so results can be piped:
 
 ```sh
@@ -31,8 +31,8 @@ akleg.gov committee; a meeting from a playlist needs its body named with
 
 That body becomes the meeting's one body (in `meeting_bodies`), and its
 timezone the meeting's. A joint meeting, held by several bodies together, gets
-its other bodies afterwards, eg `pnpm om tools update_meeting
-'{"meeting":12,"bodies":["gbos","luc"]}'`.
+its other bodies afterwards, with the `update_meeting` tool in
+`@open-minutes/agents`.
 
 To scan a new body, set its source, eg:
 

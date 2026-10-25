@@ -1,6 +1,6 @@
-// Programmatic API behind the `om` CLI in @open-minutes/agents. The CLI commands
-// only parse arguments and wire stdio; scripts, tests, and future services
-// should call these.
+// The ingestion API. The `om` CLI in @open-minutes/cli is a thin development
+// wrapper over it that only parses arguments and wires stdio; scripts, tests,
+// and services call these directly.
 export { listIngested, type IngestedMeeting } from "./ingested";
 export {
   listAvailable,
