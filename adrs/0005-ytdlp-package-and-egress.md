@@ -14,29 +14,15 @@ Listing a channel or playlist works from any IP.
 
 The pieces involved are spread across the repo:
 
-| Piece                                                  | Where                                                                    |
-| ------------------------------------------------------ | ------------------------------------------------------------------------ |
-| Install yt-dlp                                         | `packages/youtube/install-ytdlp.sh`                                      |
-| Install, start, rotate and stop WARP and Tor           | `packages/youtube/egress/*.sh`                                           |
-| Try WARP, rotate, fall back to Tor                     | `.github/scripts/fetch-youtube-audio.sh` (bash)                          |
-| Try each of `YOUTUBE_PROXY` in turn on a blocked exit  | `ytDlpVia` in `packages/youtube/src/index.ts` (TypeScript)               |
-| Re-encode for speech (ffmpeg), upload, record failures | `.github/workflows/fetch-youtube-audio.yml` and `encode-speech-audio.sh` |
+| Piece                                                 | Where                                                      |
+| ----------------------------------------------------- | ---------------------------------------------------------- |
+| Install yt-dlp                                        | `packages/youtube/install-ytdlp.sh`                        |
+| Install, start, rotate and stop WARP and Tor          | `packages/youtube/egress/*.sh`                             |
+| Try WARP, rotate, fall back to Tor                    | `.github/scripts/fetch-youtube-audio.sh` (bash)            |
+| Try each of `YOUTUBE_PROXY` in turn on a blocked exit | `ytDlpVia` in `packages/youtube/src/index.ts` (TypeScript) |
 
 The retry logic exists twice, in two languages, with different rules: the bash
 script rotates exits, the TypeScript one only walks a fixed list of proxies.
-
-The `fetch-youtube-audio` workflow is also the only thing that writes to the
-object store. CI, contributors and reprocessing read YouTube audio from the
-store, never from YouTube. Writing needs the `object-store-writer`
-environment's secrets, which only runs from `main` get. A client that misses
-in the store triggers the workflow and polls for its result, which takes 2–6
-minutes per video.
-
-The daily ingest of new meetings (U1 in
-[docs/research/audio.md](../docs/research/audio.md)) will run unattended,
-probably on a datacenter IP. It should be able to get a video's audio into the
-store in one process, without dispatching a workflow per video and waiting on
-it.
 
 ## Decision
 
@@ -64,7 +50,7 @@ const { stdout, route } = await runWithEgress(args, { beforeAttempt });
   `--js-runtimes node:<this node>` so deno is optional. It rejects with
   yt-dlp's stdout and stderr on failure. `runWithEgress` calls it.
 - **`egress({ routes })`** is the manager under `runWithEgress`, for a process
-  that runs yt-dlp many times (the daily ingest): its `run(args, options)`
+  that runs yt-dlp many times, like a scout: its `run(args, options)`
   works like `runWithEgress`, but the daemons stay up and a route found
   blocked stays skipped until `close()`.
 
@@ -123,62 +109,15 @@ later.
 `execFile` and `ytDlpVia`. `listRecordings` calls `run`, since listing works
 from any IP. `YOUTUBE_PROXY` becomes a fixed-URL route in `YOUTUBE_EGRESS`.
 
-### Writing to the store moves into TypeScript
+### The workflow downloads through it
 
-A new `fetchToStore(videoId, { routes, credentials })` in
-`@open-minutes/youtube` does what the workflow's steps do: download through
-`runWithEgress`, re-encode with ffmpeg, strip the stream URLs from the info
-JSON, upload both, and write `error.json` when every route fails. Upload uses
-an S3 client against `OBJECT_STORE_ENDPOINT`.
-
-The audio's format at each stage:
-
-| Stage           | Format                                                                                  | Size         | Made by                                                             |
-| --------------- | --------------------------------------------------------------------------------------- | ------------ | ------------------------------------------------------------------- |
-| From YouTube    | Opus in WebM (format 251), 48 kHz stereo, ~110 kbps                                     | ~50 MB/hour  | yt-dlp, `-f "bestaudio[ext=webm]"`; one stream, so no ffmpeg        |
-| In the store    | `youtube/<id>/speech.webm`: Opus in WebM, 16 kHz mono, 24 kbps                          | ~11 MB/hour  | ffmpeg in `fetchToStore`                                            |
-| Into the models | 16 kHz mono 16-bit PCM WAV, which `@open-minutes/audio`'s transcriber and diarizer take | ~115 MB/hour | `webmOpusToWav` in `@open-minutes/youtube`, on the reader's machine |
-
-- **YouTube to the store.** ffmpeg averages the two channels into one
-  (`pan=mono|c0=0.5*c0+0.5*c1`, since ffmpeg's own downmix makes dual-mono 3
-  dB louder and can clip), resamples to 16 kHz, encodes with libopus at
-  24 kbps, and drops metadata (`-map_metadata -1 -fflags +bitexact`). This is
-  `encode-speech-audio.sh` today. The models take 16 kHz mono, so nothing they
-  use is lost. YouTube's original isn't kept. Beside it goes
-  `youtube/<id>/info.json`, yt-dlp's metadata minus its expiring stream URLs.
-- **The store to the models.** `webmOpusToWav` demuxes the WebM and decodes
-  with libopus compiled to WebAssembly, asking it for 16 kHz mono directly, so
-  readers need no ffmpeg and get the same bytes on every machine. A reader
-  that downloads from YouTube itself decodes the original the same way; the
-  result has the same length as the stored copy's, at zero lag, with
-  correlation ~0.997.
-
-ffmpeg is needed only for the first step, so it lives in `fetchToStore`, not
-in `@open-minutes/ytdlp`. `fetchToStore` installs a static ffmpeg build into
-`.cache/bin` when it isn't on `PATH`, so this step needs no apt either.
-
-Callers:
-
-- **The daily ingest** runs where it has the writer credentials and calls
-  `fetchToStore` itself.
-- **The `fetch-youtube-audio` workflow** becomes `pnpm om fetch-audio <id>`
-  after installing WARP and Tor, so the workflow and the ingest share one
-  implementation.
-- **Everything else** (fork CI, contributors, sandboxed containers) keeps
-  reading the store and, with `YOUTUBE_AUDIO_DISPATCH_TOKEN`, triggering the
-  workflow on a miss.
-
-The workflow stays because it is the only writer those callers can reach:
-they have neither the store's write credentials nor, often, a route to
-YouTube. It handles videos the daily ingest didn't fetch, such as a fixture
-or a backfill of older meetings. If every video the project uses comes
-through the ingest, the dispatch path and the workflow can go.
+The `fetch-youtube-audio` workflow's download step calls `runWithEgress`
+through a small TypeScript script in place of `fetch-youtube-audio.sh`, after
+`installWarpAndTor`. Its other steps (re-encoding, upload, `error.json`) are
+unchanged.
 
 ### Not decided here
 
-- **Where the daily ingest runs.** This design assumes a scheduled GitHub
-  Actions job on `main` with the `object-store-writer` environment, which can
-  run WARP and Tor. A home machine works too, with `direct` as its route.
 - **Whether a scout lists and reads metadata through the YouTube Data API.**
   A scout will own audio ingestion, so it runs yt-dlp for the audio either
   way. Listing and metadata (the title and description that say whether a
@@ -191,11 +130,6 @@ through the ingest, the dispatch path and the workflow can go.
 - One retry policy, in TypeScript, tested with a fake yt-dlp and fake egress.
   The real egress is exercised only on runners, through the
   `fetch-youtube-audio` workflow.
-- The ingest gets audio in about the time the download takes (11 s for a
-  92-minute meeting through WARP), instead of 2–6 minutes per video waiting on
-  a workflow.
-- More code runs with the store's write credentials: whatever runs the ingest
-  holds them, not only a workflow pinned to `main`.
 - `@open-minutes/youtube` no longer shells out directly, so its tests mock one
   module instead of `node:child_process`.
 - Downloading from YouTube is supported only from a residential connection
@@ -206,9 +140,6 @@ through the ingest, the dispatch path and the workflow can go.
 
 ## Alternatives considered
 
-- **Keep the workflow as the only writer** and have the ingest dispatch it per
-  video. Keeps write credentials in one place, but every new meeting costs a
-  runner start and a polling loop, and failures are split across two logs.
 - **Install everything, WARP and Tor included, from `ensureYtDlpInstalled()`.** Would
   make the API one call, but it would run sudo and register WARP as a side
   effect of a library call, and fail on every machine without apt.
