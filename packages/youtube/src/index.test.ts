@@ -1,8 +1,8 @@
-import { describe, it, expect, vi, afterEach } from "vitest";
-import { execFile, type ChildProcess } from "node:child_process";
+import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { copyFile, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { ensureYtDlpInstalled, run, runWithEgress } from "@open-minutes/ytdlp";
 import {
   youtube,
   youtubeConfigFromEnv,
@@ -11,10 +11,16 @@ import {
 } from ".";
 import { existsSync } from "node:fs";
 
-// yt-dlp runs for real unless a test replaces execFile's implementation.
-vi.mock("node:child_process", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("node:child_process")>();
-  return { ...actual, execFile: vi.fn(actual.execFile) };
+// yt-dlp runs for real unless a test replaces run's or runWithEgress's
+// implementation.
+vi.mock("@open-minutes/ytdlp", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@open-minutes/ytdlp")>();
+  return {
+    ...actual,
+    ensureYtDlpInstalled: vi.fn(actual.ensureYtDlpInstalled),
+    run: vi.fn(actual.run),
+    runWithEgress: vi.fn(actual.runWithEgress),
+  };
 });
 
 describe("YouTube Module", () => {
@@ -77,208 +83,104 @@ describe("YouTube Module", () => {
   );
 
   it("should download video audio with yt-dlp", { tags: ["ytdlp"] }, () =>
-    expectDownloads(youtube({ proxies: youtubeConfigFromEnv().proxies })),
+    expectDownloads(youtube({ routes: youtubeConfigFromEnv().routes })),
   );
 });
 
 describe("youtubeConfigFromEnv", () => {
-  it("reads YOUTUBE_PROXY as a comma-separated list", () => {
+  it("reads YOUTUBE_EGRESS as a comma-separated list of routes", () => {
     expect(
       youtubeConfigFromEnv({
-        YOUTUBE_PROXY: " socks5://127.0.0.1:40000, ,socks5://127.0.0.1:9050,",
-      }).proxies,
-    ).toEqual(["socks5://127.0.0.1:40000", "socks5://127.0.0.1:9050"]);
+        YOUTUBE_EGRESS: " warp, ,socks5://127.0.0.1:9050,",
+      }).routes,
+    ).toEqual(["warp", "socks5://127.0.0.1:9050"]);
   });
 
-  it.each([{}, { YOUTUBE_PROXY: "" }, { YOUTUBE_PROXY: " , " }])(
-    "has no proxies for %j",
+  it.each([{}, { YOUTUBE_EGRESS: "" }, { YOUTUBE_EGRESS: " , " }])(
+    "leaves the routes to @open-minutes/ytdlp for %j",
     (env) => {
-      expect(youtubeConfigFromEnv(env).proxies).toBeUndefined();
+      expect(youtubeConfigFromEnv(env).routes).toBeUndefined();
     },
   );
 });
 
-describe("yt-dlp through proxies", () => {
-  const WARP = "socks5://127.0.0.1:40000";
-  const TOR = "socks5://127.0.0.1:9050";
-  const BOT_CHECK =
-    "ERROR: [youtube] QUF1uLgzL-s: Sign in to confirm you’re not a bot. Use --cookies-from-browser or --cookies for the authentication.\n";
+describe("yt-dlp", () => {
   const INFO = JSON.stringify({ id: "QUF1uLgzL-s", title: "Short" });
+  const fixture = new URL("./fixtures/tones.webm", import.meta.url);
 
-  type Reply = { stdout?: string; stderr?: string; fail?: boolean };
-
-  /** Replaces yt-dlp with `reply`, and returns the args of each call. */
-  function fakeYtDlp(reply: (args: string[]) => Reply | Promise<Reply>) {
-    const calls: string[][] = [];
-    vi.mocked(execFile).mockImplementation(((
-      _file: string,
-      args: string[],
-      _options: unknown,
-      callback: (e: Error | null, stdout: string, stderr: string) => void,
-    ) => {
-      calls.push(args);
-      void Promise.resolve(reply(args)).then(
-        ({ stdout = "", stderr = "", fail }) => {
-          const error = fail ? new Error("Command failed: yt-dlp") : null;
-          callback(error, stdout, stderr);
-        },
-      );
-      return {} as ChildProcess;
-    }) as unknown as typeof execFile);
-    return calls;
-  }
-
-  const proxyOf = (args: string[]) => {
-    const i = args.indexOf("--proxy");
-    return i === -1 ? undefined : args[i + 1];
-  };
+  beforeEach(() => {
+    vi.mocked(ensureYtDlpInstalled).mockResolvedValue();
+  });
 
   afterEach(() => {
-    vi.mocked(execFile).mockReset();
+    vi.mocked(ensureYtDlpInstalled).mockReset();
+    vi.mocked(run).mockReset();
+    vi.mocked(runWithEgress).mockReset();
   });
 
-  it("passes no --proxy without proxies", async () => {
-    const calls = fakeYtDlp(() => ({ stdout: INFO }));
-    const meta = await youtube({}).getMetadata("QUF1uLgzL-s");
+  it("gets metadata through the configured routes", async () => {
+    vi.mocked(runWithEgress).mockResolvedValue({
+      stdout: INFO,
+      stderr: "",
+      route: "tor",
+    });
+    const meta = await youtube({ routes: ["tor"] }).getMetadata("QUF1uLgzL-s");
     expect(meta.title).toBe("Short");
-    expect(calls).toHaveLength(1);
-    expect(calls[0]).not.toContain("--proxy");
-  });
-
-  it("moves to the next proxy when one is bot-checked", async () => {
-    const calls = fakeYtDlp((args) =>
-      proxyOf(args) === WARP
-        ? { fail: true, stderr: BOT_CHECK }
-        : { stdout: INFO },
-    );
-    const meta = await youtube({ proxies: [WARP, TOR] }).getMetadata(
-      "QUF1uLgzL-s",
-    );
-    expect(meta.id).toBe("QUF1uLgzL-s");
-    expect(calls.map(proxyOf)).toEqual([WARP, TOR]);
-  });
-
-  it("moves to the next proxy when one can't be reached", async () => {
-    const calls = fakeYtDlp((args) =>
-      proxyOf(args) === WARP
-        ? {
-            fail: true,
-            stderr:
-              "ERROR: [youtube] QUF1uLgzL-s: Unable to download API page: Unable to connect to proxy\n",
-          }
-        : { stdout: INFO },
-    );
-    await youtube({ proxies: [WARP, TOR] }).getMetadata("QUF1uLgzL-s");
-    expect(calls.map(proxyOf)).toEqual([WARP, TOR]);
-  });
-
-  it("doesn't retry an error that isn't a blocked exit", async () => {
-    const calls = fakeYtDlp(() => ({
-      fail: true,
-      stderr: "ERROR: [youtube] QUF1uLgzL-s: Private video\n",
-    }));
-    await expect(
-      youtube({ proxies: [WARP, TOR] }).getMetadata("QUF1uLgzL-s"),
-    ).rejects.toMatchObject({ stderr: expect.stringContaining("Private") });
-    expect(calls.map(proxyOf)).toEqual([WARP]);
-  });
-
-  it("names each proxy and its error when all fail", async () => {
-    fakeYtDlp((args) => ({
-      fail: true,
-      stderr:
-        proxyOf(args) === WARP
-          ? BOT_CHECK
-          : "[download] 1.0%\nERROR: unable to download video data: HTTP Error 403: Forbidden\n",
-    }));
-    const error = await youtube({ proxies: [WARP, TOR] })
-      .getMetadata("QUF1uLgzL-s")
-      .catch((e: Error) => e);
-    expect((error as Error).message).toBe(
-      [
-        "yt-dlp failed through every proxy:",
-        `  ${WARP}: ${BOT_CHECK.trim()}`,
-        `  ${TOR}: ERROR: unable to download video data: HTTP Error 403: Forbidden`,
-      ].join("\n"),
+    expect(runWithEgress).toHaveBeenCalledWith(
+      ["--skip-download", "-J", "https://www.youtube.com/watch?v=QUF1uLgzL-s"],
+      expect.objectContaining({ routes: ["tor"] }),
     );
   });
 
-  it("downloads through the next proxy, clearing the partial file", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "youtube-proxy-"));
+  it("downloads audio, clearing the partial file before each attempt", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "youtube-ytdlp-"));
     try {
       const wav = join(dir, "audio.wav");
       const webm = `${wav}.webm`;
       const leftovers: boolean[] = [];
-      const calls = fakeYtDlp(async (args) => {
-        leftovers.push(existsSync(webm) || existsSync(`${webm}.part`));
-        const out = args[args.indexOf("-o") + 1]!;
-        if (proxyOf(args) === WARP) {
-          await copyFile(
-            new URL("./fixtures/tones.webm", import.meta.url),
-            `${out}.part`,
-          );
-          return {
-            fail: true,
-            stderr: "ERROR: HTTP Error 429: Too Many Requests\n",
-          };
-        }
-        await copyFile(new URL("./fixtures/tones.webm", import.meta.url), out);
-        return {};
-      });
-      const result = await youtube({
-        proxies: [WARP, TOR],
-      }).ensureAudioDownloaded("QUF1uLgzL-s", wav);
+      vi.mocked(runWithEgress).mockImplementation(
+        async (args, { beforeAttempt } = {}) => {
+          const out = args[args.indexOf("-o") + 1]!;
+          // A first attempt that leaves a partial file, then one that works.
+          await beforeAttempt?.();
+          leftovers.push(existsSync(`${webm}.part`));
+          await copyFile(fixture, `${out}.part`);
+          await beforeAttempt?.();
+          leftovers.push(existsSync(`${webm}.part`));
+          await copyFile(fixture, out);
+          return { stdout: "", stderr: "", route: "warp" };
+        },
+      );
+      const result = await youtube({}).ensureAudioDownloaded(
+        "QUF1uLgzL-s",
+        wav,
+      );
       expect(result).toEqual({ downloaded: true });
       expect(existsSync(wav)).toBe(true);
       expect(existsSync(webm)).toBe(false);
       expect(leftovers).toEqual([false, false]);
-      expect(calls.map(proxyOf)).toEqual([WARP, TOR]);
-      for (const args of calls) {
-        expect(args).toEqual(
-          expect.arrayContaining(["--retries", "2", "--fragment-retries", "2"]),
-        );
-      }
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
   });
 
-  it("downloads directly, with yt-dlp's own retries, without proxies", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "youtube-proxy-"));
-    try {
-      const wav = join(dir, "audio.wav");
-      const calls = fakeYtDlp(async (args) => {
-        const out = args[args.indexOf("-o") + 1]!;
-        await copyFile(new URL("./fixtures/tones.webm", import.meta.url), out);
-        return {};
-      });
-      await youtube({}).ensureAudioDownloaded("QUF1uLgzL-s", wav);
-      expect(calls).toHaveLength(1);
-      expect(calls[0]).not.toContain("--proxy");
-      expect(calls[0]).not.toContain("--retries");
-    } finally {
-      await rm(dir, { recursive: true, force: true });
-    }
-  });
-
-  it("never lists a source through a proxy", async () => {
-    const calls = fakeYtDlp(() => ({
+  it("lists a source directly, without egress", async () => {
+    vi.mocked(run).mockResolvedValue({
       stdout: JSON.stringify({
         entries: [{ id: "QUF1uLgzL-s", title: "Short" }],
       }),
-    }));
-    // listRecordings takes no config, so even YOUTUBE_PROXY can't reach it.
-    vi.stubEnv("YOUTUBE_PROXY", WARP);
-    try {
-      const videos = await youtubeSource({
-        kind: "playlist",
-        id: "PL123",
-      }).listRecordings();
-      expect(videos).toEqual([{ id: "QUF1uLgzL-s", title: "Short" }]);
-    } finally {
-      vi.unstubAllEnvs();
-    }
-    expect(calls).toHaveLength(1);
-    expect(calls[0]).not.toContain("--proxy");
+      stderr: "",
+    });
+    const videos = await youtubeSource({
+      kind: "playlist",
+      id: "PL123",
+    }).listRecordings();
+    expect(videos).toEqual([{ id: "QUF1uLgzL-s", title: "Short" }]);
+    expect(run).toHaveBeenCalledWith([
+      "--flat-playlist",
+      "-J",
+      "https://www.youtube.com/playlist?list=PL123",
+    ]);
+    expect(runWithEgress).not.toHaveBeenCalled();
   });
 });

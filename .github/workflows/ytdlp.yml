@@ -1,0 +1,63 @@
+# Does yt-dlp still get past YouTube from a GitHub runner? Runs the tests
+# tagged `ytdlp` (`pnpm test:ytdlp`), which fetch real metadata and audio
+# through @open-minutes/ytdlp's default routes. YouTube refuses the runner's
+# own IP, so WARP or Tor takes over, as in the fetch-youtube-audio workflow.
+# Runs on PRs that touch yt-dlp code, and daily on main to catch changes on
+# YouTube's side.
+name: ytdlp
+
+on:
+  pull_request:
+    paths:
+      - packages/ytdlp/**
+      - packages/youtube/**
+      - .github/scripts/fetch-youtube-audio.ts
+      - .github/workflows/ytdlp.yml
+      - .github/workflows/fetch-youtube-audio.yml
+  schedule:
+    - cron: "37 13 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: ytdlp-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: yt-dlp against YouTube
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+
+      # The same .deb cache as fetch-youtube-audio.yml.
+      - name: Name the .deb cache
+        id: debs
+        run: echo "key=youtube-egress-debs-v2-${{ runner.os }}-${{ runner.arch }}-$(date +%Y-%m)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache/restore@v4
+        id: debs-cache
+        with:
+          path: ${{ runner.temp }}/debs
+          key: ${{ steps.debs.outputs.key }}
+      - name: Install Cloudflare WARP and Tor
+        run: packages/ytdlp/egress/install.sh "$RUNNER_TEMP/debs"
+      - uses: actions/cache/save@v4
+        if: steps.debs-cache.outputs.cache-hit != 'true'
+        with:
+          path: ${{ runner.temp }}/debs
+          key: ${{ steps.debs.outputs.key }}
+
+      - name: Test
+        env:
+          YOUTUBE_EGRESS_STATE: ${{ runner.temp }}/youtube-egress
+        run: pnpm test:ytdlp
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: egress-logs
+          path: ${{ runner.temp }}/youtube-egress/*.log

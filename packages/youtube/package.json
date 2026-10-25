@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@open-minutes/core": "workspace:*",
+    "@open-minutes/ytdlp": "workspace:*",
     "opus-decoder": "^0.7.12"
   },
   "devDependencies": {

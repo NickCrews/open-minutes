@@ -1,7 +1,7 @@
 # ADR 0005: A yt-dlp package that owns the binary, egress and retries
 
 Date: 2026-10-24
-Status: Proposed
+Status: Accepted
 
 ## Context
 
@@ -41,6 +41,7 @@ const { stdout, route } = await runWithEgress(args, { beforeAttempt });
 - **`ensureYtDlpInstalled()`** puts yt-dlp's standalone binary in the repo's
   gitignored `.cache/bin` when it isn't on `PATH`. No sudo, Linux and macOS.
   The binary includes yt-dlp's JS challenge scripts. It installs nothing else.
+  `run` finds yt-dlp on `PATH`, then in `.cache/bin`.
 - **`runWithEgress(args, { routes, isBlocked, beforeAttempt })`** is what
   callers use. It runs yt-dlp with `args` through each route in turn, adding
   `--proxy` for a route that has one, starting the route's daemon when it is
@@ -72,8 +73,9 @@ to twice. `beforeAttempt` runs before each attempt, to clear a partial
 download.
 
 A route that can't run on this machine is skipped, not an error on its own:
-WARP or Tor not installed, not Linux, no root for WARP's daemon, no UDP. On
-macOS that leaves `direct`. When no route succeeds, `runWithEgress` rejects
+WARP or Tor not installed, WARP off Linux or without root (or passwordless
+sudo), or a daemon that won't start (WARP without UDP). On macOS that leaves
+`direct`, and `tor` if Tor is on `PATH`. When no route succeeds, `runWithEgress` rejects
 with an `EgressError` whose `routes` lists each route with its outcome
 (`blocked` with yt-dlp's last error, or `unavailable` with the reason and what
 to install), and whose message says the same.
@@ -83,10 +85,11 @@ GitHub runners always fail `direct`, so the workflow sets
 
 #### One manager per machine
 
-A lock file under the egress state directory makes a second process wait for
-the first before it starts or rotates a daemon. Rotating an exit changes it
-for everyone using it, and two managers would contend for WARP's registration
-and Tor's port. `direct` takes no lock.
+Before a manager starts a daemon, it takes a lock file under the egress state
+directory and holds it until `close()`, so a second process that needs a
+daemon waits for the first to finish. Rotating an exit changes it for
+everyone using it, and two managers would contend for WARP's registration and
+Tor's port. `direct` and fixed URLs take no lock.
 
 ### Installing egress is explicit
 
@@ -107,14 +110,18 @@ later.
 
 `getMetadata` and `ensureAudioDownloaded` call `runWithEgress` instead of
 `execFile` and `ytDlpVia`. `listRecordings` calls `run`, since listing works
-from any IP. `YOUTUBE_PROXY` becomes a fixed-URL route in `YOUTUBE_EGRESS`.
+from any IP. Each calls `ensureYtDlpInstalled()` first, so a developer needs
+no install step. `YOUTUBE_PROXY` becomes a fixed-URL route in
+`YOUTUBE_EGRESS`.
 
 ### The workflow downloads through it
 
 The `fetch-youtube-audio` workflow's download step calls `runWithEgress`
-through a small TypeScript script in place of `fetch-youtube-audio.sh`, after
-`installWarpAndTor`. Its other steps (re-encoding, upload, `error.json`) are
-unchanged.
+through `.github/scripts/fetch-youtube-audio.ts` in place of
+`fetch-youtube-audio.sh`, after `egress/install.sh` (what `installWarpAndTor`
+runs). The script installs yt-dlp itself and yt-dlp uses node, so the
+workflow's yt-dlp and deno steps go. Its other steps (re-encoding, upload,
+`error.json`) are unchanged.
 
 ## Consequences
 
@@ -126,7 +133,8 @@ unchanged.
   `direct` works, and in a CI job that runs `installWarpAndTor` first, where `direct`
   is blocked and WARP or Tor takes over. The test is the same on both. The CI
   job runs on PRs that touch `@open-minutes/ytdlp` or `@open-minutes/youtube`,
-  and daily on `main` to catch changes on YouTube's side.
+  and daily on `main` to catch changes on YouTube's side
+  (`.github/workflows/ytdlp.yml`).
 - `@open-minutes/youtube` no longer shells out directly, so its tests mock one
   module instead of `node:child_process`.
 - Downloading from YouTube is supported only from a residential connection
