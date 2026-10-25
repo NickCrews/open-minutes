@@ -1,0 +1,17 @@
+{
+  "name": "@open-minutes/ytdlp",
+  "version": "0.1.0",
+  "description": "Runs the yt-dlp CLI from any machine: installs it, and routes it past YouTube's block on datacenter IPs through Cloudflare WARP or Tor",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.17",
+    "vitest": "^4.0.18"
+  }
+}

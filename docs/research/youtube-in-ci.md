@@ -104,8 +104,8 @@ failed all its attempts), so expect the success rate to move.
 `ffprobe` is not on the `ubuntu-latest` image; install `ffmpeg` with apt.
 
 **Running WARP and Tor on a runner.** The scripts are in
-`packages/youtube/egress/` (`install.sh`, `up.sh`, `rotate.sh`, `down.sh`),
-and `.github/scripts/fetch-youtube-audio.sh` drives them. Lessons from making
+`packages/ytdlp/egress/` (`install.sh`, `up.sh`, `rotate.sh`, `down.sh`),
+and `runWithEgress` in `packages/ytdlp/src/egress.ts` drives them. Lessons from making
 the setup fast:
 
 - `apt-get install cloudflare-warp` takes ~30 s, mostly the desktop app's

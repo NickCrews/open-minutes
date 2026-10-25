@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Starts Cloudflare WARP (in proxy mode) and Tor, unpacked by install.sh, and
-# prints one yt-dlp proxy URL per line, WARP's first:
-#   export YOUTUBE_PROXY="$(packages/youtube/egress/up.sh | paste -sd,)"
+# prints one yt-dlp proxy URL per line, WARP's first. The TypeScript manager
+# in src/egress.ts runs it for one service at a time.
 # Usage: up.sh [warp] [tor]
 #
 # Returns once each proxy is ready. With no arguments it starts both, skipping

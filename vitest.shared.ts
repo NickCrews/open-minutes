@@ -20,6 +20,13 @@ export default defineConfig({
         timeout: 25 * 60 * 1000, // a full 166-min meeting diarizes in ~8-10 min; headroom for CI/background
         skip: process.env.SLOW !== "1",
       },
+      {
+        name: "ytdlp",
+        description:
+          "Tests that run yt-dlp against YouTube. Skipped unless YTDLP=1; run via `pnpm test:ytdlp` or `pnpm test:all`, which install yt-dlp into .cache/bin if it isn't on PATH. YouTube blocks datacenter IPs, so from CI or a server they need WARP or Tor installed (see packages/ytdlp/README.md).",
+        timeout: 5 * 60 * 1000, // listing a big channel takes about a minute
+        skip: process.env.YTDLP !== "1",
+      },
     ],
   },
 });

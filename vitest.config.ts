@@ -10,6 +10,7 @@ export default defineConfig({
       "./packages/ingest/vitest.config.ts",
       "./packages/agents/vitest.config.ts",
       "./packages/youtube/vitest.config.ts",
+      "./packages/ytdlp/vitest.config.ts",
       "./packages/akleg/vitest.config.ts",
       "./packages/glossary/vitest.config.ts",
       "./packages/web/vitest.config.ts",

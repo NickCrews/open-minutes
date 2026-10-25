@@ -82,10 +82,8 @@ jobs:
       - uses: actions/checkout@v4
         if: steps.stored.outputs.hit != 'true'
 
-      - uses: denoland/setup-deno@v2
+      - uses: ./.github/actions/setup
         if: steps.stored.outputs.hit != 'true'
-        with:
-          deno-version: v2.x
 
       # WARP's and Tor's .deb files, so a run can skip `apt-get update`. The
       # key changes monthly to pick up new releases.
@@ -99,12 +97,9 @@ jobs:
         with:
           path: ${{ runner.temp }}/debs
           key: ${{ steps.debs.outputs.key }}
-      - name: Install yt-dlp
-        if: steps.stored.outputs.hit != 'true'
-        run: packages/youtube/install-ytdlp.sh
       - name: Install Cloudflare WARP and Tor
         if: steps.stored.outputs.hit != 'true'
-        run: packages/youtube/egress/install.sh "$RUNNER_TEMP/debs"
+        run: packages/ytdlp/egress/install.sh "$RUNNER_TEMP/debs"
       # Saved right away rather than at the end of the job, so a failed
       # download doesn't lose it.
       - uses: actions/cache/save@v4
@@ -113,9 +108,14 @@ jobs:
           path: ${{ runner.temp }}/debs
           key: ${{ steps.debs.outputs.key }}
 
+      # Installs yt-dlp too. YouTube always refuses a runner's own IP, so
+      # direct isn't tried.
       - name: Download the audio and metadata
         if: steps.stored.outputs.hit != 'true'
-        run: .github/scripts/fetch-youtube-audio.sh "$VIDEO_ID" "$RUNNER_TEMP/audio/original.webm"
+        env:
+          YOUTUBE_EGRESS: warp,tor
+          YOUTUBE_EGRESS_STATE: ${{ runner.temp }}/youtube-egress
+        run: pnpm exec tsx .github/scripts/fetch-youtube-audio.ts "$VIDEO_ID" "$RUNNER_TEMP/audio/original.webm"
       # ffmpeg isn't on the ubuntu-latest image.
       - name: Install ffmpeg
         if: steps.stored.outputs.hit != 'true'

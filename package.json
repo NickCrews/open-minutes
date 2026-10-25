@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:slow": "SLOW=1 vitest run --tagsFilter slow",
-    "test:all": "SLOW=1 vitest run",
+    "test:ytdlp": "YTDLP=1 vitest run --tagsFilter ytdlp",
+    "test:all": "SLOW=1 YTDLP=1 vitest run",
     "bench": "vitest bench --run",
     "typecheck": "pnpm --filter @open-minutes/* run typecheck",
     "check": "pnpm typecheck && pnpm run format:check && pnpm run lint && pnpm run test",
@@ -30,6 +31,8 @@
     "prettier": "^3.7.4",
     "typescript": "5.9.3",
     "typescript-eslint": "^8.45.0",
-    "vitest": "^4.0.18"
+    "vitest": "^4.0.18",
+    "@open-minutes/ytdlp": "workspace:*",
+    "tsx": "^4.21.0"
   }
 }
