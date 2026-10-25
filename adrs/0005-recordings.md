@@ -84,10 +84,11 @@ recording_id: integer()
 
 ### Ingestion
 
+Ingestion never deals with a recording's site: the site's scout has already normalized what ingestion needs, the `recordings` row and the audio in the object store, to a common format.
+
 1. If the recording's `is_meeting` is null, decide it, before transcribing, from the title, description and duration.
    A recording that isn't a meeting gets `is_meeting` false and `notes`, and ingestion stops.
 2. Read the audio from the object store, then transcribe, diarize, align and recognize, as now.
-   Ingestion never touches a recording's site.
 3. Decide the bodies, date and time from the title and the opening of the transcript, starting from the scout's `recording_bodies` if it gave any.
    A body ingestion can't determine is left off; the meeting is stored without it and flagged for a person or agent to fill in.
 4. Store the meeting, its `meeting_bodies` and segments, set `is_meeting` true, all in one transaction.
