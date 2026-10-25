@@ -190,20 +190,18 @@ choose.
 2. **Play the MP3 first**, in an `<audio>` element. It's on the transcript's
    timeline exactly, every recorded meeting has one, and it's a sixth of the size or less
    of the video. It shows no picture.
-3. **Add video later**, with the offset measured at ingest as above and stored
+3. **Add video later**, with the offset measured when the meeting is stored, as above and stored
    on the meeting. The alternative, transcribing the MP4's audio instead of
    the MP3 so the timelines match by construction, needs the same AAC decoder
    and still leaves audio-only meetings on the MP3.
 
-The database and pipeline take akleg.gov meetings:
+The database and `@open-minutes/akleg` take akleg.gov meetings:
 
-- A body whose meeting source is
-  `{"type":"akleg_committee","committee":"HRES"}` is scanned by
-  `om available`, which lists the committee's meetings in the Legislature
-  sitting now.
+- A body's meeting source can be
+  `{"type":"akleg_committee","committee":"HRES"}`, and `aklegSource` lists
+  that committee's meetings in the Legislature sitting now.
 - Its meetings are stored with `site_kind` `akleg` and the meeting ID as
-  `site_id`, and `om ingest` gets their metadata and audio from
-  `@open-minutes/akleg`.
+  `site_id`, and `@open-minutes/akleg` gets their metadata and audio.
 - The meeting's date and time come from its ID, so `resolveMeetingDateTime`
   finds them in the title the source builds, eg
   `House RESOURCES - 2018-09-10 14:00:00`, without reading the transcript.
@@ -212,11 +210,11 @@ Left to do:
 
 - **The player.** Meetings store no media URLs yet (step 1 above); the site
   shows an akleg.gov meeting's transcript, but can't play it.
-- **Earlier Legislatures.** `om available` lists only the current one, so
+- **Earlier Legislatures.** `aklegSource` lists only the current one, so
   early in a new Legislature it misses the end of the last one, and older
-  meetings need `om ingest` by ID.
+  meetings must be fetched by ID.
 - **Joint meetings** have an ID per chamber sharing one recording, so if both
-  committees are bodies, the recording is ingested once for each.
+  committees are bodies, the recording appears once for each.
 
 ## Not in the API
 
@@ -225,5 +223,5 @@ agenda markers ("Start", each bill or overview, "Adjourn") placed on the
 audio's timeline in seconds, as `newA.title="<title>"` followed by
 `else {newDiv.style.left=(100000*<seconds>/totalMediaTime) + '%';}`. They
 could seed chapters. Scraping them is fragile, so it belongs in a best-effort
-step that never fails an ingest. The page's "Minutes" tab has the log notes
+step that never fails storing a meeting. The page's "Minutes" tab has the log notes
 as text, and some meetings have official transcripts.

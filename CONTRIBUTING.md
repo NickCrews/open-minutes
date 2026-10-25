@@ -13,10 +13,12 @@ code, comments, and commit messages.
 ## How it works
 
 ```
-YouTube ──yt-dlp──▶ pipeline (om ingest) ──▶ Postgres + pgvector ◀── web (Cloudflare Workers)
-                    transcribe / diarize /       (local Docker or Neon)
-                    align / recognize
+YouTube / akleg.gov ──▶ audio (transcribe / diarize) ──▶ Postgres + pgvector ◀── web (Cloudflare Workers)
+                                                          (local Docker or Neon)
 ```
+
+Nothing yet runs a meeting through these stages and writes it to the
+database; that orchestration is to be built.
 
 A [pnpm](https://pnpm.io) workspace of these packages. Each depends only on
 the ones listed above it:
@@ -46,7 +48,7 @@ the ones listed above it:
   [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx). It transcribes a
   meeting's audio (NeMo Parakeet ASR + Silero VAD) and diarizes it into speaker turns (pyannote
   segmentation + CAM++ voice embeddings). No GPU or external API is needed;
-  models are downloaded on first use (or all at once with `pnpm om models`).
+  models are downloaded on first use (or all at once with `pnpm models`).
   See the [audio README](packages/audio/README.md).
 - **[`packages/youtube`](packages/youtube)** (`@open-minutes/youtube`): the
   YouTube source. It lists a channel's or playlist's videos and gets a video's
@@ -69,16 +71,6 @@ the ones listed above it:
   (`@open-minutes/meeting-audio`): YouTube's audio by way of the blob store,
   and a per-machine cache of meetings' decoded audio. See the
   [meeting-audio README](packages/meeting-audio/README.md).
-- **[`packages/ingest`](packages/ingest)** (`@open-minutes/ingest`): the
-  offline ingestion pipeline. It gets a meeting's audio from
-  `@open-minutes/meeting-audio` (YouTube, by way of the blob store) or
-  `@open-minutes/akleg`, runs it through `@open-minutes/audio`, aligns turns to words, recognizes speakers
-  against known voiceprints, and writes the meeting to the database. See the
-  [ingest README](packages/ingest/README.md).
-- **[`packages/cli`](packages/cli)** (`@open-minutes/cli`): the `om` CLI, for
-  development: `om ingest` and friends over `@open-minutes/ingest`, and
-  `om models`. It only parses arguments and wires stdio; the logic lives in
-  the packages it calls.
 - **[`packages/web`](packages/web)** (`@open-minutes/web`): the public
   transcript browser, built with [SolidJS](https://www.solidjs.com) +
   [TanStack Start](https://tanstack.com/start), Kobalte and Tailwind, deployed
@@ -94,8 +86,7 @@ Docker via [`docker-compose.yml`](docker-compose.yml). Production is on
 **meeting source** (a YouTube channel or playlist, or an akleg.gov
 committee) that is scanned for new meetings. **Meetings** are held by one or
 more bodies (`meeting_bodies`), all equal: a **joint meeting**, held by several,
-counts as a meeting of each. Ingestion records the one body whose source
-published a meeting.
+counts as a meeting of each.
 Meetings record their timezone, the site they were published on (YouTube or
 akleg.gov), and each meeting's
 transcript is a sequence of **segments** (a run of words by one speaker, with
@@ -216,15 +207,12 @@ problem on the turn it makes it.
 
 ### Transcript cleaning
 
-Right after transcription, `om ingest` runs a **clean** stage that applies
-the fixes of the rules in `CLEANING_RULE_SPECS`
+`cleanSpeechSegments` applies the fixes of the rules in `CLEANING_RULE_SPECS`
 ([`packages/core/src/rules/clean.ts`](packages/core/src/rules/clean.ts)) to
 the recognizer's verbatim output, such as dropping filler words ("um", "uh")
-and stuttered function words ("the the");
-the cached `transcription.json` stays verbatim, so a rule change applies on
-the next run without re-transcribing.
+and stuttered function words ("the the").
 
-Golden transcripts must already be clean, or the pipeline's output would be
+Golden transcripts must already be clean, or transcription output would be
 scored against disfluencies it removed on purpose. `pnpm fixtures:check`
 reports any left in a golden as an error, so the tests and the hook above
 catch them in new goldens too. `pnpm fixtures:fix` removes them, with the
@@ -234,13 +222,10 @@ To add a cleanup, write a rule with a fix in `packages/core/src/rules/`, add
 it to `RULE_SPECS` and `CLEANING_RULE_SPECS` with tests, then run
 `pnpm fixtures:fix` and review the golden diff.
 
-## Running the pipeline
+## Meeting audio
 
 ```sh
-pnpm om status          # meetings already ingested
-pnpm om available       # meetings not yet ingested, on bodies' meeting sources
-pnpm om ingest <id>     # run the full pipeline for a meeting
-pnpm om models          # download every ML model up front (~650MB)
+pnpm models             # download every ML model up front (~650MB)
 ```
 
 From a server or CI runner, YouTube answers yt-dlp with "sign in to confirm
@@ -250,18 +235,13 @@ project's S3-compatible bucket (Cloudflare R2), public at
 [`fetch-youtube-audio`](.github/workflows/fetch-youtube-audio.yml) workflow
 stores each video's yt-dlp metadata and audio under `youtube/<video id>/`
 after downloading them through Cloudflare WARP or Tor. The audio is re-encoded
-to 16 kHz mono Opus at 24 kbps (~11 MB per hour) to keep storage small. The pipeline decodes
-the Opus to 16 kHz mono wav itself, with libopus compiled to WebAssembly, so
+to 16 kHz mono Opus at 24 kbps (~11 MB per hour) to keep storage small.
+`@open-minutes/meeting-audio` decodes the Opus to 16 kHz mono wav itself, with libopus compiled to WebAssembly, so
 reading from the store needs neither yt-dlp nor ffmpeg. With
 `YOUTUBE_AUDIO_DISPATCH_TOKEN` set, a missing video triggers that workflow and
 waits for it; without it, a missing video is downloaded with yt-dlp, which
 works from a home connection. See [`.env.example`](.env.example) and
 [docs/research/youtube-in-ci.md](docs/research/youtube-in-ci.md).
-
-`om` (in [`packages/cli`](packages/cli/src/om.ts)) writes to the
-same database as everything else (`DB=prod pnpm om ingest <id>` to ingest
-into production). See [`packages/ingest/README.md`](packages/ingest/README.md)
-for details.
 
 ## Working with the data directly
 
@@ -278,9 +258,7 @@ WHERE s.text ILIKE '%snow removal%'
 ORDER BY m.start_time, s.start_secs;
 ```
 
-`pnpm db studio` opens a browser UI on it. The pipeline's API (`listIngested`,
-`listAvailable`, `ingestVideo` from `@open-minutes/ingest/om`) and `om`'s
-JSON output (`pnpm -s om status --json`) are designed to be composed.
+`pnpm db studio` opens a browser UI on it.
 
 ## Architecture Decision Records
 
@@ -300,7 +278,7 @@ records research, and mention it in the commit message.
 
 - Short, lowercase, imperative subject lines. Most use a type prefix
   (`feat:`, `fix:`, `refactor:`, `docs:`, `chore:`, `dx:`) or an area prefix
-  (`web:`, `ingest:`, `db:`, `transcript:`). A scope such as `feat(web):` is
+  (`web:`, `audio:`, `db:`, `transcript:`). A scope such as `feat(web):` is
   also fine.
 - For anything non-trivial, add a body that explains _why_, and what a
   reviewer should know (follow-ups, known breakage, ADRs).

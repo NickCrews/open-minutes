@@ -218,8 +218,8 @@ tests.
    goldens.
 4. **What does CI cache:** recordings only, or also prepared model input?
    This trades cache size against preparation time (R9).
-5. **Do we keep the ingest work directory's other artifacts** (raw
-   transcription and diarization) alongside the recording, so reprocessing can
+5. **Do we keep intermediate artifacts** (raw transcription and
+   diarization) alongside the recording, so reprocessing can
    restart from any stage?
 6. **Retention and takedowns.** Are there recordings we'd be asked to remove,
    and what happens to transcripts if so? Public meeting recordings are

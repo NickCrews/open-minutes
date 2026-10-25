@@ -1,6 +1,0 @@
-{
-  "description": "Two GBOS meetings with real voiceprints for their speakers: the known past the e2e test recognizes gbos-2026-06-15's speakers against.",
-  "meetings": ["gbos-2026-03-23", "gbos-2026-05-18"],
-  "people": "speakers",
-  "voiceprints": "audio"
-}

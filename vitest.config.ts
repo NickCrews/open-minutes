@@ -8,7 +8,6 @@ export default defineConfig({
       "./packages/db/vitest.config.ts",
       "./packages/fixtures/vitest.config.ts",
       "./packages/meeting-audio/vitest.config.ts",
-      "./packages/ingest/vitest.config.ts",
       "./packages/youtube/vitest.config.ts",
       "./packages/ytdlp/vitest.config.ts",
       "./packages/akleg/vitest.config.ts",

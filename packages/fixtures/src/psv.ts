@@ -29,8 +29,8 @@
 //                                slug (eg "margaret-tyler"). The SAME slug is the SAME
 //                                person in every golden — that global identity is
 //                                what lets cross-meeting speaker recognition be
-//                                tested end to end (seed people + voiceprints from
-//                                two goldens, then recognize them in a third).
+//                                tested (seed people + voiceprints from some
+//                                goldens, then recognize them in another).
 //   - Timestamps are `H:MM:SS.ss` (hours:minutes:seconds.hundredths).
 //   - event_data is the final field, so it may itself contain `|`.
 
@@ -50,9 +50,9 @@ import type {
  *   - `identified` is a global person, keyed by a stable `person` slug that means
  *     the same individual across every meeting.
  *
- * The live diarization/alignment pipeline only ever produces `unlabeled` or
- * `segmented` (it cannot know who a voice belongs to — that is identify.ts's job,
- * later, against stored voiceprints). `identified` exists only in goldens, where
+ * Diarization and alignment only ever produce `unlabeled` or `segmented` (they
+ * cannot know who a voice belongs to — that is recognition's job, later,
+ * against stored voiceprints). `identified` exists only in goldens, where
  * a human has supplied the ground-truth answer.
  */
 export type SpeakerLabel =

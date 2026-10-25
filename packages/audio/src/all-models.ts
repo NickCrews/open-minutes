@@ -4,7 +4,7 @@ import { SEGMENTATION_MODEL_SPEC } from "./diarize.js";
 import { EMBEDDING_MODEL_SPEC } from "./embed.js";
 
 // Every model this package uses. Each stage downloads its own models lazily on
-// first use; this list exists so they can all be fetched up front (`om
+// first use; this list exists so they can all be fetched up front (`pnpm
 // models`), eg in CI before the tests, so no test pays for a download.
 export const ALL_MODEL_SPECS: readonly ModelSpec[] = [
   TRANSCRIPTION_MODEL_SPEC,

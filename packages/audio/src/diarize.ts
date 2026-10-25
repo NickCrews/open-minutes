@@ -41,7 +41,7 @@ export const SEGMENTATION_MODEL_SPEC = {
 
 // Diarizer clustering. -1 lets the model auto-detect the speaker count; the
 // threshold then controls how eagerly it splits (lower = more speakers). These
-// are deliberately separate from the recognition thresholds in identify.ts.
+// are deliberately separate from any threshold for recognizing known people.
 const NUM_CLUSTERS = -1;
 const CLUSTER_THRESHOLD = 0.55;
 const MIN_DURATION_ON = 0.2; // ignore speech blips shorter than this (seconds)
@@ -50,9 +50,8 @@ const MIN_DURATION_OFF = 0.5; // ignore silences shorter than this when splittin
 // Post-clustering merge. sherpa's agglomerative clustering over-splits on long
 // recordings: one real speaker drifts into many sub-clusters as the meeting wears
 // on (a 166-min meeting produced ~160 "speakers"). We re-merge any two clusters
-// whose voiceprints are this similar. 0.5 matches identify.ts's recognition band
-// and collapses the long tail without a crude fixed speaker cap. See
-// DIARIZATION_FINDINGS.md for the data behind this value.
+// whose voiceprints are this similar. At 0.5 it collapses the long tail without
+// a crude fixed speaker cap. See DIARIZATION_FINDINGS.md for the data behind this value.
 const MERGE_THRESHOLD = 0.5;
 
 /**

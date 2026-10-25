@@ -17,8 +17,8 @@ person is _recognized across meetings by their voice_. The scenario:
 1. Start from a blank database.
 2. Seed it from two golden meetings — transcripts **and** a voiceprint per known
    person.
-3. Ingest a third meeting's audio through the real pipeline.
-4. Compare that ingestion against the third golden — did we transcribe it well,
+3. Transcribe, diarize and recognize a third meeting's audio.
+4. Compare the result against the third golden — did we transcribe it well,
    and did we put the right names to the voices?
 
 For step 4 to mean anything, "Margaret" in golden 1 has to be the _same identity_
@@ -39,7 +39,7 @@ Model speaker attribution as two distinct kinds, not one number:
   voiceprint stored in the `people` table.
 
 The bridge from raw audio to a global identity is the voiceprint: diarization
-produces anonymous local clusters, then `identify.ts` matches each cluster's
+produces anonymous local clusters, then recognition matches each cluster's
 voiceprint against the stored people and resolves the ones it recognizes.
 
 ### Golden format encodes both, explicitly
@@ -58,7 +58,7 @@ property of the data, not a guess from whether the slug looks like `spk-N`.
 
 ### Two types, not one — diarization stays identity-blind
 
-The live pipeline's `TranscriptSegment` keeps `speakerNum: number | null`
+Transcription's `TranscriptSegment` keeps `speakerNum: number | null`
 unchanged. Diarization and alignment cannot know _who_ a voice is — identification
 happens later, against the database — so pushing an `identified` case into them
 would add a state they can never produce. The richer representation lives only on
@@ -76,10 +76,10 @@ interface GoldenSegment {
 }
 ```
 
-The golden is ground truth, so it _can_ carry the identified-person answer the
-pipeline has to work out. `toGoldenSegment()` lifts a pipeline segment (a bare
+The golden is ground truth, so it _can_ carry the identified-person answer
+recognition has to work out. `toGoldenSegment()` lifts a transcribed segment (a bare
 cluster) into a `GoldenSegment`; nothing converts the other way, because the
-pipeline never asserts an identity.
+diarizer never asserts an identity.
 
 Consequence for the snapshot refresh: the transcription-snapshot path can no
 longer round-trip golden speakers through the numeric diarization turn (that would
@@ -90,31 +90,25 @@ preserving both the cluster boundaries and the `identified` labels.
 ### `people.slug`
 
 Add a unique, nullable `slug` to `people`. Seeded/known people carry a slug;
-people auto-created during ingestion (a distinct but unknown voice) keep it null,
-as today. The slug is the cross-meeting join key — the fact that makes
+people created for a distinct but unknown voice keep it null. The slug is the cross-meeting join key — the fact that makes
 "the Margaret recognized here is the same row as there" true rather than
 coincidental.
 
-### End-to-end seeding
+### Seeding known people
 
-The `recognition` dataset (`packages/datasets/specs/recognition.json`) seeds
-hand-verified goldens as established truth: the meetings, their segments and one
-person per `identified` slug, with each person's voiceprint built from the audio
-spans they speak (reusing the pipeline's own `computeSpeakerEmbeddings`, so seeded
-voiceprints live in the same embedding space the pipeline matches against). A
-person recurring across seed meetings is a single row.
-
-The e2e test then ingests a third meeting through the unmodified `ingestVideo`
-pipeline — which sees only audio — and scores the result against the third golden:
-word error rate, plus (once the third golden is hand-labeled) how often the right
-person was recognized.
+A dataset whose spec sets `"voiceprints": "audio"` seeds hand-verified goldens
+as established truth: the meetings, their segments and one person per
+`identified` slug, with each person's voiceprint built from the audio spans they
+speak (reusing `computeSpeakerEmbeddings`, so seeded voiceprints live in the
+same embedding space recognition matches against). A person recurring across
+seed meetings is a single row.
 
 ## Alternatives considered
 
 - **String label everywhere, including the DB.** Replace `speaker_number:
-integer` with a text label and thread strings through diarize/align/identify.
+integer` with a text label and thread strings through diarize/align/recognize.
   Rejected: it forces the identity-blind stages to carry an `identified` case they
-  never produce, and rewrites a working numeric column for no pipeline benefit.
+  never produce, and rewrites a working numeric column for no benefit.
 - **Keep everything under `segmented:` and infer person-ness from the slug shape.**
   Rejected: makes a core distinction implicit in a naming convention.
 - **Reuse `people.name` as the cross-meeting key.** Rejected: `name` is a nullable
@@ -123,8 +117,5 @@ integer` with a text label and thread strings through diarize/align/identify.
 
 ## Status / follow-ups
 
-- The held-out third golden is a rough first-pass transcript; e2e thresholds are
-  deliberately lax and identification accuracy is only scored once the third
-  golden has `identified` people. Tighten as the fixture is hand-cleaned.
 - Voiceprint accumulation across seed meetings is first-wins; averaging is a
   possible later refinement.

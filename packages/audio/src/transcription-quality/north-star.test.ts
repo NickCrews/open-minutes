@@ -49,7 +49,7 @@ describe("transcribe", () => {
         const runDir = join(RUNS_DIR, slug);
         cpDirSymlinked(meeting.meetingDir, runDir);
         // Goldens hold cleaned text (see `pnpm fixtures check`), so compare
-        // against the same transcribe → clean output ingestion uses.
+        // against transcribe → clean output.
         const audio = await getMeetingAudio(meeting);
         const wallStart = Date.now();
         const speechSegments = cleanSpeechSegments(

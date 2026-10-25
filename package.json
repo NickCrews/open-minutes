@@ -17,7 +17,7 @@
     "check": "pnpm typecheck && pnpm run format:check && pnpm run lint && pnpm run test",
     "web:dev": "pnpm --filter @open-minutes/web run dev",
     "db": "pnpm --silent --filter @open-minutes/db run db",
-    "om": "pnpm --silent --filter @open-minutes/cli run om",
+    "models": "pnpm --silent --filter @open-minutes/audio run models",
     "fixtures:check": "pnpm --silent --filter @open-minutes/fixtures run check",
     "fixtures:fix": "pnpm --silent --filter @open-minutes/fixtures run fix",
     "deploy:prod": "pnpm --filter @open-minutes/web run deploy"

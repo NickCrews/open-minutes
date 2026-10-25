@@ -82,36 +82,14 @@ importers:
       '@types/node':
         specifier: ^22.19.17
         version: 22.19.17
+      tsx:
+        specifier: ^4.21.0
+        version: 4.21.0
       vitest:
         specifier: ^4.0.18
         version: 4.1.4(@types/node@22.19.17)(vite@7.3.2(@types/node@22.19.17)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.21.0))
 
   packages/blobstore: {}
-
-  packages/cli:
-    dependencies:
-      '@open-minutes/audio':
-        specifier: workspace:*
-        version: link:../audio
-      '@open-minutes/core':
-        specifier: workspace:*
-        version: link:../core
-      '@open-minutes/db':
-        specifier: workspace:*
-        version: link:../db
-      '@open-minutes/ingest':
-        specifier: workspace:*
-        version: link:../ingest
-      citty:
-        specifier: ^0.1.6
-        version: 0.1.6
-    devDependencies:
-      '@types/node':
-        specifier: ^25.6.0
-        version: 25.6.0
-      tsx:
-        specifier: ^4.21.0
-        version: 4.21.0
 
   packages/codecs:
     dependencies:
@@ -222,46 +200,6 @@ importers:
       vitest:
         specifier: ^4.0.18
         version: 4.1.4(@types/node@22.19.17)(vite@7.3.2(@types/node@22.19.17)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.21.0))
-
-  packages/ingest:
-    dependencies:
-      '@neondatabase/serverless':
-        specifier: ^1.1.0
-        version: 1.1.0
-      '@open-minutes/akleg':
-        specifier: workspace:*
-        version: link:../akleg
-      '@open-minutes/audio':
-        specifier: workspace:*
-        version: link:../audio
-      '@open-minutes/core':
-        specifier: workspace:*
-        version: link:../core
-      '@open-minutes/db':
-        specifier: workspace:*
-        version: link:../db
-      '@open-minutes/meeting-audio':
-        specifier: workspace:*
-        version: link:../meeting-audio
-      '@open-minutes/youtube':
-        specifier: workspace:*
-        version: link:../youtube
-      drizzle-orm:
-        specifier: 1.0.0-beta.21
-        version: 1.0.0-beta.21(@neondatabase/serverless@1.1.0)(@types/mssql@9.1.11(@azure/core-client@1.10.1))(mssql@11.0.1(@azure/core-client@1.10.1))(postgres@3.4.9)(zod@4.3.6)
-    devDependencies:
-      '@open-minutes/datasets':
-        specifier: workspace:*
-        version: link:../datasets
-      '@open-minutes/fixtures':
-        specifier: workspace:*
-        version: link:../fixtures
-      '@types/node':
-        specifier: ^22.19.17
-        version: 22.19.17
-      tsx:
-        specifier: ^4.21.0
-        version: 4.21.0
 
   packages/meeting-audio:
     dependencies:

@@ -44,7 +44,7 @@ _Avoid_: video (unless it is one), stream, clip, media, item, post, listing, sit
 ### Meetings and transcripts
 
 **Meeting**:
-One gathering of one body, or of several in a joint meeting, with exactly one recording; the unit we ingest, store, and display.
+One gathering of one body, or of several in a joint meeting, with exactly one recording; the unit we transcribe, store, and display.
 _Avoid_: session, hearing, event, recording, video
 
 **Joint meeting**:
@@ -158,19 +158,11 @@ their name is "Bob", but we don't know the full identity of the person.
 **Full Recognition**:
 We recognize this speaker as an exact person, eg "Jennifer Wingard, the GBOS co-chair in 2026".
 
-### Pipeline
+### Audio processing
 
 **Span**:
 A stretch of a meeting's audio, from start to end in seconds from the start of the file.
 _Avoid_: range, interval, from/to.
-
-**Ingestion**:
-Running one meeting's recording through transcription, diarization, alignment, and recognition, then storing the meeting and its segments all at once.
-_Avoid_: import, processing, scraping, sync
-
-**Available meeting**:
-A meeting on a body's meeting source that hasn't been ingested yet.
-_Avoid_: available video, new video, pending video, backlog
 
 **Transcription**:
 The process of turning audio into a Transcript.
@@ -193,10 +185,6 @@ _Avoid_: segment, turn (alone)
 **Alignment**:
 The stage that assigns each word to the diarization turn it overlaps most and groups consecutive same-speaker words into segments.
 _Avoid_: merging, matching
-
-**Work directory**:
-A meeting's cache of stage outputs (audio, transcription, diarization) kept between pipeline runs.
-_Avoid_: cache dir, temp dir
 
 ### Test data and evaluation
 

@@ -239,10 +239,9 @@ test("…", async ({ testDb }) => {
 
 `dbTest` takes the same `schemaVersion` and `data` as `pnpm db up`. Each
 (schema version, dataset) pair gets a template, rebuilt only when the
-migrations or dataset change. The pipeline's tests use `bodiesTest`
-(`dbTest({ data: dataset("bodies") })` plus helpers). The e2e test uses
-`dataset("recognition")`, whose real voiceprints take minutes to compute;
-pass `setupTimeoutMs` for slow datasets like that.
+migrations or dataset change. A dataset with real voiceprints, such as
+`dataset("quick-voiceprints")`, takes a while to compute; pass
+`setupTimeoutMs` for slow datasets like that.
 
 ## How it works
 
@@ -301,8 +300,6 @@ data is renamed to `open_minutes__main` on first use.
   ([`packages/web/vite/dev-database.ts`](../../packages/web/vite/dev-database.ts))
   migrates without seeding, then passes the URL to the Worker, which can't
   read `.env.local` or `.git` itself.
-- **`om`**, before every command, so `DB=prod om ingest` fails fast if
-  production is behind.
 - **Tests** build their templates with it.
 - **Production deploys**, just before switching traffic ([deploy.md](deploy.md)).
 - **CI** ([`.github/workflows/ci.yml`](../../.github/workflows/ci.yml)) checks

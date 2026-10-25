@@ -9,7 +9,7 @@ import type { ModelSpec } from "./model.js";
 // centroids + diarize.ts's post-clustering merge). We deliberately use the
 // "common_advanced" variant rather than en_voxceleb: on GBOS audio it separates
 // speakers far more cleanly (different speakers ~0.1-0.25 cosine vs en_voxceleb's
-// muddy 0.45-0.5), which is what makes both clustering and identify.ts reliable.
+// muddy 0.45-0.5), which is what makes both clustering and recognition reliable.
 // NOTE: the release tag "speaker-recongition-models" is misspelled upstream;
 // that misspelling is the correct, canonical URL.
 export const EMBEDDING_MODEL_SPEC = {

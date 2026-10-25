@@ -8,8 +8,7 @@ Gets a meeting's audio. Two parts:
   workflow puts them, so it works where YouTube blocks yt-dlp (CI, servers).
   On a miss it triggers that workflow and waits, given
   `YOUTUBE_AUDIO_DISPATCH_TOKEN`, or else falls back to
-  [`@open-minutes/youtube`](../youtube/README.md). `@open-minutes/ingest` uses
-  it as its YouTube site. Where the store keeps a video's files is
+  [`@open-minutes/youtube`](../youtube/README.md). Where the store keeps a video's files is
   `blobStore().youtube()` in [`@open-minutes/blobstore`](../blobstore/README.md).
 - `getCachedAudio`: a YouTube video's audio decoded to 16 kHz mono WAV (by
   [`@open-minutes/codecs`](../codecs/README.md)) in the per-machine cache,

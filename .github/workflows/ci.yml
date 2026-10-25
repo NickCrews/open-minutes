@@ -68,7 +68,7 @@ jobs:
       - name: Compute the models' cache key
         id: models
         run: |
-          pnpm -s om models --list > "$RUNNER_TEMP/models.jsonl"
+          pnpm -s models --list > "$RUNNER_TEMP/models.jsonl"
           echo "key=onnx-models-$(sha256sum < "$RUNNER_TEMP/models.jsonl" | cut -c1-16)" >> "$GITHUB_OUTPUT"
       - name: Restore the models
         id: models-cache
@@ -77,7 +77,7 @@ jobs:
           path: packages/audio/src/models
           key: ${{ steps.models.outputs.key }}
       - name: Download the models
-        run: pnpm om models
+        run: pnpm models
       - name: Save the models
         if: steps.models-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4

@@ -29,7 +29,7 @@ Replace `start_time` with two nullable columns on `meetings`:
 
 - **A null `time` means "time unknown"**, never midnight. A `00:00:00` time is a
   real, entered midnight.
-- **`date` is nullable too**: ingestion can't derive a date yet (YouTube's
+- **`date` is nullable too**: nothing derives a date from a recording yet (YouTube's
   publish/stream times don't reliably match when a body gavelled in), so rows
   exist before anyone supplies one.
 - A check constraint (`meetings_time_requires_date`) forbids a time without a
