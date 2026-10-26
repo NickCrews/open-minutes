@@ -3,12 +3,11 @@
 
 import type { Span } from "./span";
 
-/** The part of a chapter the rules look at, with times in seconds. */
-export interface ChapterSpan {
-  start: number;
-  end: number;
+/** A titled, summarized stretch of a meeting, with times in seconds. */
+export interface Chapter extends Span {
+  /** A few words, scannable as a table of contents. */
   title: string;
-  summary?: string;
+  summary: string;
   bullets: readonly string[];
 }
 

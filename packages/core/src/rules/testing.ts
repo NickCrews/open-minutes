@@ -1,6 +1,6 @@
 // Helpers for the rules' tests.
 
-import type { ChapterSpan } from "../chapters";
+import type { Chapter } from "../chapters";
 import type { Segment, Word } from "../transcript";
 import type { RuleMeeting, Violation } from "./common";
 
@@ -47,11 +47,12 @@ export function fixWith(
 }
 
 /** A chapter from `start` to `end` with `bullets` bullets. */
-export function chapter(start: number, end: number, bullets = 0): ChapterSpan {
+export function chapter(start: number, end: number, bullets = 0): Chapter {
   return {
     start,
     end,
     title: `${start}-${end}`,
+    summary: "Summary.",
     bullets: Array.from({ length: bullets }, (_, i) => `bullet ${i}`),
   };
 }
@@ -62,7 +63,7 @@ export function chapter(start: number, end: number, bullets = 0): ChapterSpan {
  */
 export function chapterProblems(
   rule: (meeting: RuleMeeting) => (Violation & { chapterIndex?: number })[],
-  chapters: ChapterSpan[],
+  chapters: Chapter[],
   more: { durationSecs?: number; segments?: Segment<string>[] } = {},
 ): [number | undefined, string][] {
   return rule({ segments: [], durationSecs: 1000, ...more, chapters }).map(
