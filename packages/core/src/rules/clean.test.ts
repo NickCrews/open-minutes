@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { cleanGroups, cleanSpeechSegments, cleanWords } from "./clean";
+import { cleanGroups, cleanSpeechRuns, cleanWords } from "./clean";
 import { text, words } from "./testing";
 
 function clean(sentence: string, step?: number): string {
@@ -50,10 +50,10 @@ describe("cleanGroups", () => {
   });
 });
 
-describe("cleanSpeechSegments", () => {
+describe("cleanSpeechRuns", () => {
   it("cleans each VAD run and keeps it, even emptied", () => {
     expect(
-      cleanSpeechSegments([
+      cleanSpeechRuns([
         { start: 0, end: 1, words: words("Um.") },
         { start: 1, end: 2, words: words("the the vote") },
       ]),

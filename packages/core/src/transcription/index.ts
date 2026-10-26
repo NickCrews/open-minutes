@@ -1,10 +1,4 @@
-export type {
-  DiarizationTurn,
-  SpeechSegment,
-  TranscriptSegment,
-  TranscriptWord,
-} from "./types.ts";
-export { LAST_WORD_DURATION_SEC } from "./types";
+export type { DiarizationTurn, SpeechRun } from "./types";
 export {
   alignSpeakers,
   MAX_WORD_SEC,

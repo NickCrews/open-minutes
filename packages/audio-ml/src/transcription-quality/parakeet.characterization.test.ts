@@ -14,17 +14,17 @@ import { beforeAll, describe, expect, it } from "vite-plus/test";
 import { transcribeRange } from "@open-minutes/audio-ml/transcribe";
 import { readWav, type WaveForm } from "@open-minutes/codecs";
 import { getMeetingData } from "@open-minutes/datasets/datums";
+import { type Word } from "@open-minutes/core/transcript";
 import {
   alignWords,
   compareTranscripts,
-  type TranscriptWord,
 } from "@open-minutes/core/transcription";
 import { getMeetingAudio } from "@open-minutes/datasets/audio";
 
 const SLUG = "gbos-2026-06-15";
 
 let wave: WaveForm;
-let ref: TranscriptWord[];
+let ref: Word[];
 /** Starts of 2-minute stretches where the golden is dense with speech. */
 let regions: number[];
 
@@ -43,19 +43,16 @@ beforeAll(
 );
 
 /** One pass over exactly [start, end): no context either side. */
-function decode(start: number, end: number): Promise<TranscriptWord[]> {
+function decode(start: number, end: number): Promise<Word[]> {
   return transcribeRange(wave, start, end, { contextSecs: 0 });
 }
 
-function refIn(start: number, end: number): TranscriptWord[] {
+function refIn(start: number, end: number): Word[] {
   return ref.filter((w) => w.start >= start && w.start < end);
 }
 
 /** For each of `refWords`, whether `hyp` has it (an alignment match). */
-function found(
-  refWords: readonly TranscriptWord[],
-  hyp: readonly TranscriptWord[],
-): boolean[] {
+function found(refWords: readonly Word[], hyp: readonly Word[]): boolean[] {
   const hit = refWords.map(() => false);
   for (const op of alignWords(refWords, hyp))
     if (op.op === "match") hit[op.refIdx] = true;
@@ -111,7 +108,7 @@ describe("Parakeet (characterization, not requirements)", () => {
       const wers: number[] = [];
       for (const start of regions) {
         // Compare only the middle 40 s, away from either window's edges.
-        const middle = (ws: TranscriptWord[]) =>
+        const middle = (ws: Word[]) =>
           ws.filter((w) => w.start >= start + 10 && w.start < start + 50);
         const a = middle(await decode(start, start + 60));
         const b = middle(await decode(start + 0.01, start + 60.01));

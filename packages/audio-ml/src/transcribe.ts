@@ -11,10 +11,8 @@ import sherpa_onnx, {
   type OfflineRecognizerResult,
   type Vad,
 } from "sherpa-onnx-node";
-import type {
-  SpeechSegment,
-  TranscriptWord,
-} from "@open-minutes/core/transcription";
+import type { Word } from "@open-minutes/core/transcript";
+import type { SpeechRun } from "@open-minutes/core/transcription";
 
 export const TRANSCRIPTION_MODEL_SPEC = {
   // I chose this model based on how it is the highest accuracy with still a >3000x real-time facto
@@ -114,17 +112,17 @@ export interface TranscribeOptions {
 }
 
 /**
- * Transcribe audio into speech segments. Silero VAD splits the audio at silences
+ * Transcribe audio into speech runs. Silero VAD splits the audio at silences
  * (never mid-word); consecutive runs are merged into windows of up to
  * MERGE_WINDOW_SEC that are each decoded in one pass (so the model gets context),
  * then each window's words are redistributed back to the VAD runs they fall in.
- * The result is one {@link SpeechSegment} per VAD run, with absolute word
+ * The result is one {@link SpeechRun} per VAD run, with absolute word
  * timestamps, in time order. Returns [] for silence. Input must be 16 kHz mono.
  */
 export async function transcribeAudio(
   audio: string | WaveForm,
   options: TranscribeOptions = {},
-): Promise<SpeechSegment[]> {
+): Promise<SpeechRun[]> {
   const wallStart = Date.now();
   const wave = await ensureWaveForm(audio);
   assertSampleRate(wave.sampleRate);
@@ -141,7 +139,7 @@ export async function transcribeAudio(
   const windowSegments = await mapWithConcurrency(
     windows,
     TRANSCRIBE_CONCURRENCY,
-    async (win, i): Promise<SpeechSegment[]> => {
+    async (win, i): Promise<SpeechRun[]> => {
       const start = win.startSample / wave.sampleRate;
       const end = win.endSample / wave.sampleRate;
       // Zero-copy view into the original waveform — never copy the window's samples
@@ -200,7 +198,7 @@ export async function transcribeRange(
   start: number,
   end: number,
   { contextSecs = RANGE_CONTEXT_SEC } = {},
-): Promise<TranscriptWord[]> {
+): Promise<Word[]> {
   assertSampleRate(wave.sampleRate);
   const rate = wave.sampleRate;
   const from = Math.max(0, Math.floor((start - contextSecs) * rate));
@@ -217,7 +215,7 @@ export async function transcribeRange(
 }
 
 /** A speech run as half-open sample-index bounds into the source waveform. */
-interface SpeechRun {
+interface SampleSpan {
   startSample: number;
   endSample: number;
 }
@@ -226,7 +224,7 @@ interface SpeechRun {
 interface SpeechWindow {
   startSample: number;
   endSample: number;
-  runs: SpeechRun[];
+  runs: SampleSpan[];
 }
 
 /**
@@ -236,7 +234,7 @@ interface SpeechWindow {
  * VAD_MAX_SPEECH_SEC) becomes its own window — still under Parakeet's ~400s limit.
  */
 function mergeRuns(
-  runs: readonly SpeechRun[],
+  runs: readonly SampleSpan[],
   sampleRate: number,
 ): SpeechWindow[] {
   const maxSamples = MERGE_WINDOW_SEC * sampleRate;
@@ -259,17 +257,17 @@ function mergeRuns(
 
 /**
  * Distribute a window's recognized words (absolute timestamps, in time order)
- * back to the VAD runs they fall in, yielding one SpeechSegment per run so the
+ * back to the VAD runs they fall in, yielding one SpeechRun per run so the
  * output still marks exactly where VAD cut. Each word is assigned to the latest
  * run whose start it has reached; a word landing in an inter-run silence attaches
  * to the preceding run. Runs with no words yield an empty segment.
  */
 function splitWordsIntoRuns(
-  runs: readonly SpeechRun[],
-  words: readonly TranscriptWord[],
+  runs: readonly SampleSpan[],
+  words: readonly Word[],
   sampleRate: number,
-): SpeechSegment[] {
-  const segments: SpeechSegment[] = runs.map((r) => ({
+): SpeechRun[] {
+  const segments: SpeechRun[] = runs.map((r) => ({
     start: r.startSample / sampleRate,
     end: r.endSample / sampleRate,
     words: [],
@@ -289,11 +287,11 @@ function splitWordsIntoRuns(
  * are discarded immediately so we never duplicate the audio (see transcribeAudio,
  * which slices zero-copy views from the original waveform).
  */
-function detectSpeechRuns(wave: WaveForm): SpeechRun[] {
+function detectSpeechRuns(wave: WaveForm): SampleSpan[] {
   const vad = getVad();
   vad.reset();
 
-  const runs: SpeechRun[] = [];
+  const runs: SampleSpan[] = [];
   const drain = () => {
     while (!vad.isEmpty()) {
       const seg = vad.front();
@@ -422,13 +420,10 @@ export function ensureModelFiles() {
 //
 // Only the word's onset (its first token's timestamp) is kept: Parakeet reports
 // no durations, so any per-word end would be an estimate. Word ends are instead
-// derived from the run structure where needed — see TranscriptWord in
+// derived from the run structure where needed — see Word in
 // @open-minutes/core and deriveTimedWords in its transcription/align.ts.
-export function tokensToWords(
-  tokens: string[],
-  timestamps: number[],
-): TranscriptWord[] {
-  const words: TranscriptWord[] = [];
+export function tokensToWords(tokens: string[], timestamps: number[]): Word[] {
+  const words: Word[] = [];
   let currentText = "";
   let currentStart = 0;
 

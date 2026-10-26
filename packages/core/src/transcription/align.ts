@@ -1,10 +1,5 @@
-import {
-  LAST_WORD_DURATION_SEC,
-  type DiarizationTurn,
-  type SpeechSegment,
-  type TranscriptSegment,
-  type TranscriptWord,
-} from "./types";
+import { LAST_WORD_DURATION_SEC, type Segment, type Word } from "../transcript";
+import { type DiarizationTurn, type SpeechRun } from "./types";
 
 /**
  * A word with its derived end time. Stored words carry only their onset; ends
@@ -12,13 +7,13 @@ import {
  * {@link deriveTimedWords}.
  */
 interface TimedWord {
-  word: TranscriptWord;
+  word: Word;
   end: number;
 }
 
-/** A TranscriptSegment whose words still carry their derived ends. */
+/** A Segment whose words still carry their derived ends. */
 interface TimedSegment {
-  speakerNum: number | null;
+  speakerNumber: number | null;
   words: TimedWord[];
 }
 
@@ -56,7 +51,7 @@ export const MAX_WORD_SEC = 0.32;
  * run lets such a word overlap the next run's first word (170 of 919 boundaries
  * on gbos-2026-05-18).
  */
-function deriveTimedWords(speech: readonly SpeechSegment[]): TimedWord[] {
+function deriveTimedWords(speech: readonly SpeechRun[]): TimedWord[] {
   // Runs are in time order and each holds a contiguous slice of the ordered
   // word stream, so flattening recovers that stream.
   const words = speech.flatMap((run) => run.words);
@@ -79,13 +74,13 @@ function deriveTimedWords(speech: readonly SpeechSegment[]): TimedWord[] {
  * happen due to clustering wobble in the diarization output.
  */
 export function alignSpeakers(
-  speech: readonly SpeechSegment[],
+  speech: readonly SpeechRun[],
   turns: readonly DiarizationTurn[],
-): TranscriptSegment[] {
+): Segment[] {
   const words = deriveTimedWords(speech);
   if (words.length === 0) return [];
   if (turns.length === 0) {
-    return [{ speakerNum: null, words: words.map((t) => t.word) }];
+    return [{ speakerNumber: null, words: words.map((t) => t.word) }];
   }
 
   const segments: TimedSegment[] = [];
@@ -93,19 +88,19 @@ export function alignSpeakers(
   let currentSpeaker: number | null = null;
 
   for (const word of words) {
-    const speakerNum = assignSpeaker(word, turns);
-    if (current === null || speakerNum !== currentSpeaker) {
+    const speakerNumber = assignSpeaker(word, turns);
+    if (current === null || speakerNumber !== currentSpeaker) {
       current = {
-        speakerNum: speakerNum,
+        speakerNumber,
         words: [],
       };
-      currentSpeaker = speakerNum;
+      currentSpeaker = speakerNumber;
       segments.push(current);
     }
     current.words.push(word);
   }
   return absorbSlivers(segments).map((s) => ({
-    speakerNum: s.speakerNum,
+    speakerNumber: s.speakerNumber,
     words: s.words.map((t) => t.word),
   }));
 }
@@ -117,16 +112,16 @@ export function alignSpeakers(
  * Only `segmented` segments contribute; unlabeled/identified are skipped.
  */
 export function segmentsToTurns(
-  segments: readonly TranscriptSegment[],
+  segments: readonly Segment[],
 ): DiarizationTurn[] {
   const turns: DiarizationTurn[] = [];
   for (const segment of segments) {
-    if (segment.speakerNum === null) continue;
+    if (segment.speakerNumber === null) continue;
     if (segment.words.length === 0) continue;
     turns.push({
       start: segment.words[0]!.start,
       end: segment.words.at(-1)!.start + LAST_WORD_DURATION_SEC,
-      speakerNum: segment.speakerNum,
+      speakerNumber: segment.speakerNumber,
     });
   }
   return turns;
@@ -141,8 +136,8 @@ export function segmentsToTurns(
  * more eager here than in the live pipeline.
  */
 export function segmentsToSpeechRuns(
-  segments: readonly { words: readonly TranscriptWord[] }[],
-): SpeechSegment[] {
+  segments: readonly { words: readonly Word[] }[],
+): SpeechRun[] {
   return segments
     .filter((s) => s.words.length > 0)
     .map((s) => ({
@@ -239,14 +234,14 @@ function isWobble(
 }
 
 function sameSpeaker(a: TimedSegment, b: TimedSegment): boolean {
-  if (a.speakerNum === null || b.speakerNum === null) {
+  if (a.speakerNumber === null || b.speakerNumber === null) {
     return false;
   }
-  return a.speakerNum === b.speakerNum;
+  return a.speakerNumber === b.speakerNumber;
 }
 
 /** Whether a word closes a sentence. */
-function endsSentence(word: TranscriptWord): boolean {
+function endsSentence(word: Word): boolean {
   return /[.?!]["')\]]?$/.test(word.text);
 }
 
@@ -255,27 +250,27 @@ function assignSpeaker(
   timed: TimedWord,
   turns: readonly DiarizationTurn[],
 ): number {
-  let bestSpeaker = turns[0]!.speakerNum;
+  let bestSpeaker = turns[0]!.speakerNumber;
   let bestOverlap = 0;
   for (const turn of turns) {
     const overlap =
       Math.min(timed.end, turn.end) - Math.max(timed.word.start, turn.start);
     if (overlap > bestOverlap) {
       bestOverlap = overlap;
-      bestSpeaker = turn.speakerNum;
+      bestSpeaker = turn.speakerNumber;
     }
   }
   if (bestOverlap > 0) return bestSpeaker;
 
   // No turn overlaps this word — attach it to the nearest by midpoint distance.
   const mid = (timed.word.start + timed.end) / 2;
-  let nearestSpeaker = turns[0]!.speakerNum;
+  let nearestSpeaker = turns[0]!.speakerNumber;
   let nearestDistance = Infinity;
   for (const turn of turns) {
     const distance = Math.abs(mid - (turn.start + turn.end) / 2);
     if (distance < nearestDistance) {
       nearestDistance = distance;
-      nearestSpeaker = turn.speakerNum;
+      nearestSpeaker = turn.speakerNumber;
     }
   }
   return nearestSpeaker;

@@ -20,7 +20,7 @@ import {
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { N_DIMENSIONS as VOICE_N_DIMENSIONS } from "@open-minutes/core/voice_embeddings";
-import { TranscriptWord } from "@open-minutes/core/transcription";
+import { Word } from "@open-minutes/core/transcript";
 import type {
   MeetingSource,
   SiteKind,
@@ -274,7 +274,7 @@ export const segmentsTable = pgTable(
       (): SQL =>
         sql`words_end_secs(${segmentsTable.words}) - words_start_secs(${segmentsTable.words})`,
     ),
-    words: jsonb().$type<TranscriptWord[]>().notNull(),
+    words: jsonb().$type<Word[]>().notNull(),
     created_at: timestamp().notNull().defaultNow(),
   },
   (table) => [

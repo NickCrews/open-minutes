@@ -1,4 +1,4 @@
-import { LAST_WORD_DURATION_SEC } from "@open-minutes/core/transcription";
+import { LAST_WORD_DURATION_SEC } from "@open-minutes/core/transcript";
 import type { getMeetingById } from "./index";
 import {
   assignSpeakers,
