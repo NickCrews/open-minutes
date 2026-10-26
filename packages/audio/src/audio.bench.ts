@@ -1,4 +1,4 @@
-import { bench, describe } from "vitest";
+import { test } from "vite-plus/test";
 import { halfUntranscribedRollCall } from "@open-minutes/fixtures/clips";
 import { untranscribedSpeech } from "./coverage.js";
 import { detectSpeech } from "./vad.js";
@@ -26,40 +26,25 @@ const opts = {
   setup: () => loadTranscriptionModels(),
 };
 
-describe("per minute of audio", () => {
-  bench(
-    "speech runs (Silero VAD, 0.2 s pauses)",
-    () => {
+test("per minute of audio", async ({ bench }) => {
+  await bench.compare(
+    bench("speech runs (Silero VAD, 0.2 s pauses)", () => {
       detectSpeech(wave);
-    },
-    opts,
-  );
-
-  bench(
-    "transcribeRange, one pass",
-    async () => {
+    }),
+    bench("transcribeRange, one pass", async () => {
       await transcribeRange(wave, 0, 60);
-    },
-    opts,
-  );
-
-  bench(
-    "transcribeAudio, the pipeline's VAD + windowed pass",
-    async () => {
+    }),
+    bench("transcribeAudio, the pipeline's VAD + windowed pass", async () => {
       await transcribeAudio(wave);
-    },
+    }),
     opts,
   );
 });
 
-describe("finding untranscribed speech on the clip", () => {
-  bench(
-    "speech runs + decoding the one stretch it finds",
-    async () => {
-      for (const s of untranscribedSpeech(detectSpeech(wave), words)) {
-        await transcribeRange(wave, s.start, s.end);
-      }
-    },
-    opts,
-  );
+test("finding untranscribed speech on the clip", async ({ bench }) => {
+  await bench("speech runs + decoding the one stretch it finds", async () => {
+    for (const s of untranscribedSpeech(detectSpeech(wave), words)) {
+      await transcribeRange(wave, s.start, s.end);
+    }
+  }).run(opts);
 });

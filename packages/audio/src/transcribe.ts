@@ -461,7 +461,7 @@ export function tokensToWords(
 async function cli() {
   const audioPath = process.argv[2];
   if (!audioPath) {
-    console.error("Usage: tsx transcribe.ts <path-to-audio-file>");
+    console.error("Usage: vpx transcribe.ts <path-to-audio-file>");
     process.exit(1);
   }
   const result = await transcribeAudio(audioPath);

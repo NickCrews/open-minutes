@@ -1,4 +1,4 @@
-import { describe, expect } from "vitest";
+import { describe, expect } from "vite-plus/test";
 import { bodiesTable, jurisdictionsTable } from "@open-minutes/db";
 import { dbTest, test } from "@open-minutes/db/testing/vitest";
 import {

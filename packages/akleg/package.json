@@ -7,7 +7,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "test": "vitest run",
+    "test": "vp test run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -17,6 +17,6 @@
   "devDependencies": {
     "@open-minutes/audio": "workspace:*",
     "@types/node": "^22.19.17",
-    "vitest": "^4.0.18"
+    "vite-plus": "catalog:"
   }
 }

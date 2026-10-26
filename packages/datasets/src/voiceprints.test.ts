@@ -1,4 +1,4 @@
-import { describe, expect } from "vitest";
+import { describe, expect } from "vite-plus/test";
 import { sql } from "drizzle-orm";
 import { meetingsTable, peopleTable, segmentsTable } from "@open-minutes/db";
 import { dbTest } from "@open-minutes/db/testing/vitest";

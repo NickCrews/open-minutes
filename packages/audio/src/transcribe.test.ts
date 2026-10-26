@@ -2,7 +2,7 @@
 // any good is measured by the WER and runtime of
 // transcription-quality/north-star.test.ts, which outranks these; see the
 // README.md there.
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vite-plus/test";
 import { existsSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";

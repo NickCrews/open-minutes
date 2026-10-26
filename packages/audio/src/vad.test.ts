@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vite-plus/test";
 import { halfUntranscribedRollCall } from "@open-minutes/fixtures/clips";
 import { clip, gaps, type Span, totalSecs } from "@open-minutes/core/span";
 import { detectSpeech } from "./vad";

@@ -1,4 +1,4 @@
-#!/usr/bin/env -S npx tsx
+#!/usr/bin/env -S npx vpx
 // Check the fixture data, printing problems as `file:line: severity: message`.
 //
 //   pnpm fixtures:check                    every meeting

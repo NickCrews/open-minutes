@@ -1,4 +1,4 @@
-#!/usr/bin/env -S npx tsx
+#!/usr/bin/env -S npx vpx
 // Apply the meeting rules' fixes to the fixture data, rewriting files in place.
 //
 //   pnpm fixtures:fix                    every meeting

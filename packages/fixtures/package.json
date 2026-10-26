@@ -12,9 +12,9 @@
     "./check": "./src/check.ts"
   },
   "scripts": {
-    "check": "tsx src/check-cli.ts",
-    "fix": "tsx src/fix-cli.ts",
-    "test": "vitest run",
+    "check": "vpx src/check-cli.ts",
+    "fix": "vpx src/fix-cli.ts",
+    "test": "vp test run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -23,7 +23,6 @@
   },
   "devDependencies": {
     "@types/node": "^25.6.0",
-    "tsx": "^4.21.0",
-    "vitest": "^4.0.18"
+    "vite-plus": "catalog:"
   }
 }

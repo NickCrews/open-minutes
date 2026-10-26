@@ -7,7 +7,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "test": "vitest run",
+    "test": "vp test run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -19,6 +19,6 @@
   },
   "devDependencies": {
     "@types/node": "^25.6.0",
-    "vitest": "^4.0.18"
+    "vite-plus": "catalog:"
   }
 }

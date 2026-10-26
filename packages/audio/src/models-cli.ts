@@ -1,4 +1,4 @@
-#!/usr/bin/env -S npx tsx
+#!/usr/bin/env -S npx vpx
 // Download every ML model this package uses (~650MB), skipping any already
 // present. Otherwise each is downloaded on first use.
 //

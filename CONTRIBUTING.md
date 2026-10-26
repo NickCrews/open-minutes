@@ -37,7 +37,8 @@ voiceprint so they can be recognized in later meetings.
 
 ## Getting started
 
-You need Node 22, pnpm (the version is pinned in `package.json`;
+You need Node 22.18+, 24.11+ or 26+ (`vpx`, which runs the TypeScript CLIs,
+needs one of those), pnpm (the version is pinned in `package.json`;
 `corepack enable` picks it up), and Docker with Compose. Then:
 
 ```sh

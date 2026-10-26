@@ -1,6 +1,6 @@
 // Downloads the audio of one YouTube video, plus yt-dlp's metadata for it
 // beside the audio (<output>.info.json, with the output's extension replaced).
-// Usage: pnpm exec tsx .github/scripts/fetch-youtube-audio.ts <video id> <output file>
+// Usage: pnpm exec vpx .github/scripts/fetch-youtube-audio.ts <video id> <output file>
 //
 // The request goes out through runWithEgress's routes (YOUTUBE_EGRESS; the
 // fetch-youtube-audio workflow sets warp,tor, since YouTube refuses GitHub's

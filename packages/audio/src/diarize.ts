@@ -229,7 +229,7 @@ function getDiarizer(): OfflineSpeakerDiarization {
 async function cli() {
   const audioPath = process.argv[2];
   if (!audioPath) {
-    console.error("Usage: tsx diarize.ts <path-to-wav-webm-or-mp3>");
+    console.error("Usage: vpx diarize.ts <path-to-wav-webm-or-mp3>");
     process.exit(1);
   }
   // Decoded once, for both stages.

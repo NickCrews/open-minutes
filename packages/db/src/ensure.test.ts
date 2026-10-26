@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { afterEach, beforeAll, describe, expect, test } from "vitest";
+import { afterEach, beforeAll, describe, expect, test } from "vite-plus/test";
 import postgres from "postgres";
 import { jurisdictionsTable } from "./schema";
 import { resolveDatabaseUrl } from "./resolve";

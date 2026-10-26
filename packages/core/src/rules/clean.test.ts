@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { cleanGroups, cleanSpeechSegments, cleanWords } from "./clean";
 import { text, words } from "./testing";
 
