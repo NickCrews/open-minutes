@@ -1,6 +1,7 @@
+import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { DATUMS_ROOT } from "./datums";
+import { DATUMS_ROOT, transcriptPath } from "./datums";
 
 // A dataset is a combination of datums, declared by a JSON file in datasets/
 // named for it. Every dataset holds all the jurisdictions and bodies; its file
@@ -58,6 +59,31 @@ export function loadDataset(name: string): Dataset {
         `(packages/datasets/datasets/).`,
     );
   return parseDataset(JSON.parse(readFileSync(path, "utf8")), path);
+}
+
+/**
+ * A sha256 (hex) of `dataset`'s contents: what it selects (less its
+ * description) and every datums file it reads. Changes whenever the rows it
+ * names would.
+ */
+export function datasetHash(dataset: Dataset): string {
+  const selected = [dataset.meetings, dataset.people, dataset.voiceprints];
+  const hash = createHash("sha256")
+    .update(`${JSON.stringify(selected)}\n`)
+    .update(readFileSync(join(DATUMS_ROOT, "jurisdictions.jsonl")))
+    .update(readFileSync(join(DATUMS_ROOT, "bodies.jsonl")));
+  if (dataset.meetings.length)
+    hash.update(readFileSync(join(DATUMS_ROOT, "people.jsonl")));
+  for (const slug of dataset.meetings) {
+    const dir = join(DATUMS_ROOT, "meetings", slug);
+    const chapters = join(dir, "chapters.json");
+    hash
+      .update(`${slug}\0`)
+      .update(readFileSync(join(dir, "meeting.json")))
+      .update(readFileSync(transcriptPath(dir)!))
+      .update(existsSync(chapters) ? readFileSync(chapters) : "");
+  }
+  return hash.digest("hex");
 }
 
 /** Check a parsed dataset file; `source` names it in errors. */

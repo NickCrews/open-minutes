@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vite-plus/test";
 import {
   allMeetingSlugs,
+  datasetHash,
   datasetNames,
   loadDataset,
   parseDataset,
@@ -47,5 +48,24 @@ describe("parseDataset", () => {
     [{ description: "d", meetings: [], people: "all" }, /need meetings/],
   ] as const)("refuses %j", ([json, error]) => {
     expect(() => parseDataset(json, "x")).toThrow(error);
+  });
+});
+
+describe("datasetHash", () => {
+  test("is stable, and differs per dataset", () => {
+    const names = datasetNames();
+    const hashes = names.map((n) => datasetHash(loadDataset(n)));
+    for (const h of hashes) expect(h).toMatch(/^[0-9a-f]{64}$/);
+    expect(new Set(hashes).size).toBe(names.length);
+    expect(datasetHash(loadDataset("bodies"))).toBe(
+      hashes[names.indexOf("bodies")],
+    );
+  });
+
+  test("ignores the description", () => {
+    const bodies = loadDataset("bodies");
+    expect(datasetHash({ ...bodies, description: "other" })).toBe(
+      datasetHash(bodies),
+    );
   });
 });
