@@ -37,9 +37,16 @@ voiceprint so they can be recognized in later meetings.
 
 ## Getting started
 
-You need Node 22.18+, 24.11+ or 26+ (`vpx`, which runs the TypeScript CLIs,
-needs one of those), pnpm (the version is pinned in `package.json`;
-`corepack enable` picks it up), and Docker with Compose. Then:
+You need [Vite+](https://viteplus.dev) and Docker with Compose. Vite+ provides
+`node` and `pnpm` at the versions this repo pins (Node in `.node-version`, pnpm
+in `package.json`'s `packageManager`), and runs the formatter, linter and
+tests:
+
+```sh
+curl -fsSL https://vite.plus | bash   # then open a new shell
+```
+
+Then:
 
 ```sh
 pnpm install
