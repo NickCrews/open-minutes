@@ -8,9 +8,10 @@ and the fast tests. The root `package.json` lists the other test commands.
 - **Fast tests** run by default and are what `pnpm test` runs. Tests that need
   a database each get a fresh copy of a pre-seeded template, which takes
   milliseconds; see [db.md](db.md#databases-in-tests).
-- **Slow tests** transcribe and diarize whole golden meetings and score the
-  result, taking 10–20 minutes each on CPU. They're skipped unless you ask for
-  them with `pnpm test:slow` or `pnpm test:all`.
+- **Slow tests** take more than 10 seconds. Most transcribe or diarize whole
+  golden meetings and score the result, which takes 10–20 minutes each on CPU.
+  They're skipped unless you ask for them with `pnpm test:slow` or
+  `pnpm test:all`.
 - **yt-dlp tests** run yt-dlp against YouTube. They're skipped unless you ask
   with `pnpm test:ytdlp` or `pnpm test:all`. They pass from a home connection,
   or from Linux with WARP and Tor installed, as in CI (see the
