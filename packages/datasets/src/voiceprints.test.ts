@@ -1,6 +1,6 @@
 import { describe, expect } from "vite-plus/test";
 import { sql } from "drizzle-orm";
-import { meetingsTable, peopleTable, segmentsTable } from "@open-minutes/db";
+import { peopleTable, segmentsTable } from "@open-minutes/db";
 import { dbTest } from "@open-minutes/db/testing/vitest";
 import { getMeetingData } from "@open-minutes/fixtures/test-data";
 import { dataset, loadSpec } from "./index";
@@ -25,8 +25,12 @@ describe("audio voiceprints", () => {
     db,
   }) => {
     const meeting = getMeetingData(SLUG);
-    const meetings = await db.select().from(meetingsTable);
-    expect(meetings.map((m) => m.site_id)).toEqual([meeting.youtube_id]);
+    const meetings = await db.query.meetingsTable.findMany({
+      with: { recording: true },
+    });
+    expect(meetings.map((m) => m.recording.external_id)).toEqual([
+      meeting.recording.external_id,
+    ]);
     expect(meetings.map((m) => m.slug)).toEqual([SLUG]);
 
     const [row] = (await db.execute(

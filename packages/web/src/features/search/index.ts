@@ -1,4 +1,5 @@
 import { type DB } from "@open-minutes/db";
+import { meetingRecordingColumns } from "../meetings/bodies";
 
 /** Basic substring search over transcript segment text. */
 export function searchSegments(db: DB, query: string) {
@@ -12,10 +13,9 @@ export function searchSegments(db: DB, query: string) {
           title: true,
           date: true,
           time: true,
-          site_kind: true,
-          site_id: true,
           timezone: true,
         },
+        with: { recording: meetingRecordingColumns },
       },
       person: { columns: { id: true, name: true } },
     },

@@ -5,8 +5,7 @@
  * own playlist on it instead.
  *
  * Stored as JSON, so adding a kind means a new member here, a case in the
- * `bodies_meeting_source_valid` check (see the db schema), and a `RecordingLister`
- * for it.
+ * `bodies_meeting_source_valid` check (see the db schema), and a scout for it.
  */
 export type MeetingSource =
   | {
@@ -25,26 +24,6 @@ export type MeetingSource =
       /** Its chamber and code, as in akleg.gov meeting IDs: "HRES". */
       committee: string;
     };
-
-/**
- * Which site a meeting is published on: `meetings.site_kind`. A meeting's ID
- * on its site (`meetings.site_id`) is a YouTube video ID, or an akleg.gov
- * meeting ID ("HRES 2018-09-10 14:00:00").
- */
-export type SiteKind = "youtube" | "akleg";
-
-export const SITE_KINDS: readonly SiteKind[] = ["youtube", "akleg"];
-
-/** The kind of site a source's meetings are on. */
-export function siteKindOf(source: MeetingSource): SiteKind {
-  switch (source.type) {
-    case "youtube_channel":
-    case "youtube_playlist":
-      return "youtube";
-    case "akleg_committee":
-      return "akleg";
-  }
-}
 
 /**
  * The source's page, for people. An akleg.gov committee's is its page for the
@@ -77,15 +56,4 @@ export function meetingSourceLabel(source: MeetingSource): string {
     case "akleg_committee":
       return "akleg.gov committee";
   }
-}
-
-/**
- * The meeting's YouTube video ID, or null when it isn't on YouTube. For
- * what only works with YouTube: its player and thumbnails.
- */
-export function youtubeIdOf(meeting: {
-  site_kind: string;
-  site_id: string;
-}): string | null {
-  return meeting.site_kind === "youtube" ? meeting.site_id : null;
 }

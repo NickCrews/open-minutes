@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vite-plus/test";
 import { hasTypographicDash } from "@open-minutes/core/text";
-import { loadPeople, parseGoldenBodies, parseGoldenWhen } from "./test-data";
+import {
+  loadAllTestData,
+  loadPeople,
+  parseGoldenBodies,
+  parseGoldenWhen,
+} from "./test-data";
 
 describe("people.jsonl", () => {
   it("uses a plain hyphen, not an en or em dash, in names and bios", () => {
@@ -63,5 +68,42 @@ describe("parseGoldenBodies", () => {
     expect(() =>
       parseGoldenBodies({ body_slugs: ["luc", "luc"] }, "m.json"),
     ).toThrow(/duplicates/);
+  });
+});
+
+describe("recordings.jsonl", () => {
+  const { bodies, recordings, meetings } = loadAllTestData();
+
+  it("has every golden meeting's recording, once", () => {
+    const keys = recordings.map((r) => `${r.site} ${r.external_id}`);
+    expect(new Set(keys).size).toBe(keys.length);
+    const missing = meetings
+      .filter(
+        (m) => !keys.includes(`${m.recording.site} ${m.recording.external_id}`),
+      )
+      .map((m) => m.slug);
+    expect(missing).toEqual([]);
+  });
+
+  it("names only bodies in bodies.jsonl, and a golden meeting's own", () => {
+    const slugs = new Set(bodies.map((b) => b.slug));
+    for (const r of recordings) {
+      for (const b of r.body_slugs) expect(slugs).toContain(b);
+      const meeting = meetings.find(
+        (m) =>
+          m.recording.site === r.site &&
+          m.recording.external_id === r.external_id,
+      );
+      if (meeting) {
+        expect(r.is_meeting).toBe(true);
+        expect([...r.body_slugs].sort()).toEqual(
+          [...meeting.body_slugs].sort(),
+        );
+      }
+    }
+  });
+
+  it("has a recording that isn't a meeting", () => {
+    expect(recordings.some((r) => r.is_meeting === false)).toBe(true);
   });
 });

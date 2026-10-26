@@ -4,6 +4,7 @@ import {
   meetingBodiesTable,
   meetingsTable,
 } from "@open-minutes/db";
+import { insertRecording } from "@open-minutes/db/testing";
 import { test } from "@open-minutes/db/testing/vitest";
 import { describe, expect, it } from "vite-plus/test";
 import { getLlmsTxtData, renderLlmsTxt, type LlmsTxtBody } from "./llms-txt";
@@ -83,15 +84,13 @@ describe("getLlmsTxtData", () => {
       .values([
         {
           timezone: "America/Anchorage",
-          site_kind: "youtube",
-          site_id: "a",
+          recording_id: await insertRecording(db),
           date: "2026-03-23",
           created_at: new Date("2026-09-01T12:00:00Z"),
         },
         {
           timezone: "America/Anchorage",
-          site_kind: "youtube",
-          site_id: "b",
+          recording_id: await insertRecording(db),
           date: "2025-01-06",
           created_at: new Date("2026-10-02T12:00:00Z"),
         },

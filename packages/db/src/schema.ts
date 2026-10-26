@@ -21,10 +21,8 @@ import {
 } from "drizzle-orm/pg-core";
 import { N_DIMENSIONS as VOICE_N_DIMENSIONS } from "@open-minutes/core/voice_embeddings";
 import { TranscriptWord } from "@open-minutes/core/transcription";
-import type {
-  MeetingSource,
-  SiteKind,
-} from "@open-minutes/core/meeting-source";
+import type { MeetingSource } from "@open-minutes/core/meeting-source";
+import { SITES, type Site } from "@open-minutes/core/site";
 
 const secondsInterval = () => interval({ fields: "second", precision: 3 });
 
@@ -34,6 +32,13 @@ export const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 /** A check that a slug column matches {@link SLUG_PATTERN}. */
 const kebabCase = (column: AnyPgColumn) =>
   sql`${column} ~ '${sql.raw(SLUG_PATTERN.source)}'`;
+
+/** A check that a column holds one of `values`, which may not hold a quote. */
+const oneOf = (column: AnyPgColumn, values: readonly string[]) => {
+  const quoted = values.find((v) => v.includes("'"));
+  if (quoted !== undefined) throw new Error(`oneOf can't take ${quoted}`);
+  return sql`${column} IN (${sql.raw(values.map((v) => `'${v}'`).join(", "))})`;
+};
 
 /**
  * A government: the Municipality of Anchorage, the City & Borough of Juneau.
@@ -104,6 +109,65 @@ export const bodiesTable = pgTable(
   ],
 );
 
+/**
+ * One item published on a site that may be a meeting: a YouTube video, or a
+ * meeting on akleg.gov. Written when a scout finds it, before and independent
+ * of any meeting; a meeting points at its recording. Recordings that aren't
+ * meetings stay, so no scan of a site rediscovers or rejudges them. See
+ * docs/contributing/recordings.md.
+ */
+export const recordingsTable = pgTable(
+  "recordings",
+  {
+    id: serial().primaryKey(),
+    site: varchar().$type<Site>().notNull(),
+    // Its ID on its site: a YouTube video ID, or an akleg.gov meeting ID.
+    external_id: varchar().notNull(),
+    permalink: varchar(),
+    // As the site gives them.
+    title: varchar().notNull().default(""),
+    description: varchar().notNull().default(""),
+    // When the site published it, in UTC; null when the site doesn't say.
+    published_at: timestamp(),
+    duration_secs: secondsInterval(),
+    // The `Scout.id` that reported it, eg "moa-youtube"; null for one added by
+    // hand. Scouts live in code, so not a foreign key.
+    scout_id: varchar(),
+    found_at: timestamp().notNull().defaultNow(),
+    // Whether it is a meeting. Null until a scout or ingestion decides.
+    is_meeting: boolean(),
+    // Notes on that decision, from whoever made it.
+    notes: varchar().notNull().default(""),
+    // When its audio reached the blob store, at
+    // recordings/<site>/<external_id>/speech.webm; null until then.
+    audio_stored_at: timestamp(),
+    // Failed attempts to fetch and store its audio, and the last one's error.
+    audio_failures: integer().notNull().default(0),
+    audio_error: varchar(),
+  },
+  (table) => [
+    unique("recordings_site_external_id_unique").on(
+      table.site,
+      table.external_id,
+    ),
+    check("recordings_site_known", oneOf(table.site, SITES)),
+  ],
+);
+
+/** Bodies a scout says a recording belongs to; a hint for ingestion. */
+export const recordingBodiesTable = pgTable(
+  "recording_bodies",
+  {
+    recording_id: integer()
+      .notNull()
+      .references(() => recordingsTable.id, { onDelete: "cascade" }),
+    body_id: integer()
+      .notNull()
+      .references(() => bodiesTable.id, { onDelete: "cascade" }),
+  },
+  (table) => [primaryKey({ columns: [table.recording_id, table.body_id] })],
+);
+
 /** A recorded meeting. The bodies that held it are in `meeting_bodies`. */
 export const meetingsTable = pgTable(
   "meetings",
@@ -117,22 +181,12 @@ export const meetingsTable = pgTable(
     // for meetings that aren't fixtures. Never all digits, so a reference that
     // is all digits is unambiguously an `id`.
     slug: varchar().unique(),
-    // The kind of site the meeting was published on, and its ID there: a YouTube
-    // video ID, or an akleg.gov meeting ID ("HRES 2018-09-10 14:00:00"). The
-    // audio we transcribed came from there, so transcript times are seconds
-    // into its recording.
-    site_kind: varchar().$type<SiteKind>().notNull(),
-    site_id: varchar().notNull(),
-    // The meeting's page on its site.
-    url: varchar()
+    // The recording it was transcribed from, so transcript times are seconds
+    // into its audio.
+    recording_id: integer()
       .notNull()
-      .generatedAlwaysAs(
-        (): SQL =>
-          sql`CASE ${meetingsTable.site_kind}
-            WHEN 'youtube' THEN 'https://www.youtube.com/watch?v=' || ${meetingsTable.site_id}
-            WHEN 'akleg' THEN 'https://www.akleg.gov/basis/Meeting/Detail?Meeting=' || replace(replace(${meetingsTable.site_id}, '&', '%26'), ' ', '%20')
-          END`,
-      ),
+      .unique()
+      .references(() => recordingsTable.id),
     title: varchar().notNull().default(""),
     // Free text from the meeting's site, copied with a plain hyphen
     // for each en or em dash: the YouTube video description, or the room for
@@ -165,14 +219,6 @@ export const meetingsTable = pgTable(
     ),
     check("meetings_slug_valid", kebabCase(table.slug)),
     check("meetings_slug_not_numeric", sql`${table.slug} !~ '^[0-9]+$'`),
-    check(
-      "meetings_site_kind_known",
-      sql`${table.site_kind} IN ('youtube', 'akleg')`,
-    ),
-    unique("meetings_site_kind_site_id_unique").on(
-      table.site_kind,
-      table.site_id,
-    ),
   ],
 );
 
@@ -396,6 +442,8 @@ export const relations = defineRelations(
   {
     jurisdictionsTable,
     bodiesTable,
+    recordingsTable,
+    recordingBodiesTable,
     meetingsTable,
     meetingBodiesTable,
     peopleTable,
@@ -421,7 +469,22 @@ export const relations = defineRelations(
         to: r.meetingsTable.id.through(r.meetingBodiesTable.meeting_id),
       }),
     },
+    recordingsTable: {
+      meeting: r.one.meetingsTable({
+        from: r.recordingsTable.id,
+        to: r.meetingsTable.recording_id,
+      }),
+      bodies: r.many.bodiesTable({
+        from: r.recordingsTable.id.through(r.recordingBodiesTable.recording_id),
+        to: r.bodiesTable.id.through(r.recordingBodiesTable.body_id),
+      }),
+    },
     meetingsTable: {
+      recording: r.one.recordingsTable({
+        from: r.meetingsTable.recording_id,
+        to: r.recordingsTable.id,
+        optional: false,
+      }),
       bodies: r.many.bodiesTable({
         from: r.meetingsTable.id.through(r.meetingBodiesTable.meeting_id),
         to: r.bodiesTable.id.through(r.meetingBodiesTable.body_id),

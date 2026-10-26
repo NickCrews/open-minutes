@@ -1,5 +1,6 @@
 import { describe, expect } from "vite-plus/test";
 import { eq } from "drizzle-orm";
+import { insertRecording } from "./testing";
 import { test } from "./testing/vitest";
 import type { DB } from "./index";
 import { meetingsTable, segmentsTable } from "./schema";
@@ -8,8 +9,7 @@ async function insertMeeting(db: DB): Promise<number> {
   const [meeting] = await db
     .insert(meetingsTable)
     .values({
-      site_kind: "youtube",
-      site_id: "test-video",
+      recording_id: await insertRecording(db),
       timezone: "America/Anchorage",
     })
     .returning({ id: meetingsTable.id });

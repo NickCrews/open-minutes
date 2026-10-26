@@ -9,6 +9,7 @@ import type {
   RecordingMetadata,
 } from "@open-minutes/core/audio-provider";
 import type { RecordingLister } from "@open-minutes/core/recording-lister";
+import type { FetchAudio } from "@open-minutes/core/scout";
 
 export type {
   AudioProvider,
@@ -250,14 +251,20 @@ export interface AkLeg extends AudioProvider {
     legislature: number,
   ): Promise<AkLegMeeting[]>;
   getMeeting(meetingIdOrUrl: string): Promise<AkLegMeeting>;
+  /** akleg.gov's {@link FetchAudio}: a meeting's {@link mainAudio} MP3. */
+  fetchAudio: FetchAudio;
 }
 
 /** An {@link AkLeg} that uses `config`. Does no I/O until a method is called. */
 export function akleg(config: AkLegConfig = {}): AkLeg {
   const fetchFn = config.fetch ?? fetch;
 
-  async function get(url: string, headers?: Record<string, string>) {
-    const res = await fetchFn(url, { headers });
+  async function get(
+    url: string,
+    headers?: Record<string, string>,
+    signal?: AbortSignal,
+  ) {
+    const res = await fetchFn(url, { headers, signal });
     if (!res.ok) throw new Error(`GET ${url}: HTTP ${res.status}`);
     return res;
   }
@@ -296,8 +303,37 @@ export function akleg(config: AkLegConfig = {}): AkLeg {
     return meeting;
   }
 
+  /**
+   * Streams a meeting's main audio to `path`. Written beside `path` and moved
+   * into place, so an interrupted download never leaves a partial file there.
+   */
+  async function download(
+    meetingIdOrUrl: string,
+    path: string,
+    signal?: AbortSignal,
+  ) {
+    await mkdir(dirname(path), { recursive: true });
+    const meeting = await getMeeting(meetingIdOrUrl);
+    const audio = mainAudio(meeting);
+    if (!audio) throw new Error(`No audio for akleg.gov meeting ${meeting.id}`);
+    const res = await get(audio.url, undefined, signal);
+    if (!res.body) throw new Error(`GET ${audio.url}: no body`);
+    const part = `${path}.part`;
+    try {
+      await pipeline(
+        Readable.from(chunksOf(res.body)),
+        createWriteStream(part),
+        { signal },
+      );
+      await rename(part, path);
+    } finally {
+      await rm(part, { force: true });
+    }
+  }
+
   return {
     audioExtension: "mp3",
+    fetchAudio: (meetingId, dest, signal) => download(meetingId, dest, signal),
     async meetingsOfCommittee(committee, legislature) {
       const chamber = committee.slice(0, 1);
       const code = committee.slice(1);
@@ -327,26 +363,9 @@ export function akleg(config: AkLegConfig = {}): AkLeg {
         () => false,
       );
       if (exists && !overwrite) return { downloaded: false };
-      const meeting = await getMeeting(meetingIdOrUrl);
-      const audio = mainAudio(meeting);
-      if (!audio)
-        throw new Error(`No audio for akleg.gov meeting ${meeting.id}`);
       // Progress goes to stderr so callers' stdout stays machine-readable.
-      console.error(`Downloading audio from ${audio.url} to ${path}...`);
-      const res = await get(audio.url);
-      if (!res.body) throw new Error(`GET ${audio.url}: no body`);
-      // Written beside `path` and moved into place, so an interrupted download
-      // never leaves a partial file at `path`.
-      const part = `${path}.part`;
-      try {
-        await pipeline(
-          Readable.from(chunksOf(res.body)),
-          createWriteStream(part),
-        );
-        await rename(part, path);
-      } finally {
-        await rm(part, { force: true });
-      }
+      console.error(`Downloading audio for ${meetingIdOrUrl} to ${path}...`);
+      await download(meetingIdOrUrl, path);
       return { downloaded: true };
     },
   };

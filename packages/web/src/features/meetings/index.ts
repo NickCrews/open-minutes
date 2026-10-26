@@ -2,11 +2,11 @@ import { type DB, meetingsTable } from "@open-minutes/db";
 import type { MeetingWhen } from "@open-minutes/core/meeting-date";
 import { eq } from "drizzle-orm";
 import { intervalToSecs } from "~/lib/format";
-import { meetingBodiesColumns } from "./bodies";
+import { meetingBodiesColumns, meetingRecordingColumns } from "./bodies";
 
 export function getAllMeetings(db: DB) {
   return db.query.meetingsTable.findMany({
-    with: { bodies: meetingBodiesColumns },
+    with: { bodies: meetingBodiesColumns, recording: meetingRecordingColumns },
     orderBy: { date: "desc", time: "desc" },
   });
 }
@@ -36,6 +36,7 @@ export function getMeetingById(db: DB, meetingId: number) {
       where: { id: meetingId },
       with: {
         bodies: meetingBodiesColumns,
+        recording: meetingRecordingColumns,
         segments: {
           // The transcript renders word-by-word synced to video playback, so
           // ship the word-level timestamps and skip the derived text column.

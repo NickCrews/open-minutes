@@ -1,6 +1,7 @@
 {
-  "description": "Every golden meeting with its transcript and chapters, and everyone in people.jsonl, with placeholder voiceprints. What `pnpm dev` seeds.",
+  "description": "Every golden meeting with its transcript and chapters, every recording (some aren't meetings), and everyone in people.jsonl, with placeholder voiceprints. What `pnpm dev` seeds.",
   "meetings": "all",
+  "recordings": "all",
   "people": "all",
   "voiceprints": "placeholder"
 }

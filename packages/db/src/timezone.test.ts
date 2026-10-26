@@ -1,5 +1,6 @@
 import { describe, expect } from "vite-plus/test";
 import { ianaTimezoneError as jsTimezoneError } from "@open-minutes/core/timezone";
+import { insertRecording } from "./testing";
 import { test } from "./testing/vitest";
 import { bodiesTable, jurisdictionsTable, meetingsTable } from "./schema";
 import { ianaTimezoneError } from "./timezone";
@@ -68,8 +69,7 @@ describe("meetings.timezone", () => {
   test("rejects what ianaTimezoneError rejects", async ({ db }) => {
     await expect(
       db.insert(meetingsTable).values({
-        site_kind: "youtube",
-        site_id: "x",
+        recording_id: await insertRecording(db),
         timezone: "Etc/GMT+9",
       }),
     ).rejects.toThrow();

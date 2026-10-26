@@ -23,12 +23,16 @@ than by building its key:
   which the
   [`fetch-youtube-audio`](../../.github/workflows/fetch-youtube-audio.yml)
   workflow writes.
+- `recording({ site, external_id })`: a recording's `speechWebm`, at
+  `recordings/<site>/<external_id>/speech.webm`, which `pnpm scout run`
+  writes (see
+  [recordings.md](../../docs/contributing/recordings.md#the-harness)).
 - `duckdbExport`: production's public data as one DuckDB file, which the
   [`export-duckdb`](../../.github/workflows/export-duckdb.yml) workflow
   writes nightly.
 
-Those workflows write with the AWS CLI, so keep their keys in step with this
-package.
+Those workflows and the scout harness write with the AWS CLI, so keep their
+keys in step with this package.
 
 `blobStore()` reads the `BLOB_STORE_PUBLIC_URL` environment variable where
 there is an environment (Node, the web app's Worker), falling back to the

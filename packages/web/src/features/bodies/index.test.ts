@@ -5,6 +5,7 @@ import {
   meetingBodiesTable,
   meetingsTable,
 } from "@open-minutes/db";
+import { insertRecording } from "@open-minutes/db/testing";
 import { test } from "@open-minutes/db/testing/vitest";
 import { describe, expect } from "vite-plus/test";
 import { getAllBodies, getBodyById } from "./index";
@@ -27,9 +28,6 @@ async function insertBody(db: DB, name: string): Promise<number> {
   return body!.id;
 }
 
-/** A meeting's site_kind and site_id are unique, so meetings need distinct IDs. */
-let nextSiteId = 0;
-
 async function insertMeeting(
   db: DB,
   bodyIds: number[],
@@ -38,8 +36,7 @@ async function insertMeeting(
   const [meeting] = await db
     .insert(meetingsTable)
     .values({
-      site_kind: "youtube",
-      site_id: `vid${nextSiteId++}`,
+      recording_id: await insertRecording(db),
       timezone: "America/Anchorage",
       date,
     })

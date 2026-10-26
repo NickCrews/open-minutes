@@ -30,6 +30,14 @@ describe("parseSpec", () => {
     );
   });
 
+  test('takes "meetings" recordings by default', () => {
+    expect(parseSpec(voiced, "x").recordings).toBe("meetings");
+    expect(
+      parseSpec({ description: "d", meetings: [], recordings: "all" }, "x")
+        .recordings,
+    ).toBe("all");
+  });
+
   test.for([
     [{ ...voiced, extra: 1 }, /unknown key "extra"/],
     [{ ...voiced, description: "" }, /description/],
@@ -38,6 +46,7 @@ describe("parseSpec", () => {
       { ...voiced, meetings: ["pzc-2026-06-08", "pzc-2026-06-08"] },
       /duplicate/,
     ],
+    [{ ...voiced, recordings: "some" }, /recordings must be/],
     [{ ...voiced, people: "some" }, /people must be/],
     [{ ...voiced, voiceprints: undefined }, /voiceprints must be/],
     [{ description: "d", meetings: [], people: "all" }, /need meetings/],

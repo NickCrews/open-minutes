@@ -8,6 +8,7 @@ import {
   peopleTable,
   segmentsTable,
 } from "@open-minutes/db";
+import { insertRecording } from "@open-minutes/db/testing";
 import { dbTest } from "@open-minutes/db/testing/vitest";
 import { loadAllTestData } from "@open-minutes/fixtures/test-data";
 import { dataset } from "./index";
@@ -18,9 +19,11 @@ const test = dbTest({ data: dataset("all") });
 
 describe('the "all" dataset', () => {
   test("seeds every golden meeting, with transcripts", async ({ db }) => {
-    const meetings = await db.select().from(meetingsTable);
-    expect(meetings.map((m) => m.site_id).sort()).toEqual(
-      snapshot.meetings.map((m) => m.youtube_id).sort(),
+    const meetings = await db.query.meetingsTable.findMany({
+      with: { recording: true },
+    });
+    expect(meetings.map((m) => m.recording.external_id).sort()).toEqual(
+      snapshot.meetings.map((m) => m.recording.external_id).sort(),
     );
     expect(meetings.map((m) => m.slug).sort()).toEqual(
       snapshot.meetings.map((m) => m.slug).sort(),
@@ -30,6 +33,40 @@ describe('the "all" dataset', () => {
       sql`SELECT count(DISTINCT meeting_id)::int AS n FROM ${segmentsTable}`,
     )) as unknown as [{ n: number }];
     expect(n).toBe(snapshot.meetings.length);
+  });
+
+  test("seeds every recording in recordings.jsonl, with its bodies", async ({
+    db,
+  }) => {
+    const recordings = await db.query.recordingsTable.findMany({
+      with: { bodies: { columns: { slug: true } } },
+      orderBy: { id: "asc" },
+    });
+    expect(
+      recordings.map((r) => ({
+        site: r.site,
+        external_id: r.external_id,
+        is_meeting: r.is_meeting,
+        body_slugs: r.bodies.map((b) => b.slug).sort(),
+      })),
+    ).toEqual(
+      snapshot.recordings.map((r) => ({
+        site: r.site,
+        external_id: r.external_id,
+        is_meeting: r.is_meeting,
+        body_slugs: [...r.body_slugs].sort(),
+      })),
+    );
+    const notMeeting = recordings.find((r) => r.external_id === "bzWOvGt-Y5w");
+    expect(notMeeting).toMatchObject({
+      title: "Testing Assembly: Live Please Ignore",
+      is_meeting: false,
+    });
+    const gbos = recordings.find((r) => r.external_id === "9HoIM5INxpI");
+    expect(gbos).toMatchObject({
+      published_at: new Date("2026-03-24T19:05:28Z"),
+      duration_secs: "02:46:10",
+    });
   });
 
   test("links identified speakers to people, with bios where given", async ({
@@ -52,8 +89,7 @@ describe('the "all" dataset', () => {
     const [row] = await db
       .insert(meetingsTable)
       .values({
-        site_kind: "youtube",
-        site_id: "new-one",
+        recording_id: await insertRecording(db),
         timezone: "America/Anchorage",
       })
       .returning({ id: meetingsTable.id });

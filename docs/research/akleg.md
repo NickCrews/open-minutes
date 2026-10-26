@@ -200,8 +200,10 @@ The database and `@open-minutes/akleg` take akleg.gov meetings:
 - A body's meeting source can be
   `{"type":"akleg_committee","committee":"HRES"}`, and `aklegSource` lists
   that committee's meetings in the Legislature sitting now.
-- Its meetings are stored with `site_kind` `akleg` and the meeting ID as
-  `site_id`, and `@open-minutes/akleg` gets their metadata and audio.
+- Its recordings are stored with `site` `akleg` and the meeting ID as
+  `external_id`, and `@open-minutes/akleg` gets their metadata and audio.
+  The `akleg` scout reports each committee meeting with audio (see
+  [recordings.md](../contributing/recordings.md)).
 - The meeting's date and time come from its ID, so `resolveMeetingDateTime`
   finds them in the title the source builds, eg
   `House RESOURCES - 2018-09-10 14:00:00`, without reading the transcript.

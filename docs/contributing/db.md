@@ -91,18 +91,22 @@ spec picks the rest:
 {
   "description": "What it's for.",
   "meetings": ["gbos-2026-03-23"], // golden meeting slugs, or "all"
+  "recordings": "meetings", // or "all": every row of recordings.jsonl
   "people": "speakers", // or "all": everyone in people.jsonl
   "voiceprints": "audio", // or "placeholder"
 }
 ```
 
+`recordings` defaults to `"meetings"`, the recordings of the spec's meetings.
 A spec with `"meetings": []` leaves out `people` and `voiceprints`. Real
 (`"audio"`) voiceprints are computed from each meeting's audio, which takes a
 while the first time; placeholders are instant but useless for recognition.
 The datasets are:
 
 - **`all`**: what `pnpm dev` runs on. Every golden meeting with its transcript
-  and chapters, and everyone in people.jsonl. Voiceprints are placeholders.
+  and chapters, every recording in recordings.jsonl (including ones that
+  aren't meetings), and everyone in people.jsonl. Voiceprints are
+  placeholders.
 - **`bodies`**: only the jurisdictions and bodies.
 - **`recognition`**: two GBOS meetings with real voiceprints, for the e2e
   speaker-recognition test.

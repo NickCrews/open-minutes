@@ -101,14 +101,19 @@ How much a scout decides is up to it. At minimum it reports the recording and
 what the site says about it. It may also decide whether the recording is a
 meeting and name its bodies.
 
-| id             | Watches                                 | Bodies                             | Schedule                      |
-| -------------- | --------------------------------------- | ---------------------------------- | ----------------------------- |
-| `gbos-youtube` | GBOS channel `UCOUlNInprZEjhbpVPiJOlEA` | `gbos`, LUC, other Girdwood bodies | daily, weekdays               |
-| `moa-youtube`  | MOA channel                             | `assembly`, `pzc`, `ced`, …        | several times a day, weekdays |
-| `akleg`        | akleg.gov committees                    | `hres`, …                          | daily                         |
+| id             | Watches                                 | Bodies                   | Schedule                  |
+| -------------- | --------------------------------------- | ------------------------ | ------------------------- |
+| `gbos-youtube` | GBOS channel `UCOUlNInprZEjhbpVPiJOlEA` | `gbos`, `luc`            | daily, weekdays           |
+| `moa-youtube`  | MOA channel `UCZDEuWj4IxdlwBhqrk62_XA`  | `assembly`, `pzc`, `ced` | every six hours, weekdays |
+| `akleg`        | akleg.gov committees                    | `hres`                   | daily                     |
+
+`SCOUTS` in `packages/scouts/src/scouts/index.ts` lists them, with their
+cron schedules.
 
 The akleg.gov scout knows each recording's body from its committee code, and
-that every one is a meeting. Its `FetchAudio` downloads the recording's MP3.
+that every one is a meeting. It reports a meeting a day after its scheduled
+start, so one still being recorded isn't reported with part of its audio. Its
+`FetchAudio` downloads the recording's MP3.
 akleg.gov doesn't say when it published a
 recording, so its `published_at` is null; the meeting's date and time are in
 its title. The YouTube scouts apply title rules, eg "test"
@@ -129,8 +134,8 @@ interface RecordingKey {
 /**
  * What a scout reports for one recording: its `recordings` columns, minus
  * the ones the harness fills in (`id`, `scout_id`, `found_at`,
- * `audio_stored_at`), plus any bodies it can name, as slugs, which the
- * harness writes to `recording_bodies`.
+ * `audio_stored_at`, `audio_failures`, `audio_error`), plus any bodies it can
+ * name, as slugs, which the harness writes to `recording_bodies`.
  */
 interface ScoutedRecording extends RecordingKey {
   permalink: string | null;
@@ -155,17 +160,16 @@ interface Scout {
 interface ScoutContext {
   /** The ones no scout has reported yet. */
   unseen(recordings: readonly RecordingKey[]): Promise<RecordingKey[]>;
-  log: Logger;
+  logger: Logger;
   signal: AbortSignal;
   now: Date;
 }
 
-interface Logger {
-  info(message: string): void;
-  warn(message: string): void;
-  /** Something failed but the scan goes on, eg one recording's metadata. */
-  error(message: string, cause?: unknown): void;
-}
+/**
+ * Where a scout's messages go; `console` is one. `error` is for something
+ * that failed while the scan goes on, eg one recording's metadata.
+ */
+type Logger = Pick<Console, "info" | "warn" | "error">;
 
 /**
  * Downloads a recording's audio to `dest` as the site serves it, the best
@@ -186,8 +190,8 @@ A scout reports only recordings whose audio is complete: a live or upcoming
 stream waits until it has ended.
 
 A scout that throws has failed; the harness keeps what it yielded before the
-throw. One that hits a problem with a single recording calls `log.error` and
-moves on.
+throw. One that hits a problem with a single recording calls `logger.error`
+and moves on.
 
 ### Where the code lives
 
@@ -195,20 +199,20 @@ moves on.
 - [`packages/youtube`](../../packages/youtube/README.md) and
   [`packages/akleg`](../../packages/akleg/README.md): talking to each site,
   including each site's `FetchAudio`.
-- `packages/scouts`: the scouts, which use those packages, and the harness that
-  runs them.
+- [`packages/scouts`](../../packages/scouts/README.md): the scouts, which use
+  those packages, and the harness that runs them.
 
 ### The harness
 
-`pnpm scout run [--scout <id>] [--dry-run]` runs scouts and writes each report
+`pnpm scout run [--scout <id>] [--dry-run] [--audio-cap <n>]` runs scouts and writes each report
 to `recordings` and `recording_bodies` as it is yielded. It rejects a report
 naming a body that isn't in its scout's `bodies`. With no `--scout`, it runs
 each scout whose cron fell in the past hour.
 
 After the scans, the harness fetches audio for each recording with
 `is_meeting` not false, no `audio_stored_at` and fewer than 3
-`audio_failures`, newest `published_at` first (unknown last), up to a cap per
-run. For each, it calls its site's `FetchAudio` into a temporary file,
+`audio_failures`, newest `published_at` first (unknown last), up to
+`--audio-cap` per run (default 10). For each, it calls its site's `FetchAudio` into a temporary file,
 encodes it for speech with
 [`encode-speech-audio.sh`](../../.github/scripts/encode-speech-audio.sh)
 (16 kHz mono Opus at 24 kbps, in WebM, from whatever format the site serves),
@@ -216,7 +220,10 @@ checks that the result's duration is within a few seconds of `duration_secs`
 when that is known, uploads it to `recordings/<site>/<external_id>/speech.webm`
 in the blob store, and sets `audio_stored_at`. A failure increments
 `audio_failures`, sets `audio_error`, and is retried on a later run until the
-third. Resetting `audio_failures` to 0 retries it again.
+third. Resetting `audio_failures` to 0 retries it again. Uploads use the AWS
+CLI and the bucket `BLOB_STORE_BUCKET` names; a run that can't upload stops
+before fetching anything, so it counts no failures. `--audio-cap 0` only
+scouts.
 
 A run logs each scout's messages prefixed with its id. Errors become GitHub
 Actions annotations in CI, and a run with any error, a failed scout or a
@@ -234,7 +241,9 @@ those that have given up on their audio, with `audio_error`.
 - `published_at` is yt-dlp's `release_timestamp` for a stream or premiere,
   otherwise its `timestamp`.
 - They skip a stream that is live or upcoming (yt-dlp's `live_status`).
-- Its `FetchAudio` downloads YouTube's Opus stream (format 251) with yt-dlp.
+- Its `FetchAudio` downloads YouTube's Opus stream (format 251), else its
+  best audio, with yt-dlp.
+- A video with "test" in its title is not a meeting.
 - In CI, yt-dlp goes through the WARP or Tor egress in
   [`packages/ytdlp/egress`](../../packages/ytdlp/README.md); see
   [youtube-in-ci.md](../research/youtube-in-ci.md).

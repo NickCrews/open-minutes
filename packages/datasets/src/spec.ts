@@ -4,8 +4,8 @@ import { TEST_DATA_ROOT } from "@open-minutes/fixtures/test-data";
 
 // A dataset is declared by a JSON file in specs/, named for the dataset: which
 // of the test data's rows to seed. Every dataset seeds all the jurisdictions
-// and bodies; a spec says which meetings go with them, which people, and where
-// their voiceprints come from.
+// and bodies; a spec says which meetings go with them, which recordings, which
+// people, and where their voiceprints come from.
 
 export const SPECS_DIR = new URL("../specs/", import.meta.url).pathname;
 
@@ -14,6 +14,11 @@ export interface DatasetSpec {
   description: string;
   /** Golden meeting slugs, in id order, or "all" of them. */
   meetings: string[];
+  /**
+   * "meetings" (the default): only the recordings of `meetings`. "all": every
+   * recording in recordings.jsonl, including those that aren't meetings.
+   */
+  recordings: "all" | "meetings";
   /**
    * "all": everyone in people.jsonl, plus anyone the meetings identify who
    * isn't listed. "speakers": only the people the meetings identify.
@@ -27,7 +32,7 @@ export interface DatasetSpec {
   voiceprints: "placeholder" | "audio";
 }
 
-const KEYS = ["description", "meetings", "people", "voiceprints"];
+const KEYS = ["description", "meetings", "recordings", "people", "voiceprints"];
 
 /** The names of the datasets in specs/, sorted. */
 export function datasetNames(): string[] {
@@ -89,12 +94,17 @@ export function parseSpec(json: unknown, source: string): DatasetSpec {
       fail("meetings has a duplicate");
   } else meetings = fail('meetings must be "all" or a list of meeting slugs');
 
+  const recordings = raw.recordings ?? "meetings";
+  if (recordings !== "all" && recordings !== "meetings")
+    fail('recordings must be "all" or "meetings"');
+
   if (meetings.length === 0) {
     if (raw.people !== undefined || raw.voiceprints !== undefined)
       fail("people and voiceprints need meetings");
     return {
       description: raw.description as string,
       meetings,
+      recordings: recordings as DatasetSpec["recordings"],
       people: "speakers",
       voiceprints: "placeholder",
     };
@@ -106,6 +116,7 @@ export function parseSpec(json: unknown, source: string): DatasetSpec {
   return {
     description: raw.description as string,
     meetings,
+    recordings: recordings as DatasetSpec["recordings"],
     people: raw.people as DatasetSpec["people"],
     voiceprints: raw.voiceprints as DatasetSpec["voiceprints"],
   };

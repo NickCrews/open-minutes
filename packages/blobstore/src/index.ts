@@ -40,10 +40,28 @@ export interface YoutubeVideoFiles {
   errorJson: BlobFile;
 }
 
+/**
+ * What the scout harness (`pnpm scout run`, in packages/scouts) stores for a
+ * recording, under recordings/<site>/<external_id>/.
+ */
+export interface RecordingFiles {
+  /**
+   * The recording's audio as the site serves it, encoded for speech by
+   * .github/scripts/encode-speech-audio.sh: 16 kHz mono Opus in WebM at 24
+   * kbps (~11 MB per hour).
+   */
+  speechWebm: BlobFile;
+}
+
 /** The blob store's files, by what they are; see {@link blobStore}. */
 export interface BlobStore {
   /** A YouTube video's files. */
   youtube(youtubeId: string): YoutubeVideoFiles;
+  /**
+   * A recording's files, by its site and its ID there (eg "youtube" and
+   * "9HoIM5INxpI", or "akleg" and "HRES 2018-09-10 14:00:00").
+   */
+  recording(recording: { site: string; external_id: string }): RecordingFiles;
   /**
    * Production's public data as one DuckDB file, rebuilt nightly by the
    * export-duckdb workflow (.github/workflows/export-duckdb.yml).
@@ -60,7 +78,9 @@ export interface BlobStore {
 export function blobStore(base?: string): BlobStore {
   base = baseUrl(base);
   const file = (key: string): BlobFile => {
-    const url = `${base.replace(/\/$/, "")}/${key}`;
+    // A key may hold spaces and colons (akleg.gov meeting IDs).
+    const path = key.split("/").map(encodeURIComponent).join("/");
+    const url = `${base.replace(/\/$/, "")}/${path}`;
     return {
       key,
       url,
@@ -75,11 +95,16 @@ export function blobStore(base?: string): BlobStore {
   };
   return {
     youtube(youtubeId) {
-      const prefix = `youtube/${encodeURIComponent(youtubeId)}`;
+      const prefix = `youtube/${youtubeId}`;
       return {
         infoJson: file(`${prefix}/info.json`),
         speechWebm: file(`${prefix}/speech.webm`),
         errorJson: file(`${prefix}/error.json`),
+      };
+    },
+    recording({ site, external_id }) {
+      return {
+        speechWebm: file(`recordings/${site}/${external_id}/speech.webm`),
       };
     },
     duckdbExport: file("exports/open-minutes.duckdb"),

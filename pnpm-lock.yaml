@@ -212,6 +212,43 @@ importers:
         specifier: 'catalog:'
         version: 1.4.0(@types/node@24.19.2)(@vitest/ui@5.0.5(vitest@5.0.5))(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(typescript@5.9.3)
 
+  packages/scouts:
+    dependencies:
+      '@open-minutes/akleg':
+        specifier: workspace:*
+        version: link:../akleg
+      '@open-minutes/blobstore':
+        specifier: workspace:*
+        version: link:../blobstore
+      '@open-minutes/core':
+        specifier: workspace:*
+        version: link:../core
+      '@open-minutes/db':
+        specifier: workspace:*
+        version: link:../db
+      '@open-minutes/youtube':
+        specifier: workspace:*
+        version: link:../youtube
+      '@open-minutes/ytdlp':
+        specifier: workspace:*
+        version: link:../ytdlp
+      citty:
+        specifier: ^0.1.6
+        version: 0.1.6
+      drizzle-orm:
+        specifier: 1.0.0-beta.21
+        version: 1.0.0-beta.21(@neondatabase/serverless@1.1.0)(@types/mssql@9.1.11(@azure/core-client@1.10.1))(mssql@11.0.1(@azure/core-client@1.10.1))(postgres@3.4.9)(zod@4.3.6)
+    devDependencies:
+      '@open-minutes/datasets':
+        specifier: workspace:*
+        version: link:../datasets
+      '@types/node':
+        specifier: ^24
+        version: 24.19.2
+      vite-plus:
+        specifier: 'catalog:'
+        version: 1.4.0(@types/node@24.19.2)(@vitest/ui@5.0.5(vitest@5.0.5))(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(typescript@5.9.3)
+
   packages/web:
     dependencies:
       '@kobalte/core':
