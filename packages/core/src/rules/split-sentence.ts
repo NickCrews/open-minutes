@@ -6,7 +6,7 @@
 // a few words away.
 
 import { formatClock } from "../clock";
-import type { Word } from "../transcript";
+import { speakerKey, type Word } from "../transcript";
 import type { InSegment, RuleMeeting, Severity, Violation } from "./common";
 
 /** How far, in words, a boundary may be from the sentence edge it belongs at. */
@@ -137,8 +137,8 @@ export function rule(meeting: RuleMeeting): SplitSentence[] {
   return splitSentences(segments)
     .filter(
       (split) =>
-        segments[split.segment - 1]!.speaker !==
-        segments[split.segment]!.speaker,
+        speakerKey(segments[split.segment - 1]!) !==
+        speakerKey(segments[split.segment]!),
     )
     .map((split) => {
       const misplaced = split.misplaced.map((w) => w.text);

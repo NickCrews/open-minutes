@@ -23,14 +23,14 @@ export async function audioVoiceprints(
   const wanted = new Set(slugs);
   const voiceprints = new Map<string, Float32Array>();
   for (const meeting of meetings) {
-    // Give each identified person a synthetic speaker index, then reuse the
+    // Give each known person a synthetic speaker index, then reuse the
     // pipeline's per-speaker centroid builder (it expects DiarizationTurns
-    // keyed by number). Each identified segment becomes one turn.
+    // keyed by number). Each of their segments becomes one turn.
     const slugToIndex = new Map<string, number>();
     const turns: DiarizationTurn[] = [];
     for (const seg of meeting.segments) {
-      if (seg.speaker.kind !== "identified" || seg.words.length === 0) continue;
-      const slug = seg.speaker.person;
+      const slug = seg.person;
+      if (slug === null || seg.words.length === 0) continue;
       if (!wanted.has(slug) || voiceprints.has(slug)) continue;
       let index = slugToIndex.get(slug);
       if (index === undefined) {
