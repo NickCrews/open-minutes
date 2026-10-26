@@ -2,7 +2,7 @@
 
 Gets a meeting's audio. Two parts:
 
-- `storedYoutube` (and `storedYoutubeFromEnv`): an `AudioProvider` for YouTube
+- `storedYoutube` (and `storedYoutubeFromEnv`): a `SiteAdapter` for YouTube
   that reads a video's metadata and audio from the blob store, where the
   [`fetch-youtube-audio`](../../.github/workflows/fetch-youtube-audio.yml)
   workflow puts them, so it works where YouTube blocks yt-dlp (CI, servers).

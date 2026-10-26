@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vite-plus/test";
-import { mkdtemp, rm, stat } from "node:fs/promises";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
+import { mkdtemp, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { decodeToWav, SAMPLE_RATE } from "@open-minutes/codecs";
@@ -9,60 +9,65 @@ import { storedYoutube } from "./stored-youtube";
 // A YouTube that fails, so a video missing from the store fails the test
 // instead of falling back to yt-dlp.
 const unreachable: YouTube = {
+  site: "youtube",
   audioExtension: "webm",
   getMetadata: async () => {
     throw new Error("unexpected getMetadata call");
   },
-  ensureAudioDownloaded: async () => {
-    throw new Error("unexpected ensureAudioDownloaded call");
+  downloadAudio: async () => {
+    throw new Error("unexpected downloadAudio call");
   },
 };
 const yt = storedYoutube(unreachable);
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 describe("storedYoutube", () => {
   it("gets a video's metadata from the blob store", async () => {
     expect(await yt.getMetadata("9HoIM5INxpI")).toEqual({
       id: "9HoIM5INxpI",
+      permalink: "https://www.youtube.com/watch?v=9HoIM5INxpI",
       channelId: "UCOUlNInprZEjhbpVPiJOlEA",
       title: "Girdwood Board of Supervisors Regular Meeting March 23, 2026",
       description: expect.stringContaining("www.muni.org/gbos"),
       durationSecs: 9970,
-      uploadDate: "2026-03-24",
+      publishedAt: new Date("2026-03-24T19:05:28Z"),
     });
   });
 
-  it("downloads a video's WebM audio from the blob store, once", async () => {
+  it("downloads a video's WebM audio from the blob store, replacing what's there", async () => {
     const dir = await mkdtemp(join(tmpdir(), "stored-youtube-audio-"));
     try {
       const path = join(dir, "short.webm");
       // A 5 s video.
       const url = "https://www.youtube.com/watch?v=QUF1uLgzL-s";
-      expect(await yt.ensureAudioDownloaded(url, path)).toEqual({
-        downloaded: true,
-      });
+      await writeFile(path, "stale");
+      await yt.downloadAudio(url, path);
       const wavPath = join(dir, "short.wav");
       await decodeToWav(path, wavPath);
       // A 44-byte header and 16-bit mono samples.
       const { size } = await stat(wavPath);
       expect((size - 44) / 2 / SAMPLE_RATE).toBeCloseTo(5, 0);
-      expect(await yt.ensureAudioDownloaded(url, path)).toEqual({
-        downloaded: false,
-      });
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
   });
 
   it("falls back to YouTube for a video missing from the store", async () => {
+    // With a dispatch token, as in CI, a miss runs fetch-youtube-audio instead.
+    vi.stubEnv("YOUTUBE_AUDIO_DISPATCH_TOKEN", "");
     const fallback = storedYoutube({
       ...unreachable,
       getMetadata: async (id) => ({
         id,
+        permalink: `https://www.youtube.com/watch?v=${id}`,
         channelId: "",
         title: "from YouTube",
         description: "",
         durationSecs: null,
-        uploadDate: null,
+        publishedAt: null,
       }),
     });
     // A well-formed ID no video has.

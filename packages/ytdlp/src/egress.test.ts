@@ -109,6 +109,22 @@ describe("runWithEgress", () => {
     expect(down).not.toHaveBeenCalled();
   });
 
+  it("tries no more routes once its signal aborts", async () => {
+    const controller = new AbortController();
+    const calls = fakeYtDlp(() => {
+      controller.abort(new Error("stop"));
+      return ytDlpError(BOT_CHECK);
+    });
+    await expect(
+      runWithEgress(ARGS, { ...quiet, signal: controller.signal }),
+    ).rejects.toThrow("stop");
+    expect(calls).toEqual(["direct"]);
+    expect(vi.mocked(run).mock.calls[0]![1]).toEqual({
+      signal: controller.signal,
+    });
+    expect(up).not.toHaveBeenCalled();
+  });
+
   it("starts WARP when direct is blocked, and stops it after", async () => {
     const calls = fakeYtDlp((proxy) =>
       proxy === "direct" ? ytDlpError(BOT_CHECK) : "{}",

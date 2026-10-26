@@ -58,11 +58,7 @@ describe("akleg.gov, live", { timeout: 60_000 }, () => {
   it("downloads a meeting's MP3 audio", { timeout: 120_000 }, async () => {
     // A 7.5-minute meeting: a 3.6 MB MP3.
     const path = join(mkdtempSync(join(tmpdir(), "akleg-")), "audio.mp3");
-    const result = await source.ensureAudioDownloaded(
-      "HRES 2025-04-04 13:00:00",
-      path,
-    );
-    expect(result).toEqual({ downloaded: true });
+    await source.downloadAudio("HRES 2025-04-04 13:00:00", path);
     const wave = await ensureWaveAudio(path);
     expect(wave.sampleRate).toBe(16_000);
     // The API says 451.508 s; the decoded MP3 is about half a second shorter.

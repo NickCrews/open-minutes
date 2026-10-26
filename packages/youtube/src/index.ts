@@ -1,14 +1,15 @@
-import { mkdir, access, rename, rm } from "node:fs/promises";
+import { mkdir, rename, rm } from "node:fs/promises";
 import { dirname } from "node:path";
 import type {
-  AudioProvider,
   RecordingMetadata,
-} from "@open-minutes/core/audio-provider";
+  SiteAdapter,
+} from "@open-minutes/core/site-adapter";
 import type {
   ListedRecording,
   RecordingLister,
 } from "@open-minutes/core/recording-lister";
 import {
+  type Egress,
   type Route,
   ensureYtDlpInstalled,
   parseRoutes,
@@ -61,6 +62,13 @@ export interface YouTubeConfig {
    * else direct, then WARP, then Tor).
    */
   routes?: Route[];
+  /**
+   * An egress manager to run yt-dlp through instead, which keeps WARP and
+   * Tor up between calls, for a caller that makes many, like a scout. It
+   * brings its own routes, so {@link YouTubeConfig.routes} is ignored. The
+   * caller closes it.
+   */
+  egress?: Egress;
 }
 
 /**
@@ -70,10 +78,15 @@ export interface YouTubeConfig {
 async function ytDlpWithEgress(
   config: YouTubeConfig,
   args: string[],
-  beforeAttempt?: () => Promise<void>,
+  {
+    beforeAttempt,
+    signal,
+  }: { beforeAttempt?: () => Promise<void>; signal?: AbortSignal } = {},
 ) {
   await ensureYtDlpInstalled();
-  return runWithEgress(args, { routes: config.routes, beforeAttempt });
+  return config.egress
+    ? config.egress.run(args, { beforeAttempt, signal })
+    : runWithEgress(args, { routes: config.routes, beforeAttempt, signal });
 }
 
 interface FlatEntry {
@@ -119,19 +132,27 @@ export interface YtDlpInfo {
   title?: string;
   description?: string;
   duration?: number | null;
-  /** "YYYYMMDD". */
-  upload_date?: string | null;
+  /** When it was uploaded, in seconds since the epoch. */
+  timestamp?: number | null;
+  /** When a stream or premiere started, in seconds since the epoch. */
+  release_timestamp?: number | null;
+  webpage_url?: string;
 }
 
-/** The {@link RecordingMetadata} in a video's yt-dlp info JSON. */
+/**
+ * The {@link RecordingMetadata} in a video's yt-dlp info JSON. It was
+ * published when its stream or premiere started, else when it was uploaded.
+ */
 export function metadataFromYtDlpInfo(raw: YtDlpInfo): RecordingMetadata {
+  const publishedSecs = raw.release_timestamp ?? raw.timestamp;
   return {
     id: raw.id,
+    permalink: raw.webpage_url ?? `https://www.youtube.com/watch?v=${raw.id}`,
     channelId: raw.channel_id ?? "",
     title: raw.title ?? "",
     description: raw.description ?? "",
     durationSecs: raw.duration ?? null,
-    uploadDate: isoDate(raw.upload_date),
+    publishedAt: publishedSecs == null ? null : new Date(publishedSecs * 1000),
   };
 }
 
@@ -147,29 +168,17 @@ async function getMetadata(
   return metadataFromYtDlpInfo(JSON.parse(stdout) as YtDlpInfo);
 }
 
-/** yt-dlp's "YYYYMMDD" as "YYYY-MM-DD"; null if absent or malformed. */
-function isoDate(yyyymmdd: string | null | undefined): string | null {
-  const m = /^(\d{4})(\d{2})(\d{2})$/.exec(yyyymmdd ?? "");
-  return m ? `${m[1]}-${m[2]}-${m[3]}` : null;
-}
-
 /**
  * Downloads a video's original Opus-in-WebM audio to `path` with yt-dlp. A
  * single format needs no ffmpeg to download.
  */
-async function ensureAudioDownloaded(
+async function downloadAudio(
   config: YouTubeConfig,
   videoIdOrUrl: string,
   path: string,
-  { overwrite = false }: { overwrite?: boolean } = {},
+  { signal }: { signal?: AbortSignal } = {},
 ) {
   await mkdir(dirname(path), { recursive: true });
-  const exists = await access(path).then(
-    () => true,
-    () => false,
-  );
-  if (exists && !overwrite) return { downloaded: false };
-
   const url = videoUrl(videoIdOrUrl);
   // Progress goes to stderr so callers' stdout stays machine-readable.
   console.error(`Downloading audio for ${url} to ${path}...`);
@@ -185,13 +194,12 @@ async function ensureAudioDownloaded(
     await ytDlpWithEgress(
       config,
       ["-f", "bestaudio[ext=webm]", "--no-playlist", "-o", webm, url],
-      removeWebm,
+      { beforeAttempt: removeWebm, signal },
     );
     await rename(webm, path);
   } finally {
     await removeWebm();
   }
-  return { downloaded: true };
 }
 
 /**
@@ -199,7 +207,8 @@ async function ensureAudioDownloaded(
  * {@link youtube} or {@link youtubeFromEnv} and pass it around; tests pass a
  * fake instead (see the pipeline's `om/testing.ts`).
  */
-export type YouTube = AudioProvider & {
+export type YouTube = SiteAdapter & {
+  readonly site: "youtube";
   readonly audioExtension: "webm";
 };
 
@@ -215,10 +224,11 @@ export function youtubeSource(source: YouTubeSource): RecordingLister {
 /** A {@link YouTube} that uses `config`. Does no I/O until a method is called. */
 export function youtube(config: YouTubeConfig = {}): YouTube {
   return {
+    site: "youtube",
     audioExtension: "webm",
     getMetadata: (videoIdOrUrl) => getMetadata(config, videoIdOrUrl),
-    ensureAudioDownloaded: (videoIdOrUrl, path, options) =>
-      ensureAudioDownloaded(config, videoIdOrUrl, path, options),
+    downloadAudio: (videoIdOrUrl, path, options) =>
+      downloadAudio(config, videoIdOrUrl, path, options),
   };
 }
 

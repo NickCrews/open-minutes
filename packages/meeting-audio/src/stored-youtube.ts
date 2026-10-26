@@ -1,6 +1,6 @@
-import { access, mkdir, rename, writeFile } from "node:fs/promises";
+import { mkdir, rename, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import type { AudioProvider } from "@open-minutes/core/audio-provider";
+import type { SiteAdapter } from "@open-minutes/core/site-adapter";
 import { blobStore } from "@open-minutes/blobstore";
 import {
   type YouTube,
@@ -29,13 +29,14 @@ import { fetchYoutubeVideoFile, parseJson } from "./fetch-youtube-audio";
 export function storedYoutube(
   youtube: YouTube,
   { dispatchToken }: { dispatchToken?: string } = {},
-): AudioProvider {
+): SiteAdapter {
   const blobs = blobStore();
   const fetchFile = (
     id: string,
     pick: Parameters<typeof fetchYoutubeVideoFile>[2],
   ) => fetchYoutubeVideoFile(blobs, id, pick, dispatchToken);
   return {
+    site: youtube.site,
     audioExtension: youtube.audioExtension,
     async getMetadata(videoIdOrUrl) {
       const info = await fetchFile(
@@ -46,30 +47,19 @@ export function storedYoutube(
         ? metadataFromYtDlpInfo(parseJson(info) as YtDlpInfo)
         : youtube.getMetadata(videoIdOrUrl);
     },
-    async ensureAudioDownloaded(
-      videoIdOrUrl,
-      path,
-      { overwrite = false } = {},
-    ) {
-      const exists = await access(path).then(
-        () => true,
-        () => false,
-      );
-      if (exists && !overwrite) return { downloaded: false };
-
+    async downloadAudio(videoIdOrUrl, path, { signal } = {}) {
       const id = videoId(videoIdOrUrl);
       // Progress goes to stderr so callers' stdout stays machine-readable.
       console.error(`Getting audio for ${id} from the blob store...`);
       const webm = await fetchFile(id, (files) => files.speechWebm);
       if (!webm) {
-        return youtube.ensureAudioDownloaded(videoIdOrUrl, path, { overwrite });
+        return youtube.downloadAudio(videoIdOrUrl, path, { signal });
       }
       await mkdir(dirname(path), { recursive: true });
       // Written beside `path` and moved into place, so an interrupted write
       // never leaves a partial file at `path`.
       await writeFile(`${path}.part`, webm);
       await rename(`${path}.part`, path);
-      return { downloaded: true };
     },
   };
 }
@@ -79,7 +69,7 @@ export function storedYoutube(
  * `youtubeFromEnv`, the blob store from BLOB_STORE_PUBLIC_URL (see
  * `blobStore`), and the dispatch token from YOUTUBE_AUDIO_DISPATCH_TOKEN.
  */
-export function storedYoutubeFromEnv(env = process.env): AudioProvider {
+export function storedYoutubeFromEnv(env = process.env): SiteAdapter {
   return storedYoutube(youtubeFromEnv(env), {
     dispatchToken: env.YOUTUBE_AUDIO_DISPATCH_TOKEN || undefined,
   });

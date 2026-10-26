@@ -3,8 +3,8 @@
  * akleg.gov committee...): the recordings it lists.
  * Each site has its own constructor taking whatever identifies a source there (see @open-minutes/youtube's `youtubeSource`), so
  * discovering new meetings doesn't care which site, and tests can pass a fake.
- * Getting a listed recording's metadata and audio is `AudioProvider`'s job (see
- * ./audio-provider).
+ * Getting a listed recording's metadata and audio is `SiteAdapter`'s job (see
+ * ./site-adapter).
  */
 export interface RecordingLister {
   /** The source's recordings, newest first, without duplicates. */
@@ -12,7 +12,7 @@ export interface RecordingLister {
 }
 
 export interface ListedRecording {
-  /** The recording's ID on its site, as its `AudioProvider` takes it. */
+  /** The recording's ID on its site, as its `SiteAdapter` takes it. */
   id: string;
   title?: string;
 }

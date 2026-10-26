@@ -67,9 +67,7 @@ export async function getCachedAudio(video: {
   const youtube = storedYoutubeFromEnv();
   const sourcePath = join(dir, `audio.${youtube.audioExtension}`);
   try {
-    await youtube.ensureAudioDownloaded(video.youtubeId, sourcePath, {
-      overwrite: true,
-    });
+    await youtube.downloadAudio(video.youtubeId, sourcePath);
     await decodeToWav(sourcePath, audioPath);
   } finally {
     await rm(sourcePath, { force: true });
