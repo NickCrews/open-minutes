@@ -38,9 +38,8 @@ voiceprint so they can be recognized in later meetings.
 ## Getting started
 
 You need [Vite+](https://viteplus.dev) and Docker with Compose. Vite+ provides
-`node` and `pnpm` at the versions this repo pins (Node in `.node-version`, pnpm
-in `package.json`'s `packageManager`), and runs the formatter, linter and
-tests:
+`node` and `pnpm` at the versions `devEngines` in `package.json` pins, and runs
+the formatter, linter and tests:
 
 ```sh
 curl -fsSL https://vite.plus | bash   # then open a new shell
