@@ -38,7 +38,7 @@ A website meetings are published on, YouTube or akleg.gov, from which we get a r
 _Avoid_: platform, provider, host
 
 **Recording**:
-One item published on a site that may be a meeting: a YouTube video, or a meeting page on akleg.gov with an audio file and usually a video. Its audio is what we transcribe. It has an ID on its site, its recording ID: a YouTube video ID, or an akleg.gov meeting ID like `HRES 2018-09-10 14:00:00`. A meeting has exactly one.
+One item published on a site that may be a meeting: a YouTube video, or a meeting page on akleg.gov with an audio file and usually a video. Its audio is what we transcribe. It has an ID on its site, its external ID: a YouTube video ID, or an akleg.gov meeting ID like `HRES 2018-09-10 14:00:00`. A meeting has exactly one.
 _Avoid_: video (unless it is one), stream, clip, media, item, post, listing, site ref
 
 ### Meetings and transcripts

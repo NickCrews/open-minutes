@@ -34,12 +34,13 @@ export const recordingsTable = pgTable(
     id: serial().primaryKey(),
     site: varchar().$type<Site>().notNull(),
     // Its ID on its site: a YouTube video ID, or an akleg.gov meeting ID.
-    site_id: varchar().notNull(),
+    external_id: varchar().notNull(),
     permalink: varchar(),
     // As the site gives them.
     title: varchar().notNull().default(""),
     description: varchar().notNull().default(""),
-    upload_date: date({ mode: "string" }),
+    // When the site published it, in UTC; null when the site doesn't say.
+    published_at: timestamp(),
     duration_secs: secondsInterval(),
     // The `Scout.id` that reported it, eg "moa-youtube"; null for one added by
     // hand. Scouts live in code, so not a foreign key.
@@ -50,11 +51,14 @@ export const recordingsTable = pgTable(
     // Notes on that decision, from whoever made it.
     notes: varchar().notNull().default(""),
     // When its audio reached the blob store, at
-    // recordings/<site>/<site_id>/speech.webm; null until then.
+    // recordings/<site>/<external_id>/speech.webm; null until then.
     audio_stored_at: timestamp(),
   },
   (table) => [
-    unique("recordings_site_site_id_unique").on(table.site, table.site_id),
+    unique("recordings_site_external_id_unique").on(
+      table.site,
+      table.external_id,
+    ),
     check("recordings_site_known", oneOf(table.site, SITES)),
   ],
 );
@@ -101,7 +105,9 @@ meeting and name its bodies.
 | `akleg`        | akleg.gov committees                    | `hres`, …                          | daily                         |
 
 The akleg.gov scout knows each recording's body from its committee code, and
-that every one is a meeting. The YouTube scouts apply title rules, eg "test"
+that every one is a meeting. akleg.gov doesn't say when it published a
+recording, so its `published_at` is null; the meeting's date and time are in
+its title. The YouTube scouts apply title rules, eg "test"
 in the title means not a meeting, and leave the rest null.
 
 ### Contract
@@ -110,10 +116,10 @@ in the title means not a meeting, and leave the rest null.
 `recordings` columns, so the harness copies them straight across:
 
 ```ts
-/** A recording's key: `recordings.site` and `recordings.site_id`. */
+/** A recording's key: `recordings.site` and `recordings.external_id`. */
 interface RecordingKey {
   site: Site;
-  site_id: string;
+  external_id: string;
 }
 
 /**
@@ -126,7 +132,7 @@ interface ScoutedRecording extends RecordingKey {
   permalink: string | null;
   title: string;
   description: string;
-  upload_date: string | null;
+  published_at: Date | null;
   duration_secs: number | null;
   is_meeting: boolean | null; // null leaves it to ingestion
   notes: string;
@@ -175,11 +181,11 @@ body that isn't in its scout's `bodies`. With no `--scout`, it runs each scout
 whose cron fell in the past hour.
 
 After writing a run's reports, the harness fetches audio for each recording
-with `is_meeting` not false and no `audio_stored_at`, newest first, up to a cap
-per run. For each, it calls the scout's `fetchAudio` into a temporary file,
+with `is_meeting` not false and no `audio_stored_at`, newest `published_at`
+first (unknown last), up to a cap per run. For each, it calls the scout's `fetchAudio` into a temporary file,
 encodes it for speech with
 [`encode-speech-audio.sh`](../../.github/scripts/encode-speech-audio.sh),
-uploads it to `recordings/<site>/<site_id>/speech.webm` in the blob store, and
+uploads it to `recordings/<site>/<external_id>/speech.webm` in the blob store, and
 sets `audio_stored_at`. A failed fetch is logged and retried on the next run.
 
 `pnpm scout available` lists available recordings.
@@ -190,6 +196,8 @@ sets `audio_stored_at`. A failed fetch is logged and retried on the next run.
 
 - The scouts list a channel with `yt-dlp --flat-playlist -J`, then run
   `yt-dlp --skip-download -J` for each recording `unseen` returns.
+- `published_at` is yt-dlp's `release_timestamp` for a stream or premiere,
+  otherwise its `timestamp`.
 - `fetchAudio` downloads YouTube's Opus stream (format 251) with yt-dlp.
 - In CI, yt-dlp goes through the WARP or Tor egress in
   [`packages/ytdlp/egress`](../../packages/ytdlp/README.md); see
