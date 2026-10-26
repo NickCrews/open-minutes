@@ -78,7 +78,9 @@ describe("recordings.jsonl", () => {
     const keys = recordings.map((r) => `${r.site} ${r.external_id}`);
     expect(new Set(keys).size).toBe(keys.length);
     const missing = meetings
-      .filter((m) => !keys.includes(`youtube ${m.youtube_id}`))
+      .filter(
+        (m) => !keys.includes(`${m.recording.site} ${m.recording.external_id}`),
+      )
       .map((m) => m.slug);
     expect(missing).toEqual([]);
   });
@@ -87,7 +89,11 @@ describe("recordings.jsonl", () => {
     const slugs = new Set(bodies.map((b) => b.slug));
     for (const r of recordings) {
       for (const b of r.body_slugs) expect(slugs).toContain(b);
-      const meeting = meetings.find((m) => m.youtube_id === r.external_id);
+      const meeting = meetings.find(
+        (m) =>
+          m.recording.site === r.site &&
+          m.recording.external_id === r.external_id,
+      );
       if (meeting) {
         expect(r.is_meeting).toBe(true);
         expect([...r.body_slugs].sort()).toEqual(

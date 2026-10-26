@@ -1,7 +1,7 @@
 {
   "body_slugs": ["pzc"],
   "timezone": "America/Anchorage",
-  "youtube_id": "DwFHRjobjcY",
+  "recording": { "site": "youtube", "external_id": "DwFHRjobjcY" },
   "title": "Planning and Zoning Commission - June 8, 2026 - 2026-06-08 18:30:00",
   "date": "2026-06-08",
   "time": "18:30",

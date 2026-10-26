@@ -112,13 +112,12 @@ export async function seedDataset(
     })),
   );
 
-  // Every golden meeting is a YouTube video, whose recording is in
-  // recordings.jsonl.
-  const meetingVideos = new Set(meetings.map((m) => m.youtube_id));
+  // A recording's key, for matching meetings to recordings.jsonl.
+  const keyOf = (r: { site: string; external_id: string }) =>
+    `${r.site} ${r.external_id}`;
+  const meetingRecordings = new Set(meetings.map((m) => keyOf(m.recording)));
   const recordings = loadRecordings().filter(
-    (r) =>
-      spec.recordings === "all" ||
-      (r.site === "youtube" && meetingVideos.has(r.external_id)),
+    (r) => spec.recordings === "all" || meetingRecordings.has(keyOf(r)),
   );
   const recordingRows = recordings.map(
     ({ body_slugs: _bodies, published_at, duration_secs, ...r }, i) => ({
@@ -129,11 +128,7 @@ export async function seedDataset(
       duration_secs: duration_secs === null ? null : `${duration_secs}`,
     }),
   );
-  const recordingIdByVideo = new Map(
-    recordingRows
-      .filter((r) => r.site === "youtube")
-      .map((r) => [r.external_id, r.id]),
-  );
+  const recordingIdByKey = new Map(recordingRows.map((r) => [keyOf(r), r.id]));
   const recordingBodies = recordings.flatMap((r, i) =>
     r.body_slugs.map((slug) => {
       const body_id = bodyIdBySlug.get(slug);
@@ -146,11 +141,11 @@ export async function seedDataset(
     }),
   );
 
-  const recordingIdOf = (slug: string, video: string) => {
-    const id = recordingIdByVideo.get(video);
+  const recordingIdOf = (m: (typeof meetings)[number]) => {
+    const id = recordingIdByKey.get(keyOf(m.recording));
     if (id === undefined) {
       throw new Error(
-        `Golden meeting "${slug}" is YouTube video ${video}, which recordings.jsonl doesn't have`,
+        `Golden meeting "${m.slug}" is recording ${keyOf(m.recording)}, which recordings.jsonl doesn't have`,
       );
     }
     return id;
@@ -162,7 +157,7 @@ export async function seedDataset(
       id: i + 1,
       slug: m.slug,
       timezone: m.timezone,
-      recording_id: recordingIdOf(m.slug, m.youtube_id),
+      recording_id: recordingIdOf(m),
       title: m.title,
       date: m.date,
       time: m.time,

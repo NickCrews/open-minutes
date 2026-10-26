@@ -23,7 +23,7 @@ describe('the "all" dataset', () => {
       with: { recording: true },
     });
     expect(meetings.map((m) => m.recording.external_id).sort()).toEqual(
-      snapshot.meetings.map((m) => m.youtube_id).sort(),
+      snapshot.meetings.map((m) => m.recording.external_id).sort(),
     );
     expect(meetings.map((m) => m.slug).sort()).toEqual(
       snapshot.meetings.map((m) => m.slug).sort(),

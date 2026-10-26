@@ -2,7 +2,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { type GoldenSegment, parsePsv, parseTimestamp } from "./psv";
 import type { MeetingSource } from "@open-minutes/core/meeting-source";
-import type { Site } from "@open-minutes/core/site";
+import { type RecordingKey, SITES, type Site } from "@open-minutes/core/site";
 import { ianaTimezoneError } from "@open-minutes/core/timezone";
 import {
   type MeetingWhen,
@@ -81,10 +81,10 @@ export interface GoldenMeeting {
   /** IANA zone `date` and `time` read in (eg "America/Anchorage"). */
   timezone: string;
   /**
-   * Every fixture meeting is a YouTube video: its recording's `external_id`,
-   * which recordings.jsonl must have.
+   * Its recording, which recordings.jsonl must have. Its site and external ID
+   * name it the same way in every database, so it needs no slug.
    */
-  youtube_id: string;
+  recording: RecordingKey;
   title: string;
   /**
    * "YYYY-MM-DD" in `timezone`, or null if unknown. Optional in
@@ -256,6 +256,15 @@ export function getMeetingData(
   const meeting = parseJson<GoldenMeeting>(meetingPath);
   const when = parseGoldenWhen(meeting, meetingPath);
   const body_slugs = parseGoldenBodies(meeting, meetingPath);
+  const recording = meeting.recording as Partial<RecordingKey> | undefined;
+  if (
+    !(SITES as readonly unknown[]).includes(recording?.site) ||
+    typeof recording?.external_id !== "string"
+  ) {
+    throw new Error(
+      `${meetingPath}: recording must be {"site": ${SITES.map((s) => `"${s}"`).join(" or ")}, "external_id": "..."}`,
+    );
+  }
   const timezoneError =
     typeof meeting.timezone === "string"
       ? ianaTimezoneError(meeting.timezone)

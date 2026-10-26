@@ -29,7 +29,7 @@ describe("audio voiceprints", () => {
       with: { recording: true },
     });
     expect(meetings.map((m) => m.recording.external_id)).toEqual([
-      meeting.youtube_id,
+      meeting.recording.external_id,
     ]);
     expect(meetings.map((m) => m.slug)).toEqual([SLUG]);
 

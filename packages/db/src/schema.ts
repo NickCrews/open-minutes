@@ -33,9 +33,12 @@ export const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const kebabCase = (column: AnyPgColumn) =>
   sql`${column} ~ '${sql.raw(SLUG_PATTERN.source)}'`;
 
-/** A check that a column holds one of `values`. */
-const oneOf = (column: AnyPgColumn, values: readonly string[]) =>
-  sql`${column} IN (${sql.raw(values.map((v) => `'${v}'`).join(", "))})`;
+/** A check that a column holds one of `values`, which may not hold a quote. */
+const oneOf = (column: AnyPgColumn, values: readonly string[]) => {
+  const quoted = values.find((v) => v.includes("'"));
+  if (quoted !== undefined) throw new Error(`oneOf can't take ${quoted}`);
+  return sql`${column} IN (${sql.raw(values.map((v) => `'${v}'`).join(", "))})`;
+};
 
 /**
  * A government: the Municipality of Anchorage, the City & Borough of Juneau.

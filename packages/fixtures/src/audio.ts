@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { symlink } from "node:fs/promises";
 import { join } from "node:path";
+import { youtubeIdOf } from "@open-minutes/core/site";
 import { type CachedAudio, getCachedAudio } from "@open-minutes/meeting-audio";
 import type { GoldenMeeting } from "./test-data";
 
@@ -13,8 +14,14 @@ import type { GoldenMeeting } from "./test-data";
 export async function getMeetingAudio(
   meeting: GoldenMeeting,
 ): Promise<CachedAudio> {
+  const youtubeId = youtubeIdOf(meeting.recording);
+  if (!youtubeId) {
+    throw new Error(
+      `Golden meeting ${meeting.slug}: only YouTube recordings have cached audio`,
+    );
+  }
   const audio = await getCachedAudio({
-    youtubeId: meeting.youtube_id,
+    youtubeId,
     sha256: meeting._audio_sha256,
   });
 

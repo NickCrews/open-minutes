@@ -1,7 +1,7 @@
 {
   "body_slugs": ["ced"],
   "timezone": "America/Anchorage",
-  "youtube_id": "hK1Sq1a7aQM",
+  "recording": { "site": "youtube", "external_id": "hK1Sq1a7aQM" },
   "title": "HYBRID Community and Economic Development Committee Meeting",
   "date": "2026-03-05",
   "time": "09:00",
