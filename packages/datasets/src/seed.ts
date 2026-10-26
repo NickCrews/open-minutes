@@ -19,6 +19,7 @@ import {
   loadBodies,
   loadJurisdictions,
   loadPeople,
+  loadRecordings,
 } from "@open-minutes/fixtures/test-data";
 import { bodyRows, meetingBodyIds } from "./map";
 import { advanceIdSequences } from "./sequences";
@@ -52,8 +53,9 @@ const INSERT_CHUNK = 500;
 
 /**
  * Replace every table the dataset covers with the rows `spec` declares, in one
- * transaction. Ids are assigned in order (meetings in `spec.meetings` order,
- * people in people.jsonl order, then speakers in order of appearance), so URLs
+ * transaction. Ids are assigned in order (recordings in recordings.jsonl
+ * order, meetings in `spec.meetings` order, people in people.jsonl order, then
+ * speakers in order of appearance), so URLs
  * like `/meetings/1` stay stable across reseeds.
  *
  * Every person needs a voiceprint, so a speaker with too little speech to
@@ -110,20 +112,49 @@ export async function seedDataset(
     })),
   );
 
-  // Every golden meeting is a YouTube video, with recording id = meeting id.
-  const recordingRows = meetings.map((m, i) => ({
-    id: i + 1,
-    site: "youtube" as const,
-    external_id: m.youtube_id,
-    permalink: `https://www.youtube.com/watch?v=${m.youtube_id}`,
-    title: m.title,
-    duration_secs: `${m.duration_secs}`,
-    is_meeting: true,
-  }));
-  const recordingBodies = meetingBodies.map(({ meeting_id, body_id }) => ({
-    recording_id: meeting_id,
-    body_id,
-  }));
+  // Every golden meeting is a YouTube video, whose recording is in
+  // recordings.jsonl.
+  const meetingVideos = new Set(meetings.map((m) => m.youtube_id));
+  const recordings = loadRecordings().filter(
+    (r) =>
+      spec.recordings === "all" ||
+      (r.site === "youtube" && meetingVideos.has(r.external_id)),
+  );
+  const recordingRows = recordings.map(
+    ({ body_slugs: _bodies, published_at, duration_secs, ...r }, i) => ({
+      id: i + 1,
+      ...r,
+      published_at: published_at === null ? null : new Date(published_at),
+      // Postgres reads a bare number as seconds.
+      duration_secs: duration_secs === null ? null : `${duration_secs}`,
+    }),
+  );
+  const recordingIdByVideo = new Map(
+    recordingRows
+      .filter((r) => r.site === "youtube")
+      .map((r) => [r.external_id, r.id]),
+  );
+  const recordingBodies = recordings.flatMap((r, i) =>
+    r.body_slugs.map((slug) => {
+      const body_id = bodyIdBySlug.get(slug);
+      if (body_id === undefined) {
+        throw new Error(
+          `Recording ${r.site} ${r.external_id} has unknown body "${slug}"`,
+        );
+      }
+      return { recording_id: i + 1, body_id };
+    }),
+  );
+
+  const recordingIdOf = (slug: string, video: string) => {
+    const id = recordingIdByVideo.get(video);
+    if (id === undefined) {
+      throw new Error(
+        `Golden meeting "${slug}" is YouTube video ${video}, which recordings.jsonl doesn't have`,
+      );
+    }
+    return id;
+  };
 
   const meetingRows = meetings.map((m, i) => {
     const lastWord = m.segments.flatMap((s) => s.words).at(-1);
@@ -131,7 +162,7 @@ export async function seedDataset(
       id: i + 1,
       slug: m.slug,
       timezone: m.timezone,
-      recording_id: i + 1,
+      recording_id: recordingIdOf(m.slug, m.youtube_id),
       title: m.title,
       date: m.date,
       time: m.time,
@@ -194,8 +225,9 @@ export async function seedDataset(
     if (personRows.length) await tx.insert(peopleTable).values(personRows);
     if (recordingRows.length) {
       await tx.insert(recordingsTable).values(recordingRows);
-      await tx.insert(recordingBodiesTable).values(recordingBodies);
     }
+    if (recordingBodies.length)
+      await tx.insert(recordingBodiesTable).values(recordingBodies);
     if (meetingRows.length) await tx.insert(meetingsTable).values(meetingRows);
     if (meetingBodies.length)
       await tx.insert(meetingBodiesTable).values(meetingBodies);

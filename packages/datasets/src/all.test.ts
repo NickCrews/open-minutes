@@ -35,6 +35,40 @@ describe('the "all" dataset', () => {
     expect(n).toBe(snapshot.meetings.length);
   });
 
+  test("seeds every recording in recordings.jsonl, with its bodies", async ({
+    db,
+  }) => {
+    const recordings = await db.query.recordingsTable.findMany({
+      with: { bodies: { columns: { slug: true } } },
+      orderBy: { id: "asc" },
+    });
+    expect(
+      recordings.map((r) => ({
+        site: r.site,
+        external_id: r.external_id,
+        is_meeting: r.is_meeting,
+        body_slugs: r.bodies.map((b) => b.slug).sort(),
+      })),
+    ).toEqual(
+      snapshot.recordings.map((r) => ({
+        site: r.site,
+        external_id: r.external_id,
+        is_meeting: r.is_meeting,
+        body_slugs: [...r.body_slugs].sort(),
+      })),
+    );
+    const notMeeting = recordings.find((r) => r.external_id === "bzWOvGt-Y5w");
+    expect(notMeeting).toMatchObject({
+      title: "Testing Assembly: Live Please Ignore",
+      is_meeting: false,
+    });
+    const gbos = recordings.find((r) => r.external_id === "9HoIM5INxpI");
+    expect(gbos).toMatchObject({
+      published_at: new Date("2026-03-24T19:05:28Z"),
+      duration_secs: "02:46:10",
+    });
+  });
+
   test("links identified speakers to people, with bios where given", async ({
     db,
   }) => {

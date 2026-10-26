@@ -15,11 +15,18 @@ import type { DatasetSpec } from "./spec";
  * voiceprints, also the embedding model that computes them.
  */
 export function datasetFingerprint(spec: DatasetSpec): string {
-  const seeded = [spec.meetings, spec.people, spec.voiceprints];
+  const seeded = [
+    spec.meetings,
+    spec.recordings,
+    spec.people,
+    spec.voiceprints,
+  ];
   const hash = createHash("sha256")
     .update(`v${SEED_VERSION}\n${JSON.stringify(seeded)}\n`)
     .update(readFileSync(join(TEST_DATA_ROOT, "jurisdictions.jsonl")))
     .update(readFileSync(join(TEST_DATA_ROOT, "bodies.jsonl")));
+  if (spec.meetings.length || spec.recordings === "all")
+    hash.update(readFileSync(join(TEST_DATA_ROOT, "recordings.jsonl")));
   if (spec.meetings.length)
     hash.update(readFileSync(join(TEST_DATA_ROOT, "people.jsonl")));
   for (const slug of spec.meetings) {

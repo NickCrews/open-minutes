@@ -4,7 +4,11 @@ The real, hand-verified data that seeds local and test databases and scores
 the speech models. Nothing here ships to production.
 
 [`test-data/`](test-data/) holds the jurisdictions, bodies (with their meeting
-sources), people and golden meetings. Adding a body means adding rows there.
+sources), recordings, people and golden meetings. Adding a body means adding
+rows there. `recordings.jsonl` has a row per recording, in the shape of the
+`recordings` table, with its bodies as `body_slugs`: every golden meeting's
+(its `youtube_id`), and recordings that aren't meetings, such as test
+streams.
 Each golden meeting is a directory of its metadata, its transcript
 (`golden.psv`) and its chapters. The `transcript-cleanup` and
 `people-records` skills in [`.claude/skills/`](../../.claude/skills/)

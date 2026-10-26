@@ -2,6 +2,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { type GoldenSegment, parsePsv, parseTimestamp } from "./psv";
 import type { MeetingSource } from "@open-minutes/core/meeting-source";
+import type { Site } from "@open-minutes/core/site";
 import { ianaTimezoneError } from "@open-minutes/core/timezone";
 import {
   type MeetingWhen,
@@ -42,6 +43,26 @@ export interface GoldenBody {
   _rules?: string[];
 }
 
+/**
+ * A recording, as in `recordings` (see recordings.jsonl): every golden
+ * meeting's, and recordings that aren't meetings. Columns the harness fills
+ * in (`id`, `scout_id`, `found_at`, the audio columns) are left out.
+ */
+export interface GoldenRecording {
+  site: Site;
+  external_id: string;
+  permalink: string | null;
+  title: string;
+  description: string;
+  /** ISO 8601 in UTC, or null when the site doesn't say. */
+  published_at: string | null;
+  duration_secs: number | null;
+  is_meeting: boolean | null;
+  notes: string;
+  /** As in `recording_bodies`: the bodies it belongs to, by slug. */
+  body_slugs: string[];
+}
+
 export interface GoldenPerson {
   slug: string;
   name: string;
@@ -59,7 +80,10 @@ export interface GoldenMeeting {
   body_slugs: string[];
   /** IANA zone `date` and `time` read in (eg "America/Anchorage"). */
   timezone: string;
-  /** Every fixture meeting is a YouTube video: its `recordings.external_id`. */
+  /**
+   * Every fixture meeting is a YouTube video: its recording's `external_id`,
+   * which recordings.jsonl must have.
+   */
   youtube_id: string;
   title: string;
   /**
@@ -102,6 +126,7 @@ export interface GoldenChapters {
 export interface TestData {
   jurisdictions: GoldenJurisdiction[];
   bodies: GoldenBody[];
+  recordings: GoldenRecording[];
   people: GoldenPerson[];
   meetings: GoldenMeeting[];
 }
@@ -130,6 +155,8 @@ export function loadAllTestData(root: string = TEST_DATA_ROOT): TestData {
     throw new Error(`Bodies file not found: ${bodiesPath}`);
   const bodies = parseJsonl<GoldenBody>(bodiesPath);
 
+  const recordings = loadRecordings(root);
+
   const peoplePath = join(root, "people.jsonl");
   if (!existsSync(peoplePath))
     throw new Error(`People file not found: ${peoplePath}`);
@@ -144,9 +171,19 @@ export function loadAllTestData(root: string = TEST_DATA_ROOT): TestData {
   return {
     jurisdictions,
     bodies,
+    recordings,
     people,
     meetings,
   };
+}
+
+/** Load just the recordings (recordings.jsonl). */
+export function loadRecordings(
+  root: string = TEST_DATA_ROOT,
+): GoldenRecording[] {
+  const path = join(root, "recordings.jsonl");
+  if (!existsSync(path)) throw new Error(`Recordings file not found: ${path}`);
+  return parseJsonl<GoldenRecording>(path);
 }
 
 /**
