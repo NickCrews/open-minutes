@@ -1,5 +1,6 @@
 import { join } from "node:path";
-import { type GoldenSegment, parsePsv } from "./psv";
+import type { Segment } from "@open-minutes/core/transcript";
+import { parsePsv } from "./psv";
 import { TEST_DATA_ROOT } from "./test-data";
 
 // Short stretches of real meeting audio, checked in so the audio models and
@@ -19,7 +20,7 @@ export interface AudioClip {
   offsetSecs: number;
   wavPath: string;
   /** Its transcript, as the golden had it. */
-  segments: GoldenSegment[];
+  segments: Segment<string>[];
 }
 
 /**

@@ -38,7 +38,13 @@ describe("invalid-chapter", () => {
   });
 
   test("ends the meeting at its last word when that is later", () => {
-    const segments = [{ speaker: null, words: [{ start: 98, text: "End." }] }];
+    const segments = [
+      {
+        speakerNumber: null,
+        person: null,
+        words: [{ start: 98, text: "End." }],
+      },
+    ];
     expect(
       chapterProblems(invalidChapter.rule, [chapter(0, 98.5)], {
         durationSecs: 60,

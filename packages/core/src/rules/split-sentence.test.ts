@@ -34,7 +34,11 @@ describe("split-sentence", () => {
   it("says nothing when the same speaker is either side", () => {
     expect(
       splitSentence.rule({
-        segments: segments.map((s) => ({ ...s, speaker: "a" })),
+        segments: segments.map((s) => ({
+          ...s,
+          speakerNumber: null,
+          person: "a",
+        })),
       }),
     ).toEqual([]);
   });

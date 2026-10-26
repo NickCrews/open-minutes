@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { type GoldenSegment, parsePsv, parseTimestamp } from "./psv";
+import type { Segment } from "@open-minutes/core/transcript";
+import { parsePsv, parseTimestamp } from "./psv";
 import type { MeetingSource } from "@open-minutes/core/meeting-source";
 import { ianaTimezoneError } from "@open-minutes/core/timezone";
 import {
@@ -70,7 +71,7 @@ export interface GoldenMeeting {
   /** "HH:MM:SS" in `timezone`, or null if unknown. */
   time: string | null;
   duration_secs: number;
-  segments: GoldenSegment[];
+  segments: Segment<string>[];
   /** The meeting's chapters, from chapters.json; null if it has none. */
   chapters: GoldenChapters | null;
   meetingDir: string; // path to the meeting's fixture directory (used internally for loading audio and PSV)

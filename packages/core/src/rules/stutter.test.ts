@@ -38,7 +38,9 @@ describe("stutter", () => {
   it("reports each word it would drop", () => {
     expect(
       stutter.rule({
-        segments: [{ speaker: null, words: words("I I think") }],
+        segments: [
+          { speakerNumber: null, person: null, words: words("I I think") },
+        ],
       }),
     ).toEqual([
       {

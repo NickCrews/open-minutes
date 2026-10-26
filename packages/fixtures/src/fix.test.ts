@@ -17,11 +17,13 @@ describe("fixGoldenSegments", () => {
   it("cleans each speaker separately and drops emptied segments", async () => {
     const { segments, fixed } = await fixGoldenSegments([
       {
-        speaker: { kind: "identified", person: "a" },
+        speakerNumber: null,
+        person: "a",
         words: [{ text: "Um.", start: 1 }],
       },
       {
-        speaker: { kind: "segmented", cluster: 2 },
+        speakerNumber: 2,
+        person: null,
         words: [
           { text: "Uh,", start: 2 },
           { text: "the", start: 2.2 },
@@ -32,7 +34,8 @@ describe("fixGoldenSegments", () => {
     ]);
     expect(segments).toEqual([
       {
-        speaker: { kind: "segmented", cluster: 2 },
+        speakerNumber: 2,
+        person: null,
         words: [
           { text: "The", start: 2.4 },
           { text: "budget.", start: 2.6 },
@@ -47,11 +50,11 @@ describe("fixGoldenSegments", () => {
     ]);
   });
 
-  it("unlabels an answer moved out of the asker's segment", async () => {
-    const clerk = { kind: "identified", person: "clerk" } as const;
+  it("leaves an answer moved out of the asker's segment unattributed", async () => {
+    const clerk = { speakerNumber: null, person: "clerk" };
     const { segments } = await fixGoldenSegments([
       {
-        speaker: clerk,
+        ...clerk,
         words: [
           { text: "Member", start: 1 },
           { text: "Johnson.", start: 1.3 },
@@ -61,20 +64,25 @@ describe("fixGoldenSegments", () => {
     ]);
     expect(segments).toEqual([
       {
-        speaker: clerk,
+        ...clerk,
         words: [
           { text: "Member", start: 1 },
           { text: "Johnson.", start: 1.3 },
         ],
       },
-      { speaker: { kind: "unlabeled" }, words: [{ text: "Yes.", start: 2 }] },
+      {
+        speakerNumber: null,
+        person: null,
+        words: [{ text: "Yes.", start: 2 }],
+      },
     ]);
   });
 
   it("returns clean segments as given", async () => {
     const given = [
       {
-        speaker: { kind: "unlabeled" } as const,
+        speakerNumber: null,
+        person: null,
         words: [{ text: "Yes.", start: 1 }],
       },
     ];

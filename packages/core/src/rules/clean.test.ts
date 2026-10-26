@@ -31,8 +31,8 @@ describe("cleanWords", () => {
 describe("cleanGroups", () => {
   it("never reaches across a group boundary", () => {
     const groups = cleanGroups([
-      { speaker: "a", words: words("I") },
-      { speaker: "b", words: words("I agree") },
+      { speakerNumber: null, person: "a", words: words("I") },
+      { speakerNumber: null, person: "b", words: words("I agree") },
     ]);
     expect(groups.map((g) => text(g.words))).toEqual(["I", "I agree"]);
   });
@@ -40,12 +40,16 @@ describe("cleanGroups", () => {
   it("keeps group properties and may leave a group empty", () => {
     expect(
       cleanGroups([
-        { speaker: "a", words: words("Um.") },
-        { speaker: "b", words: words("uh, yes") },
+        { speakerNumber: null, person: "a", words: words("Um.") },
+        { speakerNumber: null, person: "b", words: words("uh, yes") },
       ]),
     ).toEqual([
-      { speaker: "a", words: [] },
-      { speaker: "b", words: [{ text: "yes", start: 0.3 }] },
+      { speakerNumber: null, person: "a", words: [] },
+      {
+        speakerNumber: null,
+        person: "b",
+        words: [{ text: "yes", start: 0.3 }],
+      },
     ]);
   });
 });

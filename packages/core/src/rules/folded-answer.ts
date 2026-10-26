@@ -177,7 +177,8 @@ export function fix<M extends RuleMeeting>(
         pieces.push({ ...seg, words: seg.words.slice(from, v.wordIndex) });
       pieces.push({
         ...seg,
-        speaker: null,
+        speakerNumber: null,
+        person: null,
         words: seg.words.slice(v.wordIndex, to),
       });
       from = to;

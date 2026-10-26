@@ -14,7 +14,11 @@ const findXs: FindDrops = (ws) =>
 
 /** A meeting of one segment per sentence. */
 const meeting = (...sentences: string[]) => ({
-  segments: sentences.map((s) => ({ speaker: null, words: words(s) })),
+  segments: sentences.map((s) => ({
+    speakerNumber: null,
+    person: null,
+    words: words(s),
+  })),
 });
 
 /** `dropWords` with `findXs` over one sentence. */
@@ -90,9 +94,10 @@ describe("dropWords", () => {
   it("keeps untouched segments, and kept words' onsets and properties", () => {
     const m = {
       segments: [
-        { speaker: "a", words: words("a b") },
+        { speakerNumber: null, person: "a", words: words("a b") },
         {
-          speaker: "b",
+          speakerNumber: null,
+          person: "b",
           words: [
             { text: "x", start: 1, tag: 1 },
             { text: "yes", start: 2, tag: 2 },
@@ -107,7 +112,8 @@ describe("dropWords", () => {
     ).meeting;
     expect(fixed.segments[0]).toBe(m.segments[0]);
     expect(fixed.segments[1]).toEqual({
-      speaker: "b",
+      speakerNumber: null,
+      person: "b",
       words: [{ text: "yes", start: 2, tag: 2 }],
     });
   });

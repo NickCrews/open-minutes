@@ -375,8 +375,8 @@ describe("segmentsToTurns", () => {
 describe("segmentsToSpeechRuns", () => {
   it("wraps labeled segments as pseudo-runs that re-align to the same speakers", () => {
     const segments: Segment[] = [
-      { speakerNumber: 0, words: [w("a", 0.0), w("b", 0.3)] },
-      { speakerNumber: 1, words: [w("c", 2.0)] },
+      { speakerNumber: 0, person: null, words: [w("a", 0.0), w("b", 0.3)] },
+      { speakerNumber: 1, person: null, words: [w("c", 2.0)] },
     ];
     const runs = segmentsToSpeechRuns(segments);
     expect(runs).toHaveLength(2);

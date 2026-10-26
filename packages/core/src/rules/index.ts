@@ -41,7 +41,7 @@ import * as uncoveredSpeech from "./uncovered-speech";
 import * as wordOutOfOrder from "./word-out-of-order";
 import * as zoningDistrict from "./zoning-district";
 
-export type { RuleMeeting, RuleSegment, Severity } from "./common";
+export type { RuleMeeting, Severity } from "./common";
 export {
   CLEANING_RULE_SPECS,
   cleanGroups,

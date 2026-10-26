@@ -19,14 +19,15 @@
 //         event_data is JSON ({"index","dur"}, dur being the run's length in
 //         seconds). Purely informational: parsePsv skips these, so they never
 //         affect parsed output.
-//   - Speaker labels name who is speaking, in one of three forms:
-//       * "unlabeled"          — no speaker info.
-//       * "segmented:spk-<n>"  — a distinct voice the diarizer separated but that
-//                                is not tied to a known person. The number is a
-//                                per-meeting cluster id: spk-3 in one meeting has
-//                                nothing to do with spk-3 in another.
-//       * "identified:<slug>"  — a known, recurring person, keyed by a stable
-//                                slug (eg "margaret-tyler"). The SAME slug is the SAME
+//   - Speaker labels name who is speaking, in one of three forms, each parsed
+//     into a Segment<string>'s speakerNumber and person:
+//       * "unlabeled"          — unattributed: neither.
+//       * "segmented:spk-<n>"  — speakerNumber n: a distinct voice the diarizer
+//                                separated but that is not tied to a known person.
+//                                spk-3 in one meeting has nothing to do with spk-3
+//                                in another.
+//       * "identified:<slug>"  — person <slug>: a known, recurring person (eg
+//                                "margaret-tyler"). The SAME slug is the SAME
 //                                person in every golden — that global identity is
 //                                what lets cross-meeting speaker recognition be
 //                                tested (seed people + voiceprints from some
@@ -37,57 +38,8 @@
 import { readFileSync, writeFileSync } from "node:fs";
 
 import { formatClock } from "@open-minutes/core/clock";
-import type { Segment, Word } from "@open-minutes/core/transcript";
+import type { Segment } from "@open-minutes/core/transcript";
 import type { SpeechRun } from "@open-minutes/core/transcription";
-
-/**
- * Who a golden segment is attributed to. Two tiers of identity:
- *   - `segmented` is a per-meeting diarization cluster — a voice we separated but
- *     have not tied to a known person. `cluster` is local to one meeting.
- *   - `identified` is a global person, keyed by a stable `person` slug that means
- *     the same individual across every meeting.
- *
- * Diarization and alignment only ever produce `unlabeled` or `segmented` (they
- * cannot know who a voice belongs to — that is recognition's job, later,
- * against stored voiceprints). `identified` exists only in goldens, where
- * a human has supplied the ground-truth answer.
- */
-export type SpeakerLabel =
-  | { kind: "unlabeled" }
-  | { kind: "segmented"; cluster: number }
-  | { kind: "identified"; person: string };
-
-/**
- * A speaker-grouped run of words in a golden transcript. The golden counterpart
- * of the pipeline's {@link Segment}: same word grouping, but its
- * speaker is a rich {@link SpeakerLabel} rather than a bare cluster number, so it
- * can carry the identified-person ground truth the pipeline has to work out.
- */
-export interface GoldenSegment {
-  speaker: SpeakerLabel;
-  words: Word[];
-}
-
-/** Lift a pipeline segment (bare cluster number) into a golden segment. */
-export function toGoldenSegment(seg: Segment): GoldenSegment {
-  return {
-    speaker:
-      seg.speakerNumber === null
-        ? { kind: "unlabeled" }
-        : { kind: "segmented", cluster: seg.speakerNumber },
-    words: seg.words,
-  };
-}
-
-/** Structural equality of two speaker labels. */
-export function sameSpeakerLabel(a: SpeakerLabel, b: SpeakerLabel): boolean {
-  if (a.kind !== b.kind) return false;
-  if (a.kind === "segmented" && b.kind === "segmented")
-    return a.cluster === b.cluster;
-  if (a.kind === "identified" && b.kind === "identified")
-    return a.person === b.person;
-  return true; // both "unlabeled"
-}
 
 // Internal line-level representation. Not part of the public API.
 type PsvEvent =
@@ -115,15 +67,18 @@ export function parseTimestamp(str: string): number {
   return Math.round(seconds * 100) / 100;
 }
 
-function parseSpeaker(label: string): SpeakerLabel {
-  if (label === "unlabeled") return { kind: "unlabeled" };
+/** Who a `begin_speaker` label says is speaking. */
+type Speaker = Pick<Segment<string>, "speakerNumber" | "person">;
+
+function parseSpeaker(label: string): Speaker {
+  if (label === "unlabeled") return { speakerNumber: null, person: null };
   if (label.startsWith("segmented:")) {
     const m = label.slice("segmented:".length).match(/^spk-(\d+)$/);
     if (!m)
       throw new Error(
         `Invalid segmented speaker label (expected "segmented:spk-<n>"): ${JSON.stringify(label)}`,
       );
-    return { kind: "segmented", cluster: Number(m[1]) };
+    return { speakerNumber: Number(m[1]), person: null };
   }
   if (label.startsWith("identified:")) {
     const person = label.slice("identified:".length);
@@ -132,20 +87,26 @@ function parseSpeaker(label: string): SpeakerLabel {
         `Invalid identified speaker slug (expected kebab-case, eg "identified:margaret-tyler"): ${JSON.stringify(label)}`,
       );
     }
-    return { kind: "identified", person };
+    return { speakerNumber: null, person };
   }
   throw new Error(`Unknown speaker label: ${JSON.stringify(label)}`);
 }
 
-export function formatSpeaker(speaker: SpeakerLabel): string {
-  switch (speaker.kind) {
-    case "unlabeled":
-      return "unlabeled";
-    case "segmented":
-      return `segmented:spk-${speaker.cluster}`;
-    case "identified":
-      return `identified:${speaker.person}`;
+/**
+ * The `begin_speaker` label for a segment's speaker. A label holds a person or
+ * a speaker number, not both, so a segment with both throws rather than lose
+ * one.
+ */
+function formatSpeaker({ speakerNumber, person }: Speaker): string {
+  if (person !== null) {
+    if (speakerNumber !== null)
+      throw new Error(
+        `A PSV speaker label can't hold both person ${JSON.stringify(person)} and speaker number ${speakerNumber}`,
+      );
+    return `identified:${person}`;
   }
+  if (speakerNumber !== null) return `segmented:spk-${speakerNumber}`;
+  return "unlabeled";
 }
 
 function parseEvents(content: string): PsvEvent[] {
@@ -217,11 +178,11 @@ function parseEvents(content: string): PsvEvent[] {
  * Pass a content string to parse it directly, or `{ path }` to read and parse
  * the file at that path.
  */
-export function parsePsv(source: string | { path: string }): GoldenSegment[] {
+export function parsePsv(source: string | { path: string }): Segment<string>[] {
   const content =
     typeof source === "string" ? source : readFileSync(source.path, "utf8");
-  const segments: GoldenSegment[] = [];
-  let current: GoldenSegment | null = null;
+  const segments: Segment<string>[] = [];
+  let current: Segment<string> | null = null;
 
   for (const event of parseEvents(content)) {
     if (event.type === "vad") {
@@ -233,7 +194,7 @@ export function parsePsv(source: string | { path: string }): GoldenSegment[] {
           `Unsupported meta event (expected begin_speaker): ${JSON.stringify(event.data)}`,
         );
       }
-      current = { speaker: parseSpeaker(label), words: [] };
+      current = { ...parseSpeaker(label), words: [] };
       segments.push(current);
     } else {
       if (!current) {
@@ -257,14 +218,14 @@ export function parsePsv(source: string | { path: string }): GoldenSegment[] {
  * is also written to that file.
  */
 export function serializePsv(
-  segments: readonly GoldenSegment[],
+  segments: readonly Segment<string>[],
   options?: { path?: string },
 ): string {
   const rows: string[] = [];
   for (const segment of segments) {
     const start = segment.words[0]?.start ?? 0;
     rows.push(
-      `${formatClock(start)}|meta|${JSON.stringify({ begin_speaker: formatSpeaker(segment.speaker) })}`,
+      `${formatClock(start)}|meta|${JSON.stringify({ begin_speaker: formatSpeaker(segment) })}`,
     );
     for (const w of segment.words) {
       rows.push(`${formatClock(w.start)}|text|${w.text}`);

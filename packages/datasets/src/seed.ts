@@ -70,11 +70,11 @@ export async function seedDataset(
   for (const meeting of meetings) {
     for (const seg of meeting.segments) {
       if (
-        seg.speaker.kind === "identified" &&
+        seg.person !== null &&
         seg.words.length > 0 &&
-        !slugs.includes(seg.speaker.person)
+        !slugs.includes(seg.person)
       )
-        slugs.push(seg.speaker.person);
+        slugs.push(seg.person);
     }
   }
   const voiceprints =
@@ -129,11 +129,8 @@ export async function seedDataset(
       .map((seg) => ({
         meeting_id: i + 1,
         person_id:
-          seg.speaker.kind === "identified"
-            ? (personIdBySlug.get(seg.speaker.person) ?? null)
-            : null,
-        speaker_number:
-          seg.speaker.kind === "segmented" ? seg.speaker.cluster : null,
+          seg.person === null ? null : (personIdBySlug.get(seg.person) ?? null),
+        speaker_number: seg.speakerNumber,
         words: seg.words,
       })),
   );
