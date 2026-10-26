@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import { hasTypographicDash } from "@open-minutes/core/text";
-import { loadPeople, parseGoldenBodies, parseGoldenWhen } from "./test-data";
+import { loadPeople, parseGoldenBodies, parseGoldenWhen } from "./datums";
 
 describe("people.jsonl", () => {
   it("uses a plain hyphen, not an en or em dash, in names and bios", () => {

@@ -17,14 +17,14 @@ import {
   loadBodies,
   loadJurisdictions,
   loadPeople,
-} from "@open-minutes/datasets/test-data";
+} from "@open-minutes/datasets/datums";
 import { bodyRows, meetingBodyIds } from "./map";
 import { advanceIdSequences } from "./sequences";
-import type { DatasetSpec } from "@open-minutes/datasets/spec";
+import type { Dataset } from "@open-minutes/datasets";
 import { placeholderVoiceprints } from "./voiceprints";
 
 /**
- * Bump when seedDataset's behavior changes in a way the specs and test data
+ * Bump when seedDataset's behavior changes in a way the datasets and datums
  * don't capture. Every dataset's fingerprint includes it.
  */
 export const SEED_VERSION = 1;
@@ -47,8 +47,9 @@ const SEEDED_TABLES = [
 const INSERT_CHUNK = 500;
 
 /**
- * Replace every table the dataset covers with the rows `spec` declares, in one
- * transaction. Ids are assigned in order (meetings in `spec.meetings` order,
+ * Replace every table the dataset covers with the rows `dataset` declares, in
+ * one
+ * transaction. Ids are assigned in order (meetings in `dataset.meetings` order,
  * people in people.jsonl order, then speakers in order of appearance), so URLs
  * like `/meetings/1` stay stable across reseeds.
  *
@@ -57,16 +58,16 @@ const INSERT_CHUNK = 500;
  */
 export async function seedDataset(
   db: DB,
-  spec: DatasetSpec,
+  dataset: Dataset,
 ): Promise<SeedSummary> {
   const { jurisdictions, bodies, bodyIdBySlug } = bodyRows(
     loadJurisdictions(),
     loadBodies(),
   );
-  const meetings = spec.meetings.map((slug) => getMeetingData(slug));
+  const meetings = dataset.meetings.map((slug) => getMeetingData(slug));
   const registry = loadPeople();
 
-  const slugs = spec.people === "all" ? registry.map((p) => p.slug) : [];
+  const slugs = dataset.people === "all" ? registry.map((p) => p.slug) : [];
   for (const meeting of meetings) {
     for (const seg of meeting.segments) {
       if (
@@ -78,7 +79,7 @@ export async function seedDataset(
     }
   }
   const voiceprints =
-    spec.voiceprints === "audio"
+    dataset.voiceprints === "audio"
       ? await (
           await import("./audio-voiceprints")
         ).audioVoiceprints(slugs, meetings)

@@ -3,7 +3,7 @@
 The real, hand-verified data that seeds local and test databases and scores
 the speech models. Nothing here ships to production.
 
-[`test-data/`](test-data/) holds the jurisdictions, bodies (with their meeting
+[`datums/`](datums/) holds the jurisdictions, bodies (with their meeting
 sources), people and golden meetings. Adding a body means adding rows there.
 Each golden meeting is a directory of its metadata, its transcript
 (`golden.psv`) and its chapters. The `transcript-cleanup` and
@@ -13,11 +13,12 @@ describe how to edit them.
 `@open-minutes/datasets/audio` gets a golden meeting's audio and checks that
 it's the audio its transcript was timed to.
 
-A dataset is a named selection of that data, declared by a JSON spec in
-[`specs/`](specs/): which meetings, which people, and where their voiceprints
-come from. `@open-minutes/datasets/spec` reads and checks the specs. This
-package doesn't touch a database, so packages that only read the data (like
-`@open-minutes/audio`'s tests) don't depend on `@open-minutes/db`.
+Those rows are the datums. A dataset is a named combination of them, declared
+by a JSON file in [`datasets/`](datasets/): which meetings, which people, and
+where their voiceprints come from. `@open-minutes/datasets` reads and checks
+those files. This package doesn't touch a database, so packages that only read
+the datums (like `@open-minutes/audio`'s tests) don't depend on
+`@open-minutes/db`.
 [`@open-minutes/seed`](../seed/README.md) seeds a database with a dataset.
 
 ## Transcript format

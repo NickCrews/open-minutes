@@ -16,7 +16,7 @@ import {
   serializePsv,
   toGoldenSegment,
 } from "@open-minutes/datasets/psv";
-import { getMeetingData } from "@open-minutes/datasets/test-data";
+import { getMeetingData } from "@open-minutes/datasets/datums";
 import { N_DIMENSIONS } from "@open-minutes/core/voice_embeddings";
 import { getMeetingAudio } from "@open-minutes/datasets/audio";
 

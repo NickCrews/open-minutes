@@ -17,7 +17,7 @@ and the fast tests. The root `package.json` lists the other test commands.
   or from Linux with WARP and Tor installed, as in CI (see the
   [ytdlp README](../../packages/ytdlp/README.md)).
 
-## Hand-edited test data
+## Hand-edited datums
 
 The golden meetings in [`packages/datasets`](../../packages/datasets/README.md)
 are edited by hand and checked by rules that run in the test suite, from the

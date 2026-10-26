@@ -4,7 +4,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { transcribeAudio } from "@open-minutes/audio/transcribe";
 import { serializeVadRunsPsv } from "@open-minutes/datasets/psv";
-import { getMeetingData } from "@open-minutes/datasets/test-data";
+import { getMeetingData } from "@open-minutes/datasets/datums";
 import { getMeetingAudio } from "@open-minutes/datasets/audio";
 import { cleanSpeechSegments } from "@open-minutes/core/rules";
 import { compareTranscripts } from "@open-minutes/core/transcription";

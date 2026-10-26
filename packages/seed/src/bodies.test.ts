@@ -1,26 +1,23 @@
 import { describe, expect } from "vite-plus/test";
 import { bodiesTable, jurisdictionsTable } from "@open-minutes/db";
 import { dbTest, test } from "@open-minutes/db/testing/vitest";
-import {
-  loadBodies,
-  loadJurisdictions,
-} from "@open-minutes/datasets/test-data";
-import { dataset } from "./index";
+import { loadBodies, loadJurisdictions } from "@open-minutes/datasets/datums";
+import { datasetState } from "./index";
 
 // Integration test: each test gets its own Postgres database cloned from a
 // template the harness pre-seeded with the "bodies" dataset. The value of the
-// dataset is the end-to-end path from test-data/ to live tables, which an
+// dataset is the end-to-end path from datums/ to live tables, which an
 // in-memory fake would not exercise.
-const bodies = dataset("bodies");
+const bodies = datasetState("bodies");
 const bodiesTest = dbTest({ data: bodies });
 
-// Expected counts derive from the test data, never hard-coded, so adding a
-// body to test-data/ does not break this test.
+// Expected counts derive from the datums, never hard-coded, so adding a
+// body to datums/ does not break this test.
 const snapshot = { jurisdictions: loadJurisdictions(), bodies: loadBodies() };
 
 describe('the "bodies" dataset', () => {
   bodiesTest(
-    "seeds the jurisdictions and bodies from the test data",
+    "seeds the jurisdictions and bodies from the datums",
     async ({ db }) => {
       const jurisdictions = await db.select().from(jurisdictionsTable);
       expect(jurisdictions).toHaveLength(snapshot.jurisdictions.length);

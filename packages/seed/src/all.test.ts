@@ -9,12 +9,12 @@ import {
   segmentsTable,
 } from "@open-minutes/db";
 import { dbTest } from "@open-minutes/db/testing/vitest";
-import { loadAllTestData } from "@open-minutes/datasets/test-data";
-import { dataset } from "./index";
+import { loadAllDatums } from "@open-minutes/datasets/datums";
+import { datasetState } from "./index";
 import { placeholderVoiceprint } from "./voiceprints";
 
-const snapshot = loadAllTestData();
-const test = dbTest({ data: dataset("all") });
+const snapshot = loadAllDatums();
+const test = dbTest({ data: datasetState("all") });
 
 describe('the "all" dataset', () => {
   test("seeds every golden meeting, with transcripts", async ({ db }) => {

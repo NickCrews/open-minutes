@@ -24,7 +24,7 @@ import {
   getMeetingData,
   type GoldenChapters,
   transcriptPath,
-} from "./test-data";
+} from "./datums";
 
 /** A file the fixes rewrote, and the violations they fixed in it. */
 export interface FileFix {

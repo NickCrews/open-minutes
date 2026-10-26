@@ -1,14 +1,14 @@
 import { join } from "node:path";
 import { type GoldenSegment, parsePsv } from "./psv";
-import { TEST_DATA_ROOT } from "./test-data";
+import { DATUMS_ROOT } from "./datums";
 
 // Short stretches of real meeting audio, checked in so the audio models and
 // the tools built on them can be tested (and timed) without downloading a
-// meeting. Each is a 16 kHz mono 16-bit WAV in test-data/clips/ with the
+// meeting. Each is a 16 kHz mono 16-bit WAV in datums/clips/ with the
 // golden's transcript of it beside it as PSV, its times shifted so the clip
 // starts at 0.
 
-const CLIPS_DIR = join(TEST_DATA_ROOT, "clips");
+const CLIPS_DIR = join(DATUMS_ROOT, "clips");
 
 export interface AudioClip {
   /** The clip's file name, without extension. */

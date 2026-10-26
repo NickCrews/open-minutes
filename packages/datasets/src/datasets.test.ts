@@ -1,21 +1,26 @@
 import { describe, expect, test } from "vite-plus/test";
-import { allMeetingSlugs, datasetNames, loadSpec, parseSpec } from "./spec";
+import {
+  allMeetingSlugs,
+  datasetNames,
+  loadDataset,
+  parseDataset,
+} from "./datasets";
 
-describe("specs/", () => {
-  test.for(datasetNames())("%s.json is a valid spec", (name) => {
-    expect(() => loadSpec(name)).not.toThrow();
+describe("datasets/", () => {
+  test.for(datasetNames())("%s.json is a valid dataset", (name) => {
+    expect(() => loadDataset(name)).not.toThrow();
   });
 
   test('resolves "meetings": "all" to every golden meeting', () => {
-    expect(loadSpec("all").meetings).toEqual(allMeetingSlugs());
+    expect(loadDataset("all").meetings).toEqual(allMeetingSlugs());
   });
 
   test("names the datasets when one is unknown", () => {
-    expect(() => loadSpec("nope")).toThrow(/No dataset "nope".*bodies/);
+    expect(() => loadDataset("nope")).toThrow(/No dataset "nope".*bodies/);
   });
 });
 
-describe("parseSpec", () => {
+describe("parseDataset", () => {
   const voiced = {
     description: "d",
     meetings: ["pzc-2026-06-08"],
@@ -23,10 +28,10 @@ describe("parseSpec", () => {
     voiceprints: "audio",
   };
 
-  test("accepts a spec with no meetings and nothing else", () => {
-    expect(parseSpec({ description: "d", meetings: [] }, "x").meetings).toEqual(
-      [],
-    );
+  test("accepts a dataset with no meetings and nothing else", () => {
+    expect(
+      parseDataset({ description: "d", meetings: [] }, "x").meetings,
+    ).toEqual([]);
   });
 
   test.for([
@@ -40,7 +45,7 @@ describe("parseSpec", () => {
     [{ ...voiced, people: "some" }, /people must be/],
     [{ ...voiced, voiceprints: undefined }, /voiceprints must be/],
     [{ description: "d", meetings: [], people: "all" }, /need meetings/],
-  ] as const)("refuses %j", ([spec, error]) => {
-    expect(() => parseSpec(spec, "x")).toThrow(error);
+  ] as const)("refuses %j", ([json, error]) => {
+    expect(() => parseDataset(json, "x")).toThrow(error);
   });
 });

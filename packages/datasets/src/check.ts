@@ -24,9 +24,9 @@ import {
   type GoldenMeeting,
   getMeetingData,
   parseGoldenChapters,
-  TEST_DATA_ROOT,
+  DATUMS_ROOT,
   transcriptPath,
-} from "./test-data";
+} from "./datums";
 
 // Checks over the hand-edited fixture files, reported against file and line
 // so whoever made an edit (often an agent) can go straight to the mistake.
@@ -55,7 +55,7 @@ export function formatIssue(issue: Issue, cwd = process.cwd()): string {
 
 /** Every fixture meeting directory under the given data roots. */
 export function meetingDirs(
-  roots: readonly string[] = [TEST_DATA_ROOT],
+  roots: readonly string[] = [DATUMS_ROOT],
 ): string[] {
   return roots.flatMap((root) => {
     const dir = join(root, "meetings");
@@ -72,7 +72,7 @@ export function meetingDirs(
  */
 export function meetingDirsFor(
   file: string,
-  roots: readonly string[] = [TEST_DATA_ROOT],
+  roots: readonly string[] = [DATUMS_ROOT],
 ): string[] {
   const path = resolve(file);
   const root = roots

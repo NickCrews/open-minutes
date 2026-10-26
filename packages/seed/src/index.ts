@@ -1,42 +1,40 @@
+import { loadDataset } from "@open-minutes/datasets";
 import type { DataState } from "@open-minutes/db/ensure";
 import { datasetFingerprint } from "./fingerprint";
 import { seedDataset } from "./seed";
-import { datasetNames, loadSpec } from "@open-minutes/datasets/spec";
 
-// Datasets by name, as the database harness takes them:
+// A dataset as the database harness takes it, seeding the rows it names:
 //
-//   const test = dbTest({ data: dataset("bodies") });
+//   const test = dbTest({ data: datasetState("bodies") });
 //
-// Each is declared by a spec in @open-minutes/datasets (specs/<name>.json). Seed one through the
-// harness (dbTest, or `pnpm db up --data <name>`), not by calling `apply`
-// directly, or the recorded fingerprint no longer describes the database.
+// Seed one through the harness (dbTest, or `pnpm db up --data <name>`), not by
+// calling `apply` directly, or the recorded fingerprint no longer describes the
+// database.
 
 export { placeholderVoiceprint } from "./voiceprints";
 
 const cache = new Map<string, DataState>();
 
-/** The dataset specs/<name>.json declares. Throws on an unknown name. */
-export function dataset(name: string): DataState {
+/**
+ * The DataState for the dataset @open-minutes/datasets names `name`. Throws on
+ * an unknown name.
+ */
+export function datasetState(name: string): DataState {
   let data = cache.get(name);
   if (!data) {
-    const spec = loadSpec(name);
+    const dataset = loadDataset(name);
     let fingerprint: string | undefined;
     data = {
       name,
       get fingerprint() {
-        fingerprint ??= datasetFingerprint(spec);
+        fingerprint ??= datasetFingerprint(dataset);
         return fingerprint;
       },
       apply: async (db) => {
-        await seedDataset(db, spec);
+        await seedDataset(db, dataset);
       },
     };
     cache.set(name, data);
   }
   return data;
-}
-
-/** Every dataset in specs/, by name. */
-export function allDatasets(): Record<string, DataState> {
-  return Object.fromEntries(datasetNames().map((n) => [n, dataset(n)]));
 }

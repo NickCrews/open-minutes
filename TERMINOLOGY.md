@@ -186,14 +186,14 @@ _Avoid_: segment, turn (alone)
 The stage that assigns each word to the diarization turn it overlaps most and groups consecutive same-speaker words into segments.
 _Avoid_: merging, matching
 
-### Test data and evaluation
+### Datums, datasets and evaluation
 
-**Test data**:
-The checked-in jurisdictions, bodies, people, and golden meetings that seeding loads.
-_Avoid_: fixtures, seed data, snapshot
+**Datums**:
+The checked-in jurisdictions, bodies, people, and golden meetings, in `packages/datasets/datums/`: the atoms that datasets combine.
+_Avoid_: test data, fixtures, seed data, snapshot
 
 **Golden meeting**:
-A meeting in the test data: its metadata, golden transcript, and audio.
+A meeting in the datums: its metadata, golden transcript, and audio.
 _Avoid_: test meeting, sample
 
 **Golden transcript**:
@@ -213,12 +213,12 @@ The speaker of a golden transcript's segment, tagged with how much we know: unla
 _Avoid_: speaker tag, speaker id
 
 **Seeding**:
-Loading test data into a database as established truth, including building each known person's voiceprint from their golden segments.
+Loading a dataset into a database as established truth, including building each known person's voiceprint from their golden segments.
 _Avoid_: importing, populating
 
 **Dataset**:
-A named selection of the test data that seeding loads, declared by a spec in `packages/datasets/specs/`, such as `bodies` (only jurisdictions and bodies) or `all` (every golden meeting, with placeholder voiceprints). `pnpm db up --data <name>` and `dbTest` take one.
-_Avoid_: seed, fixture set, golden data, dev data
+A named combination of datums that seeding loads, declared by a JSON file in `packages/datasets/datasets/`, such as `bodies` (only jurisdictions and bodies) or `all` (every golden meeting, with placeholder voiceprints). `pnpm db up --data <name>` and `dbTest` take one.
+_Avoid_: spec, seed, fixture set, golden data, dev data
 
 **WER**:
 Word error rate: how far a pipeline transcript's words are from a golden transcript's, as a fraction of the golden transcript's word count.
@@ -247,7 +247,7 @@ How a rule's violations are reported; each rule gives a default. `error` means t
 _Avoid_: level
 
 **Issue**:
-A violation with its severity and its location: file and line in the test data.
+A violation with its severity and its location: file and line in the datums.
 _Avoid_: diagnostic, finding, problem
 
 **Check**:

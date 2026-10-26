@@ -7,7 +7,7 @@ import {
   formatIssue,
   meetingDirs,
 } from "./check";
-import { loadAllTestData } from "./test-data";
+import { loadAllDatums } from "./datums";
 
 /** A PSV from `[onset, speaker | word]` rows; speakers start with "@". */
 function psv(...rows: [string, string][]): string {
@@ -36,7 +36,7 @@ describe("all fixtures", () => {
   });
 
   it("include chapters for at least one golden meeting", async () => {
-    expect(loadAllTestData().meetings.some((m) => m.chapters)).toBe(true);
+    expect(loadAllDatums().meetings.some((m) => m.chapters)).toBe(true);
     expect(meetingDirs().length).toBeGreaterThan(0);
   });
 });

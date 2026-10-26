@@ -1,15 +1,15 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { TEST_DATA_ROOT } from "./test-data";
+import { DATUMS_ROOT } from "./datums";
 
-// A dataset is declared by a JSON file in specs/, named for the dataset: which
-// of the test data's rows to seed. Every dataset seeds all the jurisdictions
-// and bodies; a spec says which meetings go with them, which people, and where
-// their voiceprints come from.
+// A dataset is a combination of datums, declared by a JSON file in datasets/
+// named for it. Every dataset holds all the jurisdictions and bodies; its file
+// says which meetings go with them, which people, and where their voiceprints
+// come from.
 
-export const SPECS_DIR = new URL("../specs/", import.meta.url).pathname;
+export const DATASETS_DIR = new URL("../datasets/", import.meta.url).pathname;
 
-export interface DatasetSpec {
+export interface Dataset {
   /** What the dataset is for. Not seeded. */
   description: string;
   /** Golden meeting slugs, in id order, or "all" of them. */
@@ -29,9 +29,9 @@ export interface DatasetSpec {
 
 const KEYS = ["description", "meetings", "people", "voiceprints"];
 
-/** The names of the datasets in specs/, sorted. */
+/** The names of the datasets in datasets/, sorted. */
 export function datasetNames(): string[] {
-  return readdirSync(SPECS_DIR)
+  return readdirSync(DATASETS_DIR)
     .filter((f) => f.endsWith(".json"))
     .map((f) => f.slice(0, -".json".length))
     .sort();
@@ -39,34 +39,34 @@ export function datasetNames(): string[] {
 
 /** Every golden meeting's slug, sorted. */
 export function allMeetingSlugs(): string[] {
-  const dir = join(TEST_DATA_ROOT, "meetings");
+  const dir = join(DATUMS_ROOT, "meetings");
   return readdirSync(dir)
     .filter((slug) => existsSync(join(dir, slug, "meeting.json")))
     .sort();
 }
 
 /**
- * Read and check specs/<name>.json (see parseSpec), resolving `"meetings": "all"` to every
- * golden meeting. A spec with no meetings may leave out `people` and
- * `voiceprints`.
+ * Read and check datasets/<name>.json (see parseDataset), resolving
+ * `"meetings": "all"` to every golden meeting. A dataset with no meetings may
+ * leave out `people` and `voiceprints`.
  */
-export function loadSpec(name: string): DatasetSpec {
-  const path = join(SPECS_DIR, `${name}.json`);
+export function loadDataset(name: string): Dataset {
+  const path = join(DATASETS_DIR, `${name}.json`);
   if (!existsSync(path))
     throw new Error(
       `No dataset "${name}". Datasets: ${datasetNames().join(", ")} ` +
-        `(packages/datasets/specs/).`,
+        `(packages/datasets/datasets/).`,
     );
-  return parseSpec(JSON.parse(readFileSync(path, "utf8")), path);
+  return parseDataset(JSON.parse(readFileSync(path, "utf8")), path);
 }
 
-/** Check a parsed spec; `source` names it in errors. */
-export function parseSpec(json: unknown, source: string): DatasetSpec {
+/** Check a parsed dataset file; `source` names it in errors. */
+export function parseDataset(json: unknown, source: string): Dataset {
   const fail = (message: string): never => {
     throw new Error(`${source}: ${message}`);
   };
   if (typeof json !== "object" || json === null || Array.isArray(json))
-    fail("a spec must be a JSON object");
+    fail("a dataset must be a JSON object");
   const raw = json as Record<string, unknown>;
 
   for (const key of Object.keys(raw))
@@ -106,7 +106,7 @@ export function parseSpec(json: unknown, source: string): DatasetSpec {
   return {
     description: raw.description as string,
     meetings,
-    people: raw.people as DatasetSpec["people"],
-    voiceprints: raw.voiceprints as DatasetSpec["voiceprints"],
+    people: raw.people as Dataset["people"],
+    voiceprints: raw.voiceprints as Dataset["voiceprints"],
   };
 }

@@ -1,13 +1,13 @@
 ---
 name: transcript-cleanup
-description: Fix who-said-what, people, and chapters in Open Minutes golden fixture files. Use when correcting speaker labels, splitting or merging segments, naming people, or writing chapters in packages/datasets/test-data/.
+description: Fix who-said-what, people, and chapters in Open Minutes golden fixture files. Use when correcting speaker labels, splitting or merging segments, naming people, or writing chapters in packages/datasets/datums/.
 ---
 
 # Transcript cleanup
 
 ## Tools
 
-Golden fixtures (`packages/datasets/test-data/`) are files. Check them with
+Golden fixtures (`packages/datasets/datums/`) are files. Check them with
 `pnpm datasets:check`, which holds them to the rules in
 `packages/core/src/rules/` plus the rules of the file format. Fix every error;
 read every warning and fix it unless the data is right as it is. In a PSV file,

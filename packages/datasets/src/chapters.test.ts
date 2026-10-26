@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { parseGoldenChapters } from "./test-data";
+import { parseGoldenChapters } from "./datums";
 
 describe("parseGoldenChapters", () => {
   const valid = {

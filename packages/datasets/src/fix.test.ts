@@ -4,7 +4,7 @@ import { join, resolve } from "node:path";
 import { describe, expect, it } from "vite-plus/test";
 import { fixGoldenSegments, fixMeetingDir, serializeChapters } from "./fix";
 import { meetingDirs } from "./check";
-import { getMeetingData, transcriptPath } from "./test-data";
+import { getMeetingData, transcriptPath } from "./datums";
 
 const slugOf = (dir: string) => dir.split(/[\\/]/).at(-1)!;
 

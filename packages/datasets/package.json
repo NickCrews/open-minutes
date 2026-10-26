@@ -4,8 +4,8 @@
   "description": "Open Minutes test data: golden jurisdictions, bodies, people and meetings, the datasets that select from them, and the tools that load and check them",
   "type": "module",
   "exports": {
-    "./test-data": "./src/test-data.ts",
-    "./spec": "./src/spec.ts",
+    ".": "./src/datasets.ts",
+    "./datums": "./src/datums.ts",
     "./psv": "./src/psv.ts",
     "./audio": "./src/audio.ts",
     "./clips": "./src/clips.ts",

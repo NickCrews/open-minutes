@@ -4,7 +4,7 @@ import {
 } from "@open-minutes/core/transcription";
 import { computeSpeakerEmbeddings } from "@open-minutes/audio/embed";
 import { getMeetingAudio } from "@open-minutes/datasets/audio";
-import type { GoldenMeeting } from "@open-minutes/datasets/test-data";
+import type { GoldenMeeting } from "@open-minutes/datasets/datums";
 import type { Voiceprints } from "./voiceprints";
 
 // Real voiceprints for golden meetings, computed from their audio: the "known
