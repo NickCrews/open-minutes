@@ -2,7 +2,7 @@
 // --data <name>` can name, one per packages/datasets/specs/<name>.json. See
 // docs/contributing/db.md.
 import { defineConfig } from "@open-minutes/db/config";
-import { allDatasets } from "@open-minutes/datasets";
+import { allDatasets } from "@open-minutes/seed";
 
 export default defineConfig({
   datasets: allDatasets(),

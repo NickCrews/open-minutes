@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { TEST_DATA_ROOT } from "@open-minutes/fixtures/test-data";
+import { TEST_DATA_ROOT } from "./test-data";
 
 // A dataset is declared by a JSON file in specs/, named for the dataset: which
 // of the test data's rows to seed. Every dataset seeds all the jurisdictions

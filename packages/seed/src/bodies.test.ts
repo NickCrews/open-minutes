@@ -4,7 +4,7 @@ import { dbTest, test } from "@open-minutes/db/testing/vitest";
 import {
   loadBodies,
   loadJurisdictions,
-} from "@open-minutes/fixtures/test-data";
+} from "@open-minutes/datasets/test-data";
 import { dataset } from "./index";
 
 // Integration test: each test gets its own Postgres database cloned from a

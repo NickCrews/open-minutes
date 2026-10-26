@@ -1,8 +1,8 @@
 #!/usr/bin/env -S npx vpx
 // Check the fixture data, printing problems as `file:line: severity: message`.
 //
-//   pnpm fixtures:check                    every meeting
-//   pnpm fixtures:check path/to/file ...   just the meetings those files are in
+//   pnpm datasets:check                    every meeting
+//   pnpm datasets:check path/to/file ...   just the meetings those files are in
 //   … --hook                               as a Claude Code PostToolUse hook:
 //                                          reads the edited file from the hook
 //                                          payload on stdin, stays quiet for

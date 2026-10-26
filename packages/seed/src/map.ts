@@ -3,7 +3,7 @@ import type {
   GoldenBody,
   GoldenJurisdiction,
   GoldenMeeting,
-} from "@open-minutes/fixtures/test-data";
+} from "@open-minutes/datasets/test-data";
 
 type JurisdictionInsert = typeof jurisdictionsTable.$inferInsert;
 type BodyInsert = typeof bodiesTable.$inferInsert;

@@ -17,10 +17,10 @@ import {
   loadBodies,
   loadJurisdictions,
   loadPeople,
-} from "@open-minutes/fixtures/test-data";
+} from "@open-minutes/datasets/test-data";
 import { bodyRows, meetingBodyIds } from "./map";
 import { advanceIdSequences } from "./sequences";
-import type { DatasetSpec } from "./spec";
+import type { DatasetSpec } from "@open-minutes/datasets/spec";
 import { placeholderVoiceprints } from "./voiceprints";
 
 /**

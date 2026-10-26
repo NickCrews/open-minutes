@@ -9,7 +9,7 @@ import {
   segmentsTable,
 } from "@open-minutes/db";
 import { dbTest } from "@open-minutes/db/testing/vitest";
-import { loadAllTestData } from "@open-minutes/fixtures/test-data";
+import { loadAllTestData } from "@open-minutes/datasets/test-data";
 import { dataset } from "./index";
 import { placeholderVoiceprint } from "./voiceprints";
 

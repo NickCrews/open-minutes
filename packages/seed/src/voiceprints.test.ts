@@ -2,8 +2,9 @@ import { describe, expect } from "vite-plus/test";
 import { sql } from "drizzle-orm";
 import { meetingsTable, peopleTable, segmentsTable } from "@open-minutes/db";
 import { dbTest } from "@open-minutes/db/testing/vitest";
-import { getMeetingData } from "@open-minutes/fixtures/test-data";
-import { dataset, loadSpec } from "./index";
+import { getMeetingData } from "@open-minutes/datasets/test-data";
+import { loadSpec } from "@open-minutes/datasets/spec";
+import { dataset } from "./index";
 
 // Seeding with real voiceprints computes a voiceprint per identified person, from the
 // meeting's audio. That audio comes from the blob store, so the cold path

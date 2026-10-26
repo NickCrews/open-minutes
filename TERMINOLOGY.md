@@ -205,7 +205,7 @@ A transcript a test run produces for inspection. Never ground truth.
 _Avoid_: golden, output
 
 **PSV**:
-The pipe-separated, one-word-per-line format of golden transcripts (see [the fixtures README](packages/fixtures/README.md#transcript-format)).
+The pipe-separated, one-word-per-line format of golden transcripts (see [the datasets README](packages/datasets/README.md#transcript-format)).
 _Avoid_: CSV, TSV, transcript file
 
 **Speaker label**:
@@ -251,7 +251,7 @@ A violation with its severity and its location: file and line in the test data.
 _Avoid_: diagnostic, finding, problem
 
 **Check**:
-To run the rules over a meeting, as `pnpm fixtures:check` does. Only a verb; what it runs are rules.
+To run the rules over a meeting, as `pnpm datasets:check` does. Only a verb; what it runs are rules.
 _Avoid_: lint, validate
 
 **Fix**:

@@ -5,9 +5,9 @@ import { EMBEDDING_MODEL_SPEC } from "@open-minutes/audio/embed-model";
 import {
   TEST_DATA_ROOT,
   transcriptPath,
-} from "@open-minutes/fixtures/test-data";
+} from "@open-minutes/datasets/test-data";
 import { SEED_VERSION } from "./seed";
-import type { DatasetSpec } from "./spec";
+import type { DatasetSpec } from "@open-minutes/datasets/spec";
 
 /**
  * A hash of everything seeding `spec` reads: the seeder's version, the spec

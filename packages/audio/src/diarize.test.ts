@@ -15,10 +15,10 @@ import {
   parsePsv,
   serializePsv,
   toGoldenSegment,
-} from "@open-minutes/fixtures/psv";
-import { getMeetingData } from "@open-minutes/fixtures/test-data";
+} from "@open-minutes/datasets/psv";
+import { getMeetingData } from "@open-minutes/datasets/test-data";
 import { N_DIMENSIONS } from "@open-minutes/core/voice_embeddings";
-import { getMeetingAudio } from "@open-minutes/fixtures/audio";
+import { getMeetingAudio } from "@open-minutes/datasets/audio";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const RUNS_DIR = join(HERE, "..", "test-runs");

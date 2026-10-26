@@ -83,7 +83,7 @@ Seeders write the current schema, so an older `--schema-version` defaults to
 
 Each dataset is a JSON file in
 [`packages/datasets/specs/`](../../packages/datasets/specs/), named for the
-dataset, that says which rows of `packages/fixtures/test-data/` to seed. Every
+dataset, that says which rows of `packages/datasets/test-data/` to seed. Every
 dataset has all the jurisdictions and bodies (with their meeting sources); a
 spec picks the rest:
 
@@ -114,7 +114,7 @@ repository root offers every spec to `--data` and picks the default, so
 `dbranch.config.ts` at or above the current directory (`DBRANCH_CONFIG`
 overrides that).
 
-The seeder (`packages/datasets/src/seed.ts`) assigns fixed ids (so URLs are
+The seeder (`packages/seed/src/seed.ts`) assigns fixed ids (so URLs are
 stable), then advances the id sequences past them. A dataset's fingerprint
 hashes its spec and every test-data file it reads, so editing a meeting's
 transcript reseeds only the datasets that include that meeting.
@@ -228,7 +228,7 @@ which takes tens of milliseconds:
 
 ```ts
 import { dbTest } from "@open-minutes/db/testing/vitest";
-import { dataset } from "@open-minutes/datasets";
+import { dataset } from "@open-minutes/seed";
 
 const test = dbTest({ data: dataset("bodies") });
 

@@ -26,7 +26,7 @@ untracked per-machine caches. That causes three problems:
 
 - **Recording**: the audio of one meeting, as one file.
 - **Golden meeting**: a meeting with a hand-verified transcript in
-  `packages/fixtures/test-data/`, used by tests, benchmarks and seeded datasets.
+  `packages/datasets/test-data/`, used by tests, benchmarks and seeded datasets.
 - **Ingested meeting**: any meeting the pipeline has processed into the
   database.
 - **Store**: wherever recordings live long-term, outside any one machine.

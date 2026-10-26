@@ -1,17 +1,16 @@
 import type { DataState } from "@open-minutes/db/ensure";
 import { datasetFingerprint } from "./fingerprint";
 import { seedDataset } from "./seed";
-import { datasetNames, loadSpec } from "./spec";
+import { datasetNames, loadSpec } from "@open-minutes/datasets/spec";
 
 // Datasets by name, as the database harness takes them:
 //
 //   const test = dbTest({ data: dataset("bodies") });
 //
-// Each is declared by specs/<name>.json (see spec.ts). Seed one through the
+// Each is declared by a spec in @open-minutes/datasets (specs/<name>.json). Seed one through the
 // harness (dbTest, or `pnpm db up --data <name>`), not by calling `apply`
 // directly, or the recorded fingerprint no longer describes the database.
 
-export { datasetNames, loadSpec, type DatasetSpec } from "./spec";
 export { placeholderVoiceprint } from "./voiceprints";
 
 const cache = new Map<string, DataState>();

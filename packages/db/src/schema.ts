@@ -112,7 +112,7 @@ export const meetingsTable = pgTable(
     // Stable, readable handle for a meeting (eg "gbos-2026-03-23") that means
     // the same meeting in every database, like `people.slug`. The golden
     // fixtures set it to their directory name under
-    // packages/fixtures/test-data/meetings/, so tests, evals and agents can
+    // packages/datasets/test-data/meetings/, so tests, evals and agents can
     // name a fixture meeting without knowing its id in a given database. Null
     // for meetings that aren't fixtures. Never all digits, so a reference that
     // is all digits is unambiguously an `id`.

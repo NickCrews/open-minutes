@@ -35,7 +35,7 @@ import {
 // files themselves (PSV syntax, where a speaker marker goes, the directory
 // name), and holds each meeting to the body-specific rules its bodies opt
 // into with `_rules` in bodies.jsonl (Anchorage's bill and code numbers).
-// Errors fail the fixture tests and `pnpm fixtures:check`; warnings are
+// Errors fail the fixture tests and `pnpm datasets:check`; warnings are
 // printed and want a look.
 
 export interface Issue {
@@ -303,13 +303,13 @@ function earlierSegmentLines(
     : `earlier segments at lines ${at}`;
 }
 
-/** An issue's message, pointing at `pnpm fixtures:fix` when its rule's fix resolves it. */
+/** An issue's message, pointing at `pnpm datasets:fix` when its rule's fix resolves it. */
 function withFixHint(issue: MeetingIssue): string {
   const fixable =
     "fix" in RULE_SPECS_BY_CODE[issue.code] &&
     !(issue.code === "segment-out-of-order" && issue.interleaves.length);
   return fixable
-    ? `${issue.message}; run \`pnpm fixtures:fix\``
+    ? `${issue.message}; run \`pnpm datasets:fix\``
     : issue.message;
 }
 

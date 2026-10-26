@@ -3,8 +3,8 @@
 // and chapters.json. Goldens must look like cleaned pipeline output, or every
 // disfluency the pipeline strips would count against it as a deletion; the
 // cleaning rules' fixes (see core/rules/clean.ts) do that here too.
-// `pnpm fixtures:fix` rewrites the files; check.ts reports what is left, so
-// `pnpm fixtures:check`, the fixture tests and the post-edit hook all catch
+// `pnpm datasets:fix` rewrites the files; check.ts reports what is left, so
+// `pnpm datasets:check`, the fixture tests and the post-edit hook all catch
 // what it can't fix.
 
 import { readFileSync, writeFileSync } from "node:fs";

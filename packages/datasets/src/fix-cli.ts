@@ -1,13 +1,13 @@
 #!/usr/bin/env -S npx vpx
 // Apply the meeting rules' fixes to the fixture data, rewriting files in place.
 //
-//   pnpm fixtures:fix                    every meeting
-//   pnpm fixtures:fix path/to/file ...   just the meetings those files are in;
+//   pnpm datasets:fix                    every meeting
+//   pnpm datasets:fix path/to/file ...   just the meetings those files are in;
 //                                        a PSV file outside the fixture data
 //                                        gets the transcript rules' fixes
 //   … --verbose                          list every violation fixed
 //
-// `pnpm fixtures:check` reports what this can't fix.
+// `pnpm datasets:check` reports what this can't fix.
 
 import { relative, resolve } from "node:path";
 import { formatClock } from "@open-minutes/core/clock";
@@ -25,7 +25,7 @@ if (args.includes("--help") || args.includes("-h")) {
     .map((spec) => `  ${spec.code}`);
   console.log(
     [
-      "Usage: pnpm fixtures:fix [--verbose] [files...]",
+      "Usage: pnpm datasets:fix [--verbose] [files...]",
       "",
       "Fixes:",
       ...fixes,

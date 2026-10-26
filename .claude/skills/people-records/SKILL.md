@@ -1,13 +1,13 @@
 ---
 name: people-records
-description: Conventions for a person's name and bio in Open Minutes. Use when adding or editing a person in packages/fixtures/test-data/people.jsonl.
+description: Conventions for a person's name and bio in Open Minutes. Use when adding or editing a person in packages/datasets/test-data/people.jsonl.
 ---
 
 # People records
 
 A person has a `slug`, a `name` and a `bio`. In golden fixtures they live in
-`packages/fixtures/test-data/people.jsonl`, one JSON object per line; check
-with `pnpm fixtures:check`.
+`packages/datasets/test-data/people.jsonl`, one JSON object per line; check
+with `pnpm datasets:check`.
 
 ## Rules
 

@@ -19,7 +19,7 @@ and the fast tests. The root `package.json` lists the other test commands.
 
 ## Hand-edited test data
 
-The golden meetings in [`packages/fixtures`](../../packages/fixtures/README.md)
+The golden meetings in [`packages/datasets`](../../packages/datasets/README.md)
 are edited by hand and checked by rules that run in the test suite, from the
 command line, and after each edit by a Claude Code hook. That package's README
 explains how to check and fix them.
