@@ -23,7 +23,15 @@ describe("checkMeeting", () => {
       await codes({
         bodyCount: 1,
         segments: [seg("a", [1, "Hello."]), seg("b", [2, "Hi."])],
-        chapters: [{ start: 0, end: 2.5, title: "Greetings", bullets: [] }],
+        chapters: [
+          {
+            start: 0,
+            end: 2.5,
+            title: "Greetings",
+            summary: "Greetings.",
+            bullets: [],
+          },
+        ],
       }),
     ).toEqual([]);
   });

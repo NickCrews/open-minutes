@@ -1,5 +1,6 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
+import type { Chapter } from "@open-minutes/core/chapters";
 import type { Segment } from "@open-minutes/core/transcript";
 import { parsePsv, parseTimestamp } from "./psv";
 import type { MeetingSource } from "@open-minutes/core/meeting-source";
@@ -85,19 +86,13 @@ export interface GoldenChapterGeneration {
   reviewed_by_human: boolean;
 }
 
-export interface GoldenChapter {
-  /** Seconds into the meeting. "H:MM:SS.ss" in chapters.json. */
-  start: number;
-  end: number;
-  title: string;
-  summary: string;
-  bullets: string[];
-}
-
-/** A meeting's chapters.json: one generation's chapters, in order. */
+/**
+ * A meeting's chapters.json: one generation's chapters, in order. Times are
+ * "H:MM:SS.ss" in the file and seconds once loaded.
+ */
 export interface GoldenChapters {
   generation: GoldenChapterGeneration;
-  chapters: GoldenChapter[];
+  chapters: Chapter[];
 }
 
 export interface TestData {

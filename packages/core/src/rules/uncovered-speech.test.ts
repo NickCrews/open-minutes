@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
-import { seg } from "./testing";
+import { chapter, seg } from "./testing";
 import * as uncoveredSpeech from "./uncovered-speech";
 import { uncoveredSpans } from "./uncovered-speech";
 
@@ -42,12 +42,6 @@ describe("uncoveredSpans", () => {
 
 describe("uncovered-speech", () => {
   const segments = [seg("a", [0, "Start."], [100, "End."])];
-  const chapter = (start: number, end: number) => ({
-    start,
-    end,
-    title: `${start}`,
-    bullets: [],
-  });
 
   test("reports a long stretch of speech in no chapter", () => {
     expect(

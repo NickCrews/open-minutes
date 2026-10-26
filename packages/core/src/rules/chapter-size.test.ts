@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 import { chapter, chapterProblems } from "./testing";
-import type { ChapterSpan } from "../chapters";
+import type { Chapter } from "../chapters";
 import * as chapterSize from "./chapter-size";
 
 describe("chapter-size", () => {
@@ -11,8 +11,7 @@ describe("chapter-size", () => {
   });
 
   test("holds substantive chapters to 1–15 minutes and 3–7 bullets", () => {
-    const count = (c: ChapterSpan) =>
-      chapterProblems(chapterSize.rule, [c]).length;
+    const count = (c: Chapter) => chapterProblems(chapterSize.rule, [c]).length;
     expect(count(chapter(0, 300, 3))).toBe(0);
     expect(count(chapter(0, 30, 3))).toBe(1);
     expect(count(chapter(0, 1000, 4))).toBe(1);

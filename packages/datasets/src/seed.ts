@@ -157,7 +157,7 @@ export async function seedDataset(
         end_secs: `${c.end}`,
         title: c.title,
         summary: c.summary,
-        bullets: c.bullets,
+        bullets: [...c.bullets],
       });
     }
   });
