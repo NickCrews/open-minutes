@@ -53,6 +53,9 @@ export const recordingsTable = pgTable(
     // When its audio reached the blob store, at
     // recordings/<site>/<external_id>/speech.webm; null until then.
     audio_stored_at: timestamp(),
+    // Failed attempts to fetch and store its audio, and the last one's error.
+    audio_failures: integer().notNull().default(0),
+    audio_error: varchar(),
   },
   (table) => [
     unique("recordings_site_external_id_unique").on(
@@ -105,7 +108,8 @@ meeting and name its bodies.
 | `akleg`        | akleg.gov committees                    | `hres`, …                          | daily                         |
 
 The akleg.gov scout knows each recording's body from its committee code, and
-that every one is a meeting. akleg.gov doesn't say when it published a
+that every one is a meeting. Its `FetchAudio` downloads the recording's MP3.
+akleg.gov doesn't say when it published a
 recording, so its `published_at` is null; the meeting's date and time are in
 its title. The YouTube scouts apply title rules, eg "test"
 in the title means not a meeting, and leave the rest null.
@@ -144,51 +148,82 @@ interface Scout {
   name: string;
   bodies: readonly string[]; // slugs it may report
   schedule: string; // cron, UTC
-  scan(ctx: ScoutContext): Promise<ScoutedRecording[]>;
-  /** Download the recording's audio to `dest` as Opus, converting if the site serves another format. */
-  fetchAudio(
-    recording: RecordingKey,
-    dest: string,
-    signal: AbortSignal,
-  ): Promise<void>;
+  /** Yields recordings as it finds them, so a run cut short keeps what it found. */
+  scan(ctx: ScoutContext): AsyncIterable<ScoutedRecording>;
 }
 
 interface ScoutContext {
   /** The ones no scout has reported yet. */
   unseen(recordings: readonly RecordingKey[]): Promise<RecordingKey[]>;
-  log(message: string): void;
+  log: Logger;
   signal: AbortSignal;
   now: Date;
 }
+
+interface Logger {
+  info(message: string): void;
+  warn(message: string): void;
+  /** Something failed but the scan goes on, eg one recording's metadata. */
+  error(message: string, cause?: unknown): void;
+}
+
+/**
+ * Downloads a recording's audio to `dest` as the site serves it, the best
+ * quality it offers, unconverted. One per site, not per scout, so a recording
+ * added by hand can be fetched too.
+ */
+type FetchAudio = (
+  external_id: string,
+  dest: string,
+  signal: AbortSignal,
+) => Promise<void>;
 ```
 
 Scouts don't touch the database. They may shell out, use the filesystem and
 read environment variables.
 
+A scout reports only recordings whose audio is complete: a live or upcoming
+stream waits until it has ended.
+
+A scout that throws has failed; the harness keeps what it yielded before the
+throw. One that hits a problem with a single recording calls `log.error` and
+moves on.
+
 ### Where the code lives
 
 - `@open-minutes/core/scout`: the contract above.
 - [`packages/youtube`](../../packages/youtube/README.md) and
-  [`packages/akleg`](../../packages/akleg/README.md): talking to each site.
+  [`packages/akleg`](../../packages/akleg/README.md): talking to each site,
+  including each site's `FetchAudio`.
 - `packages/scouts`: the scouts, which use those packages, and the harness that
   runs them.
 
 ### The harness
 
-`pnpm scout run [--scout <id>] [--dry-run]` runs scouts and writes their
-reports to `recordings` and `recording_bodies`. It rejects a report naming a
-body that isn't in its scout's `bodies`. With no `--scout`, it runs each scout
-whose cron fell in the past hour.
+`pnpm scout run [--scout <id>] [--dry-run]` runs scouts and writes each report
+to `recordings` and `recording_bodies` as it is yielded. It rejects a report
+naming a body that isn't in its scout's `bodies`. With no `--scout`, it runs
+each scout whose cron fell in the past hour.
 
-After writing a run's reports, the harness fetches audio for each recording
-with `is_meeting` not false and no `audio_stored_at`, newest `published_at`
-first (unknown last), up to a cap per run. For each, it calls the scout's `fetchAudio` into a temporary file,
+After the scans, the harness fetches audio for each recording with
+`is_meeting` not false, no `audio_stored_at` and fewer than 3
+`audio_failures`, newest `published_at` first (unknown last), up to a cap per
+run. For each, it calls its site's `FetchAudio` into a temporary file,
 encodes it for speech with
-[`encode-speech-audio.sh`](../../.github/scripts/encode-speech-audio.sh),
-uploads it to `recordings/<site>/<external_id>/speech.webm` in the blob store, and
-sets `audio_stored_at`. A failed fetch is logged and retried on the next run.
+[`encode-speech-audio.sh`](../../.github/scripts/encode-speech-audio.sh)
+(16 kHz mono Opus at 24 kbps, in WebM, from whatever format the site serves),
+checks that the result's duration is within a few seconds of `duration_secs`
+when that is known, uploads it to `recordings/<site>/<external_id>/speech.webm`
+in the blob store, and sets `audio_stored_at`. A failure increments
+`audio_failures`, sets `audio_error`, and is retried on a later run until the
+third. Resetting `audio_failures` to 0 retries it again.
 
-`pnpm scout available` lists available recordings.
+A run logs each scout's messages prefixed with its id. Errors become GitHub
+Actions annotations in CI, and a run with any error, a failed scout or a
+failed fetch exits non-zero, so the workflow shows red.
+
+`pnpm scout available` lists available recordings, and `pnpm scout failed`
+those that have given up on their audio, with `audio_error`.
 
 `.github/workflows/scout.yml` runs `pnpm scout run` hourly.
 
@@ -198,7 +233,8 @@ sets `audio_stored_at`. A failed fetch is logged and retried on the next run.
   `yt-dlp --skip-download -J` for each recording `unseen` returns.
 - `published_at` is yt-dlp's `release_timestamp` for a stream or premiere,
   otherwise its `timestamp`.
-- `fetchAudio` downloads YouTube's Opus stream (format 251) with yt-dlp.
+- They skip a stream that is live or upcoming (yt-dlp's `live_status`).
+- Its `FetchAudio` downloads YouTube's Opus stream (format 251) with yt-dlp.
 - In CI, yt-dlp goes through the WARP or Tor egress in
   [`packages/ytdlp/egress`](../../packages/ytdlp/README.md); see
   [youtube-in-ci.md](../research/youtube-in-ci.md).
@@ -206,7 +242,7 @@ sets `audio_stored_at`. A failed fetch is logged and retried on the next run.
 ## Turning a recording into a meeting
 
 Turning an available recording into a meeting never deals with the
-recording's site: its scout has already normalized what that needs, the
+recording's site: its scout and the harness have already normalized what that needs, the
 `recordings` row and the audio in the blob store, to a common format.
 
 1. If the recording's `is_meeting` is null, decide it from the title,
@@ -228,10 +264,12 @@ that follow it, are outside the scouts' job.
 
 - Each scout runs end to end against its live site, YouTube or akleg.gov, with
   as little mocking as possible, and must report real recordings correctly.
-- Each scout's `fetchAudio` runs against its live site on one short recording.
+- Each site's `FetchAudio` runs against the live site on one short recording,
+  and its output encodes with `encode-speech-audio.sh`.
 - The harness runs with fake scouts. Its tests cover which scouts run for a
   given hour's crons, and the database and blob store before and after a run:
   rows written, `unseen` skipping recordings already reported, unknown bodies
-  rejected, audio uploaded, the per-run cap, and a failed fetch retried on the
-  next run.
+  rejected, reports kept from a scout that throws, audio uploaded, the per-run
+  cap, a failed fetch retried until its third failure, a duration mismatch
+  counted as a failure, and the exit code.
 - Deciding `is_meeting` and bodies for recordings a scout left open.
