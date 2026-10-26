@@ -16,7 +16,7 @@ Opus, and stores it there along with yt-dlp's metadata. Code that needs a
 video reads it from the store first. On a miss it can trigger that workflow
 and wait (given a GitHub token), or fall back to running yt-dlp locally, which
 works from a home connection. [`.env.example`](../../.env.example) lists the
-settings, and [youtube-in-ci.md](../research/youtube-in-ci.md) explains how
+settings, and [youtube-on-servers.md](../research/youtube-on-servers.md) explains how
 the workaround was chosen.
 
 yt-dlp is installed into the repo's cache the first time it's needed, if it

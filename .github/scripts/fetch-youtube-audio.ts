@@ -5,7 +5,7 @@
 // The request goes out through runWithEgress's routes (YOUTUBE_EGRESS; the
 // fetch-youtube-audio workflow sets warp,tor, since YouTube refuses GitHub's
 // IPs). Expects packages/ytdlp/egress/install.sh to have run; see
-// docs/research/youtube-in-ci.md.
+// docs/research/youtube-on-servers.md.
 //
 // The output is YouTube's Opus audio as-is (format 251, ~50 MB per hour);
 // encode-speech-audio.sh then shrinks it for the blob store. On failure,

@@ -15,7 +15,7 @@ untracked per-machine caches. That causes three problems:
 
 - **YouTube is an unreliable source for automation.** From datacenter IPs
   (CI runners, cloud machines) audio downloads fail on YouTube's bot check.
-  See [youtube-in-ci.md](youtube-in-ci.md).
+  See [youtube-on-servers.md](youtube-on-servers.md).
 - **We don't keep what we've processed.** If a video is taken down, edited or
   re-encoded, we can't reproduce a transcript or re-run a better model on it.
 - **Things that should be simple are expensive or faked.** The dev dataset's
@@ -191,7 +191,7 @@ tests.
 
 - YouTube blocks audio downloads from datacenter IPs without cookies, PO
   tokens or a residential egress; listing videos and fetching metadata are
-  workable ([youtube-in-ci.md](youtube-in-ci.md)).
+  workable ([youtube-on-servers.md](youtube-on-servers.md)).
 - GitHub: files over 100 MB are rejected, repos are best kept under ~1 GB, LFS
   has bandwidth quotas, Actions caches are capped at 10 GB per repo, and jobs
   at 6 hours.
