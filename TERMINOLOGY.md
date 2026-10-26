@@ -29,9 +29,9 @@ _Avoid_: jargon, dictionary, vocabulary, mishearings
 One word or phrase in a glossary: its headword (the correct spelling), its meaning, its variants (other correct spellings) and how it has been misheard.
 _Avoid_: term, word (that is a word of a transcript)
 
-**Meeting source**:
-Where a body's meetings are published, scanned for new ones: a YouTube channel or playlist, or an Alaska Legislature committee on akleg.gov. A body has at most one; bodies that share a YouTube channel each get a playlist on it.
-_Avoid_: video source, feed, playlist, channel (unless it really is one)
+**Scout**:
+Code that watches one place on a site, such as a YouTube channel or the Alaska Legislature's committees on akleg.gov, and reports each new recording there. It may also decide whether a recording is a meeting and which bodies it belongs to.
+_Avoid_: lister, crawler, feed, meeting source
 
 **Site**:
 A website meetings are published on, YouTube or akleg.gov, from which we get a recording's metadata and audio.
