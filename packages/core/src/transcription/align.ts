@@ -80,7 +80,9 @@ export function alignSpeakers(
   const words = deriveTimedWords(speech);
   if (words.length === 0) return [];
   if (turns.length === 0) {
-    return [{ speakerNumber: null, words: words.map((t) => t.word) }];
+    return [
+      { speakerNumber: null, person: null, words: words.map((t) => t.word) },
+    ];
   }
 
   const segments: TimedSegment[] = [];
@@ -101,6 +103,7 @@ export function alignSpeakers(
   }
   return absorbSlivers(segments).map((s) => ({
     speakerNumber: s.speakerNumber,
+    person: null,
     words: s.words.map((t) => t.word),
   }));
 }
@@ -109,10 +112,10 @@ export function alignSpeakers(
  * Derive diarization turns from already-labeled segments — used to re-apply an
  * existing golden's speaker boundaries onto a freshly re-transcribed word stream
  * (so a transcription snapshot refresh preserves the diarization layer).
- * Only `segmented` segments contribute; unlabeled/identified are skipped.
+ * Segments without a speaker number contribute no turn.
  */
 export function segmentsToTurns(
-  segments: readonly Segment[],
+  segments: readonly Segment<unknown>[],
 ): DiarizationTurn[] {
   const turns: DiarizationTurn[] = [];
   for (const segment of segments) {

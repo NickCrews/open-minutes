@@ -53,7 +53,9 @@ describe("filler-word", () => {
       { text: "Um,", start: 1, tag: "a" },
       { text: "yes", start: 2, tag: "b" },
     ];
-    const meeting = { segments: [{ speaker: null, words: input }] };
+    const meeting = {
+      segments: [{ speakerNumber: null, person: null, words: input }],
+    };
     const { meeting: fixed } = fillerWord.fix(
       meeting,
       fillerWord.rule(meeting),
@@ -67,7 +69,9 @@ describe("filler-word", () => {
   it("reports each filler at its word", () => {
     expect(
       fillerWord.rule({
-        segments: [{ speaker: null, words: words("so um, yes") }],
+        segments: [
+          { speakerNumber: null, person: null, words: words("so um, yes") },
+        ],
       }),
     ).toEqual([
       {

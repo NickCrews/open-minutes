@@ -105,7 +105,8 @@ describe("rewrite", () => {
   it("writes the replacement, keeping punctuation, onsets and other properties", () => {
     const segments = [
       {
-        speaker: "x",
+        speakerNumber: null,
+        person: "x",
         words: [
           { start: 1, text: "(ten" },
           { start: 2, text: "PM)." },
@@ -145,7 +146,9 @@ describe("rewrite", () => {
   });
 
   it("leaves violations without a replacement, or whose words have changed", () => {
-    const segments = [{ speaker: null, words: [{ start: 1, text: "ten" }] }];
+    const segments = [
+      { speakerNumber: null, person: null, words: [{ start: 1, text: "ten" }] },
+    ];
     const at = {
       code: "t",
       message: "",

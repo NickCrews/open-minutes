@@ -1,16 +1,7 @@
 // The types every rule shares, and helpers for more than one rule.
 
 import type { ChapterSpan } from "../chapters";
-import { LAST_WORD_DURATION_SEC, type Word } from "../transcript";
-
-export interface RuleSegment {
-  /**
-   * Who spoke it, as a key: segments with equal keys are the same speaker.
-   * Null for unattributed speech.
-   */
-  speaker: string | null;
-  words: readonly Word[];
-}
+import { LAST_WORD_DURATION_SEC, type Segment } from "../transcript";
 
 /** A meeting as the rules take it. */
 export interface RuleMeeting {
@@ -21,7 +12,7 @@ export interface RuleMeeting {
   bodyCount?: number;
   durationSecs?: number | null;
   /** In the order they're stored. */
-  segments: readonly RuleSegment[];
+  segments: readonly Segment<string | number>[];
   /** In order. Empty, null or absent when the meeting has none. */
   chapters?: readonly ChapterSpan[] | null;
 }
