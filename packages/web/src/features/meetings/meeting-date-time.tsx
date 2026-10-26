@@ -15,7 +15,7 @@ import { z } from "zod";
 
 /**
  * Dates and times are entered by hand as the wall clock read in the meeting's own
- * timezone — the form on the agenda, and the form they're stored in (ADR 0004),
+ * timezone — the form on the agenda, and the form they're stored in,
  * so nothing is converted on the way in. The time is optional: often the day is
  * all anyone knows, and leaving it blank stores "time unknown" rather than a
  * made-up midnight. Clearing the date clears the time with it.

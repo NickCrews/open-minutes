@@ -85,7 +85,7 @@ _Avoid_: talk time, airtime
 ### Speakers and people
 
 A speaker is local to one meeting; a person is global across all meetings
-(see [ADR 0002](adrs/0002-two-tier-speaker-identity.md)).
+(see [docs/speaker-identity.md](docs/speaker-identity.md)).
 
 **Speaker**:
 A distinct voice within one meeting, as shown in that meeting's transcript. Meaningless outside its meeting.
@@ -205,7 +205,7 @@ A transcript a test run produces for inspection. Never ground truth.
 _Avoid_: golden, output
 
 **PSV**:
-The pipe-separated, one-word-per-line format of golden transcripts (see [ADR 0001](adrs/0001-psv-golden-transcript-format.md)).
+The pipe-separated, one-word-per-line format of golden transcripts (see [the fixtures README](packages/fixtures/README.md#transcript-format)).
 _Avoid_: CSV, TSV, transcript file
 
 **Speaker label**:

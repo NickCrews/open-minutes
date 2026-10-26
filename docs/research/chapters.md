@@ -402,8 +402,8 @@ A chapter's speakers should be **computed from `segments` whose time ranges
 intersect the chapter**, with speaking seconds per speaker. They should not be
 emitted by the model or stored on the chapter. Reasons:
 
-- Speaker identity changes after transcription. Humans name `speaker 3`, and ADR 0002
-  adds cross-meeting recognition. A stored list would go stale. A derived list
+- Speaker identity changes after transcription. Humans name `speaker 3`, and recognition
+  ties voices to people across meetings. A stored list would go stale. A derived list
   picks up every relabel for free.
 - It is exact where the model would be approximate.
 - The web already has the machinery (`tallySpeakers`/`assignSpeakers` in
@@ -544,13 +544,13 @@ seeks to `t` and highlights the chapter that contains it. There is no
 Assume an agent explores the data through SQL, an `om` CLI, or a future MCP or
 HTTP API. Typical tasks and what they need from chapters:
 
-| Task                                                  | What the agent does                                                                                             | Requirement                                                                                                             |
-| ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| "What happened at the Feb 3 GBOS meeting?"            | Reads the chapter outline (titles, times, summaries, top speakers), about 2k tokens.                            | A compact outline rendering, one line per chapter.                                                                      |
-| "What did the board decide about X?"                  | Searches chapter titles and bullets across meetings, then reads the transcript slice for the matching chapters. | Full-text search over title, bullets, and summary. Cheap "transcript for chapter" access (segments in `[start, end)`).  |
-| "What has Supervisor Y said about housing this year?" | Joins chapters to derived per-chapter speakers, filters by person, searches by topic, reads the slices.         | A `chapter_speakers` view (chapter_id, person_id / speaker_number, speaking_secs). A stable person identity (ADR 0002). |
-| "Cite it."                                            | Returns a deep link.                                                                                            | A URL form `/meetings/:id?t=secs`.                                                                                      |
-| "Is this trustworthy?"                                | Checks provenance.                                                                                              | Model, prompt version, generated-at, and whether a human reviewed the chapters.                                         |
+| Task                                                  | What the agent does                                                                                             | Requirement                                                                                                                                            |
+| ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| "What happened at the Feb 3 GBOS meeting?"            | Reads the chapter outline (titles, times, summaries, top speakers), about 2k tokens.                            | A compact outline rendering, one line per chapter.                                                                                                     |
+| "What did the board decide about X?"                  | Searches chapter titles and bullets across meetings, then reads the transcript slice for the matching chapters. | Full-text search over title, bullets, and summary. Cheap "transcript for chapter" access (segments in `[start, end)`).                                 |
+| "What has Supervisor Y said about housing this year?" | Joins chapters to derived per-chapter speakers, filters by person, searches by topic, reads the slices.         | A `chapter_speakers` view (chapter_id, person_id / speaker_number, speaking_secs). A stable person identity ([speaker identity](speaker-identity.md)). |
+| "Cite it."                                            | Returns a deep link.                                                                                            | A URL form `/meetings/:id?t=secs`.                                                                                                                     |
+| "Is this trustworthy?"                                | Checks provenance.                                                                                              | Model, prompt version, generated-at, and whether a human reviewed the chapters.                                                                        |
 
 Principles:
 

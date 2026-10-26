@@ -6,6 +6,48 @@ error rate, chapter rules, reading a meeting's date from its title and
 transcript, the interfaces a meeting source implements, voice-embedding
 constants, and `.env.local` loading.
 
+## Meeting dates
+
+A meeting's "when" is stored in two nullable columns on `meetings`, both read
+as the wall clock in the meeting's `timezone` (eg `America/Anchorage`), the
+way an agenda prints them:
+
+| column | example        | null means         |
+| ------ | -------------- | ------------------ |
+| `date` | `"2026-06-15"` | the day's unknown  |
+| `time` | `"19:30:00"`   | the time's unknown |
+
+- A null `time` means "time unknown", never midnight. `00:00:00` is a real
+  midnight. A time without a date is forbidden
+  (`meetings_time_requires_date`).
+- No offset or instant is stored. Titles, agendas and minutes all give wall
+  clock times, so nothing is converted on the way in or out, and a date with
+  no time has no instant to store. An instant, if ever needed, is
+  `date + time` in `timezone`.
+- Both are strings, never JS `Date`s, so neither the server's nor the
+  browser's timezone can shift them.
+
+Use [`@open-minutes/core/meeting-date`](src/meeting-date/) rather than
+formatting these yourself:
+
+- `formatMeetingDate({ date, time })` gives `"June 15, 2026 7:30 PM"`,
+  `"June 15, 2026"` when the time is unknown, or `null` when the date is
+  (callers choose the fallback, eg "Date unknown"). `formatDate`,
+  `formatTimeOfDay` and `formatMonthYear` format the pieces.
+- `parseMeetingDate` and `parseMeetingTime` validate input, and normalize
+  `"HH:MM"` to `"HH:MM:SS"`.
+- `compareMeetingsNewestFirst` sorts by date then time, unknown dates last
+  and, within a day, unknown times after known ones. SQL's
+  `ORDER BY date DESC, time DESC` puts nulls first; add `NULLS LAST` there.
+- `resolveMeetingDateTime` reads a date and time from a meeting's title and
+  the opening of its transcript, with warnings where they disagree.
+
+Golden meetings' `meeting.json` may set `date` (`"YYYY-MM-DD"`) and `time`
+(`"HH:MM"` or `"HH:MM:SS"`); left out means unknown.
+
+Meetings in different timezones are compared by wall clock, not instant.
+Every body so far is in `America/Anchorage`.
+
 ## Rules
 
 [`src/rules/`](src/rules/) holds the rules a transcript, its chapters and its

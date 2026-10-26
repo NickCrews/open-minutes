@@ -1,14 +1,13 @@
 # Contributing to Open Minutes
 
-How Open Minutes fits together and how to run it. For what the project is and
-who it's for, see the [README](README.md). Words like _body_, _meeting_,
-_segment_ and _person_ have specific meanings here; see
-[TERMINOLOGY.md](TERMINOLOGY.md) and use them in code, comments and commits.
+For developers.
+Words like _body_, _meeting_, _segment_ have specific meanings;
+see [TERMINOLOGY.md](TERMINOLOGY.md) and use them in code, comments and commits.
 
-## How it fits together
+## Architecture
 
 ```
-YouTube / akleg.gov ──▶ audio (transcribe / diarize) ──▶ Postgres + pgvector ◀── web (Cloudflare Workers)
+YouTube / akleg.gov ──▶ audio (transcribe / diarize) ──▶ Postgres ◀── web (Cloudflare Workers)
 ```
 
 Open Minutes finds a body's recorded meetings on the site that publishes them,
@@ -17,14 +16,13 @@ speaking, and stores it in Postgres, where a public website lets anyone read
 and search it. Nothing yet runs a meeting through all of these stages
 end to end; that orchestration is still to be built.
 
-The code is a [pnpm](https://pnpm.io) workspace under [`packages/`](packages/),
-roughly in layers:
+The code is a pnpm workspace, roughly in layers from bottom to top:
 
 - **Shared domain** (`core`): types and pure logic every other package uses,
-  with no database or I/O.
+  with no database, I/O, or heavy dependencies.
 - **Storage** (`db`): the Postgres schema, migrations and database tooling.
-- **Sources** (`youtube`, `akleg`, with `ytdlp` underneath): list the meetings
-  a site has published and fetch their metadata and audio.
+- **Sources** (`youtube`, `akleg`, with `ytdlp` underneath): adapters for how
+  to get metadata, recordings, etc from an upstream site.
 - **Audio** (`blobstore`, `meeting-audio`, `codecs`, `audio`): store, cache and
   decode meeting audio, then transcribe and diarize it with local models.
 - **Test data** (`fixtures`, `datasets`, `glossary`): hand-verified real
@@ -32,14 +30,10 @@ roughly in layers:
   speech models.
 - **Website** (`web`): the public transcript browser.
 
-Each package's README says what it does and how to work on it.
-
 Postgres runs in Docker locally and on [Neon](https://neon.tech) in
 production. Jurisdictions contain bodies; bodies hold meetings; a meeting's
 transcript is a sequence of segments, each spoken by a person, who carries a
 voiceprint so they can be recognized in later meetings.
-
-Significant design decisions are recorded in [`adrs/`](adrs/).
 
 ## Getting started
 
@@ -69,10 +63,13 @@ formatting and runs the fast tests.
 - [Deploying](docs/contributing/deploy.md): how production is deployed and why
   we only roll forward.
 
-## Architecture Decision Records
+## Documentation
 
-Each ADR is a numbered Markdown file in [`adrs/`](adrs/). Follow the format of
-the existing ones, and commit an ADR alongside the change it describes.
+Anything written in files must only describe how things work now, not how they got that way.
+When a change makes a doc wrong, fix the doc in the same commit.
+History and narrative belongs in commit messages and in messages to the user,
+but the files in the repo must be understandable without needing the
+conext of the entire git history.
 
 ## Commits
 
