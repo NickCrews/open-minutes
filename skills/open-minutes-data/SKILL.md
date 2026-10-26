@@ -54,7 +54,8 @@ If a download is blocked, tell the person which website needs to be allowed:
 | ------------------ | --------------------------------------------------------------- | ----------------------------------------------------------------------------- |
 | `jurisdictions`    | government, e.g. the Municipality of Anchorage                  | `slug`, `name`, `state`                                                       |
 | `bodies`           | group that holds meetings, e.g. the Anchorage Assembly          | `slug`, `jurisdiction_id`, `name`, `name_short`, `timezone`                   |
-| `meetings`         | recorded meeting                                                | `title`, `date`, `time`, `timezone`, `url`, `duration_secs`                   |
+| `meetings`         | recorded meeting                                                | `title`, `date`, `time`, `timezone`, `recording_id`, `duration_secs`          |
+| `recordings`       | item published on YouTube or akleg.gov that may be a meeting    | `site`, `external_id`, `permalink`, `title`, `published_at`, `is_meeting`     |
 | `meeting_bodies`   | body holding a meeting (several for a joint meeting)            | `meeting_id`, `body_id`                                                       |
 | `segments`         | stretch of one person talking                                   | `meeting_id`, `person_id`, `speaker_number`, `text`, `start_secs`, `end_secs` |
 | `people`           | person who speaks in meetings                                   | `name`, `bio`, `voice_embedding`                                              |
@@ -62,7 +63,8 @@ If a download is blocked, tell the person which website needs to be allowed:
 | `chapter_speakers` | person who spoke in a chapter                                   | `chapter_id`, `person_id`, `speaking_secs`                                    |
 | `export_info`      | (one row) when the file was made                                | `exported_at`                                                                 |
 
-Joins: `meeting_bodies.meeting_id → meetings.id`,
+Joins: `meetings.recording_id → recordings.id`,
+`meeting_bodies.meeting_id → meetings.id`,
 `meeting_bodies.body_id → bodies.id`, `bodies.jurisdiction_id →
 jurisdictions.id`, and
 `segments.meeting_id`/`chapters.meeting_id → meetings.id`,
@@ -83,10 +85,11 @@ Things to know:
 - **Dates** are local to where the meeting was held, in its `timezone`. `time` is null when the
   start time isn't known, and `date` can be null too. Fall back on the
   meeting's `title`, which usually has the date in it.
-- **Where a meeting was published**: `site_kind` is `youtube` or `akleg` (the
-  Alaska Legislature's akleg.gov), `site_id` is its ID there (a YouTube video
-  ID, or an akleg.gov meeting ID like `HRES 2018-09-10 14:00:00`), and `url`
-  is its page there.
+- **Where a meeting was published** is in its recording: `site` is `youtube`
+  or `akleg` (the Alaska Legislature's akleg.gov), `external_id` is its ID
+  there (a YouTube video ID, or an akleg.gov meeting ID like
+  `HRES 2018-09-10 14:00:00`), and `permalink` is its page there. Recordings
+  that aren't meetings, or aren't transcribed yet, have no meeting.
 - **Times within a meeting** (`start_secs`, `end_secs`, `duration_secs`) are
   `INTERVAL`s from the start of its recording. `epoch(start_secs)` gives
   seconds as a number.

@@ -1,0 +1,103 @@
+# Hourly, runs the scouts whose cron fell in the past hour against production
+# (`pnpm scout run`), then fetches, encodes and stores audio for up to a
+# capped number of recordings, at recordings/<site>/<external id>/speech.webm
+# in the blob store. See docs/contributing/recordings.md.
+#
+# Run one scout now with `gh workflow run scout.yml -f scout=<id>`.
+#
+# Configuration: the blob store's variables and object-store-writer secrets
+# (see fetch-youtube-audio.yml), plus NEON_PROJECT_ID and NEON_API_KEY (see
+# production.yml). A run with any error, a failed scout or a failed fetch
+# fails, and each error is an annotation on the run.
+name: scout
+
+on:
+  schedule:
+    - cron: "5 * * * *"
+  workflow_dispatch:
+    inputs:
+      scout:
+        description: Run only this scout, eg moa-youtube (default, every scout that is due)
+        required: false
+      dry_run:
+        description: Log what would be written and fetched, and write nothing
+        type: boolean
+        default: false
+
+# A run that overlaps the next waits for it, so two never write at once.
+concurrency:
+  group: scout
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  scout:
+    if: vars.NEON_PROJECT_ID != ''
+    runs-on: ubuntu-latest
+    environment: object-store-writer
+    timeout-minutes: 120
+    env:
+      BLOB_STORE_PUBLIC_URL: ${{ vars.OBJECT_STORE_PUBLIC_URL }}
+      BLOB_STORE_BUCKET: ${{ vars.OBJECT_STORE_BUCKET }}
+      AWS_ENDPOINT_URL: ${{ vars.OBJECT_STORE_ENDPOINT }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.OBJECT_STORE_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.OBJECT_STORE_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: ${{ vars.OBJECT_STORE_REGION || 'auto' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+
+      # The same .deb cache as fetch-youtube-audio.yml.
+      - name: Name the .deb cache
+        id: debs
+        run: echo "key=youtube-egress-debs-v2-${{ runner.os }}-${{ runner.arch }}-$(date +%Y-%m)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache/restore@v4
+        id: debs-cache
+        with:
+          path: ${{ runner.temp }}/debs
+          key: ${{ steps.debs.outputs.key }}
+      - name: Install Cloudflare WARP and Tor
+        run: packages/ytdlp/egress/install.sh "$RUNNER_TEMP/debs"
+      - uses: actions/cache/save@v4
+        if: steps.debs-cache.outputs.cache-hit != 'true'
+        with:
+          path: ${{ runner.temp }}/debs
+          key: ${{ steps.debs.outputs.key }}
+      # ffmpeg isn't on the ubuntu-latest image.
+      - name: Install ffmpeg
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends ffmpeg > /dev/null
+
+      # Production is the Neon project's default branch, which neonctl uses
+      # when given no branch. YouTube always refuses a runner's own IP, so
+      # direct isn't tried.
+      - name: Scout
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+          YOUTUBE_EGRESS: warp,tor
+          YOUTUBE_EGRESS_STATE: ${{ runner.temp }}/youtube-egress
+          SCOUT: ${{ inputs.scout }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          DATABASE_URL_PROD=$(npx --yes neonctl@2 connection-string \
+            --project-id "$NEON_PROJECT_ID" --no-analytics)
+          echo "::add-mask::$DATABASE_URL_PROD"
+          if [[ "$DATABASE_URL_PROD" != postgres* ]]; then
+            echo "::error::neonctl didn't return a connection string for production."
+            exit 1
+          fi
+          export DATABASE_URL_PROD
+          args=(--db prod)
+          if [[ -n "$SCOUT" ]]; then args+=(--scout "$SCOUT"); fi
+          if [[ "$DRY_RUN" == "true" ]]; then args+=(--dry-run); fi
+          pnpm scout run "${args[@]}"
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: egress-logs
+          path: ${{ runner.temp }}/youtube-egress/*.log

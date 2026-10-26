@@ -7,6 +7,8 @@
     "./audio-provider": "./src/audio-provider.ts",
     "./recording-lister": "./src/recording-lister.ts",
     "./meeting-source": "./src/meeting-source.ts",
+    "./site": "./src/site.ts",
+    "./scout": "./src/scout.ts",
     "./timeline": "./src/timeline.ts",
     "./meeting-date": "./src/meeting-date/index.ts",
     "./transcription": "./src/transcription/index.ts",

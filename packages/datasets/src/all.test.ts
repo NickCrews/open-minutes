@@ -8,6 +8,7 @@ import {
   peopleTable,
   segmentsTable,
 } from "@open-minutes/db";
+import { insertRecording } from "@open-minutes/db/testing";
 import { dbTest } from "@open-minutes/db/testing/vitest";
 import { loadAllTestData } from "@open-minutes/fixtures/test-data";
 import { dataset } from "./index";
@@ -18,8 +19,10 @@ const test = dbTest({ data: dataset("all") });
 
 describe('the "all" dataset', () => {
   test("seeds every golden meeting, with transcripts", async ({ db }) => {
-    const meetings = await db.select().from(meetingsTable);
-    expect(meetings.map((m) => m.site_id).sort()).toEqual(
+    const meetings = await db.query.meetingsTable.findMany({
+      with: { recording: true },
+    });
+    expect(meetings.map((m) => m.recording.external_id).sort()).toEqual(
       snapshot.meetings.map((m) => m.youtube_id).sort(),
     );
     expect(meetings.map((m) => m.slug).sort()).toEqual(
@@ -52,8 +55,7 @@ describe('the "all" dataset', () => {
     const [row] = await db
       .insert(meetingsTable)
       .values({
-        site_kind: "youtube",
-        site_id: "new-one",
+        recording_id: await insertRecording(db),
         timezone: "America/Anchorage",
       })
       .returning({ id: meetingsTable.id });

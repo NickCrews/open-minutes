@@ -8,6 +8,8 @@ import {
   meetingBodiesTable,
   meetingsTable,
   peopleTable,
+  recordingBodiesTable,
+  recordingsTable,
   segmentsTable,
 } from "@open-minutes/db";
 import { LAST_WORD_DURATION_SEC } from "@open-minutes/core/transcription";
@@ -27,18 +29,20 @@ import { placeholderVoiceprints } from "./voiceprints";
  * Bump when seedDataset's behavior changes in a way the specs and test data
  * don't capture. Every dataset's fingerprint includes it.
  */
-export const SEED_VERSION = 1;
+export const SEED_VERSION = 2;
 
 /** Per-table count of rows inserted by a seed. */
 export type SeedSummary = Record<string, number>;
 
-// Every table a dataset owns, truncated together. Not meeting_bodies, which
-// has no id sequence for advanceIdSequences, and goes with its meetings.
+// Every table a dataset owns, truncated together. Not meeting_bodies or
+// recording_bodies, which have no id sequence for advanceIdSequences, and go
+// with their meetings and recordings.
 const SEEDED_TABLES = [
   chaptersTable,
   chapterGenerationsTable,
   segmentsTable,
   meetingsTable,
+  recordingsTable,
   peopleTable,
   bodiesTable,
   jurisdictionsTable,
@@ -106,14 +110,28 @@ export async function seedDataset(
     })),
   );
 
+  // Every golden meeting is a YouTube video, with recording id = meeting id.
+  const recordingRows = meetings.map((m, i) => ({
+    id: i + 1,
+    site: "youtube" as const,
+    external_id: m.youtube_id,
+    permalink: `https://www.youtube.com/watch?v=${m.youtube_id}`,
+    title: m.title,
+    duration_secs: `${m.duration_secs}`,
+    is_meeting: true,
+  }));
+  const recordingBodies = meetingBodies.map(({ meeting_id, body_id }) => ({
+    recording_id: meeting_id,
+    body_id,
+  }));
+
   const meetingRows = meetings.map((m, i) => {
     const lastWord = m.segments.flatMap((s) => s.words).at(-1);
     return {
       id: i + 1,
       slug: m.slug,
       timezone: m.timezone,
-      site_kind: "youtube" as const,
-      site_id: m.youtube_id,
+      recording_id: i + 1,
       title: m.title,
       date: m.date,
       time: m.time,
@@ -174,6 +192,10 @@ export async function seedDataset(
     await tx.insert(jurisdictionsTable).values(jurisdictions);
     await tx.insert(bodiesTable).values(bodies);
     if (personRows.length) await tx.insert(peopleTable).values(personRows);
+    if (recordingRows.length) {
+      await tx.insert(recordingsTable).values(recordingRows);
+      await tx.insert(recordingBodiesTable).values(recordingBodies);
+    }
     if (meetingRows.length) await tx.insert(meetingsTable).values(meetingRows);
     if (meetingBodies.length)
       await tx.insert(meetingBodiesTable).values(meetingBodies);
@@ -191,6 +213,8 @@ export async function seedDataset(
       jurisdictions: jurisdictions.length,
       bodies: bodies.length,
       people: personRows.length,
+      recordings: recordingRows.length,
+      recording_bodies: recordingBodies.length,
       meetings: meetingRows.length,
       meeting_bodies: meetingBodies.length,
       segments: segments.length,

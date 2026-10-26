@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Re-encodes YouTube's Opus audio to the speech-quality Opus the blob store
-# keeps: 16 kHz mono at 24 kbps in WebM, ~11 MB per hour against ~50 MB for
+# Encodes a recording's audio, in whatever format its site serves (YouTube's
+# Opus, akleg.gov's MP3), to the speech-quality Opus the blob store keeps:
+# 16 kHz mono at 24 kbps in WebM, ~11 MB per hour against ~50 MB for
 # YouTube's ~110 kbps stereo. The pipeline's models take 16 kHz mono, so
 # nothing they can use is lost.
 # Usage: encode-speech-audio.sh <input> <output .webm>

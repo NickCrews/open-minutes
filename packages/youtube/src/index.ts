@@ -8,7 +8,9 @@ import type {
   ListedRecording,
   RecordingLister,
 } from "@open-minutes/core/recording-lister";
+import type { FetchAudio } from "@open-minutes/core/scout";
 import {
+  type Egress,
   type Route,
   ensureYtDlpInstalled,
   parseRoutes,
@@ -121,6 +123,64 @@ export interface YtDlpInfo {
   duration?: number | null;
   /** "YYYYMMDD". */
   upload_date?: string | null;
+  /** When it was uploaded, in seconds since the epoch. */
+  timestamp?: number | null;
+  /** When a stream or premiere started, in seconds since the epoch. */
+  release_timestamp?: number | null;
+  /** Whether it is or was a stream; absent for some videos. */
+  live_status?:
+    | "not_live"
+    | "is_live"
+    | "is_upcoming"
+    | "was_live"
+    | "post_live"
+    | null;
+  webpage_url?: string;
+}
+
+/**
+ * When YouTube published the video: a stream's or premiere's start, otherwise
+ * its upload; null when yt-dlp gives neither.
+ */
+export function publishedAt(info: YtDlpInfo): Date | null {
+  const secs = info.release_timestamp ?? info.timestamp;
+  return secs == null ? null : new Date(secs * 1000);
+}
+
+/**
+ * Whether the video's audio is all there: false for a stream that is live or
+ * upcoming, or that has just ended and YouTube is still processing.
+ */
+export function isComplete(info: YtDlpInfo): boolean {
+  return (
+    info.live_status !== "is_live" &&
+    info.live_status !== "is_upcoming" &&
+    info.live_status !== "post_live"
+  );
+}
+
+/**
+ * A video's yt-dlp info JSON, through `egress`, which keeps WARP and Tor up
+ * between calls; for a scout's many.
+ */
+export async function videoInfo(
+  egress: Egress,
+  videoIdOrUrl: string,
+): Promise<YtDlpInfo> {
+  await ensureYtDlpInstalled();
+  const { stdout } = await egress.run([
+    "--skip-download",
+    "-J",
+    videoUrl(videoIdOrUrl),
+  ]);
+  return JSON.parse(stdout) as YtDlpInfo;
+}
+
+/** The videos in a channel or playlist, as {@link youtubeSource} lists them. */
+export function listVideosIn(
+  source: YouTubeSource,
+): Promise<ListedRecording[]> {
+  return listVideos(source);
 }
 
 /** The {@link RecordingMetadata} in a video's yt-dlp info JSON. */
@@ -154,8 +214,39 @@ function isoDate(yyyymmdd: string | null | undefined): string | null {
 }
 
 /**
- * Downloads a video's original Opus-in-WebM audio to `path` with yt-dlp. A
- * single format needs no ffmpeg to download.
+ * Downloads a video's audio in yt-dlp `format` to `path`. A single format
+ * needs no ffmpeg to download.
+ */
+async function downloadAudio(
+  config: YouTubeConfig,
+  videoIdOrUrl: string,
+  path: string,
+  format: string,
+) {
+  await mkdir(dirname(path), { recursive: true });
+  const url = videoUrl(videoIdOrUrl);
+  // Downloaded beside `path` and moved into place, so an interrupted download
+  // never leaves a partial file at `path`.
+  const webm = `${path}.download.webm`;
+  const removeWebm = async () => {
+    await rm(webm, { force: true });
+    await rm(`${webm}.part`, { force: true });
+  };
+  try {
+    await ytDlpWithEgress(
+      config,
+      ["-f", format, "--no-playlist", "-o", webm, url],
+      removeWebm,
+    );
+    await rename(webm, path);
+  } finally {
+    await removeWebm();
+  }
+}
+
+/**
+ * Downloads a video's original Opus-in-WebM audio to `path`, keeping an
+ * existing file there unless `overwrite` is set.
  */
 async function ensureAudioDownloaded(
   config: YouTubeConfig,
@@ -170,28 +261,24 @@ async function ensureAudioDownloaded(
   );
   if (exists && !overwrite) return { downloaded: false };
 
-  const url = videoUrl(videoIdOrUrl);
   // Progress goes to stderr so callers' stdout stays machine-readable.
-  console.error(`Downloading audio for ${url} to ${path}...`);
-  // Downloaded beside `path` and moved into place, so an interrupted download
-  // never leaves a partial file at `path`.
-  const webm = `${path}.download.webm`;
-  const removeWebm = async () => {
-    await rm(webm, { force: true });
-    await rm(`${webm}.part`, { force: true });
-  };
-  try {
-    // The format the fetch-youtube-audio workflow re-encodes from.
-    await ytDlpWithEgress(
-      config,
-      ["-f", "bestaudio[ext=webm]", "--no-playlist", "-o", webm, url],
-      removeWebm,
-    );
-    await rename(webm, path);
-  } finally {
-    await removeWebm();
-  }
+  console.error(
+    `Downloading audio for ${videoUrl(videoIdOrUrl)} to ${path}...`,
+  );
+  // The format the fetch-youtube-audio workflow re-encodes from.
+  await downloadAudio(config, videoIdOrUrl, path, "bestaudio[ext=webm]");
   return { downloaded: true };
+}
+
+/**
+ * YouTube's {@link FetchAudio}, using `config`: its Opus stream (format 251),
+ * else its best audio.
+ */
+export function youtubeFetchAudio(config: YouTubeConfig = {}): FetchAudio {
+  return async (videoId, dest, signal) => {
+    signal.throwIfAborted();
+    await downloadAudio(config, videoId, dest, "251/bestaudio");
+  };
 }
 
 /**

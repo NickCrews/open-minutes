@@ -1,7 +1,10 @@
 import { type DB, meetingBodiesTable, meetingsTable } from "@open-minutes/db";
 import { compareMeetingsNewestFirst } from "@open-minutes/core/meeting-date";
 import { count, eq, max, min } from "drizzle-orm";
-import { meetingBodiesColumns } from "../meetings/bodies";
+import {
+  meetingBodiesColumns,
+  meetingRecordingColumns,
+} from "../meetings/bodies";
 
 /** How much of a body's record we hold: its meetings, and the span they cover. */
 export type Coverage = {
@@ -60,7 +63,12 @@ export async function getBodyById(db: DB, bodyId: number) {
     where: { id: bodyId },
     with: {
       jurisdiction: true,
-      meetings: { with: { bodies: meetingBodiesColumns } },
+      meetings: {
+        with: {
+          bodies: meetingBodiesColumns,
+          recording: meetingRecordingColumns,
+        },
+      },
     },
   });
   if (!body) throw new Error("Body not found");

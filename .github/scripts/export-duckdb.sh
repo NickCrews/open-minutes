@@ -25,6 +25,10 @@ ATTACH '${DATABASE_URL//\'/\'\'}' AS pg (TYPE postgres, READ_ONLY);
 -- keeps each column's min and max per row group), even read over HTTP.
 CREATE TABLE jurisdictions AS FROM pg.public.jurisdictions ORDER BY id;
 CREATE TABLE bodies AS FROM pg.public.bodies ORDER BY id;
+CREATE TABLE recordings AS
+  SELECT id, site, external_id, permalink, title, description, published_at,
+    duration_secs, found_at, is_meeting
+  FROM pg.public.recordings ORDER BY id;
 CREATE TABLE meetings AS FROM pg.public.meetings ORDER BY id;
 CREATE TABLE meeting_bodies AS
   FROM pg.public.meeting_bodies ORDER BY meeting_id, body_id;

@@ -23,6 +23,8 @@ The code is a pnpm workspace, roughly in layers from bottom to top:
 - **Storage** (`db`): the Postgres schema, migrations and database tooling.
 - **Sources** (`youtube`, `akleg`, with `ytdlp` underneath): adapters for how
   to get metadata, recordings, etc from an upstream site.
+- **Scouts** (`scouts`): find new recordings on those sites, store them, and
+  put their audio in the blob store.
 - **Audio** (`blobstore`, `meeting-audio`, `codecs`, `audio`): store, cache and
   decode meeting audio, then transcribe and diarize it with local models.
 - **Test data** (`fixtures`, `datasets`, `glossary`): hand-verified real

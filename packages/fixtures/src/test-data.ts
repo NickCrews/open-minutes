@@ -59,7 +59,7 @@ export interface GoldenMeeting {
   body_slugs: string[];
   /** IANA zone `date` and `time` read in (eg "America/Anchorage"). */
   timezone: string;
-  /** Every fixture meeting is a YouTube video: `meetings.site_id`. */
+  /** Every fixture meeting is a YouTube video: its `recordings.external_id`. */
   youtube_id: string;
   title: string;
   /**

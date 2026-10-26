@@ -17,6 +17,7 @@
     "web:dev": "pnpm --filter @open-minutes/web run dev",
     "db": "pnpm --silent --filter @open-minutes/db run db",
     "models": "pnpm --silent --filter @open-minutes/audio run models",
+    "scout": "pnpm --silent --filter @open-minutes/scouts run scout",
     "fixtures:check": "pnpm --silent --filter @open-minutes/fixtures run check",
     "fixtures:fix": "pnpm --silent --filter @open-minutes/fixtures run fix",
     "deploy:prod": "pnpm --filter @open-minutes/web run deploy"

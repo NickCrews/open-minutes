@@ -22,6 +22,10 @@ the workaround was chosen.
 yt-dlp is installed into the repo's cache the first time it's needed, if it
 isn't already on your `PATH`.
 
+The scout harness also stores the audio of each recording it finds, from
+either site, in the blob store, at `recordings/<site>/<external_id>/speech.webm`,
+encoded the same way; see [recordings.md](recordings.md#the-harness).
+
 ## Decoding and caching
 
 The models want 16 kHz mono WAV. Opus and MP3 are decoded in WebAssembly, so

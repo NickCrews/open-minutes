@@ -7,6 +7,7 @@ import {
   segmentsTable,
 } from "@open-minutes/db";
 import { countDistinct, desc, eq, isNotNull, max, min } from "drizzle-orm";
+import { meetingRecordingColumns } from "../meetings/bodies";
 
 /** One body a person has spoken before, and the span over which they did. */
 export type Attendance = {
@@ -121,9 +122,8 @@ export function getPersonById(db: DB, personId: number) {
                 title: true,
                 date: true,
                 time: true,
-                site_kind: true,
-                site_id: true,
               },
+              with: { recording: meetingRecordingColumns },
             },
           },
           orderBy: { id: "desc" },

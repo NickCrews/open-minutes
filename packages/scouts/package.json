@@ -1,0 +1,29 @@
+{
+  "name": "@open-minutes/scouts",
+  "version": "0.1.0",
+  "description": "Open Minutes' scouts, which find recordings on the sites that publish meetings, and the harness that runs them and stores their audio",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "scout": "vpx src/cli.ts",
+    "test": "vp test run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@open-minutes/akleg": "workspace:*",
+    "@open-minutes/blobstore": "workspace:*",
+    "@open-minutes/core": "workspace:*",
+    "@open-minutes/db": "workspace:*",
+    "@open-minutes/youtube": "workspace:*",
+    "@open-minutes/ytdlp": "workspace:*",
+    "citty": "^0.1.6",
+    "drizzle-orm": "1.0.0-beta.21"
+  },
+  "devDependencies": {
+    "@open-minutes/datasets": "workspace:*",
+    "@types/node": "catalog:",
+    "vite-plus": "catalog:"
+  }
+}

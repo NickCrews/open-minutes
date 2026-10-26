@@ -7,8 +7,11 @@ meetings, and implements `@open-minutes/core`'s `AudioProvider` for a
 meeting: its metadata, and its MP3 audio. `aklegSource({ committee:
 "HRES" })` is a committee as a body's meeting source
 (`{"type":"akleg_committee","committee":"HRES"}`): core's `RecordingLister`.
+`akleg().fetchAudio` is akleg.gov's `FetchAudio`, which the scout harness
+uses (see [recordings.md](../../docs/contributing/recordings.md)).
 
-Meetings from a committee are stored with `site_kind` `akleg`. The site's player
+Its recordings are stored with `site` `akleg` and the meeting ID as
+`external_id`. The site's player
 can't play them yet. See [docs/research/akleg.md](../../docs/research/akleg.md)
 for how akleg.gov publishes meetings, how to play them on our site, and
 what's left to do.

@@ -7,6 +7,7 @@ import {
   peopleTable,
   segmentsTable,
 } from "@open-minutes/db";
+import { insertRecording } from "@open-minutes/db/testing";
 import { test } from "@open-minutes/db/testing/vitest";
 import { N_DIMENSIONS as VOICE_N_DIMENSIONS } from "@open-minutes/core/voice_embeddings";
 import { describe, expect } from "vite-plus/test";
@@ -44,9 +45,6 @@ async function insertPerson(db: DB, name: string): Promise<number> {
   return person!.id;
 }
 
-/** A meeting's site_kind and site_id are unique, so meetings need distinct IDs. */
-let nextSiteId = 0;
-
 /** A meeting of `bodyIds` on `date`, with `segments` segments by `personId`. */
 async function insertMeeting(
   db: DB,
@@ -58,8 +56,7 @@ async function insertMeeting(
   const [meeting] = await db
     .insert(meetingsTable)
     .values({
-      site_kind: "youtube",
-      site_id: `vid${nextSiteId++}`,
+      recording_id: await insertRecording(db),
       timezone: "America/Anchorage",
       date,
     })

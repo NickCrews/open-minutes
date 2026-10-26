@@ -7,3 +7,11 @@ export const meetingBodiesColumns = {
   columns: { id: true, name: true, name_short: true },
   orderBy: { name: "asc" },
 } as const;
+
+/**
+ * A meeting's recording, as a `with` on a meetings query: where it was
+ * published, for its player, thumbnail and link.
+ */
+export const meetingRecordingColumns = {
+  columns: { site: true, external_id: true, permalink: true },
+} as const;

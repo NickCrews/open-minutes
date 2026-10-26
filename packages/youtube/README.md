@@ -7,6 +7,13 @@ its original Opus-in-WebM audio). `metadataFromYtDlpInfo` reads yt-dlp's info
 JSON, which `@open-minutes/meeting-audio` also uses on the copies in the blob store
 ([`@open-minutes/blobstore`](../blobstore/README.md)).
 
+For the YouTube scouts (see
+[recordings.md](../../docs/contributing/recordings.md)), `listVideosIn`
+lists a channel, `videoInfo` reads one video's info JSON through an `egress`
+that stays up between calls, `publishedAt` and `isComplete` read it, and
+`youtubeFetchAudio` is YouTube's `FetchAudio`: the Opus stream (format 251)
+as YouTube serves it.
+
 Metadata and audio come from yt-dlp, which runs through
 [`@open-minutes/ytdlp`](../ytdlp/README.md), which installs it and, for a
 video's metadata and audio, routes it through WARP or Tor when YouTube

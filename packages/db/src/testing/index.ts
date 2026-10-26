@@ -9,6 +9,7 @@ import {
   withAdmin,
 } from "../cluster";
 import { sql } from "drizzle-orm";
+import { recordingsTable } from "../schema";
 import { ensureDatabase, type DataState } from "../ensure";
 import {
   localMigrations,
@@ -229,3 +230,24 @@ function liveSchemaFingerprints(): Set<string> {
 
 export { ensurePostgresRunning } from "../cluster";
 export type { DataState } from "../ensure";
+
+let nextExternalId = 0;
+
+/**
+ * Inserts a recording for a test meeting to point at, a YouTube one with a
+ * fresh external ID unless `values` say otherwise. Returns its id.
+ */
+export async function insertRecording(
+  db: DB,
+  values: Partial<typeof recordingsTable.$inferInsert> = {},
+): Promise<number> {
+  const [recording] = await db
+    .insert(recordingsTable)
+    .values({
+      site: "youtube",
+      external_id: `test-recording-${nextExternalId++}`,
+      ...values,
+    })
+    .returning({ id: recordingsTable.id });
+  return recording!.id;
+}
