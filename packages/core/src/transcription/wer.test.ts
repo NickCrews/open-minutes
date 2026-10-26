@@ -14,14 +14,14 @@ describe("computeWER", () => {
       substitutions: 0,
       deletions: 0,
       insertions: 0,
-      ref_word_count: 4,
+      refWordCount: 4,
     });
   });
 
   it("ignores case and punctuation when normalizing", () => {
     const result = computeWER("Hello, world!", "hello world");
     expect(result.wer).toBe(0);
-    expect(result.ref_word_count).toBe(2);
+    expect(result.refWordCount).toBe(2);
   });
 
   it("counts a single substitution", () => {
@@ -59,14 +59,14 @@ describe("computeWER", () => {
   it("returns WER 1 when reference is empty but hypothesis is not", () => {
     const result = computeWER("", "extra words here");
     expect(result.wer).toBe(1);
-    expect(result.ref_word_count).toBe(0);
+    expect(result.refWordCount).toBe(0);
     expect(result.insertions).toBe(3);
   });
 
   it("returns WER 0 when both reference and hypothesis are empty", () => {
     const result = computeWER("", "");
     expect(result.wer).toBe(0);
-    expect(result.ref_word_count).toBe(0);
+    expect(result.refWordCount).toBe(0);
   });
 });
 
