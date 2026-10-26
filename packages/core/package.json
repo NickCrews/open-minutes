@@ -7,6 +7,7 @@
     "./site": "./src/site.ts",
     "./meeting-source": "./src/meeting-source.ts",
     "./meeting-date": "./src/meeting-date/index.ts",
+    "./transcript": "./src/transcript.ts",
     "./transcription": "./src/transcription/index.ts",
     "./voice_embeddings": "./src/voice_embeddings/index.ts",
     "./chapters": "./src/chapters.ts",

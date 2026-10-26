@@ -1,7 +1,7 @@
 // The types every rule shares, and helpers for more than one rule.
 
 import type { ChapterSpan } from "../chapters";
-import { LAST_WORD_DURATION_SEC, type TranscriptWord } from "../transcription";
+import { LAST_WORD_DURATION_SEC, type Word } from "../transcript";
 
 export interface RuleSegment {
   /**
@@ -9,7 +9,7 @@ export interface RuleSegment {
    * Null for unattributed speech.
    */
   speaker: string | null;
-  words: readonly TranscriptWord[];
+  words: readonly Word[];
 }
 
 /** A meeting as the rules take it. */

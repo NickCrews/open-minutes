@@ -6,7 +6,7 @@ import {
   onMount,
   Show,
 } from "solid-js";
-import { LAST_WORD_DURATION_SEC } from "@open-minutes/core/transcription";
+import { LAST_WORD_DURATION_SEC } from "@open-minutes/core/transcript";
 import { Button } from "~/components/button";
 import { PauseIcon, PlayIcon } from "~/components/icons";
 import { assignSpeakers, type Segment, speakerKey } from "./speaker-identity";

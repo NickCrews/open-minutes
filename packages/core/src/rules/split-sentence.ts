@@ -6,7 +6,7 @@
 // a few words away.
 
 import { formatClock } from "../clock";
-import type { TranscriptWord } from "../transcription";
+import type { Word } from "../transcript";
 import type { InSegment, RuleMeeting, Severity, Violation } from "./common";
 
 /** How far, in words, a boundary may be from the sentence edge it belongs at. */
@@ -35,7 +35,7 @@ export interface SplitSentenceMatch {
   /** Seconds between the onsets either side of that pause. */
   edgePause: number;
   /** The words between the boundary and that pause, which probably belong to the other speaker. */
-  misplaced: TranscriptWord[];
+  misplaced: Word[];
 }
 
 /**
@@ -52,7 +52,7 @@ export interface SplitSentenceMatch {
  * boundary: the pause after one is the asker waiting for an answer.
  */
 export function splitSentences(
-  segments: readonly { words: readonly TranscriptWord[] }[],
+  segments: readonly { words: readonly Word[] }[],
 ): SplitSentenceMatch[] {
   const found: SplitSentenceMatch[] = [];
   for (let s = 1; s < segments.length; s++) {

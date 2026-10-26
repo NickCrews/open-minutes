@@ -68,7 +68,7 @@ export async function diarizeAudio(
 
   const segments = diarizer.process(wave.samples);
   const rawTurns = segments
-    .map((s) => ({ start: s.start, end: s.end, speakerNum: s.speaker }))
+    .map((s) => ({ start: s.start, end: s.end, speakerNumber: s.speaker }))
     .sort((a, b) => a.start - b.start);
   return mergeSpeakers(wave, rawTurns);
 }
@@ -108,14 +108,14 @@ function mergeSpeakers(
   //    fall back to keeping raw speakers as their own groups.
   const anchors: { mid: number; group: number }[] = [];
   for (const t of turns) {
-    const group = groupOf.get(t.speakerNum);
+    const group = groupOf.get(t.speakerNumber);
     if (group !== undefined) anchors.push({ mid: midpoint(t), group });
   }
 
   const groupForTurn = (t: DiarizationTurn): number => {
-    const group = groupOf.get(t.speakerNum);
+    const group = groupOf.get(t.speakerNumber);
     if (group !== undefined) return group;
-    if (anchors.length === 0) return t.speakerNum; // degenerate: no voiceprints at all
+    if (anchors.length === 0) return t.speakerNumber; // degenerate: no voiceprints at all
     return nearestGroup(midpoint(t), anchors);
   };
 
@@ -134,7 +134,7 @@ function mergeSpeakers(
     .map((t) => ({
       start: t.start,
       end: t.end,
-      speakerNum: renumber.get(groupForTurn(t))!,
+      speakerNumber: renumber.get(groupForTurn(t))!,
     }))
     .sort((a, b) => a.start - b.start);
 }
@@ -232,14 +232,14 @@ async function cli() {
   // Decoded once, for both stages.
   const wave = await ensureWaveForm(audioPath);
   const turns = await diarizeAudio(wave);
-  const speakers = new Set(turns.map((t) => t.speakerNum));
+  const speakers = new Set(turns.map((t) => t.speakerNumber));
   console.log(
     `Found ${speakers.size} speaker(s) across ${turns.length} turn(s).`,
   );
   const embeddings = await computeSpeakerEmbeddings(wave, turns);
   for (const turn of turns) {
     console.log(
-      `${turn.start.toFixed(2)} -- ${turn.end.toFixed(2)} speaker_${turn.speakerNum}`,
+      `${turn.start.toFixed(2)} -- ${turn.end.toFixed(2)} speaker_${turn.speakerNumber}`,
     );
   }
   console.log(`Built ${embeddings.size} speaker embedding(s).`);

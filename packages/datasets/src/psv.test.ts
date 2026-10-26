@@ -7,7 +7,7 @@ import {
   serializeVadRunsPsv,
   type GoldenSegment,
 } from "./psv";
-import type { SpeechSegment } from "@open-minutes/core/transcription";
+import type { SpeechRun } from "@open-minutes/core/transcription";
 
 describe("psv timestamps", () => {
   it("round-trips through parse/format", () => {
@@ -90,7 +90,7 @@ describe("psv parse/serialize", () => {
   });
 
   it("emits vad span markers interleaved with each run's words", () => {
-    const runs: SpeechSegment[] = [
+    const runs: SpeechRun[] = [
       {
         start: 0.08,
         end: 1.0,
@@ -115,7 +115,7 @@ describe("psv parse/serialize", () => {
   });
 
   it("skips vad markers when parsing, recovering the flat word list", () => {
-    const runs: SpeechSegment[] = [
+    const runs: SpeechRun[] = [
       {
         start: 0.08,
         end: 1.0,
