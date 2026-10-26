@@ -27,6 +27,7 @@
     "@open-minutes/datasets": "workspace:*",
     "@open-minutes/db": "workspace:*",
     "@open-minutes/fixtures": "workspace:*",
+    "@open-minutes/youtube": "workspace:*",
     "@open-minutes/ytdlp": "workspace:*",
     "@types/node": "^22",
     "eslint": "^9.36.0",

@@ -14,3 +14,20 @@ refuses a direct request. Listing a channel or playlist always goes direct,
 since that works from any IP. The audio is saved as YouTube serves it;
 [`@open-minutes/codecs`](../codecs/README.md) decodes it, with no ffmpeg. See
 `youtubeConfigFromEnv` for the environment variables it reads.
+
+## The `youtube` CLI
+
+```sh
+pnpm exec youtube fetch <video id or URL> <dir> [--routes <routes>] [--no-install] [--debs <dir>]
+```
+
+Calls `fetchVideo`, which writes the video's original audio to
+`<dir>/audio.webm` and yt-dlp's metadata to `<dir>/info.json` (without the
+stream URLs, which expire within hours), from one yt-dlp request. It goes
+direct first. If YouTube refuses, it moves on to WARP, then Tor, installing
+them first on Linux with apt and sudo (`--no-install` skips that), and stops
+them when done. `--debs` keeps their .deb files somewhere a workflow can
+cache. On failure it exits 1, and `<dir>/logs/last-error.txt` says why,
+beside WARP's and Tor's logs. The
+[`fetch-youtube-audio`](../../.github/workflows/fetch-youtube-audio.yml)
+workflow runs it.

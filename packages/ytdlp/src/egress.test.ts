@@ -3,7 +3,14 @@ import { existsSync } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { down, rotate, unavailableReason, up } from "./daemons";
+import {
+  canInstall,
+  down,
+  installWarpAndTor,
+  rotate,
+  unavailableReason,
+  up,
+} from "./daemons";
 import { EgressError, egress, runWithEgress } from "./egress";
 import { YtDlpError, run } from "./run";
 
@@ -16,6 +23,8 @@ vi.mock("./daemons", async (importOriginal) => {
   return {
     ...actual,
     unavailableReason: vi.fn(),
+    canInstall: vi.fn(),
+    installWarpAndTor: vi.fn(),
     up: vi.fn(),
     rotate: vi.fn(),
     down: vi.fn(),
@@ -230,6 +239,86 @@ describe("runWithEgress", () => {
       ].join("\n"),
     );
     expect(down).toHaveBeenCalledTimes(1);
+  });
+
+  describe("with install", () => {
+    const NOT_UNPACKED = "WARP is not unpacked in /opt/youtube-egress";
+
+    /** WARP and Tor are missing until installWarpAndTor runs. */
+    function fakeInstall({ fails = false } = {}) {
+      let installed = false;
+      vi.mocked(canInstall).mockReturnValue(true);
+      vi.mocked(unavailableReason).mockImplementation(async () =>
+        installed ? null : NOT_UNPACKED,
+      );
+      vi.mocked(installWarpAndTor).mockImplementation(async () => {
+        if (fails) throw new Error("install.sh: apt-get failed");
+        installed = true;
+      });
+    }
+
+    it("installs WARP and Tor once when first needed, then starts WARP", async () => {
+      fakeInstall();
+      const calls = fakeYtDlp((proxy) =>
+        proxy === "socks5://warp1" ? "{}" : ytDlpError(BOT_CHECK),
+      );
+      const result = await runWithEgress(ARGS, {
+        ...quiet,
+        install: { debDir: "/cache/debs" },
+      });
+      expect(result.route).toBe("warp");
+      expect(calls).toEqual(["direct", "socks5://warp1"]);
+      expect(installWarpAndTor).toHaveBeenCalledTimes(1);
+      expect(installWarpAndTor).toHaveBeenCalledWith("/cache/debs", {
+        root: "/opt/youtube-egress",
+      });
+      expect(down).toHaveBeenCalledTimes(1);
+    });
+
+    it("installs nothing when direct works", async () => {
+      fakeInstall();
+      fakeYtDlp(() => "{}");
+      await runWithEgress(ARGS, { ...quiet, install: {} });
+      expect(installWarpAndTor).not.toHaveBeenCalled();
+    });
+
+    it("installs nothing without the option", async () => {
+      fakeInstall();
+      fakeYtDlp(() => ytDlpError(BOT_CHECK));
+      const error = await runWithEgress(ARGS, quiet).catch((e: unknown) => e);
+      expect(installWarpAndTor).not.toHaveBeenCalled();
+      expect((error as EgressError).routes[1]).toEqual({
+        route: "warp",
+        outcome: "unavailable",
+        reason: NOT_UNPACKED,
+      });
+    });
+
+    it("installs nothing where it can't", async () => {
+      fakeInstall();
+      vi.mocked(canInstall).mockReturnValue(false);
+      fakeYtDlp(() => ytDlpError(BOT_CHECK));
+      await runWithEgress(ARGS, { ...quiet, install: {} }).catch(() => {});
+      expect(installWarpAndTor).not.toHaveBeenCalled();
+    });
+
+    it("counts a failed install as unavailable, and doesn't retry it", async () => {
+      fakeInstall({ fails: true });
+      fakeYtDlp(() => ytDlpError(BOT_CHECK));
+      const error = await runWithEgress(ARGS, { ...quiet, install: {} }).catch(
+        (e: unknown) => e,
+      );
+      expect((error as EgressError).routes).toEqual([
+        { route: "direct", outcome: "blocked", error: BOT_CHECK },
+        {
+          route: "warp",
+          outcome: "unavailable",
+          reason: "install.sh: apt-get failed",
+        },
+        { route: "tor", outcome: "unavailable", reason: NOT_UNPACKED },
+      ]);
+      expect(installWarpAndTor).toHaveBeenCalledTimes(1);
+    });
   });
 
   it("counts a daemon that won't start as unavailable, and still stops it", async () => {

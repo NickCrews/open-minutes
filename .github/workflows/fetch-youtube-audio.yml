@@ -97,32 +97,25 @@ jobs:
         with:
           path: ${{ runner.temp }}/debs
           key: ${{ steps.debs.outputs.key }}
-      - name: Install Cloudflare WARP and Tor
-        if: steps.stored.outputs.hit != 'true'
-        run: pnpm exec ytdlp install-egress "$RUNNER_TEMP/debs"
-      # Saved right away rather than at the end of the job, so a failed
-      # download doesn't lose it.
-      - uses: actions/cache/save@v4
-        if: steps.stored.outputs.hit != 'true' && steps.debs-cache.outputs.cache-hit != 'true'
-        with:
-          path: ${{ runner.temp }}/debs
-          key: ${{ steps.debs.outputs.key }}
 
-      # Installs yt-dlp too. YouTube always refuses a runner's own IP, so
-      # direct isn't tried. The output is YouTube's Opus audio as-is (format
-      # 251, ~50 MB per hour), with yt-dlp's metadata beside it in
-      # original.info.json. --no-continue and --force-overwrites make each
-      # route's attempt start over rather than resume another exit's partial
-      # file. On failure, logs/last-error.txt says why.
+      # Writes audio/audio.webm (YouTube's Opus audio as-is, format 251, ~50 MB
+      # per hour) and audio/info.json (yt-dlp's metadata, minus the stream URLs
+      # that expire within hours and make up most of it). YouTube refuses a
+      # runner's own IP, so after one direct attempt this installs WARP and
+      # Tor, downloads through them, and stops them. On failure,
+      # audio/logs/last-error.txt says why.
       - name: Download the audio and metadata
         if: steps.stored.outputs.hit != 'true'
         env:
           YOUTUBE_EGRESS_STATE: ${{ runner.temp }}/youtube-egress
-        run: |
-          pnpm exec ytdlp run --routes warp,tor --logs "$RUNNER_TEMP/audio/logs" -- \
-            -f 'bestaudio[ext=webm]' --no-playlist --no-continue --force-overwrites \
-            --write-info-json -o "$RUNNER_TEMP/audio/original.webm" \
-            "https://www.youtube.com/watch?v=$VIDEO_ID"
+        run: pnpm exec youtube fetch "$VIDEO_ID" "$RUNNER_TEMP/audio" --debs "$RUNNER_TEMP/debs"
+      # Saved even when the download failed, so the next run has the .debs. A
+      # run that went direct downloaded none, and saves nothing.
+      - uses: actions/cache/save@v4
+        if: "!cancelled() && steps.stored.outputs.hit != 'true' && steps.debs-cache.outputs.cache-hit != 'true'"
+        with:
+          path: ${{ runner.temp }}/debs
+          key: ${{ steps.debs.outputs.key }}
       # ffmpeg isn't on the ubuntu-latest image.
       - name: Install ffmpeg
         if: steps.stored.outputs.hit != 'true'
@@ -131,14 +124,10 @@ jobs:
           sudo apt-get install -y -qq --no-install-recommends ffmpeg > /dev/null
       - name: Re-encode the audio for speech
         if: steps.stored.outputs.hit != 'true'
-        run: .github/scripts/encode-speech-audio.sh "$RUNNER_TEMP/audio/original.webm" "$RUNNER_TEMP/audio/speech.webm"
-      # The stream URLs in yt-dlp's info expire within hours and make up most
-      # of it, so they're dropped.
+        run: .github/scripts/encode-speech-audio.sh "$RUNNER_TEMP/audio/audio.webm" "$RUNNER_TEMP/audio/speech.webm"
       - name: Upload to the blob store
         if: steps.stored.outputs.hit != 'true'
         run: |
-          jq 'del(.formats, .requested_formats, .requested_downloads, .thumbnails, .automatic_captions, .subtitles, .heatmap)' \
-            "$RUNNER_TEMP/audio/original.info.json" > "$RUNNER_TEMP/audio/info.json"
           aws s3 cp "$RUNNER_TEMP/audio/info.json" "s3://$BLOB_STORE_BUCKET/$PREFIX/info.json" --content-type application/json --no-progress
           aws s3 cp "$RUNNER_TEMP/audio/speech.webm" "s3://$BLOB_STORE_BUCKET/$PREFIX/speech.webm" --content-type audio/webm --no-progress
           aws s3 rm "s3://$BLOB_STORE_BUCKET/$ERROR_KEY" || true

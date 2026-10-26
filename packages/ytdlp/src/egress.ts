@@ -4,8 +4,10 @@ import { isBlockedExit } from "./blocked";
 import {
   type EgressPaths,
   type Service,
+  canInstall,
   down,
   egressPaths,
+  installWarpAndTor,
   rotate,
   unavailableReason,
   up,
@@ -70,6 +72,19 @@ export interface EgressOptions {
   lockTimeoutMs?: number;
   /** Progress lines. Defaults to stderr. */
   log?: (line: string) => void;
+  /**
+   * When set, a `warp` or `tor` route that isn't unpacked is installed with
+   * {@link installWarpAndTor} before it's started, if this machine can
+   * install them (Linux with apt, and root or passwordless sudo). By default
+   * nothing is installed.
+   */
+  install?: {
+    /**
+     * Where the .deb files are kept, so they can be cached between runs.
+     * Default: `debs` in the egress state directory.
+     */
+    debDir?: string;
+  };
 }
 
 export interface EgressResult {
@@ -117,6 +132,7 @@ export function egress({
   routes = routesFromEnv(),
   lockTimeoutMs = 30 * 60_000,
   log = (line) => console.error(line),
+  install,
 }: EgressOptions = {}): Egress {
   const paths: EgressPaths = egressPaths();
   /** Routes that didn't work, skipped until close(). */
@@ -126,6 +142,8 @@ export function egress({
   /** Whether up.sh ran, so down.sh has something to stop. */
   let startedAny = false;
   let release: (() => Promise<void>) | undefined;
+  /** Whether installWarpAndTor has been tried, so it runs at most once. */
+  let installTried = false;
 
   // Starting, rotating and stopping daemons happen one at a time.
   let queue: Promise<unknown> = Promise.resolve();
@@ -133,6 +151,16 @@ export function egress({
     const next = queue.then(fn);
     queue = next.catch(() => {});
     return next;
+  }
+
+  /** Takes the machine's lock, unless this manager holds it already. */
+  async function lock() {
+    if (release) return;
+    await mkdir(paths.state, { recursive: true });
+    release = await acquireLock(join(paths.state, "manager.lock"), {
+      timeoutMs: lockTimeoutMs,
+      log,
+    });
   }
 
   /** The service's proxy URL, starting it if needed, or why it can't run. */
@@ -145,15 +173,22 @@ export function egress({
         outcome: "unavailable",
         reason,
       });
-      const reason = await unavailableReason(service, paths);
-      if (reason) return unavailable(reason);
-      if (!release) {
-        await mkdir(paths.state, { recursive: true });
-        release = await acquireLock(join(paths.state, "manager.lock"), {
-          timeoutMs: lockTimeoutMs,
-          log,
-        });
+      let reason = await unavailableReason(service, paths);
+      if (reason && install && !installTried && canInstall()) {
+        installTried = true;
+        await lock();
+        log(`yt-dlp: ${reason}; installing WARP and Tor`);
+        try {
+          await installWarpAndTor(install.debDir ?? join(paths.state, "debs"), {
+            root: paths.root,
+          });
+        } catch (error) {
+          return unavailable((error as Error).message);
+        }
+        reason = await unavailableReason(service, paths);
       }
+      if (reason) return unavailable(reason);
+      await lock();
       log(`yt-dlp: starting ${service}`);
       startedAny = true;
       try {
@@ -270,7 +305,8 @@ export function egress({
  * route is tried only when `isBlocked` says the exit was refused or
  * unreachable; any other error is thrown at once. WARP and Tor are started
  * when first reached and get up to two new exits each. A route that can't
- * run here (not installed, not Linux, no root) is skipped. Whatever this
+ * run here (not installed, not Linux, no root) is skipped, unless
+ * `options.install` lets it be installed. Whatever this
  * started is stopped before it returns. When no route works, rejects with an
  * {@link EgressError}.
  */

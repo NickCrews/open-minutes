@@ -6,13 +6,17 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "bin": {
+    "youtube": "./src/cli.ts"
+  },
   "scripts": {
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@open-minutes/core": "workspace:*",
-    "@open-minutes/ytdlp": "workspace:*"
+    "@open-minutes/ytdlp": "workspace:*",
+    "citty": "^0.1.6"
   },
   "devDependencies": {
     "@open-minutes/audio": "workspace:*",

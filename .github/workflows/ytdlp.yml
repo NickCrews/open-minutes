@@ -43,7 +43,7 @@ jobs:
           path: ${{ runner.temp }}/debs
           key: ${{ steps.debs.outputs.key }}
       - name: Install Cloudflare WARP and Tor
-        run: pnpm exec ytdlp install-egress "$RUNNER_TEMP/debs"
+        run: packages/ytdlp/egress/install.sh "$RUNNER_TEMP/debs"
       - uses: actions/cache/save@v4
         if: steps.debs-cache.outputs.cache-hit != 'true'
         with:

@@ -20,25 +20,6 @@ const { stdout, route } = await runWithEgress(["--skip-download", "-J", url]);
 | `egress(options)`              | The manager under `runWithEgress`, for a process that runs yt-dlp many times.                                |
 | `installWarpAndTor(debDir)`    | Unpacks WARP and Tor so the `warp` and `tor` routes can run. Linux with apt, and sudo.                       |
 
-## The `ytdlp` CLI
-
-The same API for shell scripts and workflows, such as
-[`fetch-youtube-audio`](../../.github/workflows/fetch-youtube-audio.yml):
-
-```sh
-pnpm exec ytdlp install                    # ensureYtDlpInstalled()
-pnpm exec ytdlp install-egress <deb dir>   # installWarpAndTor(debDir)
-pnpm exec ytdlp run [--routes warp,tor] [--logs <dir>] -- <yt-dlp args>
-```
-
-`run` installs yt-dlp if needed, then calls `runWithEgress` with the
-arguments after `--`. yt-dlp's stdout goes to stdout; the route that worked
-and any error go to stderr, and it exits 1 when no route gets through.
-`--routes` overrides `YOUTUBE_EGRESS`. `--logs <dir>` copies WARP's and Tor's
-logs into `dir` when done, plus `last-error.txt` with the error on failure.
-A retry through a new exit doesn't clear a partial download; pass yt-dlp
-`--no-continue --force-overwrites` to start each attempt over.
-
 yt-dlp solves YouTube's JS challenges with the node running it, or with
 [deno](https://deno.com) if that's on `PATH`.
 
@@ -61,7 +42,10 @@ manager keeps them up, and skips a route found blocked, until `close()`.
 
 A route that can't run here is skipped: WARP needs Linux, root (or
 passwordless sudo) and UDP; Tor needs to be unpacked by `installWarpAndTor`
-or on `PATH`. When no route works, `runWithEgress` rejects with an
+or on `PATH`. With the `install` option, a route that's only missing its
+unpacked daemon is installed first, once, if the machine can install them
+(Linux with apt, and root or passwordless sudo), and its .deb files are kept
+in `install.debDir` for caching. When no route works, `runWithEgress` rejects with an
 `EgressError` whose `routes` say what happened on each, `blocked` (with
 yt-dlp's last error) or `unavailable` (with the reason and what to install).
 Downloading from YouTube works from a residential connection, or from Linux

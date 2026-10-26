@@ -1,5 +1,12 @@
-import { mkdir, access, rename, rm } from "node:fs/promises";
-import { dirname } from "node:path";
+import {
+  mkdir,
+  access,
+  readFile,
+  rename,
+  rm,
+  writeFile,
+} from "node:fs/promises";
+import { dirname, join } from "node:path";
 import type {
   AudioProvider,
   RecordingMetadata,
@@ -9,6 +16,7 @@ import type {
   RecordingLister,
 } from "@open-minutes/core/recording-lister";
 import {
+  type EgressOptions,
   type Route,
   ensureYtDlpInstalled,
   parseRoutes,
@@ -61,6 +69,11 @@ export interface YouTubeConfig {
    * else direct, then WARP, then Tor).
    */
   routes?: Route[];
+  /**
+   * When set, WARP and Tor are installed if a route needs them and this
+   * machine can (see `install` in `@open-minutes/ytdlp`'s `EgressOptions`).
+   */
+  installEgress?: EgressOptions["install"];
 }
 
 /**
@@ -73,7 +86,11 @@ async function ytDlpWithEgress(
   beforeAttempt?: () => Promise<void>,
 ) {
   await ensureYtDlpInstalled();
-  return runWithEgress(args, { routes: config.routes, beforeAttempt });
+  return runWithEgress(args, {
+    routes: config.routes,
+    install: config.installEgress,
+    beforeAttempt,
+  });
 }
 
 interface FlatEntry {
@@ -154,6 +171,99 @@ function isoDate(yyyymmdd: string | null | undefined): string | null {
 }
 
 /**
+ * Keys of yt-dlp's info JSON that {@link fetchVideo} drops. The stream URLs in
+ * them expire within hours, and they make up most of the file.
+ */
+const BULKY_INFO_KEYS = [
+  "formats",
+  "requested_formats",
+  "requested_downloads",
+  "thumbnails",
+  "automatic_captions",
+  "subtitles",
+  "heatmap",
+];
+
+/**
+ * Downloads `url`'s original Opus-in-WebM audio to `path` with yt-dlp, and
+ * with `infoPath`, its info JSON minus {@link BULKY_INFO_KEYS} in the same
+ * request. A single format needs no ffmpeg to download.
+ */
+async function downloadAudio(
+  config: YouTubeConfig,
+  url: string,
+  path: string,
+  infoPath?: string,
+) {
+  // Progress goes to stderr so callers' stdout stays machine-readable.
+  console.error(`Downloading audio for ${url} to ${path}...`);
+  // Downloaded beside `path` and moved into place, so an interrupted download
+  // never leaves a partial file at `path`.
+  const webm = `${path}.download.webm`;
+  const rawInfo = `${path}.download.info.json`;
+  const removeDownload = async () => {
+    await rm(webm, { force: true });
+    await rm(`${webm}.part`, { force: true });
+    await rm(rawInfo, { force: true });
+  };
+  try {
+    // The format the fetch-youtube-audio workflow re-encodes from.
+    const result = await ytDlpWithEgress(
+      config,
+      [
+        "-f",
+        "bestaudio[ext=webm]",
+        "--no-playlist",
+        ...(infoPath ? ["--write-info-json"] : []),
+        "-o",
+        webm,
+        url,
+      ],
+      removeDownload,
+    );
+    if (infoPath) {
+      const info = JSON.parse(await readFile(rawInfo, "utf8")) as Record<
+        string,
+        unknown
+      >;
+      for (const key of BULKY_INFO_KEYS) delete info[key];
+      await writeFile(infoPath, JSON.stringify(info));
+    }
+    await rename(webm, path);
+    return result;
+  } finally {
+    await removeDownload();
+  }
+}
+
+/** The files {@link fetchVideo} writes, and how it reached YouTube. */
+export interface FetchedVideo {
+  /** `<dir>/audio.webm`: YouTube's original Opus-in-WebM audio. */
+  audio: string;
+  /** `<dir>/info.json`: yt-dlp's info JSON, minus its stream URLs. */
+  info: string;
+  /** The yt-dlp route that got through. */
+  route: Route;
+}
+
+/**
+ * Downloads a video's original audio and yt-dlp's metadata for it into `dir`,
+ * with one request to YouTube. Overwrites what's there.
+ */
+export async function fetchVideo(
+  videoIdOrUrl: string,
+  dir: string,
+  config: YouTubeConfig = {},
+): Promise<FetchedVideo> {
+  await mkdir(dir, { recursive: true });
+  const audio = join(dir, "audio.webm");
+  const info = join(dir, "info.json");
+  const url = videoUrl(videoIdOrUrl);
+  const { route } = await downloadAudio(config, url, audio, info);
+  return { audio, info, route };
+}
+
+/**
  * Downloads a video's original Opus-in-WebM audio to `path` with yt-dlp. A
  * single format needs no ffmpeg to download.
  */
@@ -170,27 +280,7 @@ async function ensureAudioDownloaded(
   );
   if (exists && !overwrite) return { downloaded: false };
 
-  const url = videoUrl(videoIdOrUrl);
-  // Progress goes to stderr so callers' stdout stays machine-readable.
-  console.error(`Downloading audio for ${url} to ${path}...`);
-  // Downloaded beside `path` and moved into place, so an interrupted download
-  // never leaves a partial file at `path`.
-  const webm = `${path}.download.webm`;
-  const removeWebm = async () => {
-    await rm(webm, { force: true });
-    await rm(`${webm}.part`, { force: true });
-  };
-  try {
-    // The format the fetch-youtube-audio workflow re-encodes from.
-    await ytDlpWithEgress(
-      config,
-      ["-f", "bestaudio[ext=webm]", "--no-playlist", "-o", webm, url],
-      removeWebm,
-    );
-    await rename(webm, path);
-  } finally {
-    await removeWebm();
-  }
+  await downloadAudio(config, videoUrl(videoIdOrUrl), path);
   return { downloaded: true };
 }
 
