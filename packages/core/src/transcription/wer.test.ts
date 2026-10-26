@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vite-plus/test";
 import { alignWords, computeWER } from "./wer";
-import type { TranscriptWord } from "./types";
+import type { Word } from "../transcript";
 
-function w(text: string, start = 0): TranscriptWord {
+function w(text: string, start = 0): Word {
   return { text, start };
 }
 

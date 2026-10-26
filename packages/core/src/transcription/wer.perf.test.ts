@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import { alignWords, type AlignedWordPair, type AlignmentOp } from "./wer";
-import type { TranscriptWord } from "./types";
+import type { Word } from "../transcript";
 
 // Deterministic PRNG so the generated transcripts are stable across runs.
 function mulberry32(seed: number): () => number {
@@ -14,13 +14,13 @@ function mulberry32(seed: number): () => number {
   };
 }
 
-function w(text: string, start = 0): TranscriptWord {
+function w(text: string, start = 0): Word {
   return { text, start };
 }
 
 // Build a sequence of `n` already-normalized words from a small vocabulary so
 // normalizeToken() is a no-op and we can reason about alignment directly.
-function makeWords(n: number, rng: () => number): TranscriptWord[] {
+function makeWords(n: number, rng: () => number): Word[] {
   const vocab = [
     "the",
     "quick",
@@ -47,7 +47,7 @@ function makeWords(n: number, rng: () => number): TranscriptWord[] {
     "down",
     "hill",
   ];
-  const words: TranscriptWord[] = new Array(n);
+  const words: Word[] = new Array(n);
   for (let i = 0; i < n; i++) {
     const text = vocab[Math.floor(rng() * vocab.length)]!;
     words[i] = w(text, i);
@@ -113,7 +113,7 @@ function referenceAlign(
   return ops;
 }
 
-function toTokens(words: readonly TranscriptWord[]): string[] {
+function toTokens(words: readonly Word[]): string[] {
   return words.map((x) => x.text);
 }
 

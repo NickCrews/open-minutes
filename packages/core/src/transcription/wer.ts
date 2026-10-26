@@ -1,7 +1,7 @@
 // Word Error Rate via Levenshtein distance over normalized word tokens.
 // WER = (substitutions + deletions + insertions) / reference_word_count.
 
-import type { TranscriptWord } from "./types";
+import type { Word } from "../transcript";
 
 export interface WERResult {
   wer: number;
@@ -52,8 +52,8 @@ export interface AlignedWordPair {
 // are compared after normalizeToken() so punctuation/case differences don't
 // register as substitutions.
 export function alignWords(
-  ref: readonly TranscriptWord[],
-  hyp: readonly TranscriptWord[],
+  ref: readonly Word[],
+  hyp: readonly Word[],
 ): AlignedWordPair[] {
   const refTokens = ref.map((w) => normalizeToken(w.text));
   const hypTokens = hyp.map((w) => normalizeToken(w.text));
@@ -194,8 +194,8 @@ export interface TranscriptComparison {
 }
 
 export function compareTranscripts(
-  ref: readonly TranscriptWord[],
-  hyp: readonly TranscriptWord[],
+  ref: readonly Word[],
+  hyp: readonly Word[],
 ): TranscriptComparison {
   const ops = alignWords(ref, hyp);
   const { matches, substitutions, deletions, insertions } = tallyOps(ops);

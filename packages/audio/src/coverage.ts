@@ -1,4 +1,4 @@
-import type { TranscriptWord } from "@open-minutes/core/transcription";
+import type { Word } from "@open-minutes/core/transcript";
 import {
   mergeSpans,
   type Span,
@@ -22,7 +22,7 @@ const WORD_LEAD_SEC = 0.15;
  * The spans `words` account for, sorted and disjoint. The words needn't be
  * in time order.
  */
-export function wordCoverage(words: readonly TranscriptWord[]): Span[] {
+export function wordCoverage(words: readonly Word[]): Span[] {
   const onsets = words.map((w) => w.start).sort((a, b) => a - b);
   const spans = onsets.map((start, i) => ({
     start: start - WORD_LEAD_SEC,
@@ -46,7 +46,7 @@ export interface UntranscribedSpeech extends Span {
  */
 export function untranscribedSpeech(
   runs: readonly Span[],
-  words: readonly TranscriptWord[],
+  words: readonly Word[],
   { minSpeechSecs = 2, joinSecs = 1.5 } = {},
 ): UntranscribedSpeech[] {
   const uncovered = subtract(runs, wordCoverage(words));

@@ -6,29 +6,25 @@ import {
   segmentsToSpeechRuns,
   segmentsToTurns,
 } from "./align";
-import type {
-  DiarizationTurn,
-  SpeechSegment,
-  TranscriptSegment,
-  TranscriptWord,
-} from "./types";
+import type { Segment, Word } from "../transcript";
+import type { DiarizationTurn, SpeechRun } from "./types";
 
 /** The text of each segment, in order — the shape a reader actually sees. */
-function texts(segments: TranscriptSegment[]): string[] {
+function texts(segments: Segment[]): string[] {
   return segments.map((s) => s.words.map((w) => w.text).join(" "));
 }
 
-function speakers(segments: TranscriptSegment[]): number[] {
-  return segments.map((s) => s.speakerNum ?? -1);
+function speakers(segments: Segment[]): number[] {
+  return segments.map((s) => s.speakerNumber ?? -1);
 }
 
 /**
- * Build a SpeechSegment the way VAD + transcription would: a run spanning from
+ * Build a SpeechRun the way VAD + transcription would: a run spanning from
  * its first word's onset to `end` (defaulting to shortly after the last word's
  * onset). Tests split words into runs wherever the audio would have had a
  * pause ≥ 0.5s, because that is what VAD does.
  */
-function run(words: TranscriptWord[], end?: number): SpeechSegment {
+function run(words: Word[], end?: number): SpeechRun {
   return {
     start: words[0]!.start,
     end: end ?? words.at(-1)!.start + 0.3,
@@ -36,7 +32,7 @@ function run(words: TranscriptWord[], end?: number): SpeechSegment {
   };
 }
 
-function w(text: string, start: number): TranscriptWord {
+function w(text: string, start: number): Word {
   return { text, start };
 }
 
@@ -48,8 +44,8 @@ describe("alignSpeakers", () => {
       run([w("c", 2.0)], 2.2),
     ];
     const turns: DiarizationTurn[] = [
-      { start: 0.0, end: 1.0, speakerNum: 0 },
-      { start: 1.8, end: 3.0, speakerNum: 1 },
+      { start: 0.0, end: 1.0, speakerNumber: 0 },
+      { start: 1.8, end: 3.0, speakerNumber: 1 },
     ];
     expect(texts(alignSpeakers(speech, turns))).toEqual(["a b", "c"]);
     expect(speakers(alignSpeakers(speech, turns))).toEqual([0, 1]);
@@ -59,7 +55,7 @@ describe("alignSpeakers", () => {
     const speech = [run([w("a", 0)], 0.2)];
     const segments = alignSpeakers(speech, []);
     expect(segments).toHaveLength(1);
-    expect(segments[0]!.speakerNum).toBeNull();
+    expect(segments[0]!.speakerNumber).toBeNull();
   });
 
   // The bug this file was written for. In production transcripts ~30% of
@@ -86,8 +82,8 @@ describe("alignSpeakers", () => {
       run([w("Thanks", 12.0), w("Jennifer.", 12.32)], 12.9),
     ];
     const turns: DiarizationTurn[] = [
-      { start: 6.0, end: 10.5, speakerNum: 0 },
-      { start: 11.5, end: 14.0, speakerNum: 1 },
+      { start: 6.0, end: 10.5, speakerNumber: 0 },
+      { start: 11.5, end: 14.0, speakerNumber: 1 },
     ];
 
     expect(texts(alignSpeakers(speech, turns))).toEqual([
@@ -127,9 +123,9 @@ describe("alignSpeakers", () => {
       ),
     ];
     const turns: DiarizationTurn[] = [
-      { start: 9.0, end: 11.45, speakerNum: 0 },
-      { start: 11.45, end: 12.35, speakerNum: 1 },
-      { start: 12.35, end: 14.0, speakerNum: 0 },
+      { start: 9.0, end: 11.45, speakerNumber: 0 },
+      { start: 11.45, end: 12.35, speakerNumber: 1 },
+      { start: 12.35, end: 14.0, speakerNumber: 0 },
     ];
 
     expect(texts(alignSpeakers(speech, turns))).toEqual([
@@ -155,9 +151,9 @@ describe("alignSpeakers", () => {
       ),
     ];
     const turns: DiarizationTurn[] = [
-      { start: 9.0, end: 11.45, speakerNum: 0 },
-      { start: 11.45, end: 12.35, speakerNum: 1 },
-      { start: 12.35, end: 14.0, speakerNum: 0 },
+      { start: 9.0, end: 11.45, speakerNumber: 0 },
+      { start: 11.45, end: 12.35, speakerNumber: 1 },
+      { start: 12.35, end: 14.0, speakerNumber: 0 },
     ];
 
     expect(texts(alignSpeakers(speech, turns))).toEqual([
@@ -188,9 +184,9 @@ describe("alignSpeakers", () => {
       ),
     ];
     const turns: DiarizationTurn[] = [
-      { start: 9.0, end: 11.45, speakerNum: 0 },
-      { start: 11.45, end: 12.35, speakerNum: 1 },
-      { start: 12.35, end: 14.0, speakerNum: 0 },
+      { start: 9.0, end: 11.45, speakerNumber: 0 },
+      { start: 11.45, end: 12.35, speakerNumber: 1 },
+      { start: 12.35, end: 14.0, speakerNumber: 0 },
     ];
 
     expect(texts(alignSpeakers(speech, turns))).toEqual([
@@ -215,9 +211,9 @@ describe("alignSpeakers", () => {
       run([w("by", 14.6), w("the", 14.8), w("plan.", 15.0)], 15.4),
     ];
     const turns: DiarizationTurn[] = [
-      { start: 9.0, end: 12.0, speakerNum: 0 },
-      { start: 12.0, end: 13.5, speakerNum: 1 },
-      { start: 13.5, end: 16.0, speakerNum: 0 },
+      { start: 9.0, end: 12.0, speakerNumber: 0 },
+      { start: 12.0, end: 13.5, speakerNumber: 1 },
+      { start: 13.5, end: 16.0, speakerNumber: 0 },
     ];
 
     expect(texts(alignSpeakers(speech, turns))).toEqual([
@@ -247,9 +243,9 @@ describe("alignSpeakers", () => {
       ),
     ];
     const turns: DiarizationTurn[] = [
-      { start: 9.0, end: 11.2, speakerNum: 0 },
-      { start: 11.2, end: 14.85, speakerNum: 1 },
-      { start: 14.85, end: 16.0, speakerNum: 0 },
+      { start: 9.0, end: 11.2, speakerNumber: 0 },
+      { start: 11.2, end: 14.85, speakerNumber: 1 },
+      { start: 14.85, end: 16.0, speakerNumber: 0 },
     ];
 
     expect(texts(alignSpeakers(speech, turns))).toEqual([
@@ -269,8 +265,8 @@ describe("alignSpeakers", () => {
       run([w("Thanks", 12.0)], 12.3),
     ];
     const turns: DiarizationTurn[] = [
-      { start: 6.0, end: 10.5, speakerNum: 0 },
-      { start: 11.5, end: 14.0, speakerNum: 1 },
+      { start: 6.0, end: 10.5, speakerNumber: 0 },
+      { start: 11.5, end: 14.0, speakerNumber: 1 },
     ];
     expect(speakers(alignSpeakers(speech, turns))).toEqual([0, 1]);
   });
@@ -296,8 +292,8 @@ describe("alignSpeakers", () => {
       run([w("Thanks", 12.5)], 12.8),
     ];
     const turns: DiarizationTurn[] = [
-      { start: 6.0, end: 10.5, speakerNum: 0 },
-      { start: 11.5, end: 14.0, speakerNum: 1 },
+      { start: 6.0, end: 10.5, speakerNumber: 0 },
+      { start: 11.5, end: 14.0, speakerNumber: 1 },
     ];
     // "report." overlaps speaker 0 for 0.18s (10.32→10.5) but speaker 1 for
     // 0.9s (11.5→12.4), so it is handed to the wrong speaker.
@@ -322,9 +318,9 @@ describe("alignSpeakers", () => {
     const speech = [run([w("the", 98.0), w("plan.", 99.0)], 98.5)];
     const turns: DiarizationTurn[] = [
       // Speaker 0 holds the floor for the whole minute; midpoint 50.
-      { start: 0.0, end: 100.0, speakerNum: 0 },
+      { start: 0.0, end: 100.0, speakerNumber: 0 },
       // A brief interjection after it; midpoint 102.
-      { start: 101.0, end: 103.0, speakerNum: 1 },
+      { start: 101.0, end: 103.0, speakerNumber: 1 },
     ];
     // |99 - 50| = 49 vs |99 - 102| = 3, so the midpoint fallback picks speaker 1
     // for a word that lies entirely within speaker 0's turn.
@@ -366,8 +362,8 @@ describe("segmentsToTurns", () => {
   it("round-trips speaker boundaries through alignSpeakers", () => {
     const speech = [run([w("a", 0.0)], 0.2), run([w("b", 2.0)], 2.2)];
     const turns: DiarizationTurn[] = [
-      { start: 0.0, end: 1.0, speakerNum: 0 },
-      { start: 1.8, end: 3.0, speakerNum: 1 },
+      { start: 0.0, end: 1.0, speakerNumber: 0 },
+      { start: 1.8, end: 3.0, speakerNumber: 1 },
     ];
     const aligned = alignSpeakers(speech, turns);
     expect(speakers(alignSpeakers(speech, segmentsToTurns(aligned)))).toEqual([
@@ -378,9 +374,9 @@ describe("segmentsToTurns", () => {
 
 describe("segmentsToSpeechRuns", () => {
   it("wraps labeled segments as pseudo-runs that re-align to the same speakers", () => {
-    const segments: TranscriptSegment[] = [
-      { speakerNum: 0, words: [w("a", 0.0), w("b", 0.3)] },
-      { speakerNum: 1, words: [w("c", 2.0)] },
+    const segments: Segment[] = [
+      { speakerNumber: 0, words: [w("a", 0.0), w("b", 0.3)] },
+      { speakerNumber: 1, words: [w("c", 2.0)] },
     ];
     const runs = segmentsToSpeechRuns(segments);
     expect(runs).toHaveLength(2);

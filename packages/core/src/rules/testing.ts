@@ -1,7 +1,7 @@
 // Helpers for the rules' tests.
 
 import type { ChapterSpan } from "../chapters";
-import type { TranscriptWord } from "../transcription";
+import type { Word } from "../transcript";
 import type { RuleMeeting, RuleSegment, Violation } from "./common";
 
 /** A segment from `[onset, word]` pairs. */
@@ -13,11 +13,11 @@ export function seg(
 }
 
 /** Words from a sentence, `step` seconds apart. */
-export function words(sentence: string, step = 0.3): TranscriptWord[] {
+export function words(sentence: string, step = 0.3): Word[] {
   return sentence.split(" ").map((text, i) => ({ text, start: i * step }));
 }
 
-export function text(ws: readonly TranscriptWord[]): string {
+export function text(ws: readonly Word[]): string {
   return ws.map((w) => w.text).join(" ");
 }
 

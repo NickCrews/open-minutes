@@ -2,7 +2,7 @@
 // way to store golden transcripts: one event per line, so a re-transcription
 // produces a clean word-level diff instead of a single mangled JSON blob.
 //
-// A TranscriptSegment is serialized as a `meta` begin_speaker line followed by
+// A Segment is serialized as a `meta` begin_speaker line followed by
 // one `text` line per word; parsing inverts that grouping.
 //
 // Grammar (see test-data/meetings/*/golden.psv for a worked example):
@@ -11,7 +11,7 @@
 //   - Each remaining line is `start_sec|event_type|event_data`.
 //       * event_type "text": a transcribed word. start_sec is the word's onset
 //         and event_data is the raw word text. Words carry no end timestamps —
-//         see TranscriptWord in @open-minutes/core.
+//         see Word in @open-minutes/core.
 //       * event_type "meta": a marker. event_data is JSON.
 //         {"begin_speaker": "<label>"} opens a new segment for that speaker.
 //       * event_type "vad": a debug marker (written only to *.gen.psv) at the
@@ -37,11 +37,8 @@
 import { readFileSync, writeFileSync } from "node:fs";
 
 import { formatClock } from "@open-minutes/core/clock";
-import type {
-  SpeechSegment,
-  TranscriptSegment,
-  TranscriptWord,
-} from "@open-minutes/core/transcription";
+import type { Segment, Word } from "@open-minutes/core/transcript";
+import type { SpeechRun } from "@open-minutes/core/transcription";
 
 /**
  * Who a golden segment is attributed to. Two tiers of identity:
@@ -62,22 +59,22 @@ export type SpeakerLabel =
 
 /**
  * A speaker-grouped run of words in a golden transcript. The golden counterpart
- * of the pipeline's {@link TranscriptSegment}: same word grouping, but its
+ * of the pipeline's {@link Segment}: same word grouping, but its
  * speaker is a rich {@link SpeakerLabel} rather than a bare cluster number, so it
  * can carry the identified-person ground truth the pipeline has to work out.
  */
 export interface GoldenSegment {
   speaker: SpeakerLabel;
-  words: TranscriptWord[];
+  words: Word[];
 }
 
 /** Lift a pipeline segment (bare cluster number) into a golden segment. */
-export function toGoldenSegment(seg: TranscriptSegment): GoldenSegment {
+export function toGoldenSegment(seg: Segment): GoldenSegment {
   return {
     speaker:
-      seg.speakerNum === null
+      seg.speakerNumber === null
         ? { kind: "unlabeled" }
-        : { kind: "segmented", cluster: seg.speakerNum },
+        : { kind: "segmented", cluster: seg.speakerNumber },
     words: seg.words,
   };
 }
@@ -289,7 +286,7 @@ export function serializePsv(
  * the markers and recovers the flat word list.
  */
 export function serializeVadRunsPsv(
-  runs: readonly SpeechSegment[],
+  runs: readonly SpeechRun[],
   options?: { path?: string },
 ): string {
   const rows: string[] = [];

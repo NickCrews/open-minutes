@@ -10,7 +10,7 @@ import {
   peopleTable,
   segmentsTable,
 } from "@open-minutes/db";
-import { LAST_WORD_DURATION_SEC } from "@open-minutes/core/transcription";
+import { LAST_WORD_DURATION_SEC } from "@open-minutes/core/transcript";
 import { transcriptFingerprint } from "@open-minutes/core/transcript-fingerprint";
 import {
   getMeetingData,

@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from "vite-plus/test";
-import type { TranscriptWord } from "@open-minutes/core/transcription";
+import type { Word } from "@open-minutes/core/transcript";
 import { halfUntranscribedRollCall } from "@open-minutes/fixtures/clips";
 import { untranscribedSpeech, wordCoverage } from "./coverage";
 import type { Span } from "@open-minutes/core/span";
@@ -7,8 +7,8 @@ import { detectSpeech } from "./vad";
 import { readWave } from "./wav";
 
 /** One word every 0.3 s from `start` to `end`. */
-function talk(start: number, end: number): TranscriptWord[] {
-  const words: TranscriptWord[] = [];
+function talk(start: number, end: number): Word[] {
+  const words: Word[] = [];
   for (let t = start; t < end; t += 0.3) words.push({ start: t, text: "word" });
   return words;
 }

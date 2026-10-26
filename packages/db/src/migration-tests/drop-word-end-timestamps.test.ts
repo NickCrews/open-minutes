@@ -1,5 +1,5 @@
 import { describe, expect } from "vite-plus/test";
-import { LAST_WORD_DURATION_SEC } from "@open-minutes/core/transcription";
+import { LAST_WORD_DURATION_SEC } from "@open-minutes/core/transcript";
 import { sqlData } from "../testing";
 import { dbTest, test as latestTest } from "../testing/vitest";
 

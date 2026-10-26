@@ -116,9 +116,9 @@ export function groupBySpeaker(
 ): Map<number, DiarizationTurn[]> {
   const bySpeaker = new Map<number, DiarizationTurn[]>();
   for (const turn of turns) {
-    const list = bySpeaker.get(turn.speakerNum) ?? [];
+    const list = bySpeaker.get(turn.speakerNumber) ?? [];
     list.push(turn);
-    bySpeaker.set(turn.speakerNum, list);
+    bySpeaker.set(turn.speakerNumber, list);
   }
   return bySpeaker;
 }

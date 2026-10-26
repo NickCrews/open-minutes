@@ -8,7 +8,8 @@
 // The rules are deliberately conservative: a missed disfluency costs a little
 // readability, but deleting a word someone actually meant changes the record.
 
-import type { SpeechSegment, TranscriptWord } from "../transcription";
+import type { Word } from "../transcript";
+import type { SpeechRun } from "../transcription";
 import type { RuleMeeting, RuleSegment, RuleSpec, Violation } from "./common";
 import * as falseStart from "./false-start";
 import * as fillerWord from "./filler-word";
@@ -48,16 +49,14 @@ export function cleanGroups<G extends RuleSegment>(groups: readonly G[]): G[] {
 }
 
 /** {@link cleanGroups} for one continuous run of words. */
-export function cleanWords<W extends TranscriptWord>(words: readonly W[]): W[] {
+export function cleanWords<W extends Word>(words: readonly W[]): W[] {
   return cleanGroups([{ speaker: null, words }])[0]!.words as W[];
 }
 
 /** The pipeline's clean stage: {@link cleanGroups} over transcribeAudio's VAD runs. */
-export function cleanSpeechSegments(
-  segments: readonly SpeechSegment[],
-): SpeechSegment[] {
+export function cleanSpeechRuns(runs: readonly SpeechRun[]): SpeechRun[] {
   const cleaned = cleanGroups(
-    segments.map((s) => ({ speaker: null, words: s.words })),
+    runs.map((s) => ({ speaker: null, words: s.words })),
   );
-  return segments.map((s, i) => ({ ...s, words: [...cleaned[i]!.words] }));
+  return runs.map((s, i) => ({ ...s, words: [...cleaned[i]!.words] }));
 }

@@ -6,7 +6,7 @@ import { transcribeAudio } from "@open-minutes/audio/transcribe";
 import { serializeVadRunsPsv } from "@open-minutes/fixtures/psv";
 import { getMeetingData } from "@open-minutes/fixtures/test-data";
 import { getMeetingAudio } from "@open-minutes/fixtures/audio";
-import { cleanSpeechSegments } from "@open-minutes/core/rules";
+import { cleanSpeechRuns } from "@open-minutes/core/rules";
 import { compareTranscripts } from "@open-minutes/core/transcription";
 
 // THE NORTH STAR for transcription (see README.md in this directory).
@@ -52,22 +52,20 @@ describe("transcribe", () => {
         // against transcribe → clean output.
         const audio = await getMeetingAudio(meeting);
         const wallStart = Date.now();
-        const speechSegments = cleanSpeechSegments(
-          await transcribeAudio(audio.path),
-        );
+        const speechRuns = cleanSpeechRuns(await transcribeAudio(audio.path));
         const rtf =
           (Date.now() - wallStart) / 1000 / audio.manifest.duration_sec;
-        const transcribedWords = speechSegments.flatMap((s) => s.words);
+        const transcribedWords = speechRuns.flatMap((s) => s.words);
         // Debug artifact: interleave VAD run markers so a diff shows where the audio
         // was chunked (each run's span + duration) and fed to the recognizer.
-        serializeVadRunsPsv(speechSegments, {
+        serializeVadRunsPsv(speechRuns, {
           path: join(runDir, "transcribed.gen.psv"),
         });
         const refWords = meeting.segments.flatMap((s) => s.words);
         const cmp = compareTranscripts(refWords, transcribedWords);
         console.log(
           `[${slug}] WER=${cmp.wer.toFixed(4)} (sub=${cmp.substitutions} del=${cmp.deletions} ins=${cmp.insertions} of ${cmp.refWordCount}); ` +
-            `p95 start=${cmp.p95StartError.toFixed(3)}s; RTF=${rtf.toFixed(3)}; ${speechSegments.length} segments`,
+            `p95 start=${cmp.p95StartError.toFixed(3)}s; RTF=${rtf.toFixed(3)}; ${speechRuns.length} segments`,
         );
         // First: confirm the check actually has teeth. With strict thresholds the
         // current transcribe output should never pass, so the assertion below MUST

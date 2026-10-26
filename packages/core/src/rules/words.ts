@@ -3,7 +3,7 @@
 // segment, from which its rule reports them and its fix drops them,
 // repairing the text around the gap.
 
-import type { TranscriptWord } from "../transcription";
+import type { Word } from "../transcript";
 import type { AtWord, Fixed, RuleMeeting, Violation } from "./common";
 
 /** Splits a word into leading punctuation, its letters/digits, and trailing punctuation. */
@@ -41,7 +41,7 @@ function endSentence(text: string, mark: string): string {
  * Which of a segment's words to drop, by index. Sees the words as they are,
  * so a rule may look at the word after.
  */
-export type FindDrops = (words: readonly TranscriptWord[]) => boolean[];
+export type FindDrops = (words: readonly Word[]) => boolean[];
 
 /** A word to drop, as a violation of a dropping rule. */
 export type DroppedWord<Code extends string> = Violation<Code> &
@@ -108,7 +108,7 @@ export function dropWords<M extends RuleMeeting, V extends Violation>(
  *
  * Kept words keep their onsets and any other properties.
  */
-function dropAndRepair<W extends TranscriptWord>(
+function dropAndRepair<W extends Word>(
   words: readonly W[],
   drops: readonly boolean[],
 ): W[] {

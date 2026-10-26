@@ -1,7 +1,5 @@
-import {
-  LAST_WORD_DURATION_SEC,
-  type DiarizationTurn,
-} from "@open-minutes/core/transcription";
+import { LAST_WORD_DURATION_SEC } from "@open-minutes/core/transcript";
+import { type DiarizationTurn } from "@open-minutes/core/transcription";
 import { computeSpeakerEmbeddings } from "@open-minutes/audio/embed";
 import { getMeetingAudio } from "@open-minutes/fixtures/audio";
 import type { GoldenMeeting } from "@open-minutes/fixtures/test-data";
@@ -42,7 +40,7 @@ export async function audioVoiceprints(
       turns.push({
         start: seg.words[0]!.start,
         end: seg.words.at(-1)!.start + LAST_WORD_DURATION_SEC,
-        speakerNum: index,
+        speakerNumber: index,
       });
     }
     if (turns.length === 0) continue;
