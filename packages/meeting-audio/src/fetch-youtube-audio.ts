@@ -39,7 +39,6 @@ export async function fetchYoutubeVideoFile(
   const first = await file.get();
   if (first) return first;
 
-  dispatchToken = makeDispatchToken(dispatchToken);
   if (!dispatchToken) return null;
   // The runner's clock and ours may differ; a minute's slack keeps a failure
   // from this run from looking like an old one.
@@ -90,8 +89,4 @@ async function requestFetch(youtubeId: string, token: string) {
       `Triggering fetch-youtube-audio for ${youtubeId}: HTTP ${res.status} ${await res.text()}`,
     );
   }
-}
-
-function makeDispatchToken(token?: string | null): string | undefined {
-  return token || process.env.YOUTUBE_AUDIO_DISPATCH_TOKEN || undefined;
 }
