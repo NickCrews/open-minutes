@@ -19,5 +19,14 @@ since that works from any IP. The audio is saved as YouTube serves it;
 [`@open-minutes/codecs`](../codecs/README.md) decodes it, with no ffmpeg. The routes
 come from `YOUTUBE_EGRESS` unless `youtube({ routes })` overrides them.
 
+`fetchVideoViaWorkflow` gets a video's metadata and speech-quality audio
+without yt-dlp on this machine: it runs the
+[`fetch-youtube-audio`](../../.github/workflows/fetch-youtube-audio.yml)
+workflow, which fetches them through WARP or Tor, waits for it, and downloads
+the files the run published as artifacts. It takes a GitHub token allowed to
+run the workflow. `storedYoutube` in
+[`@open-minutes/meeting-audio`](../meeting-audio/README.md) uses it for videos
+missing from the blob store.
+
 `metadataFromYtDlpInfo` dates a video by its stream's or premiere's start,
 else its upload.

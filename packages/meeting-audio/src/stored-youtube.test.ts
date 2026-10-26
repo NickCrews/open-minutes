@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vite-plus/test";
+import { describe, expect, it } from "vite-plus/test";
 import { mkdtemp, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -19,10 +19,6 @@ const unreachable: YouTube = {
   },
 };
 const yt = storedYoutube(unreachable);
-
-afterEach(() => {
-  vi.unstubAllEnvs();
-});
 
 describe("storedYoutube", () => {
   it("gets a video's metadata from the blob store", async () => {
@@ -56,8 +52,6 @@ describe("storedYoutube", () => {
   });
 
   it("falls back to YouTube for a video missing from the store", async () => {
-    // With a dispatch token, as in CI, a miss runs fetch-youtube-audio instead.
-    vi.stubEnv("YOUTUBE_AUDIO_DISPATCH_TOKEN", "");
     const fallback = storedYoutube({
       ...unreachable,
       getMetadata: async (id) => ({

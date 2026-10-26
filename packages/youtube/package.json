@@ -16,6 +16,7 @@
   },
   "devDependencies": {
     "@open-minutes/audio": "workspace:*",
+    "@open-minutes/codecs": "workspace:*",
     "@types/node": "catalog:",
     "vite-plus": "catalog:"
   }

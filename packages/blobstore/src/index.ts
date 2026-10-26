@@ -4,6 +4,7 @@
  * prefix per kind of file. It uses only `fetch`, so the browser can use it
  * too.
  */
+import { AwsClient } from "aws4fetch";
 
 /** One file in the blob store, which may or may not exist yet. */
 export interface BlobFile {
@@ -19,10 +20,10 @@ export interface BlobFile {
 }
 
 /**
- * What the fetch-youtube-audio workflow
- * (.github/workflows/fetch-youtube-audio.yml) stores for a YouTube video,
- * since YouTube blocks yt-dlp from datacenter IPs (CI, servers). Keep the
- * keys in step with the workflow.
+ * What the store keeps for a YouTube video, since YouTube blocks yt-dlp from
+ * datacenter IPs (CI, servers). The fetch-youtube-audio workflow
+ * (.github/workflows/fetch-youtube-audio.yml) makes these files, and
+ * `storedYoutube` in @open-minutes/meeting-audio stores them.
  *
  * Keyed by video ID, so a video edited in place on YouTube (trimmed, or audio
  * muted over a copyright claim) keeps its old audio there. That's rare for
@@ -36,8 +37,6 @@ export interface YoutubeVideoFiles {
    * (~11 MB per hour), plenty for the models, which take 16 kHz mono.
    */
   speechWebm: BlobFile;
-  /** What the workflow writes instead when it fails. */
-  errorJson: BlobFile;
 }
 
 /** The blob store's files, by what they are; see {@link blobStore}. */
@@ -79,7 +78,6 @@ export function blobStore(base?: string): BlobStore {
       return {
         infoJson: file(`${prefix}/info.json`),
         speechWebm: file(`${prefix}/speech.webm`),
-        errorJson: file(`${prefix}/error.json`),
       };
     },
     duckdbExport: file("exports/open-minutes.duckdb"),
@@ -106,4 +104,76 @@ export function baseUrl(url?: string): string {
   return typeof fromEnv === "string" && fromEnv
     ? fromEnv
     : DEFAULT_BLOB_STORE_PUBLIC_URL;
+}
+
+/** Writes files to the blob store, which takes its S3 API keys. */
+export interface BlobStoreWriter {
+  /** Stores `body` as `file`, replacing what's there. */
+  put(
+    file: BlobFile,
+    body: Uint8Array<ArrayBuffer>,
+    contentType: string,
+  ): Promise<void>;
+}
+
+/** Where the blob store's S3 API is and the keys to write to it. */
+export interface BlobStoreKeys {
+  /**
+   * For R2, https://<account id>.r2.cloudflarestorage.com; for S3,
+   * https://s3.<region>.amazonaws.com.
+   */
+  endpoint: string;
+  bucket: string;
+  accessKeyId: string;
+  secretAccessKey: string;
+  /** Defaults to "auto", which R2 wants. */
+  region?: string;
+}
+
+/** A writer to the bucket that `keys` names. */
+export function blobStoreWriter(keys: BlobStoreKeys): BlobStoreWriter {
+  const client = new AwsClient({
+    accessKeyId: keys.accessKeyId,
+    secretAccessKey: keys.secretAccessKey,
+    service: "s3",
+    region: keys.region || "auto",
+  });
+  const bucketUrl = `${keys.endpoint.replace(/\/$/, "")}/${keys.bucket}`;
+  return {
+    async put(file, body, contentType) {
+      const url = `${bucketUrl}/${file.key}`;
+      const res = await client.fetch(url, {
+        method: "PUT",
+        body,
+        headers: { "Content-Type": contentType },
+      });
+      if (!res.ok) {
+        throw new Error(
+          `PUT ${url}: HTTP ${res.status} ${await res.text()}`,
+        );
+      }
+    },
+  };
+}
+
+/**
+ * {@link blobStoreWriter} configured from BLOB_STORE_ENDPOINT,
+ * BLOB_STORE_BUCKET, BLOB_STORE_ACCESS_KEY_ID, BLOB_STORE_SECRET_ACCESS_KEY
+ * and optionally BLOB_STORE_REGION, or null unless all four are set.
+ */
+export function blobStoreWriterFromEnv(
+  env: Record<string, string | undefined>,
+): BlobStoreWriter | null {
+  const endpoint = env.BLOB_STORE_ENDPOINT;
+  const bucket = env.BLOB_STORE_BUCKET;
+  const accessKeyId = env.BLOB_STORE_ACCESS_KEY_ID;
+  const secretAccessKey = env.BLOB_STORE_SECRET_ACCESS_KEY;
+  if (!endpoint || !bucket || !accessKeyId || !secretAccessKey) return null;
+  return blobStoreWriter({
+    endpoint,
+    bucket,
+    accessKeyId,
+    secretAccessKey,
+    region: env.BLOB_STORE_REGION,
+  });
 }

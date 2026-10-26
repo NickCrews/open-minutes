@@ -47,9 +47,10 @@ jobs:
     runs-on: ubuntu-latest
     # Metadata and audio come from the blob store, and the pipeline decodes
     # the audio itself, so this job needs neither yt-dlp nor ffmpeg.
-    # github.token may trigger the
-    # fetch-youtube-audio workflow for anything missing from it (except on a
-    # fork's PR, whose token is always read-only).
+    # github.token may run the
+    # fetch-youtube-audio workflow for anything missing from it and download
+    # its artifacts (except on a fork's PR, whose token is always read-only).
+    # This job has no blob store keys, so what it fetches isn't stored.
     permissions:
       contents: read
       actions: write

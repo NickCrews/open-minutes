@@ -3,13 +3,15 @@
 Gets a meeting's audio. Two parts:
 
 - `storedYoutube` (and `storedYoutubeFromEnv`): a `SiteAdapter` for YouTube
-  that reads a video's metadata and audio from the blob store, where the
+  that reads a video's metadata and audio from the blob store, so it works
+  where YouTube blocks yt-dlp (CI, servers). On a miss, given
+  `YOUTUBE_AUDIO_DISPATCH_TOKEN`, it runs the
   [`fetch-youtube-audio`](../../.github/workflows/fetch-youtube-audio.yml)
-  workflow puts them, so it works where YouTube blocks yt-dlp (CI, servers).
-  On a miss it triggers that workflow and waits, given
-  `YOUTUBE_AUDIO_DISPATCH_TOKEN`, or else falls back to
-  [`@open-minutes/youtube`](../youtube/README.md). Where the store keeps a video's files is
-  `blobStore().youtube()` in [`@open-minutes/blobstore`](../blobstore/README.md).
+  workflow, waits, and downloads the files the run publishes as artifacts;
+  given the blob store's keys too, it stores them there. Without the token it
+  falls back to [`@open-minutes/youtube`](../youtube/README.md). Where the
+  store keeps a video's files is `blobStore().youtube()` in
+  [`@open-minutes/blobstore`](../blobstore/README.md).
 - `getCachedAudio`: a YouTube video's audio decoded to 16 kHz mono WAV (by
   [`@open-minutes/codecs`](../codecs/README.md)) in the per-machine cache,
   `~/.cache/open-minutes/meetings/<youtubeId>/`, downloaded through
