@@ -1,5 +1,5 @@
 import { createWriteStream } from "node:fs";
-import { access, mkdir, rename, rm } from "node:fs/promises";
+import { mkdir, rename, rm } from "node:fs/promises";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { dirname } from "node:path";
@@ -239,7 +239,7 @@ export interface AkLegConfig {
  */
 export interface AkLeg extends SiteAdapter {
   readonly site: "akleg";
-  /** The extension of the files {@link ensureAudioDownloaded} saves, for naming them. */
+  /** The extension of the files {@link downloadAudio} saves, for naming them. */
   readonly audioExtension: "mp3";
   /**
    * The meetings of a committee (by chamber and code, "HRES") in a Legislature
@@ -330,17 +330,8 @@ export function akleg(config: AkLegConfig = {}): AkLeg {
     getMeeting,
     getMetadata: async (meetingIdOrUrl) =>
       toMetadata(await getMeeting(meetingIdOrUrl)),
-    async ensureAudioDownloaded(
-      meetingIdOrUrl,
-      path,
-      { overwrite, signal } = {},
-    ) {
+    async downloadAudio(meetingIdOrUrl, path, { signal } = {}) {
       await mkdir(dirname(path), { recursive: true });
-      const exists = await access(path).then(
-        () => true,
-        () => false,
-      );
-      if (exists && !overwrite) return { downloaded: false };
       const meeting = await getMeeting(meetingIdOrUrl);
       const audio = mainAudio(meeting);
       if (!audio)
@@ -362,7 +353,6 @@ export function akleg(config: AkLegConfig = {}): AkLeg {
       } finally {
         await rm(part, { force: true });
       }
-      return { downloaded: true };
     },
   };
 }

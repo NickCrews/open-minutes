@@ -13,7 +13,7 @@ export const writeWave = sherpa_onnx.writeWave;
 
 /**
  * `audio` as a waveform. A path may be WAV, or WebM/Opus or MP3 as a site's
- * `ensureAudioDownloaded` saves it, which is decoded to 16 kHz mono (via a
+ * `downloadAudio` saves it, which is decoded to 16 kHz mono (via a
  * temporary WAV, removed afterwards). The format is read from the file's
  * bytes, not its name.
  */

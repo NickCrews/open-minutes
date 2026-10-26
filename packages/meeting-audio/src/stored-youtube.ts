@@ -1,4 +1,4 @@
-import { access, mkdir, rename, writeFile } from "node:fs/promises";
+import { mkdir, rename, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import type { SiteAdapter } from "@open-minutes/core/site-adapter";
 import { blobStore } from "@open-minutes/blobstore";
@@ -47,33 +47,19 @@ export function storedYoutube(
         ? metadataFromYtDlpInfo(parseJson(info) as YtDlpInfo)
         : youtube.getMetadata(videoIdOrUrl);
     },
-    async ensureAudioDownloaded(
-      videoIdOrUrl,
-      path,
-      { overwrite = false, signal } = {},
-    ) {
-      const exists = await access(path).then(
-        () => true,
-        () => false,
-      );
-      if (exists && !overwrite) return { downloaded: false };
-
+    async downloadAudio(videoIdOrUrl, path, { signal } = {}) {
       const id = videoId(videoIdOrUrl);
       // Progress goes to stderr so callers' stdout stays machine-readable.
       console.error(`Getting audio for ${id} from the blob store...`);
       const webm = await fetchFile(id, (files) => files.speechWebm);
       if (!webm) {
-        return youtube.ensureAudioDownloaded(videoIdOrUrl, path, {
-          overwrite,
-          signal,
-        });
+        return youtube.downloadAudio(videoIdOrUrl, path, { signal });
       }
       await mkdir(dirname(path), { recursive: true });
       // Written beside `path` and moved into place, so an interrupted write
       // never leaves a partial file at `path`.
       await writeFile(`${path}.part`, webm);
       await rename(`${path}.part`, path);
-      return { downloaded: true };
     },
   };
 }

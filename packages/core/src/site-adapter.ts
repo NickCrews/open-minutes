@@ -14,21 +14,20 @@ export interface SiteAdapter {
   readonly site: Site;
   /** The recording's title, publisher and so on. */
   getMetadata(recordingIdOrUrl: string): Promise<RecordingMetadata>;
-  /** The extension of the files {@link ensureAudioDownloaded} saves, for naming them. */
+  /** The extension of the files {@link downloadAudio} saves, for naming them. */
   readonly audioExtension: "mp3" | "webm";
   /**
-   * Makes sure `path` holds the recording's audio, as the site serves it
-   * (WebM/Opus for YouTube, MP3 for akleg.gov), undecoded. `ensureWaveAudio`
-   * in `@open-minutes/audio/wav` decodes it for the models. An existing file
-   * at `path` is kept unless `overwrite` is set. An interrupted download
-   * never leaves a partial file at `path`. Returns whether it downloaded
-   * anything.
+   * Downloads the recording's audio to `path`, as the site serves it
+   * (WebM/Opus for YouTube, MP3 for akleg.gov), undecoded, replacing any file
+   * there. `ensureWaveAudio` in `@open-minutes/audio/wav` decodes it for the
+   * models. An interrupted download never leaves a partial file at `path`.
+   * Caching is the caller's job.
    */
-  ensureAudioDownloaded(
+  downloadAudio(
     recordingIdOrUrl: string,
     path: string,
-    options?: { overwrite?: boolean; signal?: AbortSignal },
-  ): Promise<{ downloaded: boolean }>;
+    options?: { signal?: AbortSignal },
+  ): Promise<void>;
 }
 
 export interface RecordingMetadata {

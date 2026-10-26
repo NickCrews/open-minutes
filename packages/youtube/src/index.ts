@@ -1,4 +1,4 @@
-import { mkdir, access, rename, rm } from "node:fs/promises";
+import { mkdir, rename, rm } from "node:fs/promises";
 import { dirname } from "node:path";
 import type {
   RecordingMetadata,
@@ -172,22 +172,13 @@ async function getMetadata(
  * Downloads a video's original Opus-in-WebM audio to `path` with yt-dlp. A
  * single format needs no ffmpeg to download.
  */
-async function ensureAudioDownloaded(
+async function downloadAudio(
   config: YouTubeConfig,
   videoIdOrUrl: string,
   path: string,
-  {
-    overwrite = false,
-    signal,
-  }: { overwrite?: boolean; signal?: AbortSignal } = {},
+  { signal }: { signal?: AbortSignal } = {},
 ) {
   await mkdir(dirname(path), { recursive: true });
-  const exists = await access(path).then(
-    () => true,
-    () => false,
-  );
-  if (exists && !overwrite) return { downloaded: false };
-
   const url = videoUrl(videoIdOrUrl);
   // Progress goes to stderr so callers' stdout stays machine-readable.
   console.error(`Downloading audio for ${url} to ${path}...`);
@@ -209,7 +200,6 @@ async function ensureAudioDownloaded(
   } finally {
     await removeWebm();
   }
-  return { downloaded: true };
 }
 
 /**
@@ -237,8 +227,8 @@ export function youtube(config: YouTubeConfig = {}): YouTube {
     site: "youtube",
     audioExtension: "webm",
     getMetadata: (videoIdOrUrl) => getMetadata(config, videoIdOrUrl),
-    ensureAudioDownloaded: (videoIdOrUrl, path, options) =>
-      ensureAudioDownloaded(config, videoIdOrUrl, path, options),
+    downloadAudio: (videoIdOrUrl, path, options) =>
+      downloadAudio(config, videoIdOrUrl, path, options),
   };
 }
 

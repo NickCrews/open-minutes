@@ -27,21 +27,16 @@ describe("youtube", () => {
     });
   });
 
-  it("downloads a video's WebM audio, once", { tags }, async () => {
+  it("downloads a video's WebM audio", { tags }, async () => {
     const dir = await mkdtemp(join(tmpdir(), "youtube-audio-"));
     try {
       const path = join(dir, "short.webm");
       // A 5 s video.
       const url = "https://www.youtube.com/watch?v=QUF1uLgzL-s";
-      expect(await yt.ensureAudioDownloaded(url, path)).toEqual({
-        downloaded: true,
-      });
+      await yt.downloadAudio(url, path);
       const wave = await ensureWaveAudio(path);
       expect(wave.sampleRate).toBe(16_000);
       expect(wave.samples.length / 16_000).toBeCloseTo(5, 0);
-      expect(await yt.ensureAudioDownloaded(url, path)).toEqual({
-        downloaded: false,
-      });
     } finally {
       await rm(dir, { recursive: true, force: true });
     }

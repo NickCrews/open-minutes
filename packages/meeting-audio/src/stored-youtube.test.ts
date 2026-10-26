@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
-import { mkdtemp, rm, stat } from "node:fs/promises";
+import { mkdtemp, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { decodeToWav, SAMPLE_RATE } from "@open-minutes/codecs";
@@ -14,8 +14,8 @@ const unreachable: YouTube = {
   getMetadata: async () => {
     throw new Error("unexpected getMetadata call");
   },
-  ensureAudioDownloaded: async () => {
-    throw new Error("unexpected ensureAudioDownloaded call");
+  downloadAudio: async () => {
+    throw new Error("unexpected downloadAudio call");
   },
 };
 const yt = storedYoutube(unreachable);
@@ -37,23 +37,19 @@ describe("storedYoutube", () => {
     });
   });
 
-  it("downloads a video's WebM audio from the blob store, once", async () => {
+  it("downloads a video's WebM audio from the blob store, replacing what's there", async () => {
     const dir = await mkdtemp(join(tmpdir(), "stored-youtube-audio-"));
     try {
       const path = join(dir, "short.webm");
       // A 5 s video.
       const url = "https://www.youtube.com/watch?v=QUF1uLgzL-s";
-      expect(await yt.ensureAudioDownloaded(url, path)).toEqual({
-        downloaded: true,
-      });
+      await writeFile(path, "stale");
+      await yt.downloadAudio(url, path);
       const wavPath = join(dir, "short.wav");
       await decodeToWav(path, wavPath);
       // A 44-byte header and 16-bit mono samples.
       const { size } = await stat(wavPath);
       expect((size - 44) / 2 / SAMPLE_RATE).toBeCloseTo(5, 0);
-      expect(await yt.ensureAudioDownloaded(url, path)).toEqual({
-        downloaded: false,
-      });
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
