@@ -1,5 +1,5 @@
 import { hasTypographicDash, plainDashes } from "../text";
-import type { ChapterSpan } from "../chapters";
+import type { Chapter } from "../chapters";
 import {
   type AtWord,
   chapterName,
@@ -24,8 +24,8 @@ export const defaultSeverity = "error" satisfies Severity;
 
 const PLAIN_HYPHEN = "has an en or em dash; write a plain hyphen (-)";
 
-function chapterHasDash(c: ChapterSpan): boolean {
-  return [c.title, c.summary ?? "", ...c.bullets].some(hasTypographicDash);
+function chapterHasDash(c: Chapter): boolean {
+  return [c.title, c.summary, ...c.bullets].some(hasTypographicDash);
 }
 
 /**
@@ -102,9 +102,7 @@ export function fix<M extends RuleMeeting>(
             ? {
                 ...c,
                 title: plainDashes(c.title),
-                ...(c.summary !== undefined && {
-                  summary: plainDashes(c.summary),
-                }),
+                summary: plainDashes(c.summary),
                 bullets: c.bullets.map(plainDashes),
               }
             : c,
