@@ -1,7 +1,7 @@
 import { cpSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { fixGoldenSegments, fixMeetingDir, serializeChapters } from "./fix";
 import { meetingDirs } from "./check";
 import { getMeetingData, transcriptPath } from "./test-data";

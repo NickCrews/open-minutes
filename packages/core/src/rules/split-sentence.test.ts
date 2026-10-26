@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import type { TranscriptWord } from "../transcription";
 import * as splitSentence from "./split-sentence";
 import { seg, text } from "./testing";

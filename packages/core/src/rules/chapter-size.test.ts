@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 import { chapter, chapterProblems } from "./testing";
 import type { ChapterSpan } from "../chapters";
 import * as chapterSize from "./chapter-size";

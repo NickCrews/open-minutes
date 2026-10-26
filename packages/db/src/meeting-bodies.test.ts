@@ -1,4 +1,4 @@
-import { describe, expect } from "vitest";
+import { describe, expect } from "vite-plus/test";
 import { eq } from "drizzle-orm";
 import { test } from "./testing/vitest";
 import type { DB } from "./index";

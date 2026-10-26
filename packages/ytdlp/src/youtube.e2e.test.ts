@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vite-plus/test";
 import { mkdtemp, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

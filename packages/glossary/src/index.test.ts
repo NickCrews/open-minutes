@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { GLOSSARIES, glossaryFor, mergeGlossaries } from "./index";
 
 const gbos = { bodySlug: "gbos", jurisdictionSlug: "moa" };

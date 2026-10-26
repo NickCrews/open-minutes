@@ -10,7 +10,7 @@
 // measures. Bounds are wide on purpose: a test here fails when the model's
 // behaviour changes in kind, not by a point.
 
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vite-plus/test";
 import { transcribeRange } from "@open-minutes/audio/transcribe";
 import { readWave, type WaveForm } from "@open-minutes/audio/wav";
 import { getMeetingData } from "@open-minutes/fixtures/test-data";

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { mkdtempSync, readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";

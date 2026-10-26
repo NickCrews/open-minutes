@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vite-plus/test";
 import type { TranscriptWord } from "@open-minutes/core/transcription";
 import { halfUntranscribedRollCall } from "@open-minutes/fixtures/clips";
 import { untranscribedSpeech, wordCoverage } from "./coverage";

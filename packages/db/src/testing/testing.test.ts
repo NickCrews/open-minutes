@@ -1,4 +1,4 @@
-import { describe, expect } from "vitest";
+import { describe, expect } from "vite-plus/test";
 import { sql } from "drizzle-orm";
 import { getDb } from "../index";
 import { jurisdictionsTable } from "../schema";

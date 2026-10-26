@@ -1,18 +1,17 @@
 {
   "name": "root",
   "private": true,
-  "packageManager": "pnpm@10.33.0",
   "type": "module",
   "scripts": {
     "dev": "pnpm db up && pnpm web:dev",
-    "format": "prettier --experimental-cli --ignore-unknown '**/*' --write",
-    "format:check": "prettier --experimental-cli --ignore-unknown '**/*' --check",
-    "lint": "eslint .",
-    "test": "vitest run",
-    "test:slow": "SLOW=1 vitest run --tagsFilter slow",
-    "test:ytdlp": "YTDLP=1 vitest run --tagsFilter ytdlp",
-    "test:all": "SLOW=1 YTDLP=1 vitest run",
-    "bench": "vitest bench --run",
+    "format": "vp fmt",
+    "format:check": "vp fmt --check",
+    "lint": "vp lint",
+    "test": "vp test run",
+    "test:slow": "SLOW=1 vp test run --tagsFilter slow",
+    "test:ytdlp": "YTDLP=1 vp test run --tagsFilter ytdlp",
+    "test:all": "SLOW=1 YTDLP=1 vp test run",
+    "bench": "vp test bench --run --reporter verbose",
     "typecheck": "pnpm --filter @open-minutes/* run typecheck",
     "check": "pnpm typecheck && pnpm run format:check && pnpm run lint && pnpm run test",
     "web:dev": "pnpm --filter @open-minutes/web run dev",
@@ -23,17 +22,24 @@
     "deploy:prod": "pnpm --filter @open-minutes/web run deploy"
   },
   "devDependencies": {
-    "@eslint/js": "^9.36.0",
     "@open-minutes/datasets": "workspace:*",
     "@open-minutes/db": "workspace:*",
     "@open-minutes/fixtures": "workspace:*",
     "@open-minutes/ytdlp": "workspace:*",
-    "@types/node": "^22",
-    "eslint": "^9.36.0",
-    "prettier": "^3.7.4",
-    "tsx": "^4.21.0",
+    "@types/node": "catalog:",
     "typescript": "5.9.3",
-    "typescript-eslint": "^8.45.0",
-    "vitest": "^4.0.18"
+    "vite-plus": "catalog:"
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "10.33.0",
+      "onFail": "error"
+    },
+    "runtime": {
+      "name": "node",
+      "version": "^24.11.0",
+      "onFail": "error"
+    }
   }
 }

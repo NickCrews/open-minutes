@@ -7,7 +7,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "test": "vitest run",
+    "test": "vp test run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -17,7 +17,7 @@
     "@open-minutes/youtube": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "^22.19.17",
-    "vitest": "^4.0.18"
+    "@types/node": "catalog:",
+    "vite-plus": "catalog:"
   }
 }

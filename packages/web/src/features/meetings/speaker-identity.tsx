@@ -123,14 +123,14 @@ export function SpeakerSwatch(props: {
 // speakers falls back to numbering; public testimony can be long, but not that
 // long.
 const ANIMALS = [
-  // prettier-ignore
+  // oxfmt-ignore
   [
     "Aardvark", "Beaver", "Crocodile", "Dolphin", "Elephant", "Falcon",
     "Gazelle", "Heron", "Ibex", "Jaguar", "Kestrel", "Lynx", "Mongoose",
     "Narwhal", "Otter", "Pelican", "Quail", "Raccoon", "Salamander",
     "Tortoise", "Urchin", "Viper", "Walrus", "Xerus", "Yak", "Zebra",
   ],
-  // prettier-ignore
+  // oxfmt-ignore
   [
     "Albatross", "Bison", "Cheetah", "Dormouse", "Egret", "Ferret", "Gibbon",
     "Hedgehog", "Impala", "Jackal", "Kingfisher", "Lemur", "Marmot",

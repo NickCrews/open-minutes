@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { hasTypographicDash } from "@open-minutes/core/text";
 import { loadPeople, parseGoldenBodies, parseGoldenWhen } from "./test-data";
 

@@ -1,4 +1,4 @@
-import { describe, expect, test as plainTest } from "vitest";
+import { describe, expect, test as plainTest } from "vite-plus/test";
 import { sql } from "drizzle-orm";
 import {
   chapterGenerationsTable,

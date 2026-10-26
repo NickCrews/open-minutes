@@ -37,8 +37,11 @@ voiceprint so they can be recognized in later meetings.
 
 ## Getting started
 
-You need Node 22, pnpm (the version is pinned in `package.json`;
-`corepack enable` picks it up), and Docker with Compose. Then:
+You need [Vite+](https://viteplus.dev) and Docker with Compose. Vite+ provides
+`node` and `pnpm` at the versions `devEngines` in `package.json` pins, and runs
+the formatter, linter and tests: `curl -fsSL https://vite.plus | bash`
+
+Then (new shell):
 
 ```sh
 pnpm install

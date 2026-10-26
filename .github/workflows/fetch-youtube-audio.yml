@@ -115,7 +115,7 @@ jobs:
         env:
           YOUTUBE_EGRESS: warp,tor
           YOUTUBE_EGRESS_STATE: ${{ runner.temp }}/youtube-egress
-        run: pnpm exec tsx .github/scripts/fetch-youtube-audio.ts "$VIDEO_ID" "$RUNNER_TEMP/audio/original.webm"
+        run: pnpm exec vpx .github/scripts/fetch-youtube-audio.ts "$VIDEO_ID" "$RUNNER_TEMP/audio/original.webm"
       # ffmpeg isn't on the ubuntu-latest image.
       - name: Install ffmpeg
         if: steps.stored.outputs.hit != 'true'

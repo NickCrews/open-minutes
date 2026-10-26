@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, expect, it } from "vitest";
+import { afterEach, beforeEach, expect, it } from "vite-plus/test";
 import { spawnSync } from "node:child_process";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";

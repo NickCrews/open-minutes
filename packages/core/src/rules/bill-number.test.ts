@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import * as billNumber from "./bill-number";
 import { fixWith, foundTexts } from "./testing";
 

@@ -4,3 +4,23 @@ onlyBuiltDependencies:
   - esbuild
   - protobufjs
   - sharp
+catalog:
+  # Vite+ ships its own build of Vite (vite-plus-core, which bundles Vite 8
+  # with Rolldown and tsdown). Installing it under the name `vite` makes the
+  # web app's Vite plugins and Vite+ share one Vite.
+  vite: npm:@voidzero-dev/vite-plus-core@1.4.0
+  vite-plus: 1.4.0
+  # Matches the Node major in package.json's devEngines.runtime.
+  "@types/node": ^24
+overrides:
+  # Keeps any dependency that asks for `vite` from installing a second, real
+  # Vite alongside vite-plus-core.
+  vite@*: "catalog:"
+  # One set of Node types for the whole tree, including dependencies' own type
+  # packages (e.g. @types/mssql under drizzle-orm).
+  "@types/node": "catalog:"
+peerDependencyRules:
+  # vite-plus-core's version (1.4.0) isn't in the `vite` ranges plugins and
+  # Vitest declare as peers, though it is the Vite they expect.
+  allowAny:
+    - vite

@@ -1,4 +1,4 @@
-import { beforeAll, test as baseTest } from "vitest";
+import { beforeAll, test as baseTest } from "vite-plus/test";
 import type { DB } from "../index";
 import {
   createTestDb,
@@ -42,7 +42,7 @@ export function dbTest(
   }, options.setupTimeoutMs ?? 120_000);
 
   return baseTest.extend<{ testDb: TestDb; db: DB }>({
-    // eslint-disable-next-line no-empty-pattern
+    // oxlint-disable-next-line no-empty-pattern
     testDb: async ({}, use) => {
       const testDb = await createTestDb(options);
       try {

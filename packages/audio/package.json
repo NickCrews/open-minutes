@@ -14,10 +14,10 @@
     "./wav": "./src/wav.ts"
   },
   "scripts": {
-    "test": "vitest run",
+    "test": "vp test run",
     "typecheck": "tsc --noEmit",
-    "bench": "vitest bench --run",
-    "models": "tsx src/models-cli.ts"
+    "bench": "vp test bench --run --reporter verbose",
+    "models": "vpx src/models-cli.ts"
   },
   "dependencies": {
     "@open-minutes/codecs": "workspace:*",
@@ -26,8 +26,7 @@
   },
   "devDependencies": {
     "@open-minutes/fixtures": "workspace:*",
-    "@types/node": "^22.19.17",
-    "tsx": "^4.21.0",
-    "vitest": "^4.0.18"
+    "@types/node": "catalog:",
+    "vite-plus": "catalog:"
   }
 }
