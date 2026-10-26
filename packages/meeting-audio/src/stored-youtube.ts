@@ -7,7 +7,7 @@ import {
   type YtDlpInfo,
   metadataFromYtDlpInfo,
   videoId,
-  youtubeFromEnv,
+  youtube,
 } from "@open-minutes/youtube";
 import { fetchYoutubeVideoFile, parseJson } from "./fetch-youtube-audio";
 
@@ -65,12 +65,12 @@ export function storedYoutube(
 }
 
 /**
- * {@link storedYoutube} configured from the environment: YouTube from
- * `youtubeFromEnv`, the blob store from BLOB_STORE_PUBLIC_URL (see
- * `blobStore`), and the dispatch token from YOUTUBE_AUDIO_DISPATCH_TOKEN.
+ * {@link storedYoutube} configured from the environment: yt-dlp's routes from
+ * YOUTUBE_EGRESS, the blob store from BLOB_STORE_PUBLIC_URL (see `blobStore`),
+ * and the dispatch token from YOUTUBE_AUDIO_DISPATCH_TOKEN.
  */
 export function storedYoutubeFromEnv(env = process.env): SiteAdapter {
-  return storedYoutube(youtubeFromEnv(env), {
+  return storedYoutube(youtube(), {
     dispatchToken: env.YOUTUBE_AUDIO_DISPATCH_TOKEN || undefined,
   });
 }
