@@ -18,5 +18,4 @@ since that works from any IP. The audio is saved as YouTube serves it;
 `youtubeConfigFromEnv` for the environment variables it reads.
 
 `metadataFromYtDlpInfo` dates a video by its stream's or premiere's start,
-else its upload, and counts its audio complete unless it is a live or
-upcoming stream, or one YouTube is still processing (`live_status`).
+else its upload.

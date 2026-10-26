@@ -46,10 +46,4 @@ export interface RecordingMetadata {
    * meeting happens on or before it.
    */
   publishedAt: Date | null;
-  /**
-   * Whether the recording's audio is all there to download: false for a
-   * stream that is live or upcoming, or a meeting that may still be
-   * recording.
-   */
-  isComplete: boolean;
 }

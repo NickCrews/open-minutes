@@ -28,9 +28,6 @@ returning wrong data.
 - **Permalink:** the meeting's page on akleg.gov.
 - **Published at:** null; akleg.gov doesn't say when it published a
   recording.
-- **Complete:** once the meeting has audio and a day has passed since its
-  scheduled start, so a meeting still being recorded isn't taken with part
-  of its audio.
 
 ## Audio
 

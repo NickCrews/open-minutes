@@ -24,7 +24,6 @@ describe("youtube", () => {
       description: expect.stringContaining("www.muni.org/gbos"),
       durationSecs: 9970,
       publishedAt: new Date("2026-03-24T19:05:28Z"),
-      isComplete: true,
     });
   });
 
@@ -59,7 +58,6 @@ describe("metadataFromYtDlpInfo", () => {
       description: "",
       durationSecs: null,
       publishedAt: null,
-      isComplete: true,
     });
   });
 
@@ -70,19 +68,6 @@ describe("metadataFromYtDlpInfo", () => {
       release_timestamp: 1_774_390_000,
     });
     expect(meta.publishedAt).toEqual(new Date(1_774_390_000_000));
-  });
-
-  it.each([
-    ["not_live", true],
-    ["was_live", true],
-    [null, true],
-    ["is_live", false],
-    ["is_upcoming", false],
-    ["post_live", false],
-  ] as const)("counts a %s video's audio complete: %s", (live_status, want) => {
-    expect(
-      metadataFromYtDlpInfo({ id: "QUF1uLgzL-s", live_status }).isComplete,
-    ).toBe(want);
   });
 });
 

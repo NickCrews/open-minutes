@@ -9,7 +9,6 @@ import {
   meetingId,
   parseMeetingId,
   meetingUrl,
-  toMetadata,
 } from "./index";
 
 // Real BASIS API responses, trimmed to a few meetings.
@@ -188,28 +187,7 @@ describe("getMetadata", () => {
       description: "Anch LIO AUDITORIUM",
       durationSecs: 10746.5,
       publishedAt: null,
-      isComplete: true,
     });
-  });
-});
-
-describe("toMetadata", () => {
-  it("counts a meeting's audio complete a day after its date", async () => {
-    const { source } = fake(MEETINGS_ON_DATE);
-    const meeting = await source.getMeeting("HRES 2018-09-10 14:00:00");
-    const isComplete = (now: string) =>
-      toMetadata(meeting, new Date(now)).isComplete;
-    expect(isComplete("2018-09-10T23:00:00Z")).toBe(false);
-    expect(isComplete("2018-09-11T23:59:59Z")).toBe(false);
-    expect(isComplete("2018-09-12T00:00:00Z")).toBe(true);
-  });
-
-  it("never counts a meeting without audio complete", async () => {
-    const { source } = fake(MEETINGS_ON_DATE);
-    const meeting = await source.getMeeting("HRES 2018-09-10 14:00:00");
-    expect(
-      toMetadata({ ...meeting, audio: [] }, new Date("2026-01-01")).isComplete,
-    ).toBe(false);
   });
 });
 

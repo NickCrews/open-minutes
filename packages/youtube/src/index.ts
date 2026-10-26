@@ -136,22 +136,12 @@ export interface YtDlpInfo {
   timestamp?: number | null;
   /** When a stream or premiere started, in seconds since the epoch. */
   release_timestamp?: number | null;
-  /** Whether it is or was a stream; absent for some videos. */
-  live_status?:
-    | "not_live"
-    | "is_live"
-    | "is_upcoming"
-    | "was_live"
-    | "post_live"
-    | null;
   webpage_url?: string;
 }
 
 /**
  * The {@link RecordingMetadata} in a video's yt-dlp info JSON. It was
  * published when its stream or premiere started, else when it was uploaded.
- * Its audio isn't complete while it is a live or upcoming stream, or one that
- * has just ended and YouTube is still processing.
  */
 export function metadataFromYtDlpInfo(raw: YtDlpInfo): RecordingMetadata {
   const publishedSecs = raw.release_timestamp ?? raw.timestamp;
@@ -163,10 +153,6 @@ export function metadataFromYtDlpInfo(raw: YtDlpInfo): RecordingMetadata {
     description: raw.description ?? "",
     durationSecs: raw.duration ?? null,
     publishedAt: publishedSecs == null ? null : new Date(publishedSecs * 1000),
-    isComplete:
-      raw.live_status !== "is_live" &&
-      raw.live_status !== "is_upcoming" &&
-      raw.live_status !== "post_live",
   };
 }
 

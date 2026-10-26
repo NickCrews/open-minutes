@@ -204,30 +204,14 @@ export function mainAudio(meeting: AkLegMeeting): MediaFile | undefined {
 }
 
 /**
- * How long after a meeting's scheduled start its audio counts as complete,
- * so a meeting still being recorded isn't taken with part of its audio.
+ * {@link RecordingMetadata} for a meeting. akleg.gov has no channels: the
+ * chamber and committee code ("HRES") stand in for one, as they're what a
+ * body's meetings share. The title ends with the scheduled start as
+ * "YYYY-MM-DD hh:mm:ss", which the pipeline reads the meeting's date and time
+ * from. akleg.gov doesn't say when it published a recording.
  */
-const COMPLETE_AFTER_MS = 24 * 60 * 60 * 1000;
-
-/**
- * {@link RecordingMetadata} for a meeting, as of `now`. akleg.gov has no
- * channels: the chamber and committee code ("HRES") stand in for one, as
- * they're what a body's meetings share. The title ends with the scheduled
- * start as "YYYY-MM-DD hh:mm:ss", which the pipeline reads the meeting's date
- * and time from. akleg.gov doesn't say when it published a recording. Its
- * audio is complete once it has some and a day has passed since the
- * meeting's scheduled start.
- */
-export function toMetadata(
-  meeting: AkLegMeeting,
-  now: Date = new Date(),
-): RecordingMetadata {
+export function toMetadata(meeting: AkLegMeeting): RecordingMetadata {
   const audio = mainAudio(meeting);
-  // Scheduled starts are Alaska time, behind UTC, so this is a little over a
-  // day in.
-  const cutoff = new Date(now.getTime() - COMPLETE_AFTER_MS)
-    .toISOString()
-    .slice(0, 10);
   return {
     id: meeting.id,
     permalink: meetingUrl(meeting.id),
@@ -236,7 +220,6 @@ export function toMetadata(
     description: meeting.location,
     durationSecs: audio ? audio.durationSecs : null,
     publishedAt: null,
-    isComplete: audio !== undefined && meeting.date < cutoff,
   };
 }
 
@@ -244,8 +227,6 @@ export function toMetadata(
 export interface AkLegConfig {
   /** Replaces the global fetch; tests pass a fake. */
   fetch?: typeof fetch;
-  /** The current time, for {@link toMetadata}; tests pass a fixed one. */
-  now?: () => Date;
 }
 
 /**
@@ -275,7 +256,6 @@ export interface AkLeg extends SiteAdapter {
 /** An {@link AkLeg} that uses `config`. Does no I/O until a method is called. */
 export function akleg(config: AkLegConfig = {}): AkLeg {
   const fetchFn = config.fetch ?? fetch;
-  const now = config.now ?? (() => new Date());
 
   async function get(
     url: string,
@@ -349,7 +329,7 @@ export function akleg(config: AkLegConfig = {}): AkLeg {
     },
     getMeeting,
     getMetadata: async (meetingIdOrUrl) =>
-      toMetadata(await getMeeting(meetingIdOrUrl), now()),
+      toMetadata(await getMeeting(meetingIdOrUrl)),
     async ensureAudioDownloaded(
       meetingIdOrUrl,
       path,

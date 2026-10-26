@@ -34,7 +34,6 @@ describe("storedYoutube", () => {
       description: expect.stringContaining("www.muni.org/gbos"),
       durationSecs: 9970,
       publishedAt: new Date("2026-03-24T19:05:28Z"),
-      isComplete: true,
     });
   });
 
@@ -73,7 +72,6 @@ describe("storedYoutube", () => {
         description: "",
         durationSecs: null,
         publishedAt: null,
-        isComplete: true,
       }),
     });
     // A well-formed ID no video has.
