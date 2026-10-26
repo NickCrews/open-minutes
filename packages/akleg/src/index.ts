@@ -4,16 +4,16 @@ import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { dirname } from "node:path";
 import { z } from "zod";
-import type {
-  AudioProvider,
-  RecordingMetadata,
-} from "@open-minutes/core/audio-provider";
 import type { RecordingLister } from "@open-minutes/core/recording-lister";
+import type {
+  RecordingMetadata,
+  SiteAdapter,
+} from "@open-minutes/core/site-adapter";
 
 export type {
-  AudioProvider,
   RecordingMetadata,
-} from "@open-minutes/core/audio-provider";
+  SiteAdapter,
+} from "@open-minutes/core/site-adapter";
 export type {
   ListedRecording,
   RecordingLister,
@@ -204,22 +204,39 @@ export function mainAudio(meeting: AkLegMeeting): MediaFile | undefined {
 }
 
 /**
- * {@link RecordingMetadata} for a meeting. akleg.gov has no channels: the
- * chamber and committee code ("HRES") stand in for one, as they're what a
- * body's meetings share. The title ends with the scheduled start as
- * "YYYY-MM-DD hh:mm:ss", which the pipeline reads the meeting's date and time
- * from. akleg.gov gives no publication date, so the meeting's own date stands
- * in for it.
+ * How long after a meeting's scheduled start its audio counts as complete,
+ * so a meeting still being recorded isn't taken with part of its audio.
  */
-export function toMetadata(meeting: AkLegMeeting): RecordingMetadata {
+const COMPLETE_AFTER_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * {@link RecordingMetadata} for a meeting, as of `now`. akleg.gov has no
+ * channels: the chamber and committee code ("HRES") stand in for one, as
+ * they're what a body's meetings share. The title ends with the scheduled
+ * start as "YYYY-MM-DD hh:mm:ss", which the pipeline reads the meeting's date
+ * and time from. akleg.gov doesn't say when it published a recording. Its
+ * audio is complete once it has some and a day has passed since the
+ * meeting's scheduled start.
+ */
+export function toMetadata(
+  meeting: AkLegMeeting,
+  now: Date = new Date(),
+): RecordingMetadata {
   const audio = mainAudio(meeting);
+  // Scheduled starts are Alaska time, behind UTC, so this is a little over a
+  // day in.
+  const cutoff = new Date(now.getTime() - COMPLETE_AFTER_MS)
+    .toISOString()
+    .slice(0, 10);
   return {
     id: meeting.id,
+    permalink: meetingUrl(meeting.id),
     channelId: meeting.id.split(" ")[0]!,
     title: `${meeting.committee} - ${meeting.date} ${meeting.time}`,
     description: meeting.location,
     durationSecs: audio ? audio.durationSecs : null,
-    uploadDate: meeting.date,
+    publishedAt: null,
+    isComplete: audio !== undefined && meeting.date < cutoff,
   };
 }
 
@@ -227,6 +244,8 @@ export function toMetadata(meeting: AkLegMeeting): RecordingMetadata {
 export interface AkLegConfig {
   /** Replaces the global fetch; tests pass a fake. */
   fetch?: typeof fetch;
+  /** The current time, for {@link toMetadata}; tests pass a fixed one. */
+  now?: () => Date;
 }
 
 /**
@@ -234,10 +253,11 @@ export interface AkLegConfig {
  * through its BASIS API. Create one with {@link akleg}; tests pass a fake
  * instead.
  *
- * Its {@link AudioProvider} methods take a meeting ID or meeting page URL
+ * Its {@link SiteAdapter} methods take a meeting ID or meeting page URL
  * where YouTube's take a video ID or URL.
  */
-export interface AkLeg extends AudioProvider {
+export interface AkLeg extends SiteAdapter {
+  readonly site: "akleg";
   /** The extension of the files {@link ensureAudioDownloaded} saves, for naming them. */
   readonly audioExtension: "mp3";
   /**
@@ -255,9 +275,16 @@ export interface AkLeg extends AudioProvider {
 /** An {@link AkLeg} that uses `config`. Does no I/O until a method is called. */
 export function akleg(config: AkLegConfig = {}): AkLeg {
   const fetchFn = config.fetch ?? fetch;
+  const now = config.now ?? (() => new Date());
 
-  async function get(url: string, headers?: Record<string, string>) {
-    const res = await fetchFn(url, { headers });
+  async function get(
+    url: string,
+    {
+      headers,
+      signal,
+    }: { headers?: Record<string, string>; signal?: AbortSignal } = {},
+  ) {
+    const res = await fetchFn(url, { headers, signal });
     if (!res.ok) throw new Error(`GET ${url}: HTTP ${res.status}`);
     return res;
   }
@@ -275,8 +302,10 @@ export function akleg(config: AkLegConfig = {}): AkLeg {
     const res = await get(
       `${BASE}/publicservice/basis/${section}?minifyresult=true&json=true&session=${legislature}`,
       {
-        "X-Alaska-Legislature-Basis-Version": "1.4",
-        "X-Alaska-Legislature-Basis-Query": query,
+        headers: {
+          "X-Alaska-Legislature-Basis-Version": "1.4",
+          "X-Alaska-Legislature-Basis-Query": query,
+        },
       },
     );
     return parse(schema, await res.text());
@@ -297,6 +326,7 @@ export function akleg(config: AkLegConfig = {}): AkLeg {
   }
 
   return {
+    site: "akleg",
     audioExtension: "mp3",
     async meetingsOfCommittee(committee, legislature) {
       const chamber = committee.slice(0, 1);
@@ -319,8 +349,12 @@ export function akleg(config: AkLegConfig = {}): AkLeg {
     },
     getMeeting,
     getMetadata: async (meetingIdOrUrl) =>
-      toMetadata(await getMeeting(meetingIdOrUrl)),
-    async ensureAudioDownloaded(meetingIdOrUrl, path, { overwrite } = {}) {
+      toMetadata(await getMeeting(meetingIdOrUrl), now()),
+    async ensureAudioDownloaded(
+      meetingIdOrUrl,
+      path,
+      { overwrite, signal } = {},
+    ) {
       await mkdir(dirname(path), { recursive: true });
       const exists = await access(path).then(
         () => true,
@@ -333,7 +367,7 @@ export function akleg(config: AkLegConfig = {}): AkLeg {
         throw new Error(`No audio for akleg.gov meeting ${meeting.id}`);
       // Progress goes to stderr so callers' stdout stays machine-readable.
       console.error(`Downloading audio from ${audio.url} to ${path}...`);
-      const res = await get(audio.url);
+      const res = await get(audio.url, { signal });
       if (!res.body) throw new Error(`GET ${audio.url}: no body`);
       // Written beside `path` and moved into place, so an interrupted download
       // never leaves a partial file at `path`.
@@ -342,6 +376,7 @@ export function akleg(config: AkLegConfig = {}): AkLeg {
         await pipeline(
           Readable.from(chunksOf(res.body)),
           createWriteStream(part),
+          { signal },
         );
         await rename(part, path);
       } finally {

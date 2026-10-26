@@ -3,7 +3,7 @@
 Where Open Minutes gets meetings published by the Alaska Legislature on
 [akleg.gov](https://www.akleg.gov), a peer of
 [`@open-minutes/youtube`](../youtube). It lists a committee's recorded
-meetings, and implements `@open-minutes/core`'s `AudioProvider` for a
+meetings, and implements `@open-minutes/core`'s `SiteAdapter` for a
 meeting: its metadata, and its MP3 audio. `aklegSource({ committee:
 "HRES" })` is a committee as a body's meeting source
 (`{"type":"akleg_committee","committee":"HRES"}`): core's `RecordingLister`.
@@ -25,7 +25,12 @@ returning wrong data.
 - **Channel ID:** the chamber and committee code (`HRES`).
 - **Title:** `House RESOURCES - 2018-09-10 14:00:00`, from which
   `resolveMeetingDateTime` reads the date and time.
-- **Upload date:** akleg.gov gives none, so the meeting's own date.
+- **Permalink:** the meeting's page on akleg.gov.
+- **Published at:** null; akleg.gov doesn't say when it published a
+  recording.
+- **Complete:** once the meeting has audio and a day has passed since its
+  scheduled start, so a meeting still being recorded isn't taken with part
+  of its audio.
 
 ## Audio
 

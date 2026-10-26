@@ -9,6 +9,7 @@ import { storedYoutube } from "./stored-youtube";
 // A YouTube that fails, so a video missing from the store fails the test
 // instead of falling back to yt-dlp.
 const unreachable: YouTube = {
+  site: "youtube",
   audioExtension: "webm",
   getMetadata: async () => {
     throw new Error("unexpected getMetadata call");
@@ -23,11 +24,13 @@ describe("storedYoutube", () => {
   it("gets a video's metadata from the blob store", async () => {
     expect(await yt.getMetadata("9HoIM5INxpI")).toEqual({
       id: "9HoIM5INxpI",
+      permalink: "https://www.youtube.com/watch?v=9HoIM5INxpI",
       channelId: "UCOUlNInprZEjhbpVPiJOlEA",
       title: "Girdwood Board of Supervisors Regular Meeting March 23, 2026",
       description: expect.stringContaining("www.muni.org/gbos"),
       durationSecs: 9970,
-      uploadDate: "2026-03-24",
+      publishedAt: new Date("2026-03-24T19:05:28Z"),
+      isComplete: true,
     });
   });
 
@@ -58,11 +61,13 @@ describe("storedYoutube", () => {
       ...unreachable,
       getMetadata: async (id) => ({
         id,
+        permalink: `https://www.youtube.com/watch?v=${id}`,
         channelId: "",
         title: "from YouTube",
         description: "",
         durationSecs: null,
-        uploadDate: null,
+        publishedAt: null,
+        isComplete: true,
       }),
     });
     // A well-formed ID no video has.

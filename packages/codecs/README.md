@@ -21,6 +21,6 @@ bytes on every machine. The tests pin those bytes, so a decoder upgrade that
 changes the audio (and with it the golden fixtures' `_audio_sha256`) shows up
 there first.
 
-Sites' `AudioProvider.ensureAudioDownloaded` saves audio in the format the
+Sites' `SiteAdapter.ensureAudioDownloaded` saves audio in the format the
 site serves; `ensureWaveAudio` in `@open-minutes/audio/wav` decodes it with
 this package.

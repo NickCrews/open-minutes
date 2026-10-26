@@ -3,7 +3,12 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ensureWaveAudio } from "@open-minutes/audio/wav";
-import { youtube, youtubeConfigFromEnv, youtubeSource } from ".";
+import {
+  metadataFromYtDlpInfo,
+  youtube,
+  youtubeConfigFromEnv,
+  youtubeSource,
+} from ".";
 
 // Tagged `ytdlp`: from a datacenter IP it needs WARP or Tor installed.
 const tags = ["ytdlp"];
@@ -13,11 +18,13 @@ describe("youtube", () => {
   it("gets a video's metadata", { tags }, async () => {
     expect(await yt.getMetadata("9HoIM5INxpI")).toEqual({
       id: "9HoIM5INxpI",
+      permalink: "https://www.youtube.com/watch?v=9HoIM5INxpI",
       channelId: "UCOUlNInprZEjhbpVPiJOlEA",
       title: "Girdwood Board of Supervisors Regular Meeting March 23, 2026",
       description: expect.stringContaining("www.muni.org/gbos"),
       durationSecs: 9970,
-      uploadDate: "2026-03-24",
+      publishedAt: new Date("2026-03-24T19:05:28Z"),
+      isComplete: true,
     });
   });
 
@@ -39,6 +46,43 @@ describe("youtube", () => {
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
+  });
+});
+
+describe("metadataFromYtDlpInfo", () => {
+  it("falls back to a watch URL and nulls for missing fields", () => {
+    expect(metadataFromYtDlpInfo({ id: "QUF1uLgzL-s" })).toEqual({
+      id: "QUF1uLgzL-s",
+      permalink: "https://www.youtube.com/watch?v=QUF1uLgzL-s",
+      channelId: "",
+      title: "",
+      description: "",
+      durationSecs: null,
+      publishedAt: null,
+      isComplete: true,
+    });
+  });
+
+  it("dates a stream by its start, not its upload", () => {
+    const meta = metadataFromYtDlpInfo({
+      id: "QUF1uLgzL-s",
+      timestamp: 1_774_400_000,
+      release_timestamp: 1_774_390_000,
+    });
+    expect(meta.publishedAt).toEqual(new Date(1_774_390_000_000));
+  });
+
+  it.each([
+    ["not_live", true],
+    ["was_live", true],
+    [null, true],
+    ["is_live", false],
+    ["is_upcoming", false],
+    ["post_live", false],
+  ] as const)("counts a %s video's audio complete: %s", (live_status, want) => {
+    expect(
+      metadataFromYtDlpInfo({ id: "QUF1uLgzL-s", live_status }).isComplete,
+    ).toBe(want);
   });
 });
 

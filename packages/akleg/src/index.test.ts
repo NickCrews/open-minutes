@@ -9,6 +9,7 @@ import {
   meetingId,
   parseMeetingId,
   meetingUrl,
+  toMetadata,
 } from "./index";
 
 // Real BASIS API responses, trimmed to a few meetings.
@@ -180,12 +181,35 @@ describe("getMetadata", () => {
     const { source } = fake(MEETINGS_ON_DATE);
     expect(await source.getMetadata("HRES 2018-09-10 14:00:00")).toEqual({
       id: "HRES 2018-09-10 14:00:00",
+      permalink:
+        "https://www.akleg.gov/basis/Meeting/Detail?Meeting=HRES%202018-09-10%2014:00:00",
       channelId: "HRES",
       title: "House RESOURCES - 2018-09-10 14:00:00",
       description: "Anch LIO AUDITORIUM",
       durationSecs: 10746.5,
-      uploadDate: "2018-09-10",
+      publishedAt: null,
+      isComplete: true,
     });
+  });
+});
+
+describe("toMetadata", () => {
+  it("counts a meeting's audio complete a day after its date", async () => {
+    const { source } = fake(MEETINGS_ON_DATE);
+    const meeting = await source.getMeeting("HRES 2018-09-10 14:00:00");
+    const isComplete = (now: string) =>
+      toMetadata(meeting, new Date(now)).isComplete;
+    expect(isComplete("2018-09-10T23:00:00Z")).toBe(false);
+    expect(isComplete("2018-09-11T23:59:59Z")).toBe(false);
+    expect(isComplete("2018-09-12T00:00:00Z")).toBe(true);
+  });
+
+  it("never counts a meeting without audio complete", async () => {
+    const { source } = fake(MEETINGS_ON_DATE);
+    const meeting = await source.getMeeting("HRES 2018-09-10 14:00:00");
+    expect(
+      toMetadata({ ...meeting, audio: [] }, new Date("2026-01-01")).isComplete,
+    ).toBe(false);
   });
 });
 
