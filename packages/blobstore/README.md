@@ -39,7 +39,11 @@ null.
 
 ```ts
 const writer = blobStoreWriterFromEnv(process.env);
-await writer?.put(store.youtube("9HoIM5INxpI").infoJson, bytes, "application/json");
+await writer?.put(
+  store.youtube("9HoIM5INxpI").infoJson,
+  bytes,
+  "application/json",
+);
 ```
 
 `blobStore()` reads the `BLOB_STORE_PUBLIC_URL` environment variable where
