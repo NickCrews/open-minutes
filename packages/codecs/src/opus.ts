@@ -31,73 +31,71 @@ const OPUS_RATE = 48_000;
 const BATCH = 1_000;
 
 /**
- * The audio of a WebM/Opus file as 16 kHz mono samples. Iterate it for the
- * samples, a batch (~20 s) at a time, with the encoder's delay (pre-skip) and
- * end padding trimmed:
+ * The audio of a WebM/Opus file as 16 kHz mono samples, a batch (~20 s) at a
+ * time, with the encoder's delay (pre-skip) and end padding trimmed:
  *
  * ```ts
- * for await (const samples of new OpusReader(webm)) ...
+ * for await (const samples of decodeOpusWebm(webm)) ...
  * ```
+ *
+ * Throws right away if `webm` has no Opus track this can decode.
  *
  * Decoding is libopus compiled to WebAssembly (opus-decoder), asked for 16 kHz
  * mono output directly; a stereo stream's channels are averaged. The same
  * input gives the same samples on every machine.
  */
-export class OpusReader implements AsyncIterable<Float32Array> {
-  readonly #track: OpusTrack;
-  /** In 48 kHz samples, as the OpusHead gives it. */
-  readonly #preSkip: number;
-
-  /** Throws if `webm` has no Opus track this can decode. */
-  constructor(webm: Uint8Array) {
-    this.#track = readOpusTrack(webm);
-    const head = this.#track.opusHead;
-    if (head.length < 19 || readAscii(head, 0, 8) !== "OpusHead") {
-      throw new Error("WebM Opus track has no OpusHead");
-    }
-    const channels = head[9]!;
-    this.#preSkip = head[10]! | (head[11]! << 8);
-    if (head[18] !== 0 || channels > 2) {
-      throw new Error(`Unsupported Opus channel layout (${channels} channels)`);
-    }
+export function decodeOpusWebm(webm: Uint8Array): AsyncIterable<Float32Array> {
+  const track = readOpusTrack(webm);
+  const head = track.opusHead;
+  if (head.length < 19 || readAscii(head, 0, 8) !== "OpusHead") {
+    throw new Error("WebM Opus track has no OpusHead");
   }
+  const channels = head[9]!;
+  if (head[18] !== 0 || channels > 2) {
+    throw new Error(`Unsupported Opus channel layout (${channels} channels)`);
+  }
+  // In 48 kHz samples, as the OpusHead gives it.
+  const preSkip = head[10]! | (head[11]! << 8);
+  return decodeOpusTrack(track, preSkip);
+}
 
-  async *[Symbol.asyncIterator](): AsyncGenerator<Float32Array> {
-    const { packets, discardPaddingNs } = this.#track;
-    const decoder = new OpusDecoder({
-      sampleRate: SAMPLE_RATE,
-      // A mono decoder downmixes a stereo stream.
-      channels: 1,
-      streamCount: 1,
-      coupledStreamCount: 0,
-      channelMappingTable: [0],
-      // opus-decoder applies pre-skip in output samples, but the header gives
-      // it in 48 kHz samples.
-      preSkip: Math.round((this.#preSkip * SAMPLE_RATE) / OPUS_RATE),
-    });
-    await decoder.ready;
-    try {
-      // The encoder pads the last packet; the container says how much to
-      // drop. That many samples are held back until the next batch, so the
-      // end of the last one is never yielded.
-      const padding = Math.round((discardPaddingNs * SAMPLE_RATE) / 1e9);
-      let held = new Float32Array(0);
-      for (let i = 0; i < packets.length; i += BATCH) {
-        const out = decoder.decodeFrames(packets.slice(i, i + BATCH));
-        if (out.errors.length > 0) {
-          throw new Error(`Opus decode failed: ${out.errors[0]!.message}`);
-        }
-        const decoded = out.channelData[0]!.subarray(0, out.samplesDecoded);
-        const all = new Float32Array(held.length + decoded.length);
-        all.set(held);
-        all.set(decoded, held.length);
-        const ready = Math.max(0, all.length - padding);
-        if (ready > 0) yield all.subarray(0, ready);
-        held = all.slice(ready);
+async function* decodeOpusTrack(
+  { packets, discardPaddingNs }: OpusTrack,
+  preSkip: number,
+): AsyncGenerator<Float32Array> {
+  const decoder = new OpusDecoder({
+    sampleRate: SAMPLE_RATE,
+    // A mono decoder downmixes a stereo stream.
+    channels: 1,
+    streamCount: 1,
+    coupledStreamCount: 0,
+    channelMappingTable: [0],
+    // opus-decoder applies pre-skip in output samples, but the header gives
+    // it in 48 kHz samples.
+    preSkip: Math.round((preSkip * SAMPLE_RATE) / OPUS_RATE),
+  });
+  await decoder.ready;
+  try {
+    // The encoder pads the last packet; the container says how much to drop.
+    // That many samples are held back until the next batch, so the end of the
+    // last one is never yielded.
+    const padding = Math.round((discardPaddingNs * SAMPLE_RATE) / 1e9);
+    let held = new Float32Array(0);
+    for (let i = 0; i < packets.length; i += BATCH) {
+      const out = decoder.decodeFrames(packets.slice(i, i + BATCH));
+      if (out.errors.length > 0) {
+        throw new Error(`Opus decode failed: ${out.errors[0]!.message}`);
       }
-    } finally {
-      decoder.free();
+      const decoded = out.channelData[0]!.subarray(0, out.samplesDecoded);
+      const all = new Float32Array(held.length + decoded.length);
+      all.set(held);
+      all.set(decoded, held.length);
+      const ready = Math.max(0, all.length - padding);
+      if (ready > 0) yield all.subarray(0, ready);
+      held = all.slice(ready);
     }
+  } finally {
+    decoder.free();
   }
 }
 
@@ -118,7 +116,7 @@ const OPUS_GET_LOOKAHEAD = 4027;
  * Encodes 16 kHz mono samples, in chunks of any size, to a WebM/Opus file:
  *
  * ```ts
- * const smaller = await encodeOpusWebm(new OpusReader(webm), { bitrate: 24_000 });
+ * const smaller = await encodeOpusWebm(decodeOpusWebm(webm), { bitrate: 24_000 });
  * ```
  *
  * Encoding is libopus compiled to WebAssembly (@evan/opus's WebAssembly
@@ -194,11 +192,11 @@ export async function encodeOpusWebm(
 
 /**
  * Decodes Opus-in-WebM audio to `dest` as 16 kHz mono 16-bit WAV, the format
- * the transcription model wants; see {@link OpusReader}. Writes beside `dest`
+ * the transcription model wants; see {@link decodeOpusWebm}. Writes beside `dest`
  * first, so an interrupted decode never leaves a partial file at `dest`.
  */
 export async function webmOpusToWav(webm: Uint8Array, dest: string) {
-  await writeWav(new OpusReader(webm), dest);
+  await writeWav(decodeOpusWebm(webm), dest);
 }
 
 /**
@@ -210,7 +208,7 @@ export async function webmOpusToWav(webm: Uint8Array, dest: string) {
 export async function encodeSpeechWebm(
   webm: Uint8Array,
 ): Promise<Uint8Array<ArrayBuffer>> {
-  return encodeOpusWebm(new OpusReader(webm), { bitrate: 24_000 });
+  return encodeOpusWebm(decodeOpusWebm(webm), { bitrate: 24_000 });
 }
 
 function readAscii(buf: Uint8Array, start: number, end: number): string {

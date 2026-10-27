@@ -4,9 +4,9 @@ import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  decodeOpusWebm,
   encodeOpusWebm,
   encodeSpeechWebm,
-  OpusReader,
   webmOpusToWav,
 } from "./opus";
 import { readCanonicalWav } from "./wav";
@@ -65,10 +65,12 @@ describe("webmOpusToWav", () => {
   });
 });
 
-/** All of `reader`'s samples, end to end. */
-async function readAll(reader: OpusReader): Promise<Float32Array> {
+/** All of `samples`, end to end. */
+async function readAll(
+  samples: AsyncIterable<Float32Array>,
+): Promise<Float32Array> {
   const chunks: Float32Array[] = [];
-  for await (const chunk of reader) chunks.push(chunk);
+  for await (const chunk of samples) chunks.push(chunk);
   const all = new Float32Array(chunks.reduce((n, c) => n + c.length, 0));
   let offset = 0;
   for (const chunk of chunks) {
@@ -78,12 +80,12 @@ async function readAll(reader: OpusReader): Promise<Float32Array> {
   return all;
 }
 
-describe("OpusReader", () => {
+describe("decodeOpusWebm", () => {
   it("reads the same samples webmOpusToWav writes", async () => {
     const dest = join(mkdtempSync(join(tmpdir(), "opus-")), "tones.wav");
     await webmOpusToWav(readFileSync(TONES), dest);
     const wave = await readCanonicalWav(dest);
-    const samples = await readAll(new OpusReader(readFileSync(TONES)));
+    const samples = await readAll(decodeOpusWebm(readFileSync(TONES)));
     // The WAV is 16-bit, so compare at that precision.
     expect(samples.length).toBe(wave.samples.length);
     expect(
@@ -101,12 +103,12 @@ async function* chunked(samples: Float32Array, size: number) {
 
 describe("encodeOpusWebm", () => {
   it("writes WebM that decodes to the samples given, length included", async () => {
-    const original = await readAll(new OpusReader(readFileSync(TONES)));
+    const original = await readAll(decodeOpusWebm(readFileSync(TONES)));
     // Chunks that don't line up with Opus frames.
     const webm = await encodeOpusWebm(chunked(original, 777), {
       bitrate: 24_000,
     });
-    const decoded = await readAll(new OpusReader(webm));
+    const decoded = await readAll(decodeOpusWebm(webm));
     expect(decoded.length).toBe(original.length);
     expect(amplitude(decoded, 440, 16_000)).toBeCloseTo(0.0625, 2);
     expect(amplitude(decoded, 1000, 16_000)).toBeCloseTo(0.0625, 2);
@@ -116,7 +118,7 @@ describe("encodeOpusWebm", () => {
     const webm = await encodeOpusWebm(chunked(new Float32Array(0), 1), {
       bitrate: 24_000,
     });
-    expect((await readAll(new OpusReader(webm))).length).toBe(0);
+    expect((await readAll(decodeOpusWebm(webm))).length).toBe(0);
   });
 
   it("passes on an error from the samples", async () => {

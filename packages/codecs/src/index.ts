@@ -5,10 +5,10 @@ import { webmOpusToWav } from "./opus";
 
 export { mp3ToWav, Resampler } from "./mp3";
 export {
+  decodeOpusWebm,
   encodeOpusWebm,
   encodeSpeechWebm,
   type OpusEncodeOptions,
-  OpusReader,
   webmOpusToWav,
 } from "./opus";
 export { SAMPLE_RATE } from "./wav";
