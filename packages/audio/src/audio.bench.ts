@@ -1,6 +1,5 @@
 import { test } from "vite-plus/test";
 import { halfUntranscribedRollCall } from "@open-minutes/fixtures/clips";
-import { untranscribedSpeech } from "./coverage.js";
 import { detectSpeech } from "./vad.js";
 import {
   loadTranscriptionModels,
@@ -18,7 +17,6 @@ import { readWave } from "./waveform.js";
 
 const rollCall = halfUntranscribedRollCall();
 const wave = readWave(rollCall.wavPath);
-const words = rollCall.segments.flatMap((s) => s.words);
 const opts = {
   // Each run takes a second or more, so a handful is plenty.
   iterations: 5,
@@ -39,12 +37,4 @@ test("per minute of audio", async ({ bench }) => {
     }),
     opts,
   );
-});
-
-test("finding untranscribed speech on the clip", async ({ bench }) => {
-  await bench("speech runs + decoding the one stretch it finds", async () => {
-    for (const s of untranscribedSpeech(detectSpeech(wave), words)) {
-      await transcribeRange(wave, s.start, s.end);
-    }
-  }).run(opts);
 });
