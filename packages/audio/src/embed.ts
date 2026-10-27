@@ -6,7 +6,7 @@ import sherpa_onnx, {
 
 import { EMBEDDING_MODEL_SPEC } from "./embed-model.js";
 import { ensureDownloaded } from "./model.js";
-import { ensureWaveAudio } from "./wav.js";
+import { ensureWaveForm } from "./waveform.js";
 import type { DiarizationTurn } from "@open-minutes/core/transcription";
 
 // Speaker-embedding toolkit (Tier B): one CAM++ voiceprint per speaker, for
@@ -36,7 +36,7 @@ export async function computeSpeakerEmbeddings(
   audio: string | WaveForm,
   turns: DiarizationTurn[],
 ): Promise<Map<number, Float32Array>> {
-  const wave = await ensureWaveAudio(audio);
+  const wave = await ensureWaveForm(audio);
   const extractor = getEmbeddingExtractor();
   assertSampleRate(wave.sampleRate, EXPECTED_SAMPLE_RATE);
 
@@ -127,7 +127,7 @@ export function assertSampleRate(actual: number, expected: number): void {
   if (actual !== expected) {
     throw new Error(
       `Speaker analysis expects ${expected} Hz mono audio, got ${actual} Hz. ` +
-        `Resample first (e.g. ffmpeg -ar 16000 -ac 1).`,
+      `Resample first (e.g. ffmpeg -ar 16000 -ac 1).`,
     );
   }
 }

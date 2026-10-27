@@ -18,7 +18,7 @@ import {
   NUM_THREADS,
   speakerCentroid,
 } from "./embed.js";
-import { ensureWaveAudio } from "./wav.js";
+import { ensureWaveForm } from "./waveform.js";
 import type { DiarizationTurn } from "@open-minutes/core/transcription";
 
 // Ported from OpenWhispr's offline speaker-diarization path. This module owns
@@ -65,7 +65,7 @@ const MERGE_THRESHOLD = 0.5;
 export async function diarizeAudio(
   audio: string | WaveForm,
 ): Promise<DiarizationTurn[]> {
-  const wave = await ensureWaveAudio(audio);
+  const wave = await ensureWaveForm(audio);
   const diarizer = getDiarizer();
   assertSampleRate(wave.sampleRate, diarizer.sampleRate);
 
@@ -147,7 +147,7 @@ function agglomerate(
   clusters: { ids: number[]; centroid: Float32Array; weight: number }[],
   threshold: number,
 ): void {
-  for (;;) {
+  for (; ;) {
     let bestI = -1;
     let bestJ = -1;
     let bestSim = threshold;
@@ -233,7 +233,7 @@ async function cli() {
     process.exit(1);
   }
   // Decoded once, for both stages.
-  const wave = await ensureWaveAudio(audioPath);
+  const wave = await ensureWaveForm(audioPath);
   const turns = await diarizeAudio(wave);
   const speakers = new Set(turns.map((t) => t.speakerNum));
   console.log(

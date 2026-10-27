@@ -17,7 +17,7 @@ export const writeWave = sherpa_onnx.writeWave;
  * temporary WAV, removed afterwards). The format is read from the file's
  * bytes, not its name.
  */
-export async function ensureWaveAudio(
+export async function ensureWaveForm(
   audio: string | WaveForm,
 ): Promise<WaveForm> {
   if (typeof audio !== "string") return audio;

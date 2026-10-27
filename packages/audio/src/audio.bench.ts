@@ -7,7 +7,7 @@ import {
   transcribeAudio,
   transcribeRange,
 } from "./transcribe.js";
-import { readWave } from "./wav.js";
+import { readWave } from "./waveform.js";
 
 // How long the audio models take per minute of meeting audio, so swapping a
 // model (or its settings) shows what it costs. The clip is exactly one minute,

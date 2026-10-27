@@ -12,7 +12,7 @@
 
 import { beforeAll, describe, expect, it } from "vite-plus/test";
 import { transcribeRange } from "@open-minutes/audio/transcribe";
-import { readWave, type WaveForm } from "@open-minutes/audio/wav";
+import { readWave, type WaveForm } from "../waveform";
 import { getMeetingData } from "@open-minutes/fixtures/test-data";
 import {
   alignWords,

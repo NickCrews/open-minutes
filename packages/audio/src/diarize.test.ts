@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readdirSync, symlinkSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { readWave } from "@open-minutes/audio/wav";
+import { readWave } from "./waveform";
 
 import { computeSpeakerEmbeddings } from "@open-minutes/audio/embed";
 import { diarizeAudio } from "@open-minutes/audio/diarize";

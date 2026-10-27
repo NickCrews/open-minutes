@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { availableParallelism } from "node:os";
 import { ensureDownloaded, ModelSpec } from "./model.js";
 import { EXPECTED_SAMPLE_RATE } from "./embed.js";
-import { ensureWaveAudio } from "./wav.js";
+import { ensureWaveForm } from "./waveform.js";
 
 import sherpa_onnx, {
   type OfflineRecognizer,
@@ -127,7 +127,7 @@ export async function transcribeAudio(
   options: TranscribeOptions = {},
 ): Promise<SpeechSegment[]> {
   const wallStart = Date.now();
-  const wave = await ensureWaveAudio(audio);
+  const wave = await ensureWaveForm(audio);
   assertSampleRate(wave.sampleRate);
   const duration = wave.samples.length / wave.sampleRate;
   const { tracing } = options;
@@ -340,7 +340,7 @@ function assertSampleRate(actual: number): void {
   if (actual !== EXPECTED_SAMPLE_RATE) {
     throw new Error(
       `Transcription expects ${EXPECTED_SAMPLE_RATE} Hz mono audio, got ${actual} Hz. ` +
-        `Resample first (e.g. ffmpeg -ar 16000 -ac 1).`,
+      `Resample first (e.g. ffmpeg -ar 16000 -ac 1).`,
     );
   }
 }

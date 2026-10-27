@@ -4,7 +4,7 @@ import { halfUntranscribedRollCall } from "@open-minutes/fixtures/clips";
 import { untranscribedSpeech, wordCoverage } from "./coverage";
 import type { Span } from "@open-minutes/core/span";
 import { detectSpeech } from "./vad";
-import { readWave } from "./wav";
+import { readWave } from "./waveform";
 
 /** One word every 0.3 s from `start` to `end`. */
 function talk(start: number, end: number): TranscriptWord[] {

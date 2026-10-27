@@ -22,7 +22,7 @@ import {
   type TranscriptWord,
 } from "@open-minutes/core/transcription";
 import { halfUntranscribedRollCall } from "@open-minutes/fixtures/clips";
-import { readWave } from "./wav";
+import { readWave } from "./waveform";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const RUNS_DIR = join(HERE, "..", "test-runs");
