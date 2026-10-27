@@ -25,6 +25,7 @@
     "@open-minutes/datasets": "workspace:*",
     "@open-minutes/db": "workspace:*",
     "@open-minutes/fixtures": "workspace:*",
+    "@open-minutes/youtube": "workspace:*",
     "@open-minutes/ytdlp": "workspace:*",
     "@types/node": "catalog:",
     "typescript": "5.9.3",

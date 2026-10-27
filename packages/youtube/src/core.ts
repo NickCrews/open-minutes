@@ -48,3 +48,25 @@ export function metadataFromYtDlpInfo(raw: YtDlpInfo): RecordingMetadata {
     publishedAt: publishedSecs == null ? null : new Date(publishedSecs * 1000),
   };
 }
+
+/**
+ * `metadata` as JSON, the way the blob store and the fetch-youtube-audio
+ * workflow keep it: `publishedAt` is an ISO 8601 string.
+ */
+export function metadataToJson(
+  metadata: RecordingMetadata,
+): Uint8Array<ArrayBuffer> {
+  return new TextEncoder().encode(`${JSON.stringify(metadata, null, 2)}\n`);
+}
+
+/** The {@link RecordingMetadata} in JSON from {@link metadataToJson}. */
+export function metadataFromJson(json: Uint8Array): RecordingMetadata {
+  const raw = JSON.parse(new TextDecoder().decode(json)) as Omit<
+    RecordingMetadata,
+    "publishedAt"
+  > & { publishedAt: string | null };
+  return {
+    ...raw,
+    publishedAt: raw.publishedAt === null ? null : new Date(raw.publishedAt),
+  };
+}

@@ -1,9 +1,11 @@
 /**
  * A video's files, as the fetch-youtube-audio workflow
- * (.github/workflows/fetch-youtube-audio.yml) publishes them;
+ * (.github/workflows/fetch-youtube-audio.yml) publishes them.
  */
 export interface FetchedVideo {
-  infoJson: Uint8Array<ArrayBuffer>;
+  /** Its `RecordingMetadata`, as `metadataToJson` writes it. */
+  metadataJson: Uint8Array<ArrayBuffer>;
+  /** Its audio re-encoded for speech, as `youtube().downloadAudio` gives it. */
   speechWebm: Uint8Array<ArrayBuffer>;
 }
 
@@ -32,6 +34,15 @@ const FETCH_YOUTUBE_AUDIO_POLL_MS = 5_000;
 const FETCH_YOUTUBE_AUDIO_TIMEOUT_MS = 20 * 60_000;
 
 /**
+ * The branch whose fetch-youtube-audio workflow runs: in a pull request's
+ * GitHub Actions run, the pull request's own (GITHUB_HEAD_REF), so the
+ * workflow publishes what this code expects; else main.
+ */
+function workflowRef(): string {
+  return process.env.GITHUB_HEAD_REF || "main";
+}
+
+/**
  * Runs the fetch-youtube-audio workflow for `youtubeId`, waits for it, and
  * downloads the files it published. `token` is a GitHub token allowed to run
  * the workflow and read its artifacts (Actions: write). Throws if the run
@@ -47,7 +58,7 @@ export async function fetchVideoViaWorkflow(
     {
       method: "POST",
       body: JSON.stringify({
-        ref: "main",
+        ref: workflowRef(),
         inputs: { video_id: youtubeId },
         return_run_details: true,
       }),
@@ -80,14 +91,14 @@ export async function fetchVideoViaWorkflow(
       `fetch-youtube-audio failed for ${youtubeId}: ${failure?.error ?? run.conclusion} (${run.html_url})`,
     );
   }
-  const infoJson = await download("info.json");
+  const metadataJson = await download("metadata.json");
   const speechWebm = await download("speech.webm");
-  if (!infoJson || !speechWebm) {
+  if (!metadataJson || !speechWebm) {
     throw new Error(
-      `fetch-youtube-audio for ${youtubeId} published no info.json or speech.webm (${run.html_url})`,
+      `fetch-youtube-audio for ${youtubeId} published no metadata.json or speech.webm (${run.html_url})`,
     );
   }
-  return { infoJson, speechWebm };
+  return { metadataJson, speechWebm };
 }
 
 async function waitForRun(runId: number, token: string): Promise<WorkflowRun> {
