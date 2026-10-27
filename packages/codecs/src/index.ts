@@ -13,7 +13,7 @@ export {
 } from "./opus";
 export { SAMPLE_RATE } from "./wav";
 
-/** The audio formats this package reads, as sites serve them. */
+/** The audio formats this package reads. */
 export type AudioFormat = "wav" | "webm" | "mp3";
 
 /**
