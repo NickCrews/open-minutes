@@ -9,9 +9,7 @@ import {
 } from "@open-minutes/blobstore";
 import {
   type YouTube,
-  type YtDlpInfo,
   metadataFromJson,
-  metadataFromYtDlpInfo,
   metadataToJson,
   videoId,
   youtube,
@@ -41,12 +39,7 @@ export function storedYoutube(
       const files = blobs.youtube(id);
       const stored = await files.metadataJson.get();
       if (stored) return metadataFromJson(stored);
-      const info = await files.ytDlpInfoJson.get();
-      const metadata = info
-        ? metadataFromYtDlpInfo(
-            JSON.parse(new TextDecoder().decode(info)) as YtDlpInfo,
-          )
-        : await youtube.getMetadata(id);
+      const metadata = await youtube.getMetadata(id);
       if (writer) {
         await writer.put(
           files.metadataJson,

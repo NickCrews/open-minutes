@@ -24,8 +24,7 @@ than by building its key:
 - `youtube(id)`: a YouTube video's `metadataJson` (its `RecordingMetadata`)
   and `speechWebm`, which `storedYoutube` in
   [`@open-minutes/meeting-audio`](../meeting-audio/README.md) makes and
-  stores. Some videos have yt-dlp's info JSON (`ytDlpInfoJson`) in place of
-  `metadataJson`.
+  stores.
 - `duckdbExport`: production's public data as one DuckDB file, which the
   [`export-duckdb`](../../.github/workflows/export-duckdb.yml) workflow
   writes nightly.

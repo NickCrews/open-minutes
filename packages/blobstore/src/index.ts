@@ -35,11 +35,6 @@ export interface YoutubeVideoFiles {
    */
   metadataJson: BlobFile;
   /**
-   * yt-dlp's info JSON for the video (minus its stream URLs), which some
-   * videos have in place of {@link metadataJson}.
-   */
-  ytDlpInfoJson: BlobFile;
-  /**
    * YouTube's Opus audio re-encoded to 16 kHz mono Opus in WebM at 24 kbps
    * (~11 MB per hour), plenty for the models, which take 16 kHz mono.
    */
@@ -84,7 +79,6 @@ export function blobStore(base?: string): BlobStore {
       const prefix = `youtube/${encodeURIComponent(youtubeId)}`;
       return {
         metadataJson: file(`${prefix}/metadata.json`),
-        ytDlpInfoJson: file(`${prefix}/info.json`),
         speechWebm: file(`${prefix}/speech.webm`),
       };
     },

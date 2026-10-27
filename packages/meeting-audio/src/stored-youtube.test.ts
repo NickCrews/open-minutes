@@ -28,18 +28,6 @@ const unreachable: YouTube = {
 const yt = storedYoutube(unreachable);
 
 describe("storedYoutube", () => {
-  it("gets a video's metadata from the blob store, stored as yt-dlp's info JSON", async () => {
-    expect(await yt.getMetadata("9HoIM5INxpI")).toEqual({
-      id: "9HoIM5INxpI",
-      permalink: "https://www.youtube.com/watch?v=9HoIM5INxpI",
-      channelId: "UCOUlNInprZEjhbpVPiJOlEA",
-      title: "Girdwood Board of Supervisors Regular Meeting March 23, 2026",
-      description: expect.stringContaining("www.muni.org/gbos"),
-      durationSecs: 9970,
-      publishedAt: new Date("2026-03-24T19:05:28Z"),
-    });
-  });
-
   it("downloads a video's WebM audio from the blob store, replacing what's there", async () => {
     const dir = await mkdtemp(join(tmpdir(), "stored-youtube-audio-"));
     try {
@@ -88,7 +76,6 @@ describe("storedYoutube", () => {
       const store: BlobStore = {
         youtube: (id) => ({
           metadataJson: file(`youtube/${id}/metadata.json`),
-          ytDlpInfoJson: file(`youtube/${id}/info.json`),
           speechWebm: file(`youtube/${id}/speech.webm`),
         }),
         duckdbExport: file("exports/open-minutes.duckdb"),
