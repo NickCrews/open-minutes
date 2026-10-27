@@ -4,7 +4,13 @@ import { mp3ToWav } from "./mp3";
 import { webmOpusToWav } from "./opus";
 
 export { mp3ToWav, Resampler } from "./mp3";
-export { webmOpusToWav } from "./opus";
+export {
+  decodeOpusWebm,
+  encodeOpusWebm,
+  encodeSpeechWebm,
+  type OpusEncodeOptions,
+  webmOpusToWav,
+} from "./opus";
 export { SAMPLE_RATE } from "./wav";
 
 /** The audio formats this package reads, as sites serve them. */

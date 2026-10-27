@@ -1,6 +1,5 @@
-import { open, rename, rm } from "node:fs/promises";
 import { MPEGDecoder } from "mpg123-decoder";
-import { SAMPLE_RATE, toInt16, wavHeader } from "./wav";
+import { SAMPLE_RATE, writeWav } from "./wav";
 
 /** Input fed to the decoder at a time, so a large buffer isn't one huge call. */
 const CHUNK = 1 << 16;
@@ -22,20 +21,15 @@ export async function mp3ToWav(
   mp3: Uint8Array | AsyncIterable<Uint8Array>,
   dest: string,
 ) {
+  await writeWav(decodeMp3(mp3), dest);
+}
+
+/** `mp3`'s audio as 16 kHz mono samples; see {@link mp3ToWav}. */
+async function* decodeMp3(mp3: Uint8Array | AsyncIterable<Uint8Array>) {
   const decoder = new MPEGDecoder();
   await decoder.ready;
-
-  const part = `${dest}.part`;
-  const file = await open(part, "w");
   try {
-    let samples = 0;
     let resampler: Resampler | undefined;
-    const write = async (mono: Float32Array) => {
-      const pcm = toInt16(mono);
-      await file.write(pcm, 0, pcm.byteLength, 44 + samples * 2);
-      samples += mono.length;
-    };
-    await file.write(wavHeader(0), 0, 44, 0);
     for await (const bytes of chunks(mp3)) {
       const out = decoder.decode(bytes);
       if (out.errors.length > 0) {
@@ -48,17 +42,12 @@ export async function mp3ToWav(
           `MP3 sample rate changed mid-stream (${resampler.from} to ${out.sampleRate} Hz)`,
         );
       }
-      await write(resampler.push(downmix(out.channelData, out.samplesDecoded)));
+      yield resampler.push(downmix(out.channelData, out.samplesDecoded));
     }
     if (!resampler) throw new Error("No MP3 audio in the input");
-    await write(resampler.flush());
-    await file.write(wavHeader(samples), 0, 44, 0);
-    await file.close();
-    await rename(part, dest);
+    yield resampler.flush();
   } finally {
     decoder.free();
-    await file.close().catch(() => {});
-    await rm(part, { force: true });
   }
 }
 

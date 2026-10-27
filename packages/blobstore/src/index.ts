@@ -148,9 +148,7 @@ export function blobStoreWriter(keys: BlobStoreKeys): BlobStoreWriter {
         headers: { "Content-Type": contentType },
       });
       if (!res.ok) {
-        throw new Error(
-          `PUT ${url}: HTTP ${res.status} ${await res.text()}`,
-        );
+        throw new Error(`PUT ${url}: HTTP ${res.status} ${await res.text()}`);
       }
     },
   };
