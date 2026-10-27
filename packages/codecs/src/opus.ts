@@ -1,6 +1,6 @@
 import { createRequire } from "node:module";
 import { OpusDecoder } from "opus-decoder";
-import { SAMPLE_RATE, toInt16, writeWav } from "./wav";
+import { SAMPLE_RATE, toInt16 } from "./wav";
 import { type OpusTrack, readOpusTrack, writeOpusTrack } from "./webm";
 
 /** A libopus encoder from @evan/opus. */
@@ -188,15 +188,6 @@ export async function encodeOpusWebm(
       codecDelayNs: ns(lookahead),
     },
   );
-}
-
-/**
- * Decodes Opus-in-WebM audio to `dest` as 16 kHz mono 16-bit WAV, the format
- * the transcription model wants; see {@link decodeOpusWebm}. Writes beside `dest`
- * first, so an interrupted decode never leaves a partial file at `dest`.
- */
-export async function webmOpusToWav(webm: Uint8Array, dest: string) {
-  await writeWav(decodeOpusWebm(webm), dest);
 }
 
 /**

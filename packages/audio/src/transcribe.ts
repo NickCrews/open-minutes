@@ -4,13 +4,12 @@ import { fileURLToPath } from "node:url";
 import { availableParallelism } from "node:os";
 import { ensureDownloaded, ModelSpec } from "./model.js";
 import { EXPECTED_SAMPLE_RATE } from "./embed.js";
-import { ensureWaveForm } from "./waveform.js";
+import { ensureWaveForm, type WaveForm } from "@open-minutes/codecs";
 
 import sherpa_onnx, {
   type OfflineRecognizer,
   type OfflineRecognizerResult,
   type Vad,
-  type WaveForm,
 } from "sherpa-onnx-node";
 import type {
   SpeechSegment,
@@ -340,7 +339,7 @@ function assertSampleRate(actual: number): void {
   if (actual !== EXPECTED_SAMPLE_RATE) {
     throw new Error(
       `Transcription expects ${EXPECTED_SAMPLE_RATE} Hz mono audio, got ${actual} Hz. ` +
-      `Resample first (e.g. ffmpeg -ar 16000 -ac 1).`,
+        `Resample first (e.g. ffmpeg -ar 16000 -ac 1).`,
     );
   }
 }

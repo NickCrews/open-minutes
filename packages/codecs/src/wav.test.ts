@@ -2,7 +2,7 @@ import { describe, expect, it } from "vite-plus/test";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { isModelWav, readCanonicalWav, wavMetadata, writeWav } from "./wav";
+import { isModelWav, readWav, wavMetadata, writeWav } from "./wav";
 
 const dir = mkdtempSync(join(tmpdir(), "wav-"));
 
@@ -41,7 +41,7 @@ describe("writeWav", () => {
   it("writes samples from every chunk", async () => {
     const path = join(dir, "chunks.wav");
     await writeWav(chunks([0, 0.5], [], [-0.5, -1]), path);
-    const wave = await readCanonicalWav(path);
+    const wave = await readWav(path);
     expect(Array.from(wave.samples)).toEqual([0, 0.5, -0.5, -1]);
   });
 });
@@ -61,59 +61,72 @@ describe("isModelWav", () => {
   });
 });
 
-describe("readCanonicalWav", () => {
-  it("reads the metadata and samples", async () => {
-    const wave = await readCanonicalWav(await wavOf([0, 0.5, -0.5, -1]));
+describe("readWav", () => {
+  it("reads 16-bit PCM", async () => {
+    const wave = await readWav(await wavOf([0, 0.5, -0.5, -1]));
     expect(wave).toEqual({
-      ...wavMetadata(),
       samples: Float32Array.from([0, 0.5, -0.5, -1]),
+      sampleRate: 16_000,
     });
+  });
+
+  it("reads any sample rate", async () => {
+    const edit = (_: Uint8Array, view: DataView) =>
+      view.setUint32(24, 24_000, true);
+    expect((await readWav(await wavOf([0.5], edit))).sampleRate).toBe(24_000);
+  });
+
+  it("reads 32-bit float", async () => {
+    // Two 16-bit samples' bytes are one 32-bit float's.
+    const edit = (_: Uint8Array, view: DataView) => {
+      view.setUint16(20, 3, true);
+      view.setUint16(34, 32, true);
+      view.setFloat32(44, 0.25, true);
+    };
+    const wave = await readWav(await wavOf([0, 0], edit));
+    expect(wave.samples).toEqual(Float32Array.from([0.25]));
   });
 
   it.each([
     {
       name: "stereo",
       edit: (_: Uint8Array, view: DataView) => view.setUint16(22, 2, true),
-    },
-    {
-      name: "44.1 kHz",
-      edit: (_: Uint8Array, view: DataView) => view.setUint32(24, 44_100, true),
+      reason: "2 channels",
     },
     {
       name: "8-bit",
       edit: (_: Uint8Array, view: DataView) => view.setUint16(34, 8, true),
-    },
-    {
-      name: "not PCM (IEEE float)",
-      edit: (_: Uint8Array, view: DataView) => view.setUint16(20, 3, true),
+      reason: "8-bit pcm samples",
     },
     {
       name: "a-law, a format code this package doesn't read",
       edit: (_: Uint8Array, view: DataView) => view.setUint16(20, 6, true),
+      reason: "unsupported WAV format code 6",
     },
     {
       name: "not RIFF",
       edit: (bytes: Uint8Array) => bytes.set([0x52, 0x49, 0x46, 0x58]),
+      reason: "not a canonical 44-byte WAV header",
     },
     {
       name: "one with an 18-byte fmt chunk",
       edit: (_: Uint8Array, view: DataView) => view.setUint32(16, 18, true),
+      reason: "not a canonical 44-byte WAV header",
     },
     {
       name: "a data length that doesn't match the file",
       edit: (_: Uint8Array, view: DataView) => view.setUint32(40, 2, true),
+      reason: "the header gives 2 bytes of samples, the file has 4",
     },
-  ])("rejects a WAV that is $name", async ({ edit }) => {
-    await expect(readCanonicalWav(await wavOf([0, 0.5], edit))).rejects.toThrow(
-      "not a canonical 16 kHz 16-bit mono PCM WAV",
-    );
+  ])("rejects a WAV that is $name", async ({ edit, reason }) => {
+    await expect(readWav(await wavOf([0, 0.5], edit))).rejects.toThrow(reason);
   });
 
   it("rejects a file shorter than the header", async () => {
     const path = join(dir, "short.wav");
     writeFileSync(path, readFileSync(await wavOf([])).subarray(0, 20));
-    await expect(readCanonicalWav(path)).rejects.toThrow(
-      "not a canonical 16 kHz 16-bit mono PCM WAV",
+    await expect(readWav(path)).rejects.toThrow(
+      "not a canonical 44-byte WAV header",
     );
   });
 });

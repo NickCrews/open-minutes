@@ -9,9 +9,10 @@ anonymous speaker turns (pyannote segmentation), and computes a voiceprint per
 speaker (3D-Speaker CAM++). It returns `@open-minutes/core` types and
 doesn't touch the database.
 
-This is the only package that depends on `sherpa-onnx-node`. Other packages
-read and write WAV files through `@open-minutes/audio/wav`, whose
-`ensureWaveAudio` also decodes a WebM/Opus or MP3 file.
+This is the only package that depends on `sherpa-onnx-node`. Its functions
+take a path or a `WaveForm` (mono samples and their sample rate), and read
+and decode paths with [`@open-minutes/codecs`](../codecs/README.md)'s
+`ensureWaveForm`.
 
 The ONNX models (~650MB) are downloaded into `src/models/` (gitignored) the
 first time each is used, or all at once with `pnpm models`.

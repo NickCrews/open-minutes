@@ -6,7 +6,7 @@ import {
   transcribeAudio,
   transcribeRange,
 } from "./transcribe.js";
-import { readWave } from "./waveform.js";
+import { readWav } from "@open-minutes/codecs";
 
 // How long the audio models take per minute of meeting audio, so swapping a
 // model (or its settings) shows what it costs. The clip is exactly one minute,
@@ -16,7 +16,7 @@ import { readWave } from "./waveform.js";
 // Models load before timing starts; loading isn't per minute of audio.
 
 const rollCall = halfUntranscribedRollCall();
-const wave = readWave(rollCall.wavPath);
+const wave = await readWav(rollCall.wavPath);
 const opts = {
   // Each run takes a second or more, so a handful is plenty.
   iterations: 5,

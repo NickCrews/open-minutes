@@ -52,9 +52,9 @@ importers:
         specifier: ^4.3.6
         version: 4.3.6
     devDependencies:
-      '@open-minutes/audio':
+      '@open-minutes/codecs':
         specifier: workspace:*
-        version: link:../audio
+        version: link:../codecs
       '@types/node':
         specifier: ^24
         version: 24.19.2
@@ -292,9 +292,6 @@ importers:
         specifier: workspace:*
         version: link:../ytdlp
     devDependencies:
-      '@open-minutes/audio':
-        specifier: workspace:*
-        version: link:../audio
       '@open-minutes/codecs':
         specifier: workspace:*
         version: link:../codecs

@@ -1,12 +1,9 @@
 /// <reference path="./sherpa-onnx-node.d.ts" />
-import sherpa_onnx, {
-  type SpeakerEmbeddingExtractor,
-  type WaveForm,
-} from "sherpa-onnx-node";
+import sherpa_onnx, { type SpeakerEmbeddingExtractor } from "sherpa-onnx-node";
+import { ensureWaveForm, type WaveForm } from "@open-minutes/codecs";
 
 import { EMBEDDING_MODEL_SPEC } from "./embed-model.js";
 import { ensureDownloaded } from "./model.js";
-import { ensureWaveForm } from "./waveform.js";
 import type { DiarizationTurn } from "@open-minutes/core/transcription";
 
 // Speaker-embedding toolkit (Tier B): one CAM++ voiceprint per speaker, for
@@ -127,7 +124,7 @@ export function assertSampleRate(actual: number, expected: number): void {
   if (actual !== expected) {
     throw new Error(
       `Speaker analysis expects ${expected} Hz mono audio, got ${actual} Hz. ` +
-      `Resample first (e.g. ffmpeg -ar 16000 -ac 1).`,
+        `Resample first (e.g. ffmpeg -ar 16000 -ac 1).`,
     );
   }
 }

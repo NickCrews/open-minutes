@@ -5,7 +5,7 @@
 # nothing they can use is lost.
 # Usage: encode-speech-audio.sh <input> <output .webm>
 #
-# On speech, decoding this with webmOpusToWav (@open-minutes/codecs) gives the same length as the
+# On speech, decoding this with decodeOpusWebm (@open-minutes/codecs) gives the same length as the
 # original, at zero lag, with correlation ~0.997.
 set -euo pipefail
 in="$1"

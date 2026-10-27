@@ -1,31 +1,23 @@
 import { MPEGDecoder } from "mpg123-decoder";
-import { SAMPLE_RATE, writeWav } from "./wav";
+import { SAMPLE_RATE } from "./wav";
 
 /** Input fed to the decoder at a time, so a large buffer isn't one huge call. */
 const CHUNK = 1 << 16;
 
 /**
- * Decodes MP3 audio (akleg.gov's "FTR" recordings are 24 kHz stereo at
- * 64 kbps) to `dest` as 16 kHz mono 16-bit WAV, the format the transcription
- * model wants.
+ * MP3 audio (akleg.gov's "FTR" recordings are 24 kHz stereo at 64 kbps) as
+ * 16 kHz mono samples, a decoded chunk at a time.
  *
  * `mp3` is the whole file or a stream of its bytes (such as a fetch body), so a
  * multi-hour recording is decoded as it downloads, in constant memory.
  * Decoding is libmpg123 compiled to WebAssembly (mpg123-decoder), so it needs
- * no system ffmpeg and gives the same bytes on every machine. Unlike Opus,
+ * no system ffmpeg and gives the same samples on every machine. Unlike Opus,
  * MP3 can't be decoded straight to 16 kHz, so the channels are averaged and
- * then resampled with {@link Resampler}. Writes beside `dest` first, so an
- * interrupted decode never leaves a partial file at `dest`.
+ * then resampled with {@link Resampler}.
  */
-export async function mp3ToWav(
+export async function* decodeMp3(
   mp3: Uint8Array | AsyncIterable<Uint8Array>,
-  dest: string,
-) {
-  await writeWav(decodeMp3(mp3), dest);
-}
-
-/** `mp3`'s audio as 16 kHz mono samples; see {@link mp3ToWav}. */
-async function* decodeMp3(mp3: Uint8Array | AsyncIterable<Uint8Array>) {
+): AsyncIterable<Float32Array> {
   const decoder = new MPEGDecoder();
   await decoder.ready;
   try {

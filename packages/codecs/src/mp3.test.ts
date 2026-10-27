@@ -1,10 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
-import { mkdtempSync, readFileSync } from "node:fs";
-import { createHash } from "node:crypto";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { mp3ToWav, Resampler } from "./mp3";
-import { readCanonicalWav } from "./wav";
+import { readFileSync } from "node:fs";
+import { decodeMp3, Resampler } from "./mp3";
+import { readAllSamples } from "./waveform";
 
 // 1.5 s of stereo MP3 at 24 kHz and 64 kbps, like akleg.gov's recordings:
 // 440 Hz on the left, 1000 Hz on the right. Made with: ffmpeg -f lavfi -i
@@ -59,49 +56,33 @@ describe("Resampler", () => {
   });
 });
 
-describe("mp3ToWav", () => {
-  const dest = join(mkdtempSync(join(tmpdir(), "mp3-")), "tones.wav");
-
+describe("decodeMp3", () => {
   it("decodes to 16 kHz mono with both channels mixed in", async () => {
-    await mp3ToWav(readFileSync(TONES), dest);
-    const wave = await readCanonicalWav(dest);
-    expect(wave.sampleRate).toBe(16_000);
+    const samples = await readAllSamples(decodeMp3(readFileSync(TONES)));
     // 1.5 s, give or take the encoder's padding.
-    expect(wave.samples.length / 16_000).toBeCloseTo(1.5, 1);
+    expect(samples.length / 16_000).toBeCloseTo(1.5, 1);
     // ffmpeg's sine source is 1/8 full scale; a mono downmix halves each.
-    const middle = wave.samples.subarray(2000, 22_000);
+    const middle = samples.subarray(2000, 22_000);
     expect(amplitude(middle, 440, 16_000)).toBeCloseTo(0.0625, 2);
     expect(amplitude(middle, 1000, 16_000)).toBeCloseTo(0.0625, 2);
     expect(amplitude(middle, 3000, 16_000)).toBeLessThan(0.001);
   });
 
   it("decodes a stream the same as a buffer", async () => {
-    await mp3ToWav(readFileSync(TONES), dest);
-    const whole = readFileSync(dest);
     const bytes = readFileSync(TONES);
     async function* stream() {
       for (let i = 0; i < bytes.length; i += 1000) {
         yield bytes.subarray(i, i + 1000);
       }
     }
-    await mp3ToWav(stream(), dest);
-    expect(readFileSync(dest).equals(whole)).toBe(true);
-  });
-
-  // WebAssembly is deterministic, so the output is byte-for-byte the same on
-  // every machine. This pins it, so a decoder upgrade that changes the audio
-  // shows up here first.
-  it("gives the same bytes on every run", async () => {
-    await mp3ToWav(readFileSync(TONES), dest);
-    const sha256 = createHash("sha256")
-      .update(readFileSync(dest))
-      .digest("hex");
-    expect(sha256).toMatchInlineSnapshot(
-      `"c467dc85a021dda6d6c7509410d114929861e444b4255b727df0ad2ec484a167"`,
+    expect(await readAllSamples(decodeMp3(stream()))).toEqual(
+      await readAllSamples(decodeMp3(bytes)),
     );
   });
 
   it("rejects input with no MP3 audio", async () => {
-    await expect(mp3ToWav(new Uint8Array(100), dest)).rejects.toThrow();
+    await expect(
+      readAllSamples(decodeMp3(new Uint8Array(100))),
+    ).rejects.toThrow();
   });
 });

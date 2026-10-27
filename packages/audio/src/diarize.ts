@@ -2,10 +2,8 @@
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import sherpa_onnx, {
-  type OfflineSpeakerDiarization,
-  type WaveForm,
-} from "sherpa-onnx-node";
+import sherpa_onnx, { type OfflineSpeakerDiarization } from "sherpa-onnx-node";
+import { ensureWaveForm, type WaveForm } from "@open-minutes/codecs";
 
 import { ensureDownloaded, type ModelSpec } from "./model.js";
 import {
@@ -18,7 +16,6 @@ import {
   NUM_THREADS,
   speakerCentroid,
 } from "./embed.js";
-import { ensureWaveForm } from "./waveform.js";
 import type { DiarizationTurn } from "@open-minutes/core/transcription";
 
 // Ported from OpenWhispr's offline speaker-diarization path. This module owns
@@ -147,7 +144,7 @@ function agglomerate(
   clusters: { ids: number[]; centroid: Float32Array; weight: number }[],
   threshold: number,
 ): void {
-  for (; ;) {
+  for (;;) {
     let bestI = -1;
     let bestJ = -1;
     let bestSim = threshold;

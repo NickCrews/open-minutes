@@ -9,8 +9,7 @@
     "./embed": "./src/embed.ts",
     "./embed-model": "./src/embed-model.ts",
     "./models": "./src/all-models.ts",
-    "./vad": "./src/vad.ts",
-    "./wav": "./src/wav.ts"
+    "./vad": "./src/vad.ts"
   },
   "scripts": {
     "test": "vp test run",

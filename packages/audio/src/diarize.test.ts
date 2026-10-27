@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readdirSync, symlinkSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { readWave } from "./waveform";
+import { readWav } from "@open-minutes/codecs";
 
 import { computeSpeakerEmbeddings } from "@open-minutes/audio/embed";
 import { diarizeAudio } from "@open-minutes/audio/diarize";
@@ -34,7 +34,7 @@ describe("diarize", () => {
       cpDirSymlinked(meeting.meetingDir, runDir);
 
       const audioPath = await getMeetingAudio(meeting).then((a) => a.path);
-      const wave = readWave(audioPath);
+      const wave = await readWav(audioPath);
       const turns = await diarizeAudio(wave);
 
       // Keep the transcription slice from the existing golden; relabel speakers.

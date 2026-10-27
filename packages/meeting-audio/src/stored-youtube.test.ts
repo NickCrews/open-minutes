@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vite-plus/test";
-import { mkdtemp, rm, stat, writeFile } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { decodeToWav, SAMPLE_RATE } from "@open-minutes/codecs";
+import { ensureWaveForm } from "@open-minutes/codecs";
 import type { YouTube } from "@open-minutes/youtube";
 import { storedYoutube } from "./stored-youtube";
 
@@ -41,11 +41,8 @@ describe("storedYoutube", () => {
       const url = "https://www.youtube.com/watch?v=QUF1uLgzL-s";
       await writeFile(path, "stale");
       await yt.downloadAudio(url, path);
-      const wavPath = join(dir, "short.wav");
-      await decodeToWav(path, wavPath);
-      // A 44-byte header and 16-bit mono samples.
-      const { size } = await stat(wavPath);
-      expect((size - 44) / 2 / SAMPLE_RATE).toBeCloseTo(5, 0);
+      const wave = await ensureWaveForm(path);
+      expect(wave.samples.length / wave.sampleRate).toBeCloseTo(5, 0);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }

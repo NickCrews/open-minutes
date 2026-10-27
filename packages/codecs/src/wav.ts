@@ -1,4 +1,5 @@
 import { open, readFile, rename, rm } from "node:fs/promises";
+import type { WaveForm } from "./waveform";
 
 /** The sample rate the transcription model wants. */
 export const SAMPLE_RATE = 16_000;
@@ -116,7 +117,7 @@ function writeHeader(meta: WavMetadata, samples: number): Uint8Array {
  * never leaves a partial file at `dest`.
  */
 export async function writeWav(
-  samples: AsyncIterable<Float32Array>,
+  samples: AsyncIterable<Float32Array> | Iterable<Float32Array>,
   dest: string,
 ) {
   const meta = wavMetadata();
@@ -134,39 +135,44 @@ export async function writeWav(
     await file.close();
     await rename(part, dest);
   } finally {
-    await file.close().catch(() => {});
+    await file.close().catch(() => { });
     await rm(part, { force: true });
   }
 }
 
 /**
- * The metadata and samples of a WAV written by this package (canonical 44-byte
- * header, in the format the audio models read). For tests, so this package
- * needn't depend on `@open-minutes/audio/wav`, which depends on it.
+ * Read a mono WAV file at `path` and return its samples and sample rate.
+ * 
+ * Can read 16-bit PCM or 32-bit float mono WAV files at any sample rate.
  */
-export async function readCanonicalWav(
-  path: string,
-): Promise<WavMetadata & { samples: Float32Array }> {
+export async function readWav(path: string): Promise<WaveForm> {
   const bytes = await readFile(path);
-  const notCanonical = (cause?: unknown) =>
-    new Error(`${path} is not a canonical 16 kHz 16-bit mono PCM WAV`, {
-      cause,
-    });
+  const unreadable = (reason: string) =>
+    new Error(`${path} is not a WAV this package reads: ${reason}`);
   let header: WavHeader;
   try {
     header = readHeader(bytes);
   } catch (error) {
-    throw notCanonical(error);
+    throw unreadable((error as Error).message);
   }
-  if (!isModelWav(header) || header.dataBytes !== bytes.length - 44) {
-    throw notCanonical();
+  const { audioFormat, channels, sampleRate, bitsPerSample, dataBytes } =
+    header;
+  if (channels !== 1) throw unreadable(`${channels} channels`);
+  if (dataBytes !== bytes.length - 44) {
+    throw unreadable(
+      `the header gives ${dataBytes} bytes of samples, the file has ${bytes.length - 44}`,
+    );
   }
-  const { dataBytes: _, ...meta } = header;
-  const pcm = new Int16Array(
-    bytes.buffer.slice(bytes.byteOffset + 44, bytes.byteOffset + bytes.length),
+  const data = bytes.buffer.slice(
+    bytes.byteOffset + 44,
+    bytes.byteOffset + bytes.length,
   );
-  return {
-    ...meta,
-    samples: Float32Array.from(pcm, (s) => s / 32768),
-  };
+  if (audioFormat === "pcm" && bitsPerSample === 16) {
+    const samples = Float32Array.from(new Int16Array(data), (s) => s / 32768);
+    return { samples, sampleRate };
+  }
+  if (audioFormat === "float" && bitsPerSample === 32) {
+    return { samples: new Float32Array(data), sampleRate };
+  }
+  throw unreadable(`${bitsPerSample}-bit ${audioFormat} samples`);
 }
