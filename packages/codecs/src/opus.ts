@@ -101,8 +101,8 @@ export class OpusReader implements AsyncIterable<Float32Array> {
   }
 }
 
-/** Encoder settings for {@link OpusWriter}. */
-export interface OpusWriterOptions {
+/** Encoder settings for {@link encodeOpusWebm}. */
+export interface OpusEncodeOptions {
   /** Bits per second; libopus varies it around this (VBR). */
   bitrate: number;
 }
@@ -115,97 +115,81 @@ const OPUS_SET_COMPLEXITY = 4010;
 const OPUS_GET_LOOKAHEAD = 4027;
 
 /**
- * Encodes 16 kHz mono samples to a WebM/Opus file. {@link write} the samples
- * in chunks of any size, then {@link end} for the file:
+ * Encodes 16 kHz mono samples, in chunks of any size, to a WebM/Opus file:
  *
  * ```ts
- * const writer = new OpusWriter({ bitrate: 24_000 });
- * for await (const samples of new OpusReader(webm)) writer.write(samples);
- * const smaller = writer.end();
+ * const smaller = await encodeOpusWebm(new OpusReader(webm), { bitrate: 24_000 });
  * ```
  *
  * Encoding is libopus compiled to WebAssembly (@evan/opus's WebAssembly
  * build, not its native one), at its highest complexity, so the same samples
  * give the same bytes on every machine. The file decodes to exactly the
- * samples written, length included, and browsers can play and seek it.
+ * samples given, length included, and browsers can play and seek it.
  */
-export class OpusWriter {
-  readonly #encoder: Encoder;
-  /** The encoder's delay, in 16 kHz samples. */
-  readonly #lookahead: number;
-  readonly #packets: Uint8Array[] = [];
-  /** Samples not yet encoded: less than one frame. */
-  readonly #frame = new Int16Array(FRAME);
-  #buffered = 0;
-  #samples = 0;
-  #ended = false;
+export async function encodeOpusWebm(
+  samples: AsyncIterable<Float32Array>,
+  { bitrate }: OpusEncodeOptions,
+): Promise<Uint8Array<ArrayBuffer>> {
+  const encoder = new Encoder({
+    channels: 1,
+    sample_rate: SAMPLE_RATE,
+    application: "audio",
+  });
+  const packets: Uint8Array[] = [];
+  let total = 0;
+  let lookahead: number;
+  let silence: number;
+  try {
+    encoder.ctl(OPUS_SET_BITRATE, bitrate);
+    encoder.ctl(OPUS_SET_COMPLEXITY, 10);
+    /** The encoder's delay, in 16 kHz samples. */
+    lookahead = encoder.ctl(OPUS_GET_LOOKAHEAD);
 
-  constructor({ bitrate }: OpusWriterOptions) {
-    this.#encoder = new Encoder({
-      channels: 1,
-      sample_rate: SAMPLE_RATE,
-      application: "audio",
-    });
-    this.#encoder.ctl(OPUS_SET_BITRATE, bitrate);
-    this.#encoder.ctl(OPUS_SET_COMPLEXITY, 10);
-    this.#lookahead = this.#encoder.ctl(OPUS_GET_LOOKAHEAD);
-  }
-
-  /** Adds samples to the end. */
-  write(samples: Float32Array) {
-    if (this.#ended) throw new Error("OpusWriter has already ended");
-    this.#samples += samples.length;
-    const pcm = new Int16Array(toInt16(samples).buffer);
-    let offset = 0;
-    while (offset < pcm.length) {
-      const n = Math.min(FRAME - this.#buffered, pcm.length - offset);
-      this.#frame.set(pcm.subarray(offset, offset + n), this.#buffered);
-      this.#buffered += n;
-      offset += n;
-      if (this.#buffered === FRAME) this.#encodeFrame();
+    /** Samples not yet encoded: less than one frame. */
+    const frame = new Int16Array(FRAME);
+    let buffered = 0;
+    const add = (chunk: Float32Array) => {
+      const pcm = new Int16Array(toInt16(chunk).buffer);
+      let offset = 0;
+      while (offset < pcm.length) {
+        const n = Math.min(FRAME - buffered, pcm.length - offset);
+        frame.set(pcm.subarray(offset, offset + n), buffered);
+        buffered += n;
+        offset += n;
+        if (buffered === FRAME) {
+          packets.push(encoder.encode(new Uint8Array(frame.buffer)));
+          buffered = 0;
+        }
+      }
+    };
+    for await (const chunk of samples) {
+      add(chunk);
+      total += chunk.length;
     }
-  }
-
-  /** The WebM file of everything written. The writer can't be used after. */
-  end(): Uint8Array<ArrayBuffer> {
-    if (this.#ended) throw new Error("OpusWriter has already ended");
     // Silence after the end pushes the last samples through the encoder's
     // delay; the file says to drop it again.
-    const silence =
-      Math.ceil((this.#samples + this.#lookahead) / FRAME) * FRAME -
-      this.#samples;
-    this.write(new Float32Array(silence));
-    this.#samples -= silence;
-    this.#ended = true;
-    this.#encoder.drop();
-
-    const ns = (samples: number) => Math.round((samples / SAMPLE_RATE) * 1e9);
-    const opusHead = new Uint8Array(19);
-    const head = new DataView(opusHead.buffer);
-    opusHead.set(new TextEncoder().encode("OpusHead"));
-    head.setUint8(8, 1); // version
-    head.setUint8(9, 1); // channels
-    head.setUint16(10, (this.#lookahead * OPUS_RATE) / SAMPLE_RATE, true);
-    head.setUint32(12, SAMPLE_RATE, true); // the input's rate, for information
-    return writeOpusTrack(
-      {
-        opusHead,
-        packets: this.#packets,
-        discardPaddingNs: ns(silence - this.#lookahead),
-      },
-      {
-        packetMs: (FRAME / SAMPLE_RATE) * 1000,
-        durationMs: (this.#samples / SAMPLE_RATE) * 1000,
-        codecDelayNs: ns(this.#lookahead),
-      },
-    );
+    silence = Math.ceil((total + lookahead) / FRAME) * FRAME - total;
+    add(new Float32Array(silence));
+  } finally {
+    encoder.drop();
   }
 
-  #encodeFrame() {
-    const bytes = new Uint8Array(this.#frame.buffer);
-    this.#packets.push(this.#encoder.encode(bytes));
-    this.#buffered = 0;
-  }
+  const ns = (n: number) => Math.round((n / SAMPLE_RATE) * 1e9);
+  const opusHead = new Uint8Array(19);
+  const head = new DataView(opusHead.buffer);
+  opusHead.set(new TextEncoder().encode("OpusHead"));
+  head.setUint8(8, 1); // version
+  head.setUint8(9, 1); // channels
+  head.setUint16(10, (lookahead * OPUS_RATE) / SAMPLE_RATE, true);
+  head.setUint32(12, SAMPLE_RATE, true); // the input's rate, for information
+  return writeOpusTrack(
+    { opusHead, packets, discardPaddingNs: ns(silence - lookahead) },
+    {
+      packetMs: (FRAME / SAMPLE_RATE) * 1000,
+      durationMs: (total / SAMPLE_RATE) * 1000,
+      codecDelayNs: ns(lookahead),
+    },
+  );
 }
 
 /**
@@ -226,9 +210,7 @@ export async function webmOpusToWav(webm: Uint8Array, dest: string) {
 export async function encodeSpeechWebm(
   webm: Uint8Array,
 ): Promise<Uint8Array<ArrayBuffer>> {
-  const writer = new OpusWriter({ bitrate: 24_000 });
-  for await (const samples of new OpusReader(webm)) writer.write(samples);
-  return writer.end();
+  return encodeOpusWebm(new OpusReader(webm), { bitrate: 24_000 });
 }
 
 function readAscii(buf: Uint8Array, start: number, end: number): string {

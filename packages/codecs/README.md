@@ -6,9 +6,10 @@ YouTube's audio for the blob store:
 
 - `OpusReader`: a WebM/Opus file's audio as 16 kHz mono samples, iterated a
   batch at a time. libopus is asked for 16 kHz mono directly.
-- `OpusWriter`: 16 kHz mono samples, written in chunks, to a WebM/Opus file
-  that decodes to exactly those samples and that browsers can play and seek.
-- `encodeSpeechWebm`: an `OpusReader` piped into an `OpusWriter` at 24 kbps,
+- `encodeOpusWebm`: 16 kHz mono samples, as an async iterable of chunks, to a
+  WebM/Opus file that decodes to exactly those samples and that browsers can
+  play and seek.
+- `encodeSpeechWebm`: an `OpusReader` piped into `encodeOpusWebm` at 24 kbps,
   the speech-quality copy of YouTube's audio that the blob store keeps (~11 MB
   per hour). A 90-minute meeting takes about a minute. Decoded, it matches
   the original to a correlation of ~0.997 on speech, at the same length.

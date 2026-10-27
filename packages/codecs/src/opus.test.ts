@@ -4,9 +4,9 @@ import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  encodeOpusWebm,
   encodeSpeechWebm,
   OpusReader,
-  OpusWriter,
   webmOpusToWav,
 } from "./opus";
 import { readCanonicalWav } from "./wav";
@@ -92,31 +92,41 @@ describe("OpusReader", () => {
   });
 });
 
-describe("OpusWriter", () => {
-  it("writes WebM that decodes to the samples written, length included", async () => {
+/** `samples` as an async iterable of `size`-sample chunks. */
+async function* chunked(samples: Float32Array, size: number) {
+  for (let i = 0; i < samples.length; i += size) {
+    yield samples.subarray(i, i + size);
+  }
+}
+
+describe("encodeOpusWebm", () => {
+  it("writes WebM that decodes to the samples given, length included", async () => {
     const original = await readAll(new OpusReader(readFileSync(TONES)));
-    const writer = new OpusWriter({ bitrate: 24_000 });
     // Chunks that don't line up with Opus frames.
-    for (let i = 0; i < original.length; i += 777) {
-      writer.write(original.subarray(i, i + 777));
-    }
-    const decoded = await readAll(new OpusReader(writer.end()));
+    const webm = await encodeOpusWebm(chunked(original, 777), {
+      bitrate: 24_000,
+    });
+    const decoded = await readAll(new OpusReader(webm));
     expect(decoded.length).toBe(original.length);
     expect(amplitude(decoded, 440, 16_000)).toBeCloseTo(0.0625, 2);
     expect(amplitude(decoded, 1000, 16_000)).toBeCloseTo(0.0625, 2);
   });
 
   it("writes a file with no audio", async () => {
-    const decoded = await readAll(
-      new OpusReader(new OpusWriter({ bitrate: 24_000 }).end()),
-    );
-    expect(decoded.length).toBe(0);
+    const webm = await encodeOpusWebm(chunked(new Float32Array(0), 1), {
+      bitrate: 24_000,
+    });
+    expect((await readAll(new OpusReader(webm))).length).toBe(0);
   });
 
-  it("can't be written to after it ends", () => {
-    const writer = new OpusWriter({ bitrate: 24_000 });
-    writer.end();
-    expect(() => writer.write(new Float32Array(10))).toThrow("already ended");
+  it("passes on an error from the samples", async () => {
+    async function* failing() {
+      yield new Float32Array(1000);
+      throw new Error("download failed");
+    }
+    await expect(
+      encodeOpusWebm(failing(), { bitrate: 24_000 }),
+    ).rejects.toThrow("download failed");
   });
 });
 
