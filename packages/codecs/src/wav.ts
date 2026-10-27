@@ -135,14 +135,14 @@ export async function writeWav(
     await file.close();
     await rename(part, dest);
   } finally {
-    await file.close().catch(() => { });
+    await file.close().catch(() => {});
     await rm(part, { force: true });
   }
 }
 
 /**
  * Read a mono WAV file at `path` and return its samples and sample rate.
- * 
+ *
  * Can read 16-bit PCM or 32-bit float mono WAV files at any sample rate.
  */
 export async function readWav(path: string): Promise<WaveForm> {

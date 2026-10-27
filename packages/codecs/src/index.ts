@@ -5,7 +5,8 @@ import { decodeOpusWebm } from "./opus";
 import { readWav, SAMPLE_RATE, writeWav } from "./wav";
 import { readAllSamples, type WaveForm } from "./waveform";
 
-export { decodeMp3, Resampler } from "./mp3";
+export { decodeMp3 } from "./mp3";
+export { resample, Resampler } from "./resample";
 export {
   decodeOpusWebm,
   encodeOpusWebm,

@@ -4,9 +4,8 @@
 // README.md there.
 import { beforeAll, describe, expect, it } from "vite-plus/test";
 import {
-  readAllSamples,
   readWav,
-  Resampler,
+  resample,
   SAMPLE_RATE,
   type WaveForm,
 } from "@open-minutes/codecs";
@@ -29,12 +28,7 @@ import { halfUntranscribedRollCall } from "@open-minutes/fixtures/clips";
 // transcribeAudio requires 16 kHz mono, but the model's bundled en.wav is 24 kHz.
 async function sample16kHz(): Promise<WaveForm> {
   const wave = await readWav(ensureModelFiles().test_wavs["en.wav"]);
-  const resampler = new Resampler(wave.sampleRate, SAMPLE_RATE);
-  const samples = await readAllSamples([
-    resampler.push(wave.samples),
-    resampler.flush(),
-  ]);
-  return { samples, sampleRate: SAMPLE_RATE };
+  return resample(wave, SAMPLE_RATE);
 }
 
 // Parakeet reports one timestamp per token — the token's onset — and no

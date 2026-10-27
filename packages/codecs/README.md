@@ -20,6 +20,9 @@ YouTube's audio for the blob store:
   windowed-sinc filter (`Resampler`). A 3-hour meeting takes about a minute
   and 160 MB of memory. Its WAV matches ffmpeg's (`-ar 16000 -ac 1`) to a
   correlation of 0.9999999, about 1 ms apart (ffmpeg trims the encoder delay).
+- `Resampler`: streaming windowed-sinc resampling of mono samples between
+  any two sample rates, low-passed so downsampling doesn't alias.
+  `resample` does the same to a whole `WaveForm` at once.
 - `decodeToWav`: a WebM/Opus or MP3 file, picked by its magic bytes
   (`audioFormatOf`), decoded with either of the above and written to WAV in
   constant memory. The meeting audio cache keeps these WAVs.
