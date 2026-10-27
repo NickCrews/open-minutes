@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { open, readFile, rename, rm } from "node:fs/promises";
 
 /** The sample rate the transcription model wants. */
 export const SAMPLE_RATE = 16_000;
@@ -33,6 +33,34 @@ export function wavHeader(samples: number): Uint8Array {
   ascii(36, "data");
   view.setUint32(40, samples * 2, true);
   return header;
+}
+
+/**
+ * Writes 16 kHz mono `samples` to `dest` as 16-bit WAV, a chunk at a time.
+ * Writes beside `dest` first, so a failure (including one from `samples`)
+ * never leaves a partial file at `dest`.
+ */
+export async function writeWav(
+  samples: AsyncIterable<Float32Array>,
+  dest: string,
+) {
+  const part = `${dest}.part`;
+  const file = await open(part, "w");
+  try {
+    let written = 0;
+    await file.write(wavHeader(0), 0, 44, 0);
+    for await (const chunk of samples) {
+      const pcm = toInt16(chunk);
+      await file.write(pcm, 0, pcm.byteLength, 44 + written * 2);
+      written += chunk.length;
+    }
+    await file.write(wavHeader(written), 0, 44, 0);
+    await file.close();
+    await rename(part, dest);
+  } finally {
+    await file.close().catch(() => {});
+    await rm(part, { force: true });
+  }
 }
 
 /**

@@ -92,6 +92,9 @@ importers:
 
   packages/codecs:
     dependencies:
+      '@evan/opus':
+        specifier: ^1.0.3
+        version: 1.0.3
       mpg123-decoder:
         specifier: ^1.0.3
         version: 1.0.3
@@ -1017,6 +1020,9 @@ packages:
 
   '@eshaz/web-worker@1.2.2':
     resolution: {integrity: sha512-WxXiHFmD9u/owrzempiDlBB1ZYqiLnm9s6aPc8AlFQalq2tKmqdmMr9GXOupDgzXtqnBipj8Un0gkIm7Sjf8mw==}
+
+  '@evan/opus@1.0.3':
+    resolution: {integrity: sha512-ADfwIad83W1LuiZDNMjDMDNQRsPz8rj5xnDLExhVWTnA5wGJCLntOn12Ir5rxGBqdfo10QhnNVdd2+gXiZ6xCg==}
 
   '@floating-ui/core@1.8.0':
     resolution: {integrity: sha512-0CIZ5itps/8x7BG8dEIhs53BvCUH2PCoogtakwRTut+Arm58sJooJ0AuZhLw2HJYIR5cMLNPBSS728sPho2khQ==}
@@ -3969,6 +3975,8 @@ snapshots:
     optional: true
 
   '@eshaz/web-worker@1.2.2': {}
+
+  '@evan/opus@1.0.3': {}
 
   '@floating-ui/core@1.8.0':
     dependencies:

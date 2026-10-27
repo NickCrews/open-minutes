@@ -3,7 +3,12 @@ import { mkdtempSync, readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { webmOpusToWav } from "./opus";
+import {
+  encodeSpeechWebm,
+  OpusReader,
+  OpusWriter,
+  webmOpusToWav,
+} from "./opus";
 import { readCanonicalWav } from "./wav";
 
 // 1.5 s of stereo Opus in WebM: 440 Hz on the left, 1000 Hz on the right.
@@ -57,5 +62,72 @@ describe("webmOpusToWav", () => {
     await expect(
       webmOpusToWav(new Uint8Array([0x1a, 0x45, 0xdf, 0xa3, 0x80]), dest),
     ).rejects.toThrow("No Opus track");
+  });
+});
+
+/** All of `reader`'s samples, end to end. */
+async function readAll(reader: OpusReader): Promise<Float32Array> {
+  const chunks: Float32Array[] = [];
+  for await (const chunk of reader) chunks.push(chunk);
+  const all = new Float32Array(chunks.reduce((n, c) => n + c.length, 0));
+  let offset = 0;
+  for (const chunk of chunks) {
+    all.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return all;
+}
+
+describe("OpusReader", () => {
+  it("reads the same samples webmOpusToWav writes", async () => {
+    const dest = join(mkdtempSync(join(tmpdir(), "opus-")), "tones.wav");
+    await webmOpusToWav(readFileSync(TONES), dest);
+    const wave = await readCanonicalWav(dest);
+    const samples = await readAll(new OpusReader(readFileSync(TONES)));
+    // The WAV is 16-bit, so compare at that precision.
+    expect(samples.length).toBe(wave.samples.length);
+    expect(
+      samples.every((s, i) => Math.abs(s - wave.samples[i]!) <= 1 / 32768),
+    ).toBe(true);
+  });
+});
+
+describe("OpusWriter", () => {
+  it("writes WebM that decodes to the samples written, length included", async () => {
+    const original = await readAll(new OpusReader(readFileSync(TONES)));
+    const writer = new OpusWriter({ bitrate: 24_000 });
+    // Chunks that don't line up with Opus frames.
+    for (let i = 0; i < original.length; i += 777) {
+      writer.write(original.subarray(i, i + 777));
+    }
+    const decoded = await readAll(new OpusReader(writer.end()));
+    expect(decoded.length).toBe(original.length);
+    expect(amplitude(decoded, 440, 16_000)).toBeCloseTo(0.0625, 2);
+    expect(amplitude(decoded, 1000, 16_000)).toBeCloseTo(0.0625, 2);
+  });
+
+  it("writes a file with no audio", async () => {
+    const decoded = await readAll(
+      new OpusReader(new OpusWriter({ bitrate: 24_000 }).end()),
+    );
+    expect(decoded.length).toBe(0);
+  });
+
+  it("can't be written to after it ends", () => {
+    const writer = new OpusWriter({ bitrate: 24_000 });
+    writer.end();
+    expect(() => writer.write(new Float32Array(10))).toThrow("already ended");
+  });
+});
+
+describe("encodeSpeechWebm", () => {
+  // Like the decoder, the encoder is WebAssembly, so its output is pinned.
+  it("gives the same bytes on every run", async () => {
+    const webm = await encodeSpeechWebm(readFileSync(TONES));
+    expect(
+      createHash("sha256").update(webm).digest("hex"),
+    ).toMatchInlineSnapshot(
+      `"aba3c83c05b16be7dc839545a5df7d474f97eabd7780a90769738b7fd4c6bc8f"`,
+    );
   });
 });
