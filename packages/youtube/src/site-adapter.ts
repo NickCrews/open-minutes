@@ -1,40 +1,29 @@
-import { mkdir, rename, rm } from "node:fs/promises";
+import { mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import type {
   RecordingMetadata,
   SiteAdapter,
 } from "@open-minutes/core/site-adapter";
 import {
-  type Egress,
-  type Route,
+  EgressError,
   ensureYtDlpInstalled,
   runWithEgress,
 } from "@open-minutes/ytdlp";
-import { type YtDlpInfo, metadataFromYtDlpInfo, videoUrl } from "./core";
-
-/** How to reach YouTube. */
-interface YouTubeConfig {
-  /**
-   * The routes yt-dlp tries for a video's metadata and audio (see
-   * `runWithEgress` in `@open-minutes/ytdlp`; by default `YOUTUBE_EGRESS`,
-   * else direct, then WARP, then Tor).
-   */
-  routes?: Route[];
-  /**
-   * An egress manager to run yt-dlp through instead, which keeps WARP and
-   * Tor up between calls, for a caller that makes many, like a scout. It
-   * brings its own routes, so {@link YouTubeConfig.routes} is ignored. The
-   * caller closes it.
-   */
-  egress?: Egress;
-}
+import {
+  type YtDlpInfo,
+  metadataFromYtDlpInfo,
+  videoId,
+  videoUrl,
+} from "./core";
+import { type FetchedVideo, fetchVideoViaWorkflow } from "./workflow-fetch";
 
 /**
- * Runs yt-dlp through `config`'s routes, installing yt-dlp first if it's
- * missing.
+ * Runs yt-dlp through the egress routes (see `runWithEgress` in
+ * `@open-minutes/ytdlp`; by default `YOUTUBE_EGRESS`, else direct, then
+ * WARP, then Tor), installing yt-dlp first if it's missing. Rejects with an
+ * `EgressError` when YouTube refused every route.
  */
-async function ytDlpWithEgress(
-  config: YouTubeConfig,
+async function ytDlp(
   args: string[],
   {
     beforeAttempt,
@@ -42,16 +31,11 @@ async function ytDlpWithEgress(
   }: { beforeAttempt?: () => Promise<void>; signal?: AbortSignal } = {},
 ) {
   await ensureYtDlpInstalled();
-  return config.egress
-    ? config.egress.run(args, { beforeAttempt, signal })
-    : runWithEgress(args, { routes: config.routes, beforeAttempt, signal });
+  return runWithEgress(args, { beforeAttempt, signal });
 }
 
-async function getMetadata(
-  config: YouTubeConfig,
-  videoIdOrUrl: string,
-): Promise<RecordingMetadata> {
-  const { stdout } = await ytDlpWithEgress(config, [
+async function getMetadata(videoIdOrUrl: string): Promise<RecordingMetadata> {
+  const { stdout } = await ytDlp([
     "--skip-download",
     "-J",
     videoUrl(videoIdOrUrl),
@@ -64,7 +48,6 @@ async function getMetadata(
  * single format needs no ffmpeg to download.
  */
 async function downloadAudio(
-  config: YouTubeConfig,
   videoIdOrUrl: string,
   path: string,
   { signal }: { signal?: AbortSignal } = {},
@@ -82,8 +65,7 @@ async function downloadAudio(
   };
   try {
     // The format the fetch-youtube-audio workflow re-encodes from.
-    await ytDlpWithEgress(
-      config,
+    await ytDlp(
       ["-f", "bestaudio[ext=webm]", "--no-playlist", "-o", webm, url],
       { beforeAttempt: removeWebm, signal },
     );
@@ -94,22 +76,84 @@ async function downloadAudio(
 }
 
 /**
- * A video's metadata and audio from YouTube (via yt-dlp). Create one with
- * {@link youtube} and pass it around; tests pass a
- * fake instead (see the pipeline's `om/testing.ts`).
+ * A video's metadata and audio from YouTube. Create one with {@link youtube}
+ * and pass it around; tests pass a fake instead (see the pipeline's
+ * `om/testing.ts`).
  */
 export type YouTube = SiteAdapter & {
   readonly site: "youtube";
   readonly audioExtension: "webm";
 };
 
-/** A {@link YouTube} that uses `config`. Does no I/O until a method is called. */
-export function youtube(config: YouTubeConfig = {}): YouTube {
+/**
+ * A {@link YouTube} that gets each video the first way that works:
+ * 1. yt-dlp through the egress routes (`YOUTUBE_EGRESS`, else direct, then
+ *    WARP, then Tor).
+ * 2. The fetch-youtube-audio workflow (see {@link fetchVideoViaWorkflow}),
+ *    when YouTube refuses every route, if `YOUTUBE_AUDIO_DISPATCH_TOKEN` is
+ *    set. Its audio is a speech-quality re-encode of YouTube's, still Opus in
+ *    WebM.
+ *
+ * Any other error, such as a private or removed video, is thrown at once.
+ * Does no I/O until a method is called.
+ */
+export function youtube(): YouTube {
+  // One workflow run per video, however many of its files are asked for.
+  const fetched = new Map<string, Promise<FetchedVideo>>();
+  const fetchViaWorkflow = (id: string, blocked: EgressError) => {
+    const token = process.env.YOUTUBE_AUDIO_DISPATCH_TOKEN;
+    if (!token) {
+      throw new Error(
+        `${blocked.message}\nSet YOUTUBE_AUDIO_DISPATCH_TOKEN to have the fetch-youtube-audio workflow fetch ${id} instead.`,
+        { cause: blocked },
+      );
+    }
+    let video = fetched.get(id);
+    if (!video) {
+      video = fetchVideoViaWorkflow(id, token);
+      // A failed run isn't remembered, so a later call tries again.
+      video.catch(() => fetched.delete(id));
+      fetched.set(id, video);
+    }
+    return video;
+  };
+  /** `viaYtDlp()`, or `fromWorkflow` if YouTube refused yt-dlp every route. */
+  async function orViaWorkflow<T>(
+    videoIdOrUrl: string,
+    viaYtDlp: () => Promise<T>,
+    fromWorkflow: (video: FetchedVideo) => Promise<T>,
+  ): Promise<T> {
+    try {
+      return await viaYtDlp();
+    } catch (error) {
+      if (!(error instanceof EgressError)) throw error;
+      const id = videoId(videoIdOrUrl);
+      return fromWorkflow(await fetchViaWorkflow(id, error));
+    }
+  }
   return {
     site: "youtube",
     audioExtension: "webm",
-    getMetadata: (videoIdOrUrl) => getMetadata(config, videoIdOrUrl),
+    getMetadata: (videoIdOrUrl) =>
+      orViaWorkflow(
+        videoIdOrUrl,
+        () => getMetadata(videoIdOrUrl),
+        async ({ infoJson }) =>
+          metadataFromYtDlpInfo(
+            JSON.parse(new TextDecoder().decode(infoJson)) as YtDlpInfo,
+          ),
+      ),
     downloadAudio: (videoIdOrUrl, path, options) =>
-      downloadAudio(config, videoIdOrUrl, path, options),
+      orViaWorkflow(
+        videoIdOrUrl,
+        () => downloadAudio(videoIdOrUrl, path, options),
+        async ({ speechWebm }) => {
+          await mkdir(dirname(path), { recursive: true });
+          // Written beside `path` and moved into place, so an interrupted
+          // write never leaves a partial file at `path`.
+          await writeFile(`${path}.part`, speechWebm);
+          await rename(`${path}.part`, path);
+        },
+      ),
   };
 }
