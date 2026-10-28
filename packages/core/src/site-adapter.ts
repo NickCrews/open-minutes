@@ -17,10 +17,11 @@ export interface SiteAdapter {
   /** The extension of the files {@link downloadAudio} saves, for naming them. */
   readonly audioExtension: "mp3" | "webm";
   /**
-   * Downloads the recording's audio to `path`, as the site serves it
-   * (WebM/Opus for YouTube, MP3 for akleg.gov), undecoded, replacing any file
-   * there. `ensureWaveForm` in `@open-minutes/codecs` decodes it for the
-   * models. An interrupted download never leaves a partial file at `path`.
+   * Downloads the recording's audio to `path`, in the site's format
+   * (WebM/Opus for YouTube, re-encoded for speech; MP3 for akleg.gov),
+   * undecoded, replacing any file there. `ensureWaveForm` in
+   * `@open-minutes/codecs` decodes it for the models. An interrupted
+   * download never leaves a partial file at `path`.
    * Caching is the caller's job.
    */
   downloadAudio(

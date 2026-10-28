@@ -11,11 +11,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@open-minutes/codecs": "workspace:*",
     "@open-minutes/core": "workspace:*",
     "@open-minutes/ytdlp": "workspace:*"
   },
   "devDependencies": {
-    "@open-minutes/codecs": "workspace:*",
     "@types/node": "catalog:",
     "vite-plus": "catalog:"
   }

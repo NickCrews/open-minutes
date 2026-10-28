@@ -10,13 +10,14 @@ yt-dlp, and the Alaska Legislature source downloads akleg.gov's MP3s directly.
 
 YouTube blocks yt-dlp from servers and CI runners ("sign in to confirm you're
 not a bot"), so YouTube audio is also kept in the project's blob store, a
-public Cloudflare R2 bucket, along with yt-dlp's metadata. Code that needs a
-video reads it from the store first. On a miss, given a GitHub token, it runs
-a GitHub Actions workflow that downloads the video through Cloudflare WARP or
-Tor, re-encodes its audio to small, low-bitrate Opus, and publishes both as
-the run's artifacts; the code downloads them, and stores them in the blob
-store if it has the store's keys. Without a token it runs yt-dlp locally
-instead, which works from a home connection.
+public Cloudflare R2 bucket, along with the video's metadata. Code that needs
+a video reads it from the store first. On a miss it runs yt-dlp, which works
+from a home connection and, elsewhere, goes through Cloudflare WARP or Tor
+when they're installed. When YouTube refuses every route and a GitHub token
+is set, it runs a GitHub Actions workflow that does the same on a runner and
+publishes the results as the run's artifacts. Either way the audio is
+re-encoded to small, low-bitrate Opus, and both are stored in the blob store
+if the code has the store's keys.
 [`.env.example`](../../.env.example) lists the settings, and
 [youtube-in-ci.md](../research/youtube-in-ci.md) explains how the workaround
 was chosen.
@@ -31,9 +32,9 @@ isn't already on your `PATH`.
 
 ## Decoding and caching
 
-The models want 16 kHz mono WAV. Opus and MP3 are decoded in WebAssembly, so
-nothing needs ffmpeg. Decoded audio is cached per machine, so each meeting is
-downloaded and decoded once.
+The models want 16 kHz mono WAV. Opus and MP3 are decoded, and Opus is
+re-encoded, in WebAssembly, so nothing needs ffmpeg. Decoded audio is cached
+per machine, so each meeting is downloaded and decoded once.
 
 ## Speech models
 

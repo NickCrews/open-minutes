@@ -30,6 +30,9 @@ importers:
       '@open-minutes/fixtures':
         specifier: workspace:*
         version: link:packages/fixtures
+      '@open-minutes/youtube':
+        specifier: workspace:*
+        version: link:packages/youtube
       '@open-minutes/ytdlp':
         specifier: workspace:*
         version: link:packages/ytdlp
@@ -285,6 +288,9 @@ importers:
 
   packages/youtube:
     dependencies:
+      '@open-minutes/codecs':
+        specifier: workspace:*
+        version: link:../codecs
       '@open-minutes/core':
         specifier: workspace:*
         version: link:../core
@@ -292,9 +298,6 @@ importers:
         specifier: workspace:*
         version: link:../ytdlp
     devDependencies:
-      '@open-minutes/codecs':
-        specifier: workspace:*
-        version: link:../codecs
       '@types/node':
         specifier: ^24
         version: 24.19.2

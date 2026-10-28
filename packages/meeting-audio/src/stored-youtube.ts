@@ -9,9 +9,8 @@ import {
 import {
   type FetchedVideo,
   type YouTube,
-  type YtDlpInfo,
   fetchVideoViaWorkflow,
-  metadataFromYtDlpInfo,
+  metadataFromJson,
   videoId,
   youtube,
 } from "@open-minutes/youtube";
@@ -28,9 +27,8 @@ import {
  * stored, so the next miss is a hit.
  *
  * The stored audio is a speech-quality re-encode of YouTube's (still Opus in
- * WebM), so decoded it is very close to what `youtube` downloads (correlation
- * ~0.997 on speech, same length, no lag) but not byte-identical; golden
- * fixtures' sha256 are of the stored audio's WAV.
+ * WebM), the same as `youtube` downloads; golden fixtures' sha256 are of the
+ * stored audio's WAV.
  */
 export function storedYoutube(
   youtube: YouTube,
@@ -49,7 +47,11 @@ export function storedYoutube(
     const video = await fetchVideoViaWorkflow(id, token);
     if (writer) {
       const files = blobs.youtube(id);
-      await writer.put(files.infoJson, video.infoJson, "application/json");
+      await writer.put(
+        files.metadataJson,
+        video.metadataJson,
+        "application/json",
+      );
       await writer.put(files.speechWebm, video.speechWebm, "audio/webm");
       console.error(`Stored ${id} in the blob store.`);
     }
@@ -74,11 +76,9 @@ export function storedYoutube(
     site: youtube.site,
     audioExtension: youtube.audioExtension,
     async getMetadata(videoIdOrUrl) {
-      const info = await getFile(videoId(videoIdOrUrl), "infoJson");
-      return info
-        ? metadataFromYtDlpInfo(
-            JSON.parse(new TextDecoder().decode(info)) as YtDlpInfo,
-          )
+      const metadata = await getFile(videoId(videoIdOrUrl), "metadataJson");
+      return metadata
+        ? metadataFromJson(metadata)
         : youtube.getMetadata(videoIdOrUrl);
     },
     async downloadAudio(videoIdOrUrl, path, { signal } = {}) {
