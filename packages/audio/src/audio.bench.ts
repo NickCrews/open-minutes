@@ -1,5 +1,5 @@
 import { test } from "vite-plus/test";
-import { halfUntranscribedRollCall } from "@open-minutes/fixtures/clips";
+import { halfUntranscribedRollCall } from "@open-minutes/datasets/clips";
 import { detectSpeech } from "./vad.js";
 import {
   loadTranscriptionModels,

@@ -10,8 +10,7 @@ import {
 } from "@open-minutes/core/meeting-date";
 
 /** Hand-verified golden fixtures: evals, benchmarks, tests. */
-export const TEST_DATA_ROOT = new URL("../test-data/", import.meta.url)
-  .pathname;
+export const DATUMS_ROOT = new URL("../datums/", import.meta.url).pathname;
 
 // DB-shaped row types (mirrors schema.ts columns that are relevant to fixtures).
 // Fields prefixed with _ are test-only and do not exist in the DB.
@@ -99,7 +98,7 @@ export interface GoldenChapters {
   chapters: GoldenChapter[];
 }
 
-export interface TestData {
+export interface Datums {
   jurisdictions: GoldenJurisdiction[];
   bodies: GoldenBody[];
   people: GoldenPerson[];
@@ -117,7 +116,7 @@ function parseJson<T>(path: string): T {
   return JSON.parse(readFileSync(path, "utf8")) as T;
 }
 
-export function loadAllTestData(root: string = TEST_DATA_ROOT): TestData {
+export function loadAllDatums(root: string = DATUMS_ROOT): Datums {
   if (!existsSync(root)) throw new Error(`Fixtures root not found: ${root}`);
 
   const jurisdictionsPath = join(root, "jurisdictions.jsonl");
@@ -151,12 +150,12 @@ export function loadAllTestData(root: string = TEST_DATA_ROOT): TestData {
 
 /**
  * Load just the people registry (people.jsonl) without touching meetings. Unlike
- * {@link loadAllTestData}, this never parses any golden.psv, so it stays usable
+ * {@link loadAllDatums}, this never parses any golden.psv, so it stays usable
  * while a meeting fixture is mid-generation (meeting.json present, golden.psv not
  * yet written).
  */
 export function loadPeople(): GoldenPerson[] {
-  const peoplePath = join(TEST_DATA_ROOT, "people.jsonl");
+  const peoplePath = join(DATUMS_ROOT, "people.jsonl");
   if (!existsSync(peoplePath))
     throw new Error(`People file not found: ${peoplePath}`);
   return parseJsonl<GoldenPerson>(peoplePath);
@@ -168,7 +167,7 @@ export function loadPeople(): GoldenPerson[] {
  */
 export function bodyRuleCodes(
   bodySlugs: readonly string[],
-  root: string = TEST_DATA_ROOT,
+  root: string = DATUMS_ROOT,
 ): string[] {
   const bodies = parseJsonl<GoldenBody>(join(root, "bodies.jsonl"));
   const codes = bodySlugs.flatMap(
@@ -182,7 +181,7 @@ export function bodyRuleCodes(
  * tests that need a golden body's identifiers but not the whole snapshot.
  */
 export function loadBodies(): GoldenBody[] {
-  const bodiesPath = join(TEST_DATA_ROOT, "bodies.jsonl");
+  const bodiesPath = join(DATUMS_ROOT, "bodies.jsonl");
   if (!existsSync(bodiesPath))
     throw new Error(`Bodies file not found: ${bodiesPath}`);
   return parseJsonl<GoldenBody>(bodiesPath);
@@ -190,7 +189,7 @@ export function loadBodies(): GoldenBody[] {
 
 /** Load just the jurisdictions (jurisdictions.jsonl). */
 export function loadJurisdictions(): GoldenJurisdiction[] {
-  const path = join(TEST_DATA_ROOT, "jurisdictions.jsonl");
+  const path = join(DATUMS_ROOT, "jurisdictions.jsonl");
   if (!existsSync(path))
     throw new Error(`Jurisdictions file not found: ${path}`);
   return parseJsonl<GoldenJurisdiction>(path);
@@ -208,7 +207,7 @@ export function transcriptPath(meetingDir: string): string | undefined {
 
 export function getMeetingData(
   meetingSlug: string,
-  root: string = TEST_DATA_ROOT,
+  root: string = DATUMS_ROOT,
 ): GoldenMeeting {
   const meetingDir = join(root, "meetings", meetingSlug);
   if (!existsSync(meetingDir))

@@ -23,7 +23,7 @@
     "sherpa-onnx-node": "^1.12.39"
   },
   "devDependencies": {
-    "@open-minutes/fixtures": "workspace:*",
+    "@open-minutes/datasets": "workspace:*",
     "@types/node": "catalog:",
     "vite-plus": "catalog:"
   }

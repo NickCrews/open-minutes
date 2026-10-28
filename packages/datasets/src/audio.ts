@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { symlink } from "node:fs/promises";
 import { join } from "node:path";
 import { type CachedAudio, getCachedAudio } from "@open-minutes/meeting-audio";
-import type { GoldenMeeting } from "./test-data";
+import type { GoldenMeeting } from "./datums";
 
 /**
  * A golden meeting's audio, from the per-machine cache (downloaded on first

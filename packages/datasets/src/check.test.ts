@@ -7,7 +7,7 @@ import {
   formatIssue,
   meetingDirs,
 } from "./check";
-import { loadAllTestData } from "./test-data";
+import { loadAllDatums } from "./datums";
 
 /** A PSV from `[onset, speaker | word]` rows; speakers start with "@". */
 function psv(...rows: [string, string][]): string {
@@ -27,7 +27,7 @@ const lint = async (content: string) =>
 
 describe("all fixtures", () => {
   it("have no errors", async () => {
-    // Fix these at the file:line given, or run `pnpm fixtures:check`.
+    // Fix these at the file:line given, or run `pnpm datasets:check`.
     expect(
       (await checkFixtures())
         .filter((i) => i.severity === "error")
@@ -36,7 +36,7 @@ describe("all fixtures", () => {
   });
 
   it("include chapters for at least one golden meeting", async () => {
-    expect(loadAllTestData().meetings.some((m) => m.chapters)).toBe(true);
+    expect(loadAllDatums().meetings.some((m) => m.chapters)).toBe(true);
     expect(meetingDirs().length).toBeGreaterThan(0);
   });
 });
@@ -95,8 +95,8 @@ describe("checkPsv", () => {
         ),
       ),
     ).toEqual([
-      '2: error: filler "Um," should not be in a transcript; run `pnpm fixtures:fix`',
-      '3: error: stutter "the" should not be in a transcript; run `pnpm fixtures:fix`',
+      '2: error: filler "Um," should not be in a transcript; run `pnpm datasets:fix`',
+      '3: error: stutter "the" should not be in a transcript; run `pnpm datasets:fix`',
     ]);
   });
 
@@ -145,9 +145,9 @@ describe("checkPsv", () => {
         ),
       ),
     ).toEqual([
-      "1: error: speaker marker with no words after it; run `pnpm fixtures:fix`",
+      "1: error: speaker marker with no words after it; run `pnpm datasets:fix`",
       "4: error: word onset 0:00:01.50 is before the previous word's (0:00:02.00); words must be in time order",
-      "5: error: speaker marker with no words after it; run `pnpm fixtures:fix`",
+      "5: error: speaker marker with no words after it; run `pnpm datasets:fix`",
     ]);
   });
 

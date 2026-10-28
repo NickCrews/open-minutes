@@ -23,7 +23,7 @@ import {
   MAX_WORD_SEC,
   type TranscriptWord,
 } from "@open-minutes/core/transcription";
-import { halfUntranscribedRollCall } from "@open-minutes/fixtures/clips";
+import { halfUntranscribedRollCall } from "@open-minutes/datasets/clips";
 
 // transcribeAudio requires 16 kHz mono, but the model's bundled en.wav is 24 kHz.
 async function sample16kHz(): Promise<WaveForm> {

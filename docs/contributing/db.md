@@ -82,10 +82,10 @@ Seeders write the current schema, so an older `--schema-version` defaults to
 `--data none`.
 
 Each dataset is a JSON file in
-[`packages/datasets/specs/`](../../packages/datasets/specs/), named for the
-dataset, that says which rows of `packages/fixtures/test-data/` to seed. Every
-dataset has all the jurisdictions and bodies (with their meeting sources); a
-spec picks the rest:
+[`packages/datasets/datasets/`](../../packages/datasets/datasets/), named for the
+dataset, that says which of the datums in `packages/datasets/datums/` to
+seed. Every dataset has all the jurisdictions and bodies (with their meeting
+sources); its file picks the rest:
 
 ```jsonc
 {
@@ -96,7 +96,7 @@ spec picks the rest:
 }
 ```
 
-A spec with `"meetings": []` leaves out `people` and `voiceprints`. Real
+A dataset with `"meetings": []` leaves out `people` and `voiceprints`. Real
 (`"audio"`) voiceprints are computed from each meeting's audio, which takes a
 while the first time; placeholders are instant but useless for recognition.
 The datasets are:
@@ -108,15 +108,15 @@ The datasets are:
   speaker-recognition test.
 - **`quick-voiceprints`**: the shortest golden meeting with real voiceprints.
 
-To add one, add a spec. [`dbranch.config.ts`](../../dbranch.config.ts) at the
-repository root offers every spec to `--data` and picks the default, so
+To add one, add a file. [`dbranch.config.ts`](../../dbranch.config.ts) at the
+repository root offers every dataset to `--data` and picks the default, so
 `@open-minutes/db` imports no data itself. The CLI uses the nearest
 `dbranch.config.ts` at or above the current directory (`DBRANCH_CONFIG`
 overrides that).
 
-The seeder (`packages/datasets/src/seed.ts`) assigns fixed ids (so URLs are
+The seeder (`packages/seed/src/seed.ts`) assigns fixed ids (so URLs are
 stable), then advances the id sequences past them. A dataset's fingerprint
-hashes its spec and every test-data file it reads, so editing a meeting's
+hashes its file and every datums file it reads, so editing a meeting's
 transcript reseeds only the datasets that include that meeting.
 
 ## The other commands
@@ -228,9 +228,9 @@ which takes tens of milliseconds:
 
 ```ts
 import { dbTest } from "@open-minutes/db/testing/vitest";
-import { dataset } from "@open-minutes/datasets";
+import { datasetState } from "@open-minutes/seed";
 
-const test = dbTest({ data: dataset("bodies") });
+const test = dbTest({ data: datasetState("bodies") });
 
 test("…", async ({ testDb }) => {
   // testDb starts at the latest schema with the jurisdictions and bodies
@@ -240,7 +240,7 @@ test("…", async ({ testDb }) => {
 `dbTest` takes the same `schemaVersion` and `data` as `pnpm db up`. Each
 (schema version, dataset) pair gets a template, rebuilt only when the
 migrations or dataset change. A dataset with real voiceprints, such as
-`dataset("quick-voiceprints")`, takes a while to compute; pass
+`datasetState("quick-voiceprints")`, takes a while to compute; pass
 `setupTimeoutMs` for slow datasets like that.
 
 ## How it works

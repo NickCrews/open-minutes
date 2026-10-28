@@ -44,7 +44,7 @@ locally on CPU with ONNX models, with no GPU or external API. The models
 `pnpm models`. `pnpm bench` times them on a minute of real meeting audio, so a
 model change shows what it costs.
 
-The golden meetings in the test data are scored against these models by the
+The golden meetings in the datums are scored against these models by the
 slow tests; see [testing.md](testing.md).
 
 ## Where to look

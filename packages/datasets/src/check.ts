@@ -24,9 +24,9 @@ import {
   type GoldenMeeting,
   getMeetingData,
   parseGoldenChapters,
-  TEST_DATA_ROOT,
+  DATUMS_ROOT,
   transcriptPath,
-} from "./test-data";
+} from "./datums";
 
 // Checks over the hand-edited fixture files, reported against file and line
 // so whoever made an edit (often an agent) can go straight to the mistake.
@@ -35,7 +35,7 @@ import {
 // files themselves (PSV syntax, where a speaker marker goes, the directory
 // name), and holds each meeting to the body-specific rules its bodies opt
 // into with `_rules` in bodies.jsonl (Anchorage's bill and code numbers).
-// Errors fail the fixture tests and `pnpm fixtures:check`; warnings are
+// Errors fail the fixture tests and `pnpm datasets:check`; warnings are
 // printed and want a look.
 
 export interface Issue {
@@ -55,7 +55,7 @@ export function formatIssue(issue: Issue, cwd = process.cwd()): string {
 
 /** Every fixture meeting directory under the given data roots. */
 export function meetingDirs(
-  roots: readonly string[] = [TEST_DATA_ROOT],
+  roots: readonly string[] = [DATUMS_ROOT],
 ): string[] {
   return roots.flatMap((root) => {
     const dir = join(root, "meetings");
@@ -72,7 +72,7 @@ export function meetingDirs(
  */
 export function meetingDirsFor(
   file: string,
-  roots: readonly string[] = [TEST_DATA_ROOT],
+  roots: readonly string[] = [DATUMS_ROOT],
 ): string[] {
   const path = resolve(file);
   const root = roots
@@ -303,13 +303,13 @@ function earlierSegmentLines(
     : `earlier segments at lines ${at}`;
 }
 
-/** An issue's message, pointing at `pnpm fixtures:fix` when its rule's fix resolves it. */
+/** An issue's message, pointing at `pnpm datasets:fix` when its rule's fix resolves it. */
 function withFixHint(issue: MeetingIssue): string {
   const fixable =
     "fix" in RULE_SPECS_BY_CODE[issue.code] &&
     !(issue.code === "segment-out-of-order" && issue.interleaves.length);
   return fixable
-    ? `${issue.message}; run \`pnpm fixtures:fix\``
+    ? `${issue.message}; run \`pnpm datasets:fix\``
     : issue.message;
 }
 

@@ -24,7 +24,7 @@ them and finds the gaps between them (the pauses). It caches nothing:
 callers that reuse speech runs keep them themselves.
 
 A checked-in minute of real meeting audio from
-`@open-minutes/fixtures/clips` tests what VAD and `transcribeRange` hear
+`@open-minutes/datasets/clips` tests what VAD and `transcribeRange` hear
 (`vad.test.ts`, `transcribe.test.ts`), and
 `src/audio.bench.ts` times the models on it. Because the clip is one minute
 long, `pnpm bench` reports each model's time per minute of audio, so a model

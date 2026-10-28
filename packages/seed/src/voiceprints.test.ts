@@ -2,19 +2,20 @@ import { describe, expect } from "vite-plus/test";
 import { sql } from "drizzle-orm";
 import { meetingsTable, peopleTable, segmentsTable } from "@open-minutes/db";
 import { dbTest } from "@open-minutes/db/testing/vitest";
-import { getMeetingData } from "@open-minutes/fixtures/test-data";
-import { dataset, loadSpec } from "./index";
+import { getMeetingData } from "@open-minutes/datasets/datums";
+import { loadDataset } from "@open-minutes/datasets";
+import { datasetState } from "./index";
 
 // Seeding with real voiceprints computes a voiceprint per identified person, from the
 // meeting's audio. That audio comes from the blob store, so the cold path
 // is ~10 MB to download and some seconds to decode and embed; after that the
 // harness caches the seeded database as a template. The dataset's one meeting
 // is the shortest golden, which keeps the cold path short. Tests that don't
-// need the database belong in spec.test.ts, so they don't wait on the audio.
-const [SLUG] = loadSpec("quick-voiceprints").meetings as [string];
+// need the database belong in fingerprint.test.ts, so they don't wait on the audio.
+const [SLUG] = loadDataset("quick-voiceprints").meetings as [string];
 
 const test = dbTest({
-  data: dataset("quick-voiceprints"),
+  data: datasetState("quick-voiceprints"),
   // ~10 s on CI, cold. Every golden's audio is in the store; a miss waits on
   // a fetch-youtube-audio run, which can take longer than this.
   setupTimeoutMs: 5 * 60_000,
