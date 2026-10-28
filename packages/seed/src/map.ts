@@ -3,7 +3,7 @@ import type {
   GoldenBody,
   GoldenJurisdiction,
   GoldenMeeting,
-} from "@open-minutes/fixtures/test-data";
+} from "@open-minutes/datasets/datums";
 
 type JurisdictionInsert = typeof jurisdictionsTable.$inferInsert;
 type BodyInsert = typeof bodiesTable.$inferInsert;
@@ -19,7 +19,7 @@ export interface MappedRows {
 }
 
 /**
- * Convert the test data's jurisdictions and bodies into insert-ready rows.
+ * Convert the datums' jurisdictions and bodies into insert-ready rows.
  * Pure: no database access, no I/O.
  *
  * Serial primary keys are assigned explicitly here, 1-based in file order, so

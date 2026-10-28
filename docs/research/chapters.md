@@ -232,8 +232,8 @@ conventions so text search and agents can find it:
   summary: "The board voted 4-1 to send the letter."
 - Dashes are plain hyphens ("4-1", "2019-2022"), never en or em dashes.
   The `typographic-dash` rule in @open-minutes/core reports them, so
-  `pnpm fixtures:check` does too, and its fix
-  (`pnpm fixtures:fix`) writes plain hyphens.
+  `pnpm datasets:check` does too, and its fix
+  (`pnpm datasets:fix`) writes plain hyphens.
 - Procedural chapters get plain, predictable titles: "Call to order and roll
   call", "Approval of agenda and minutes", "Adjournment".
 
@@ -668,7 +668,7 @@ Notes on reconciling with existing tickets:
   chapters and their generation. The March 23, 2026 GBOS meeting has a set,
   written by Claude from the golden transcript and not yet reviewed by a
   human, so it is not yet the gold chaptering #27 asks for. The `all` dataset
-  seeds it, and `pnpm fixtures:check` (run by the tests) holds it to the
+  seeds it, and `pnpm datasets:check` (run by the tests) holds it to the
   rules above.
 - **Web**: the scrubber, the Chapters tab, chapter headings in the transcript,
   and `?t=` links, as described in [Web UX](#web-ux).

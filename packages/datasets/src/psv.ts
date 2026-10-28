@@ -5,7 +5,7 @@
 // A TranscriptSegment is serialized as a `meta` begin_speaker line followed by
 // one `text` line per word; parsing inverts that grouping.
 //
-// Grammar (see test-data/meetings/*/golden.psv for a worked example):
+// Grammar (see datums/meetings/*/golden.psv for a worked example):
 //   - Lines starting with `#` are comments; blank lines are ignored.
 //   - The column header `start_sec|event_type|event_data` is optional.
 //   - Each remaining line is `start_sec|event_type|event_data`.

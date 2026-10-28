@@ -4,7 +4,7 @@ import {
   parseDateTimeFromTranscript,
   resolveMeetingDateTime,
 } from "@open-minutes/core/meeting-date";
-import { getMeetingData } from "./test-data";
+import { getMeetingData } from "./datums";
 
 // When each golden meeting happened, read from its real title and transcript.
 // The parsers' unit tests live beside them in @open-minutes/core.
