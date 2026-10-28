@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@open-minutes/core": "workspace:*",
-    "zod": "^4.3.6"
+    "zod": "^4.6.6"
   },
   "devDependencies": {
     "@open-minutes/codecs": "workspace:*",
