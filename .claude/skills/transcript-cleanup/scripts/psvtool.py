@@ -39,7 +39,7 @@
   "segmented:spk-<n>" or "unlabeled".
 
   Splits and merges can leave a stutter ("I I") where two turns join; run
-  `pnpm fixtures:check` after each batch.
+  `pnpm datasets:check` after each batch.
 """
 import json
 import re

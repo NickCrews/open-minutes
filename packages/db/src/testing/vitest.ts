@@ -13,7 +13,7 @@ import {
 //   import { test } from "@open-minutes/db/testing/vitest";
 //   test("plays in its own sandbox", async ({ db }) => { ... });   // empty
 //
-//   const test = dbTest({ data: dataset("bodies") });              // seeded
+//   const test = dbTest({ data: datasetState("bodies") });         // seeded
 //   test("starts from the bodies", async ({ db }) => { ... });
 //
 // Kept separate from ./index so non-vitest callers (scripts, CLIs) can import

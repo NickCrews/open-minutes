@@ -14,9 +14,9 @@ Gets a meeting's audio. Two parts:
   [`@open-minutes/codecs`](../codecs/README.md)) in the per-machine cache,
   `~/.cache/open-minutes/meetings/<youtubeId>/`, downloaded through
   `storedYoutubeFromEnv` on first use, and optionally checked against an
-  expected sha256. `getMeetingAudio` in `@open-minutes/fixtures/audio` reads
+  expected sha256. `getMeetingAudio` in `@open-minutes/datasets/audio` reads
   meetings' audio from here, and checks a golden meeting's audio against its
   `_audio_sha256` for the slow tests.
 
-It doesn't depend on `@open-minutes/audio` or `@open-minutes/fixtures`, so
+It doesn't depend on `@open-minutes/audio` or `@open-minutes/datasets`, so
 both can use it.
