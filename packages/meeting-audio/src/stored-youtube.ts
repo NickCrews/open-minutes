@@ -28,9 +28,8 @@ import {
  * stored, so the next miss is a hit.
  *
  * The stored audio is a speech-quality re-encode of YouTube's (still Opus in
- * WebM), so decoded it is very close to what `youtube` downloads (correlation
- * ~0.997 on speech, same length, no lag) but not byte-identical; golden
- * fixtures' sha256 are of the stored audio's WAV.
+ * WebM), the same as `youtube` downloads; golden fixtures' sha256 are of the
+ * stored audio's WAV.
  */
 export function storedYoutube(
   youtube: YouTube,
