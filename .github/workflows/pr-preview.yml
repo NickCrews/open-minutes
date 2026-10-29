@@ -49,20 +49,35 @@ jobs:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
 
-      - name: Compute the Neon branch's expiry
-        id: expiry
-        run: echo "at=$(date -u -d '+14 days' +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
-
-      # Returns the existing branch on later pushes (its expiry is set only at
-      # creation).
+      # Reuses the branch on later pushes (its expiry is set only at creation).
+      # neonctl rather than neondatabase/create-branch-action, because neonctl
+      # prints the Neon API's error message (such as a branch limit) where the
+      # action prints only the HTTP status.
       - name: Create (or reuse) the PR's Neon branch
         id: branch
-        uses: neondatabase/create-branch-action@v6
-        with:
-          project_id: ${{ vars.NEON_PROJECT_ID }}
-          api_key: ${{ secrets.NEON_API_KEY }}
-          branch_name: ${{ env.NEON_BRANCH }}
-          expires_at: ${{ steps.expiry.outputs.at }}
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+        run: |
+          neon() { npx --yes neonctl@2 --project-id "$NEON_PROJECT_ID" --no-analytics "$@"; }
+          if neon branches get "$NEON_BRANCH" > /dev/null 2>&1; then
+            echo "Reusing Neon branch $NEON_BRANCH."
+          else
+            neon branches create --name "$NEON_BRANCH" \
+              --expires-at "$(date -u -d '+14 days' +%Y-%m-%dT%H:%M:%SZ)" > /dev/null
+            echo "Created Neon branch $NEON_BRANCH."
+          fi
+          for kind in db_url db_url_pooled; do
+            flags=(--database-name neondb --role-name neondb_owner)
+            [ "$kind" = db_url_pooled ] && flags+=(--pooled)
+            url=$(neon connection-string "$NEON_BRANCH" "${flags[@]}")
+            if [[ "$url" != postgres* ]]; then
+              echo "::error::neonctl didn't return a connection string for $NEON_BRANCH."
+              exit 1
+            fi
+            echo "::add-mask::$url"
+            echo "$kind=$url" >> "$GITHUB_OUTPUT"
+          done
 
       # The branch persists across pushes, so data reviewers enter survives and
       # each push only applies its new migrations. But editing or regenerating
