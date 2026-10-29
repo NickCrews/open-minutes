@@ -31,9 +31,9 @@ isn't already on your `PATH`.
 
 ## Decoding and caching
 
-The models want 16 kHz mono WAV. Opus and MP3 are decoded in WebAssembly, so
-nothing needs ffmpeg. Decoded audio is cached per machine, so each meeting is
-downloaded and decoded once.
+The models want 16 kHz mono WAV. Opus and MP3 are decoded, and Opus is
+re-encoded, in WebAssembly, so nothing needs ffmpeg. Decoded audio is cached
+per machine, so each meeting is downloaded and decoded once.
 
 ## Speech models
 

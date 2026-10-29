@@ -1,4 +1,4 @@
-import { mkdir, rename, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import type {
   RecordingMetadata,
@@ -9,6 +9,7 @@ import {
   ensureYtDlpInstalled,
   runWithEgress,
 } from "@open-minutes/ytdlp";
+import { encodeSpeechWebm } from "@open-minutes/codecs";
 import {
   type YtDlpInfo,
   metadataFromYtDlpInfo,
@@ -44,8 +45,9 @@ async function getMetadata(videoIdOrUrl: string): Promise<RecordingMetadata> {
 }
 
 /**
- * Downloads a video's original Opus-in-WebM audio to `path` with yt-dlp. A
- * single format needs no ffmpeg to download.
+ * Downloads a video's audio with yt-dlp and writes it to `path` re-encoded for
+ * speech (see `encodeSpeechWebm` in `@open-minutes/codecs`). A single format
+ * needs no ffmpeg to download.
  */
 async function downloadAudio(
   videoIdOrUrl: string,
@@ -56,23 +58,35 @@ async function downloadAudio(
   const url = videoUrl(videoIdOrUrl);
   // Progress goes to stderr so callers' stdout stays machine-readable.
   console.error(`Downloading audio for ${url} to ${path}...`);
-  // Downloaded beside `path` and moved into place, so an interrupted download
-  // never leaves a partial file at `path`.
+  // YouTube's audio waits beside `path` until it's re-encoded.
   const webm = `${path}.download.webm`;
   const removeWebm = async () => {
     await rm(webm, { force: true });
     await rm(`${webm}.part`, { force: true });
   };
   try {
-    // The format the fetch-youtube-audio workflow re-encodes from.
+    // Format 249 is YouTube's smallest Opus (~50 kbps, ~22 MB per hour),
+    // still well above what the re-encode keeps. Videos without it get their
+    // best WebM audio.
     await ytDlp(
-      ["-f", "bestaudio[ext=webm]", "--no-playlist", "-o", webm, url],
+      ["-f", "249/bestaudio[ext=webm]", "--no-playlist", "-o", webm, url],
       { beforeAttempt: removeWebm, signal },
     );
-    await rename(webm, path);
+    console.error(`Re-encoding the audio for speech...`);
+    await writeAtomically(path, await encodeSpeechWebm(await readFile(webm)));
   } finally {
     await removeWebm();
   }
+}
+
+/**
+ * Writes `bytes` beside `path` and moves them into place, so an interrupted
+ * write never leaves a partial file at `path`.
+ */
+async function writeAtomically(path: string, bytes: Uint8Array) {
+  await mkdir(dirname(path), { recursive: true });
+  await writeFile(`${path}.part`, bytes);
+  await rename(`${path}.part`, path);
 }
 
 /**
@@ -91,8 +105,11 @@ export type YouTube = SiteAdapter & {
  *    WARP, then Tor).
  * 2. The fetch-youtube-audio workflow (see {@link fetchVideoViaWorkflow}),
  *    when YouTube refuses every route, if `YOUTUBE_AUDIO_DISPATCH_TOKEN` is
- *    set. Its audio is a speech-quality re-encode of YouTube's, still Opus in
- *    WebM.
+ *    set. Its audio is a speech-quality re-encode of YouTube's, made with
+ *    ffmpeg on a GitHub runner.
+ *
+ * Either way, the audio is YouTube's re-encoded for speech: 16 kHz mono Opus
+ * in WebM at 24 kbps (see `encodeSpeechWebm` in `@open-minutes/codecs`).
  *
  * Any other error, such as a private or removed video, is thrown at once.
  * Does no I/O until a method is called.
@@ -147,13 +164,7 @@ export function youtube(): YouTube {
       orViaWorkflow(
         videoIdOrUrl,
         () => downloadAudio(videoIdOrUrl, path, options),
-        async ({ speechWebm }) => {
-          await mkdir(dirname(path), { recursive: true });
-          // Written beside `path` and moved into place, so an interrupted
-          // write never leaves a partial file at `path`.
-          await writeFile(`${path}.part`, speechWebm);
-          await rename(`${path}.part`, path);
-        },
+        ({ speechWebm }) => writeAtomically(path, speechWebm),
       ),
   };
 }

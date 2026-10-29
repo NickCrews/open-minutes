@@ -3,7 +3,7 @@
 Where Open Minutes gets meetings published on YouTube. It implements
 `@open-minutes/core`'s `RecordingLister` for a channel or playlist (`youtubeSource`:
 the videos in it) and `SiteAdapter` for a video (`youtube`: its metadata, and
-its original Opus-in-WebM audio). Each lives in its own file, named after the
+its audio). Each lives in its own file, named after the
 interface. `core.ts` holds the helpers that `@open-minutes/meeting-audio` also
 uses: `videoId`, and `metadataFromYtDlpInfo`, which reads yt-dlp's info JSON,
 including the copies in the blob store
@@ -14,7 +14,10 @@ including the copies in the blob store
 1. yt-dlp through `runWithEgress` in
    [`@open-minutes/ytdlp`](../ytdlp/README.md): direct, then WARP, then Tor
    (or the routes in `YOUTUBE_EGRESS`). Direct works from a home connection.
-   yt-dlp's audio is saved as YouTube serves it, at ~50Mb/hour
+   The audio is YouTube's smallest Opus format (249, ~50 kbps, ~22 MB per
+   hour), re-encoded for speech (`encodeSpeechWebm` in
+   [`@open-minutes/codecs`](../codecs/README.md): 16 kHz mono Opus in WebM at
+   24 kbps, ~11 MB per hour), with no ffmpeg.
 2. `fetchVideoViaWorkflow`, when YouTube refuses every route and
    `YOUTUBE_AUDIO_DISPATCH_TOKEN` is set. It runs the
    [`fetch-youtube-audio`](../../.github/workflows/fetch-youtube-audio.yml)

@@ -11,6 +11,7 @@ on:
     paths:
       - packages/ytdlp/**
       - packages/youtube/**
+      - packages/codecs/**
       - .github/scripts/fetch-youtube-audio.ts
       - .github/workflows/ytdlp.yml
       - .github/workflows/fetch-youtube-audio.yml
