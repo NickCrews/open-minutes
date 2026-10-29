@@ -59,7 +59,7 @@ jobs:
           NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
           NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
         run: |
-          neon() { npx --yes neonctl@2 --project-id "$NEON_PROJECT_ID" --no-analytics "$@"; }
+          neon() { pnpm --silent dlx neonctl@2 --project-id "$NEON_PROJECT_ID" --no-analytics "$@"; }
           if neon branches get "$NEON_BRANCH" > /dev/null 2>&1; then
             echo "Reusing Neon branch $NEON_BRANCH."
           else
