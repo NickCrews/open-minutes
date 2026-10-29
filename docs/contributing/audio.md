@@ -10,23 +10,31 @@ yt-dlp, and the Alaska Legislature source downloads akleg.gov's MP3s directly.
 
 YouTube blocks yt-dlp from servers and CI runners ("sign in to confirm you're
 not a bot"), so YouTube audio is also kept in the project's blob store, a
-public Cloudflare R2 bucket. A GitHub Actions workflow downloads a video
-through Cloudflare WARP or Tor, re-encodes its audio to small, low-bitrate
-Opus, and stores it there along with yt-dlp's metadata. Code that needs a
-video reads it from the store first. On a miss it can trigger that workflow
-and wait (given a GitHub token), or fall back to running yt-dlp locally, which
-works from a home connection. [`.env.example`](../../.env.example) lists the
-settings, and [youtube-on-servers.md](../research/youtube-on-servers.md) explains how
-the workaround was chosen.
+public Cloudflare R2 bucket, along with the video's metadata. Code that needs
+a video reads it from the store first. On a miss it runs yt-dlp, which works
+from a home connection and, elsewhere, goes through Cloudflare WARP or Tor
+when they're installed. When YouTube refuses every route and a GitHub token
+is set, it runs a GitHub Actions workflow that does the same on a runner and
+publishes the results as the run's artifacts. Either way the audio is
+re-encoded to small, low-bitrate Opus, and both are stored in the blob store
+if the code has the store's keys.
+[`.env.example`](../../.env.example) lists the settings, and
+[youtube-on-servers.md](../research/youtube-on-servers.md) explains how the workaround
+was chosen.
+
+CI has no keys, so it never stores what it fetches: a video missing from the
+store is fetched again on every CI run. After adding a golden meeting, put its
+video in the store by running its tests once locally with the keys in `.env`
+(or calling `getCachedAudio` from `@open-minutes/meeting-audio`).
 
 yt-dlp is installed into the repo's cache the first time it's needed, if it
 isn't already on your `PATH`.
 
 ## Decoding and caching
 
-The models want 16 kHz mono WAV. Opus and MP3 are decoded in WebAssembly, so
-nothing needs ffmpeg. Decoded audio is cached per machine, so each meeting is
-downloaded and decoded once.
+The models want 16 kHz mono WAV. Opus and MP3 are decoded, and Opus is
+re-encoded, in WebAssembly, so nothing needs ffmpeg. Decoded audio is cached
+per machine, so each meeting is downloaded and decoded once.
 
 ## Speech models
 
@@ -36,7 +44,7 @@ locally on CPU with ONNX models, with no GPU or external API. The models
 `pnpm models`. `pnpm bench` times them on a minute of real meeting audio, so a
 model change shows what it costs.
 
-The golden meetings in the test data are scored against these models by the
+The golden meetings in the datums are scored against these models by the
 slow tests; see [testing.md](testing.md).
 
 ## Where to look

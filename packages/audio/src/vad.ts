@@ -1,5 +1,6 @@
 /// <reference path="./sherpa-onnx-node.d.ts" />
-import sherpa, { type WaveForm } from "sherpa-onnx-node";
+import sherpa from "sherpa-onnx-node";
+import type { WaveForm } from "@open-minutes/codecs";
 import { ensureDownloaded } from "./model.js";
 import { VAD_MODEL_SPEC } from "./transcribe.js";
 import { EXPECTED_SAMPLE_RATE } from "./embed.js";

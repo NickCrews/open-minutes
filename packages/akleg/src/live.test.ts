@@ -2,7 +2,7 @@ import { describe, expect, it } from "vite-plus/test";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { ensureWaveAudio } from "@open-minutes/audio/wav";
+import { ensureWaveForm } from "@open-minutes/codecs";
 import { akleg, aklegSource } from "./index";
 
 // Against the live akleg.gov, so a change to its API or media server fails
@@ -59,7 +59,7 @@ describe("akleg.gov, live", { timeout: 60_000 }, () => {
     // A 7.5-minute meeting: a 3.6 MB MP3.
     const path = join(mkdtempSync(join(tmpdir(), "akleg-")), "audio.mp3");
     await source.downloadAudio("HRES 2025-04-04 13:00:00", path);
-    const wave = await ensureWaveAudio(path);
+    const wave = await ensureWaveForm(path);
     expect(wave.sampleRate).toBe(16_000);
     // The API says 451.508 s; the decoded MP3 is about half a second shorter.
     expect(Math.abs(wave.samples.length / 16_000 - 451.5)).toBeLessThan(1);

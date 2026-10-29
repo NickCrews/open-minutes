@@ -1,12 +1,9 @@
 /// <reference path="./sherpa-onnx-node.d.ts" />
-import sherpa_onnx, {
-  type SpeakerEmbeddingExtractor,
-  type WaveForm,
-} from "sherpa-onnx-node";
+import sherpa_onnx, { type SpeakerEmbeddingExtractor } from "sherpa-onnx-node";
+import { ensureWaveForm, type WaveForm } from "@open-minutes/codecs";
 
 import { EMBEDDING_MODEL_SPEC } from "./embed-model.js";
 import { ensureDownloaded } from "./model.js";
-import { ensureWaveAudio } from "./wav.js";
 import type { DiarizationTurn } from "@open-minutes/core/transcription";
 
 // Speaker-embedding toolkit (Tier B): one CAM++ voiceprint per speaker, for
@@ -36,7 +33,7 @@ export async function computeSpeakerEmbeddings(
   audio: string | WaveForm,
   turns: DiarizationTurn[],
 ): Promise<Map<number, Float32Array>> {
-  const wave = await ensureWaveAudio(audio);
+  const wave = await ensureWaveForm(audio);
   const extractor = getEmbeddingExtractor();
   assertSampleRate(wave.sampleRate, EXPECTED_SAMPLE_RATE);
 

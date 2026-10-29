@@ -25,7 +25,7 @@ The code is a pnpm workspace, roughly in layers from bottom to top:
   to get metadata, recordings, etc from an upstream site.
 - **Audio** (`blobstore`, `meeting-audio`, `codecs`, `audio`): store, cache and
   decode meeting audio, then transcribe and diarize it with local models.
-- **Test data** (`fixtures`, `datasets`, `glossary`): hand-verified real
+- **Datums and datasets** (`datasets`, `seed`, `glossary`): hand-verified real
   meetings, people and bodies that seed local and test databases and score the
   speech models.
 - **Website** (`web`): the public transcript browser.

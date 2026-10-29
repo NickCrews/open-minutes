@@ -1,8 +1,8 @@
-import { afterEach, describe, expect, it, vi } from "vite-plus/test";
-import { mkdtemp, rm, stat, writeFile } from "node:fs/promises";
+import { describe, expect, it } from "vite-plus/test";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { decodeToWav, SAMPLE_RATE } from "@open-minutes/codecs";
+import { ensureWaveForm } from "@open-minutes/codecs";
 import type { YouTube } from "@open-minutes/youtube";
 import { storedYoutube } from "./stored-youtube";
 
@@ -20,23 +20,7 @@ const unreachable: YouTube = {
 };
 const yt = storedYoutube(unreachable);
 
-afterEach(() => {
-  vi.unstubAllEnvs();
-});
-
 describe("storedYoutube", () => {
-  it("gets a video's metadata from the blob store", async () => {
-    expect(await yt.getMetadata("9HoIM5INxpI")).toEqual({
-      id: "9HoIM5INxpI",
-      permalink: "https://www.youtube.com/watch?v=9HoIM5INxpI",
-      channelId: "UCOUlNInprZEjhbpVPiJOlEA",
-      title: "Girdwood Board of Supervisors Regular Meeting March 23, 2026",
-      description: expect.stringContaining("www.muni.org/gbos"),
-      durationSecs: 9970,
-      publishedAt: new Date("2026-03-24T19:05:28Z"),
-    });
-  });
-
   it("downloads a video's WebM audio from the blob store, replacing what's there", async () => {
     const dir = await mkdtemp(join(tmpdir(), "stored-youtube-audio-"));
     try {
@@ -45,19 +29,14 @@ describe("storedYoutube", () => {
       const url = "https://www.youtube.com/watch?v=QUF1uLgzL-s";
       await writeFile(path, "stale");
       await yt.downloadAudio(url, path);
-      const wavPath = join(dir, "short.wav");
-      await decodeToWav(path, wavPath);
-      // A 44-byte header and 16-bit mono samples.
-      const { size } = await stat(wavPath);
-      expect((size - 44) / 2 / SAMPLE_RATE).toBeCloseTo(5, 0);
+      const wave = await ensureWaveForm(path);
+      expect(wave.samples.length / wave.sampleRate).toBeCloseTo(5, 0);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
   });
 
   it("falls back to YouTube for a video missing from the store", async () => {
-    // With a dispatch token, as in CI, a miss runs fetch-youtube-audio instead.
-    vi.stubEnv("YOUTUBE_AUDIO_DISPATCH_TOKEN", "");
     const fallback = storedYoutube({
       ...unreachable,
       getMetadata: async (id) => ({

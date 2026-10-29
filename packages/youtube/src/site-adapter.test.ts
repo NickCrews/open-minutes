@@ -2,7 +2,7 @@ import { describe, expect, it } from "vite-plus/test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { ensureWaveAudio } from "@open-minutes/audio/wav";
+import { ensureWaveForm } from "@open-minutes/codecs";
 import { youtube } from "./site-adapter";
 
 // Tagged `ytdlp`: from a datacenter IP it needs WARP or Tor installed.
@@ -29,7 +29,7 @@ describe("youtube", () => {
       // A 5 s video.
       const url = "https://www.youtube.com/watch?v=QUF1uLgzL-s";
       await yt.downloadAudio(url, path);
-      const wave = await ensureWaveAudio(path);
+      const wave = await ensureWaveForm(path);
       expect(wave.sampleRate).toBe(16_000);
       expect(wave.samples.length / 16_000).toBeCloseTo(5, 0);
     } finally {

@@ -4,9 +4,11 @@ export default defineConfig({
   test: {
     projects: [
       "./packages/audio/vitest.config.ts",
+      "./packages/codecs/vitest.config.ts",
       "./packages/core/vitest.config.ts",
+      "./packages/datasets/vitest.config.ts",
       "./packages/db/vitest.config.ts",
-      "./packages/fixtures/vitest.config.ts",
+      "./packages/seed/vitest.config.ts",
       "./packages/meeting-audio/vitest.config.ts",
       "./packages/youtube/vitest.config.ts",
       "./packages/ytdlp/vitest.config.ts",

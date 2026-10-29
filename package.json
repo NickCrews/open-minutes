@@ -17,14 +17,15 @@
     "web:dev": "pnpm --filter @open-minutes/web run dev",
     "db": "pnpm --silent --filter @open-minutes/db run db",
     "models": "pnpm --silent --filter @open-minutes/audio run models",
-    "fixtures:check": "pnpm --silent --filter @open-minutes/fixtures run check",
-    "fixtures:fix": "pnpm --silent --filter @open-minutes/fixtures run fix",
+    "datasets:check": "pnpm --silent --filter @open-minutes/datasets run check",
+    "datasets:fix": "pnpm --silent --filter @open-minutes/datasets run fix",
     "deploy:prod": "pnpm --filter @open-minutes/web run deploy"
   },
   "devDependencies": {
     "@open-minutes/datasets": "workspace:*",
     "@open-minutes/db": "workspace:*",
-    "@open-minutes/fixtures": "workspace:*",
+    "@open-minutes/seed": "workspace:*",
+    "@open-minutes/youtube": "workspace:*",
     "@open-minutes/ytdlp": "workspace:*",
     "@types/node": "catalog:",
     "typescript": "5.9.3",

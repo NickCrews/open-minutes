@@ -12,14 +12,14 @@
 
 import { beforeAll, describe, expect, it } from "vite-plus/test";
 import { transcribeRange } from "@open-minutes/audio/transcribe";
-import { readWave, type WaveForm } from "@open-minutes/audio/wav";
-import { getMeetingData } from "@open-minutes/fixtures/test-data";
+import { readWav, type WaveForm } from "@open-minutes/codecs";
+import { getMeetingData } from "@open-minutes/datasets/datums";
 import {
   alignWords,
   compareTranscripts,
   type TranscriptWord,
 } from "@open-minutes/core/transcription";
-import { getMeetingAudio } from "@open-minutes/fixtures/audio";
+import { getMeetingAudio } from "@open-minutes/datasets/audio";
 
 const SLUG = "gbos-2026-06-15";
 
@@ -32,7 +32,7 @@ beforeAll(
   async () => {
     if (process.env.SLOW !== "1") return;
     const meeting = getMeetingData(SLUG);
-    wave = readWave((await getMeetingAudio(meeting)).path);
+    wave = await readWav((await getMeetingAudio(meeting)).path);
     ref = meeting.segments.flatMap((s) => s.words);
     regions = [];
     const duration = wave.samples.length / wave.sampleRate;
