@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vite-plus/test";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { readFileSync } from "node:fs";
 import {
   akleg,
@@ -178,23 +178,48 @@ describe("getMeeting", () => {
     expect(requests).toHaveLength(1);
   });
 
-  it("retries after a transient error", async () => {
-    const { source, requests } = fake(
-      TRANSIENT_ERROR,
-      TRANSIENT_ERROR,
-      MEETINGS_ON_DATE,
-    );
-    const meeting = await source.getMeeting("HRES 2018-09-10 14:00:00");
-    expect(meeting.id).toBe("HRES 2018-09-10 14:00:00");
-    expect(requests).toHaveLength(3);
+  it("retries after a transient error, logging each one", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const { source, requests } = fake(
+        TRANSIENT_ERROR,
+        TRANSIENT_ERROR,
+        MEETINGS_ON_DATE,
+      );
+      const meeting = await source.getMeeting("HRES 2018-09-10 14:00:00");
+      expect(meeting.id).toBe("HRES 2018-09-10 14:00:00");
+      expect(requests).toHaveLength(3);
+      expect(log.mock.calls.map(([message]) => message)).toEqual([
+        expect.stringContaining("XmlSchemaValidationException"),
+        expect.stringContaining("try 2 of 3"),
+      ]);
+    } finally {
+      log.mockRestore();
+    }
   });
 
   it("gives up on a transient error after three tries", async () => {
-    const { source, requests } = fake(TRANSIENT_ERROR);
-    await expect(source.getMeeting("HRES 2018-09-10 14:00:00")).rejects.toThrow(
-      "BASIS API error: XmlSchemaValidationException",
-    );
-    expect(requests).toHaveLength(3);
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const { source, requests } = fake(TRANSIENT_ERROR);
+      const error = await source
+        .getMeeting("HRES 2018-09-10 14:00:00")
+        .catch((e: Error) => e);
+      expect(requests).toHaveLength(3);
+      // Enough to look into it later: the query, the try, and the response.
+      expect((error as Error).message).toContain(
+        "BASIS API error: XmlSchemaValidationException",
+      );
+      expect((error as Error).message).toContain(
+        'query "meetings;date=09/10/2018;chamber=H,media"',
+      );
+      expect((error as Error).message).toContain("try 3 of 3");
+      expect((error as Error).message).toContain(
+        "(10/3/2026 8:52:02 PM) Contact System Admin",
+      );
+    } finally {
+      log.mockRestore();
+    }
   });
 
   it("fails loudly when the response's shape changes", async () => {
