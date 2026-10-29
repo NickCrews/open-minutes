@@ -21,17 +21,19 @@ export interface BlobFile {
 
 /**
  * What the store keeps for a YouTube video, since YouTube blocks yt-dlp from
- * datacenter IPs (CI, servers). The fetch-youtube-audio workflow
- * (.github/workflows/fetch-youtube-audio.yml) makes these files, and
- * `storedYoutube` in @open-minutes/meeting-audio stores them.
+ * datacenter IPs (CI, servers). `storedYoutube` in
+ * @open-minutes/meeting-audio makes and stores these files.
  *
  * Keyed by video ID, so a video edited in place on YouTube (trimmed, or audio
  * muted over a copyright claim) keeps its old audio there. That's rare for
  * meetings, and the golden fixtures' sha256 checks would catch it.
  */
 export interface YoutubeVideoFiles {
-  /** yt-dlp's info JSON for the video (minus its stream URLs). */
-  infoJson: BlobFile;
+  /**
+   * The video's `RecordingMetadata` (@open-minutes/core/site-adapter) as
+   * JSON, with `publishedAt` as an ISO 8601 string.
+   */
+  metadataJson: BlobFile;
   /**
    * YouTube's Opus audio re-encoded to 16 kHz mono Opus in WebM at 24 kbps
    * (~11 MB per hour), plenty for the models, which take 16 kHz mono.
@@ -76,7 +78,7 @@ export function blobStore(base?: string): BlobStore {
     youtube(youtubeId) {
       const prefix = `youtube/${encodeURIComponent(youtubeId)}`;
       return {
-        infoJson: file(`${prefix}/info.json`),
+        metadataJson: file(`${prefix}/metadata.json`),
         speechWebm: file(`${prefix}/speech.webm`),
       };
     },

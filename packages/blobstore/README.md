@@ -21,10 +21,10 @@ store.duckdbExport.url;
 Each file is a `BlobFile` (`key`, `url`, `get`), reached by what it is rather
 than by building its key:
 
-- `youtube(id)`: a YouTube video's `infoJson` and `speechWebm`, which the
-  [`fetch-youtube-audio`](../../.github/workflows/fetch-youtube-audio.yml)
-  workflow makes and `storedYoutube` in
-  [`@open-minutes/meeting-audio`](../meeting-audio/README.md) stores.
+- `youtube(id)`: a YouTube video's `metadataJson` (its `RecordingMetadata`)
+  and `speechWebm`, which `storedYoutube` in
+  [`@open-minutes/meeting-audio`](../meeting-audio/README.md) makes and
+  stores.
 - `duckdbExport`: production's public data as one DuckDB file, which the
   [`export-duckdb`](../../.github/workflows/export-duckdb.yml) workflow
   writes nightly.
@@ -40,7 +40,7 @@ null.
 ```ts
 const writer = blobStoreWriterFromEnv(process.env);
 await writer?.put(
-  store.youtube("9HoIM5INxpI").infoJson,
+  store.youtube("9HoIM5INxpI").metadataJson,
   bytes,
   "application/json",
 );

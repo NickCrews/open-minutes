@@ -1,14 +1,16 @@
 # Fetches what the pipeline needs from one YouTube video and publishes it as
 # this run's artifacts, one unzipped file each, kept for a day:
-#   info.json    yt-dlp's metadata (minus its stream URLs)
-#   speech.webm  YouTube's Opus audio, re-encoded to 16 kHz mono Opus at
-#                24 kbps (~11 MB per hour); see .github/scripts/encode-speech-audio.sh
+#   metadata.json  the video's RecordingMetadata, as metadataToJson writes it
+#   speech.webm    YouTube's Opus audio, re-encoded to 16 kHz mono Opus at
+#                  24 kbps (~11 MB per hour)
+# The script runs youtube() from @open-minutes/youtube, the same code that
+# fetches a video locally, so the files match what a local fetch gives.
 # If every download attempt fails, the only artifact is error.json instead.
 #
-# Clients (fetchVideoViaWorkflow in packages/youtube/src/workflow-fetch.ts)
-# dispatch this when a video is missing from the blob store, follow the run,
-# download the artifacts, and store them in the blob store themselves if they
-# have its keys. This workflow never touches the blob store, so it needs no
+# youtube() (via fetchVideoViaWorkflow in packages/youtube/src/workflow-fetch.ts)
+# dispatches this when YouTube refuses yt-dlp every route from where it runs,
+# follows the run, and downloads the artifacts; storedYoutube stores them in
+# the blob store if it has its keys. This workflow never touches the blob store, so it needs no
 # secrets.
 #
 # Trigger it by hand with `gh workflow run fetch-youtube-audio.yml -f video_id=<id>`.
@@ -66,30 +68,17 @@ jobs:
 
       # Installs yt-dlp too. YouTube always refuses a runner's own IP, so
       # direct isn't tried.
-      - name: Download the audio and metadata
+      - name: Fetch the metadata and audio
         env:
           YOUTUBE_EGRESS: warp,tor
           YOUTUBE_EGRESS_STATE: ${{ runner.temp }}/youtube-egress
-        run: pnpm exec vpx .github/scripts/fetch-youtube-audio.ts "$VIDEO_ID" "$RUNNER_TEMP/audio/original.webm"
-      # ffmpeg isn't on the ubuntu-latest image.
-      - name: Install ffmpeg
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq --no-install-recommends ffmpeg > /dev/null
-      - name: Re-encode the audio for speech
-        run: .github/scripts/encode-speech-audio.sh "$RUNNER_TEMP/audio/original.webm" "$OUT/speech.webm"
-      # The stream URLs in yt-dlp's info expire within hours and make up most
-      # of it, so they're dropped.
-      - name: Trim the metadata
-        run: |
-          jq 'del(.formats, .requested_formats, .requested_downloads, .thumbnails, .automatic_captions, .subtitles, .heatmap)' \
-            "$RUNNER_TEMP/audio/original.info.json" > "$OUT/info.json"
+        run: pnpm exec vpx .github/scripts/fetch-youtube-audio.ts "$VIDEO_ID" "$OUT"
 
       # Unzipped (archive: false takes one file, named after it), so clients
       # download the files as they are.
       - uses: actions/upload-artifact@v7
         with:
-          path: ${{ runner.temp }}/out/info.json
+          path: ${{ runner.temp }}/out/metadata.json
           archive: false
           retention-days: 1
       - uses: actions/upload-artifact@v7
@@ -103,7 +92,7 @@ jobs:
         env:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          error=$(cat "$RUNNER_TEMP/audio/logs/last-error.txt" 2>/dev/null || echo "see $RUN_URL")
+          error=$(cat "$OUT/logs/last-error.txt" 2>/dev/null || echo "see $RUN_URL")
           jq -n --arg id "$VIDEO_ID" --arg error "$error" --arg run "$RUN_URL" \
             '{video_id: $id, error: $error, run_url: $run}' > "$OUT/error.json"
       - uses: actions/upload-artifact@v7
@@ -116,4 +105,4 @@ jobs:
         if: failure()
         with:
           name: yt-dlp-logs
-          path: ${{ runner.temp }}/audio/logs/
+          path: ${{ runner.temp }}/out/logs/
