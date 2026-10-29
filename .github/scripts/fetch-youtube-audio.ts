@@ -6,7 +6,7 @@
 // The requests go out through runWithEgress's routes (YOUTUBE_EGRESS; the
 // fetch-youtube-audio workflow sets warp,tor, since YouTube refuses GitHub's
 // IPs). Expects packages/ytdlp/egress/install.sh to have run; see
-// docs/research/youtube-in-ci.md.
+// docs/research/youtube-on-servers.md.
 //
 // On failure, <output dir>/logs/last-error.txt says why, and WARP's and Tor's
 // logs are copied beside it.

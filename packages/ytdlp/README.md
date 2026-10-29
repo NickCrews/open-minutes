@@ -53,7 +53,7 @@ ports).
 
 Use `socks5://`, not `socks5h://`, for a proxy URL: IPv4 exits got through
 more often (see
-[docs/research/youtube-in-ci.md](../../docs/research/youtube-in-ci.md)).
+[docs/research/youtube-on-servers.md](../../docs/research/youtube-on-servers.md)).
 
 ### One manager per machine
 

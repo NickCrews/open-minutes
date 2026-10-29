@@ -19,7 +19,7 @@ publishes the results as the run's artifacts. Either way the audio is
 re-encoded to small, low-bitrate Opus, and both are stored in the blob store
 if the code has the store's keys.
 [`.env.example`](../../.env.example) lists the settings, and
-[youtube-in-ci.md](../research/youtube-in-ci.md) explains how the workaround
+[youtube-on-servers.md](../research/youtube-on-servers.md) explains how the workaround
 was chosen.
 
 CI has no keys, so it never stores what it fetches: a video missing from the

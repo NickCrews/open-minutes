@@ -8,7 +8,7 @@ import { runScript } from "./run";
 /**
  * The bash scripts that install, start, rotate and stop WARP and Tor. They
  * carry timing learned on GitHub's runners; see lib.sh and
- * docs/research/youtube-in-ci.md.
+ * docs/research/youtube-on-servers.md.
  */
 const EGRESS_DIR = fileURLToPath(new URL("../egress", import.meta.url));
 
