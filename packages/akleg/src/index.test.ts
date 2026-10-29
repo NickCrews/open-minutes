@@ -21,8 +21,17 @@ const MEETINGS_ON_DATE = fixture("meetings-h-2018-09-10.json");
 /** What a malformed query gets, with HTTP 200. */
 const ERROR = fixture("error.xml");
 
-/** An akleg() whose fetch answers with `body` and records each request. */
-function fake(body: string) {
+/** What a valid query sometimes gets, with HTTP 200. */
+const TRANSIENT_ERROR = ERROR.replace(
+  "FormatException",
+  "XmlSchemaValidationException",
+);
+
+/**
+ * An akleg() whose fetch answers with `bodies` in turn, repeating the last,
+ * and records each request.
+ */
+function fake(...bodies: string[]) {
   const requests: Array<{ url: string; query?: string }> = [];
   const source = akleg({
     fetch: (async (url: string, init?: RequestInit) => {
@@ -31,8 +40,9 @@ function fake(body: string) {
         url,
         query: headers?.["X-Alaska-Legislature-Basis-Query"],
       });
-      return new Response(body);
+      return new Response(bodies[Math.min(requests.length, bodies.length) - 1]);
     }) as typeof fetch,
+    retryDelayMs: 0,
   });
   return { source, requests };
 }
@@ -161,10 +171,30 @@ describe("getMeeting", () => {
   });
 
   it("reports the API's XML errors", async () => {
-    const { source } = fake(ERROR);
+    const { source, requests } = fake(ERROR, MEETINGS_ON_DATE);
     await expect(source.getMeeting("HRES 2018-09-10 14:00:00")).rejects.toThrow(
       "BASIS API error: FormatException",
     );
+    expect(requests).toHaveLength(1);
+  });
+
+  it("retries after a transient error", async () => {
+    const { source, requests } = fake(
+      TRANSIENT_ERROR,
+      TRANSIENT_ERROR,
+      MEETINGS_ON_DATE,
+    );
+    const meeting = await source.getMeeting("HRES 2018-09-10 14:00:00");
+    expect(meeting.id).toBe("HRES 2018-09-10 14:00:00");
+    expect(requests).toHaveLength(3);
+  });
+
+  it("gives up on a transient error after three tries", async () => {
+    const { source, requests } = fake(TRANSIENT_ERROR);
+    await expect(source.getMeeting("HRES 2018-09-10 14:00:00")).rejects.toThrow(
+      "BASIS API error: XmlSchemaValidationException",
+    );
+    expect(requests).toHaveLength(3);
   });
 
   it("fails loudly when the response's shape changes", async () => {
