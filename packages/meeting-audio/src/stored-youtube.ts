@@ -9,9 +9,8 @@ import {
 import {
   type FetchedVideo,
   type YouTube,
-  type YtDlpInfo,
   fetchVideoViaWorkflow,
-  metadataFromYtDlpInfo,
+  metadataFromJson,
   videoId,
   youtube,
 } from "@open-minutes/youtube";
@@ -48,7 +47,11 @@ export function storedYoutube(
     const video = await fetchVideoViaWorkflow(id, token);
     if (writer) {
       const files = blobs.youtube(id);
-      await writer.put(files.infoJson, video.infoJson, "application/json");
+      await writer.put(
+        files.metadataJson,
+        video.metadataJson,
+        "application/json",
+      );
       await writer.put(files.speechWebm, video.speechWebm, "audio/webm");
       console.error(`Stored ${id} in the blob store.`);
     }
@@ -73,11 +76,9 @@ export function storedYoutube(
     site: youtube.site,
     audioExtension: youtube.audioExtension,
     async getMetadata(videoIdOrUrl) {
-      const info = await getFile(videoId(videoIdOrUrl), "infoJson");
-      return info
-        ? metadataFromYtDlpInfo(
-            JSON.parse(new TextDecoder().decode(info)) as YtDlpInfo,
-          )
+      const metadata = await getFile(videoId(videoIdOrUrl), "metadataJson");
+      return metadata
+        ? metadataFromJson(metadata)
         : youtube.getMetadata(videoIdOrUrl);
     },
     async downloadAudio(videoIdOrUrl, path, { signal } = {}) {

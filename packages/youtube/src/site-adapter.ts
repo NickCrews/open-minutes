@@ -12,6 +12,7 @@ import {
 import { encodeSpeechWebm } from "@open-minutes/codecs";
 import {
   type YtDlpInfo,
+  metadataFromJson,
   metadataFromYtDlpInfo,
   videoId,
   videoUrl,
@@ -105,8 +106,7 @@ export type YouTube = SiteAdapter & {
  *    WARP, then Tor).
  * 2. The fetch-youtube-audio workflow (see {@link fetchVideoViaWorkflow}),
  *    when YouTube refuses every route, if `YOUTUBE_AUDIO_DISPATCH_TOKEN` is
- *    set. Its audio is a speech-quality re-encode of YouTube's, made with
- *    ffmpeg on a GitHub runner.
+ *    set. It runs this same code on a GitHub runner.
  *
  * Either way, the audio is YouTube's re-encoded for speech: 16 kHz mono Opus
  * in WebM at 24 kbps (see `encodeSpeechWebm` in `@open-minutes/codecs`).
@@ -155,10 +155,7 @@ export function youtube(): YouTube {
       orViaWorkflow(
         videoIdOrUrl,
         () => getMetadata(videoIdOrUrl),
-        async ({ infoJson }) =>
-          metadataFromYtDlpInfo(
-            JSON.parse(new TextDecoder().decode(infoJson)) as YtDlpInfo,
-          ),
+        async ({ metadataJson }) => metadataFromJson(metadataJson),
       ),
     downloadAudio: (videoIdOrUrl, path, options) =>
       orViaWorkflow(

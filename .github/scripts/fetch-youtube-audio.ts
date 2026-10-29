@@ -1,52 +1,33 @@
-// Downloads the audio of one YouTube video, plus yt-dlp's metadata for it
-// beside the audio (<output>.info.json, with the output's extension replaced).
-// Usage: pnpm exec vpx .github/scripts/fetch-youtube-audio.ts <video id> <output file>
+// Fetches one YouTube video's metadata and speech-quality audio with
+// youtube() from @open-minutes/youtube, into <output dir>/metadata.json and
+// <output dir>/speech.webm.
+// Usage: pnpm exec vpx .github/scripts/fetch-youtube-audio.ts <video id> <output dir>
 //
-// The request goes out through runWithEgress's routes (YOUTUBE_EGRESS; the
+// The requests go out through runWithEgress's routes (YOUTUBE_EGRESS; the
 // fetch-youtube-audio workflow sets warp,tor, since YouTube refuses GitHub's
 // IPs). Expects packages/ytdlp/egress/install.sh to have run; see
 // docs/research/youtube-in-ci.md.
 //
-// The output is YouTube's Opus audio as-is (format 251, ~50 MB per hour);
-// encode-speech-audio.sh then shrinks it for the blob store. On failure,
-// <output dir>/logs/last-error.txt says why, and WARP's and Tor's logs are
-// copied beside it.
-import { copyFile, mkdir, readdir, rm, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
-import {
-  egressPaths,
-  ensureYtDlpInstalled,
-  runWithEgress,
-} from "@open-minutes/ytdlp";
+// On failure, <output dir>/logs/last-error.txt says why, and WARP's and Tor's
+// logs are copied beside it.
+import { copyFile, mkdir, readdir, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { egressPaths } from "@open-minutes/ytdlp";
+import { metadataToJson, youtube } from "@open-minutes/youtube";
 
 const [id, out] = process.argv.slice(2);
 if (!id || !out) {
-  console.error("Usage: fetch-youtube-audio.ts <video id> <output file>");
+  console.error("Usage: fetch-youtube-audio.ts <video id> <output dir>");
   process.exit(2);
 }
-const logs = join(dirname(out), "logs");
+const logs = join(out, "logs");
 await mkdir(logs, { recursive: true });
 
 try {
-  await ensureYtDlpInstalled();
-  const { route } = await runWithEgress(
-    [
-      "-f",
-      "bestaudio[ext=webm]",
-      "--no-playlist",
-      "--write-info-json",
-      "-o",
-      out,
-      `https://www.youtube.com/watch?v=${id}`,
-    ],
-    {
-      beforeAttempt: async () => {
-        await rm(out, { force: true });
-        await rm(`${out}.part`, { force: true });
-      },
-    },
-  );
-  console.log(`downloaded via ${route}`);
+  const yt = youtube();
+  const metadata = await yt.getMetadata(id);
+  await writeFile(join(out, "metadata.json"), metadataToJson(metadata));
+  await yt.downloadAudio(id, join(out, "speech.webm"));
 } catch (error) {
   const message = (error as Error).message;
   console.error(message);

@@ -4,10 +4,12 @@ import {
   readAllSamples,
   SAMPLE_RATE,
 } from "@open-minutes/codecs";
+import { metadataFromJson } from "./core";
 import { fetchVideoViaWorkflow } from "./workflow-fetch";
 
-// Runs the real fetch-youtube-audio workflow on main, so it needs a token
-// allowed to run it, and tests main's version of the workflow.
+// Runs the real fetch-youtube-audio workflow, so it needs a token allowed to
+// run it. In a pull request's CI it runs the pull request's version of the
+// workflow, else main's.
 const token = process.env.YOUTUBE_AUDIO_DISPATCH_TOKEN;
 
 describe("fetchVideoViaWorkflow", () => {
@@ -19,10 +21,7 @@ describe("fetchVideoViaWorkflow", () => {
       // A 5 s video.
       const video = await fetchVideoViaWorkflow("QUF1uLgzL-s", token!);
 
-      const info = JSON.parse(new TextDecoder().decode(video.infoJson));
-      expect(info.id).toBe("QUF1uLgzL-s");
-      // The stream URLs are dropped.
-      expect(info.formats).toBeUndefined();
+      expect(metadataFromJson(video.metadataJson).id).toBe("QUF1uLgzL-s");
 
       const samples = await readAllSamples(decodeOpusWebm(video.speechWebm));
       expect(samples.length / SAMPLE_RATE).toBeCloseTo(5, 0);

@@ -30,6 +30,9 @@ importers:
       '@open-minutes/seed':
         specifier: workspace:*
         version: link:packages/seed
+      '@open-minutes/youtube':
+        specifier: workspace:*
+        version: link:packages/youtube
       '@open-minutes/ytdlp':
         specifier: workspace:*
         version: link:packages/ytdlp
