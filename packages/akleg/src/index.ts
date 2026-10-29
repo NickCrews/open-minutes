@@ -111,23 +111,41 @@ const committeesResponse = z.object({
   }),
 });
 
-/** An error the BASIS API reported, with its code ("FormatException"). */
+/**
+ * An error the BASIS API reported. The message has its code
+ * ("FormatException"), where it came from, and the response body, whose
+ * description has the server's timestamp for the error.
+ */
 export class BasisError extends Error {
-  constructor(readonly code: string) {
-    super(`akleg.gov BASIS API error: ${code}`);
+  /** The error's code, eg "FormatException". */
+  readonly code: string;
+
+  constructor(
+    /** The response body, as the API sent it. */
+    readonly body: string,
+    /** Which request got it, eg the query and try. */
+    context?: string,
+  ) {
+    const code = /<Code>([^<]*)<\/Code>/.exec(body)?.[1] ?? "unknown";
+    super(
+      `akleg.gov BASIS API error: ${code}${context ? ` (${context})` : ""}\n` +
+        body.slice(0, 2000),
+    );
+    this.code = code;
   }
 }
 
 /**
  * A response body as `schema`. Errors come back as XML with HTTP 200
  * (`<Basis><Error><Code>FormatException</Code>...`), which this throws as a
- * {@link BasisError}.
+ * {@link BasisError} with `context` in its message.
  */
-export function parse<T>(schema: z.ZodType<T>, body: string): T {
-  if (body.trimStart().startsWith("<")) {
-    const code = /<Code>([^<]*)<\/Code>/.exec(body)?.[1] ?? "unknown";
-    throw new BasisError(code);
-  }
+export function parse<T>(
+  schema: z.ZodType<T>,
+  body: string,
+  context?: string,
+): T {
+  if (body.trimStart().startsWith("<")) throw new BasisError(body, context);
   return schema.parse(JSON.parse(body));
 }
 
@@ -295,7 +313,8 @@ export function akleg(config: AkLegConfig = {}): AkLeg {
    * One BASIS query. The query (eg "meetings;date=09/10/2018;chamber=H,media")
    * goes in a header; ",media" adds each meeting's recordings. A transient
    * error (see {@link TRANSIENT_BASIS_ERRORS}) is retried, up to
-   * {@link BASIS_TRIES} tries in all.
+   * {@link BASIS_TRIES} tries in all. Each retry is logged to stderr with the
+   * error, so errors a retry recovers from are still on record.
    */
   async function basis<T>(
     schema: z.ZodType<T>,
@@ -303,22 +322,22 @@ export function akleg(config: AkLegConfig = {}): AkLeg {
     legislature: number,
   ): Promise<T> {
     const section = query.split(";")[0];
+    const url = `${BASE}/publicservice/basis/${section}?minifyresult=true&json=true&session=${legislature}`;
     for (let tries = 1; ; tries++) {
-      const res = await get(
-        `${BASE}/publicservice/basis/${section}?minifyresult=true&json=true&session=${legislature}`,
-        {
-          headers: {
-            "X-Alaska-Legislature-Basis-Version": "1.4",
-            "X-Alaska-Legislature-Basis-Query": query,
-          },
+      const res = await get(url, {
+        headers: {
+          "X-Alaska-Legislature-Basis-Version": "1.4",
+          "X-Alaska-Legislature-Basis-Query": query,
         },
-      );
+      });
+      const context = `query "${query}", GET ${url}, try ${tries} of ${BASIS_TRIES}`;
       try {
-        return parse(schema, await res.text());
+        return parse(schema, await res.text(), context);
       } catch (error) {
         const transient =
           error instanceof BasisError && TRANSIENT_BASIS_ERRORS.has(error.code);
         if (!transient || tries >= BASIS_TRIES) throw error;
+        console.error(`${(error as Error).message}\nRetrying...`);
       }
       await new Promise((resolve) => setTimeout(resolve, retryDelayMs * tries));
     }
