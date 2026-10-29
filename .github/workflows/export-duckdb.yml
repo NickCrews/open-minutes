@@ -64,7 +64,9 @@ jobs:
           NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
           NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
         run: |
-          DATABASE_URL=$(npx --yes neonctl@2 connection-string \
+          # From outside the checkout: npx refuses to run in a directory whose
+          # package.json requires pnpm (devEngines).
+          DATABASE_URL=$(cd "$RUNNER_TEMP" && npx --yes neonctl@2 connection-string \
             --project-id "$NEON_PROJECT_ID" --no-analytics)
           echo "::add-mask::$DATABASE_URL"
           if [[ "$DATABASE_URL" != postgres* ]]; then
