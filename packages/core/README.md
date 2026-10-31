@@ -61,11 +61,11 @@ The same rules serve two purposes:
   cleaning rules (filler words such as "um", stuttered words such as
   "the the").
 - **Checking** the hand-edited golden meetings in
-  [`@open-minutes/fixtures`](../fixtures/README.md). Goldens must already be
+  [`@open-minutes/datasets`](../datasets/README.md). Goldens must already be
   clean, or transcription output would be scored against disfluencies it
   removed on purpose, so a golden that breaks a cleaning rule is an error.
 
 To add a cleanup, write a rule with a fix and tests, register it as a cleaning
 rule in [`src/rules/index.ts`](src/rules/index.ts) and
-[`src/rules/clean.ts`](src/rules/clean.ts), then run `pnpm fixtures:fix` and
+[`src/rules/clean.ts`](src/rules/clean.ts), then run `pnpm datasets:fix` and
 review the change to the goldens.

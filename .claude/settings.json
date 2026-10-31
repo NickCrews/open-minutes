@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cd \"$CLAUDE_PROJECT_DIR\" && pnpm -s fixtures:check --hook",
+            "command": "cd \"$CLAUDE_PROJECT_DIR\" && pnpm -s datasets:check --hook",
             "timeout": 60,
             "statusMessage": "Checking fixture data"
           }

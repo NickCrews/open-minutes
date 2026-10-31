@@ -4,7 +4,8 @@
   "type": "module",
   "exports": {
     "./dotenv": "./src/dotenv.ts",
-    "./audio-provider": "./src/audio-provider.ts",
+    "./site": "./src/site.ts",
+    "./site-adapter": "./src/site-adapter.ts",
     "./recording-lister": "./src/recording-lister.ts",
     "./meeting-source": "./src/meeting-source.ts",
     "./timeline": "./src/timeline.ts",

@@ -1,4 +1,4 @@
-// The rules a meeting's data must follow. @open-minutes/fixtures checks the
+// The rules a meeting's data must follow. @open-minutes/datasets checks the
 // golden fixture files against them. A caller loads the meeting into a
 // RuleMeeting, runs checkMeeting, and maps the indices in each issue back to
 // whatever its readers can act on, such as file:line.

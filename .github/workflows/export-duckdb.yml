@@ -8,9 +8,19 @@
 #
 # Trigger it by hand with `gh workflow run export-duckdb.yml`.
 #
-# Configuration: the blob store's variables and object-store-writer secrets
-# (see fetch-youtube-audio.yml), plus NEON_PROJECT_ID and NEON_API_KEY (see
-# production.yml). Production is only read: the export attaches it read-only,
+# The blob store is any S3-compatible bucket (Cloudflare R2 today) holding
+# all of the project's blobs, one top-level prefix per kind. Configuration
+# (repo settings):
+#   variables  OBJECT_STORE_PUBLIC_URL  public base URL of the bucket
+#              OBJECT_STORE_ENDPOINT    S3 API endpoint: for R2,
+#                                         https://<account id>.r2.cloudflarestorage.com;
+#                                         for S3, https://s3.<region>.amazonaws.com
+#              OBJECT_STORE_BUCKET      bucket name
+#              OBJECT_STORE_REGION      optional; defaults to "auto", which R2 wants
+#   object-store-writer environment secrets, so only runs from main can write:
+#              OBJECT_STORE_ACCESS_KEY_ID, OBJECT_STORE_SECRET_ACCESS_KEY
+#              an access key with read and write on that bucket only
+#   NEON_PROJECT_ID and NEON_API_KEY (see production.yml). Production is only read: the export attaches it read-only,
 # and the run wakes its compute for about a minute.
 name: export-duckdb
 
@@ -54,7 +64,9 @@ jobs:
           NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
           NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
         run: |
-          DATABASE_URL=$(npx --yes neonctl@2 connection-string \
+          # From outside the checkout: npx refuses to run in a directory whose
+          # package.json requires pnpm (devEngines).
+          DATABASE_URL=$(cd "$RUNNER_TEMP" && npx --yes neonctl@2 connection-string \
             --project-id "$NEON_PROJECT_ID" --no-analytics)
           echo "::add-mask::$DATABASE_URL"
           if [[ "$DATABASE_URL" != postgres* ]]; then

@@ -1,19 +1,19 @@
 ---
 name: transcript-cleanup
-description: Fix who-said-what, people, and chapters in Open Minutes golden fixture files. Use when correcting speaker labels, splitting or merging segments, naming people, or writing chapters in packages/fixtures/test-data/.
+description: Fix who-said-what, people, and chapters in Open Minutes golden fixture files. Use when correcting speaker labels, splitting or merging segments, naming people, or writing chapters in packages/datasets/datums/.
 ---
 
 # Transcript cleanup
 
 ## Tools
 
-Golden fixtures (`packages/fixtures/test-data/`) are files. Check them with
-`pnpm fixtures:check`, which holds them to the rules in
+Golden fixtures (`packages/datasets/datums/`) are files. Check them with
+`pnpm datasets:check`, which holds them to the rules in
 `packages/core/src/rules/` plus the rules of the file format. Fix every error;
 read every warning and fix it unless the data is right as it is. In a PSV file,
 a speaker marker goes on the line just before its first word, with the same
 onset. Transcripts carry no fillers ("um", "uh") or stutters ("the the"):
-`pnpm fixtures:fix` removes them, so never type one back in.
+`pnpm datasets:fix` removes them, so never type one back in.
 
 Edit a golden with [scripts/psvtool.py](scripts/psvtool.py) rather than by
 hand: `render` shows it a segment at a time with the onset of every sentence,
@@ -21,7 +21,7 @@ hand: `render` shows it a segment at a time with the onset of every sentence,
 `replace`, `insert` (for words the transcript is missing) and `replace_all`
 ops (run it with no arguments for details). Keep
 the ops files, or the script that generates them, so a batch can be fixed and
-re-run. `fixtures:check` doesn't verify that an `identified:` slug exists in
+re-run. `datasets:check` doesn't verify that an `identified:` slug exists in
 `people.jsonl`, so add every new person yourself.
 
 ## Rules
@@ -54,7 +54,7 @@ re-run. `fixtures:check` doesn't verify that an `identified:` slug exists in
    word where the speaker changes, then relabel each part. Edges are usually
    off by one to five words, most often with the next segment starting on the
    previous speaker's last words ("Thank | you."), so check the first and last
-   words of every segment. `fixtures:check` warns about a
+   words of every segment. `datasets:check` warns about a
    speaker change inside a sentence near a longer pause; the pause hints
    which way to move it, but read the words to decide who said them.
 4. **Give every voice change its own segment.** The diarizer often folds
@@ -65,7 +65,7 @@ re-run. `fixtures:check` doesn't verify that an `identified:` slug exists in
    holds a presentation usually starts after a first-name handoff ("item nine
    … Jennifer."), or after the chair reads an agenda item that names its
    sponsor ("GTC request … (Burnett)"). Long runs with no punctuation usually
-   hide a turn change. `fixtures:check` warns about a bare
+   hide a turn change. `datasets:check` warns about a bare
    "Yes." or "Second." left in the segment of whoever asked for it.
 5. **Check every segment of a cluster before labelling the whole cluster.**
    One `segmented:spk-N` can hold unrelated voices: a legislator and a police
@@ -96,7 +96,7 @@ re-run. `fixtures:check` doesn't verify that an `identified:` slug exists in
    10.B.1" and "R-4". Collapse a spoken number into one word with one
    `replace` op per number ("twenty twenty six dash twenty" → "2026-20"),
    and write only what was said: a number you can't make out stays as heard.
-   `fixtures:check` reports the rest.
+   `datasets:check` reports the rest.
 10. **Keep chapter text in step with labels.** After relabelling, check that
     chapter titles and summaries name the right people. Chapters follow
     `docs/chapters.md`. They live in the meeting's `chapters.json`, with

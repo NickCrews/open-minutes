@@ -58,6 +58,8 @@ export interface RunOptions {
   isBlocked?: (error: YtDlpError) => boolean;
   /** Runs before each attempt, e.g. to clear a partial download. */
   beforeAttempt?: () => unknown;
+  /** Kills yt-dlp and rejects with its reason, trying no more routes. */
+  signal?: AbortSignal;
 }
 
 export interface EgressOptions {
@@ -183,15 +185,17 @@ export function egress({
   let closed = false;
 
   return {
-    async run(args, { isBlocked = isBlockedExit, beforeAttempt } = {}) {
+    async run(args, { isBlocked = isBlockedExit, beforeAttempt, signal } = {}) {
       if (closed) throw new Error("This yt-dlp egress manager is closed");
 
       /** One attempt; the error if the route was blocked. */
       async function attempt(route: Route, proxy?: string) {
+        signal?.throwIfAborted();
         await beforeAttempt?.();
         try {
           const out = await run(
             proxy ? ["--proxy", proxy, ...PROXIED_ARGS, ...args] : args,
+            { signal },
           );
           return { ...out, route };
         } catch (error) {
@@ -236,6 +240,7 @@ export function egress({
 
       const outcomes: RouteOutcome[] = [];
       for (const route of routes) {
+        signal?.throwIfAborted();
         const outcome = skipped.get(route) ?? (await tryRoute(route));
         if ("stdout" in outcome) return outcome;
         skipped.set(route, outcome);
@@ -276,11 +281,16 @@ export function egress({
  */
 export async function runWithEgress(
   args: readonly string[],
-  { isBlocked, beforeAttempt, ...options }: EgressOptions & RunOptions = {},
+  {
+    isBlocked,
+    beforeAttempt,
+    signal,
+    ...options
+  }: EgressOptions & RunOptions = {},
 ): Promise<EgressResult> {
   const manager = egress(options);
   try {
-    return await manager.run(args, { isBlocked, beforeAttempt });
+    return await manager.run(args, { isBlocked, beforeAttempt, signal });
   } finally {
     await manager.close();
   }

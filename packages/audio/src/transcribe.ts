@@ -4,13 +4,12 @@ import { fileURLToPath } from "node:url";
 import { availableParallelism } from "node:os";
 import { ensureDownloaded, ModelSpec } from "./model.js";
 import { EXPECTED_SAMPLE_RATE } from "./embed.js";
-import { ensureWaveAudio } from "./wav.js";
+import { ensureWaveForm, type WaveForm } from "@open-minutes/codecs";
 
 import sherpa_onnx, {
   type OfflineRecognizer,
   type OfflineRecognizerResult,
   type Vad,
-  type WaveForm,
 } from "sherpa-onnx-node";
 import type { Word } from "@open-minutes/core/transcript";
 import type { SpeechRun } from "@open-minutes/core/transcription";
@@ -125,7 +124,7 @@ export async function transcribeAudio(
   options: TranscribeOptions = {},
 ): Promise<SpeechRun[]> {
   const wallStart = Date.now();
-  const wave = await ensureWaveAudio(audio);
+  const wave = await ensureWaveForm(audio);
   assertSampleRate(wave.sampleRate);
   const duration = wave.samples.length / wave.sampleRate;
   const { tracing } = options;

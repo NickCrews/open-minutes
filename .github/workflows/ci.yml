@@ -1,9 +1,10 @@
 # Is this code correct? The checks a contributor runs locally with
 # `pnpm check`, a build of the web app (built, not deployed), and the database
 # checks: schema and migrations agree, and migrations apply cleanly to an empty
-# database and to a copy of production. Each is its own job, so each shows up
-# as its own check on a PR and one failing doesn't hide the others. Slow
-# (SLOW=1) tests are not run here.
+# database. Each is its own job, so each shows up as its own check on a PR and
+# one failing doesn't hide the others. Slow (SLOW=1) tests are not run here.
+#
+# Applying a PR's migrations to a copy of production is pr-preview.yml's job.
 #
 # Nothing here deploys; pr-preview.yml and production.yml do.
 name: ci
@@ -46,10 +47,11 @@ jobs:
     name: tests
     runs-on: ubuntu-latest
     # Metadata and audio come from the blob store, and the pipeline decodes
-    # the audio itself, so this job needs neither yt-dlp nor ffmpeg.
-    # github.token may trigger the
-    # fetch-youtube-audio workflow for anything missing from it (except on a
-    # fork's PR, whose token is always read-only).
+    # the audio itself, so this job needs no ffmpeg. For anything missing from
+    # the store, YouTube refuses yt-dlp from the runner, so github.token runs
+    # the fetch-youtube-audio workflow and downloads its artifacts (except on a
+    # fork's PR, whose token is always read-only). This job has no blob store
+    # keys, so what it fetches isn't stored.
     permissions:
       contents: read
       actions: write
@@ -130,48 +132,3 @@ jobs:
           pnpm db migrate   # applies every migration to the wiped database
           pnpm db up --data bodies --data-reset if-needed
           pnpm db status --check
-
-  # Applies this PR's migrations to a throwaway copy-on-write fork of
-  # production, in deploy mode, exactly as `pnpm deploy:prod` will. Catches
-  # migrations that work on test data but fail on real rows (a NOT NULL with
-  # existing nulls, a unique index over duplicates), and PRs missing main's
-  # migrations. On a PR, pr-preview.yml does this too when it's configured;
-  # this job also covers pushes to main, so main is known to migrate before it
-  # is deployed. Opt-in: needs the NEON_API_KEY secret and NEON_PROJECT_ID
-  # variable; skipped for forks, which get no secrets.
-  migrate-prod-copy:
-    if: >-
-      vars.NEON_PROJECT_ID != ''
-      && (github.event_name != 'pull_request'
-          || github.event.pull_request.head.repo.full_name == github.repository)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup
-      - name: Compute the fork's expiry
-        id: expiry
-        # Expires on its own in case the delete below never runs.
-        run: echo "at=$(date -u -d '+2 hours' +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
-      - name: Fork production
-        id: branch
-        uses: neondatabase/create-branch-action@v6
-        with:
-          project_id: ${{ vars.NEON_PROJECT_ID }}
-          api_key: ${{ secrets.NEON_API_KEY }}
-          branch_name: ci/run-${{ github.run_id }}-${{ github.run_attempt }}
-          expires_at: ${{ steps.expiry.outputs.at }}
-      - name: Migrate the fork
-        env:
-          DB_URL: ${{ steps.branch.outputs.db_url }}
-        run: |
-          echo "::add-mask::$DB_URL"
-          pnpm db status --db "$DB_URL"
-          pnpm db migrate --db "$DB_URL"
-          pnpm db status --db "$DB_URL" --check
-      - name: Delete the fork
-        if: always() && steps.branch.outputs.branch_id != ''
-        uses: neondatabase/delete-branch-action@v3
-        with:
-          project_id: ${{ vars.NEON_PROJECT_ID }}
-          api_key: ${{ secrets.NEON_API_KEY }}
-          branch: ${{ steps.branch.outputs.branch_id }}

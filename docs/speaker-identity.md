@@ -47,7 +47,7 @@ The rules and the web's speaker colors and names both use it.
 ## In golden transcripts
 
 A PSV `begin_speaker` label holds one tier (see the
-[fixtures README](../packages/fixtures/README.md#transcript-format)):
+[datasets README](../packages/datasets/README.md#transcript-format)):
 
 | Label               | `speakerNumber` | `person` |
 | ------------------- | --------------- | -------- |

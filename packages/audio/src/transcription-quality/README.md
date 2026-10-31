@@ -25,7 +25,7 @@ way it is. The tests here form a hierarchy:
    design of the day and change with it.
 
 Everything here is tagged `slow`: it needs the models and the meetings' audio,
-which `getMeetingAudio` (`@open-minutes/fixtures/audio`) downloads into a
+which `getMeetingAudio` (`@open-minutes/datasets/audio`) downloads into a
 per-machine cache. Run it with `pnpm test:slow transcription-quality`, or just
 the north star with `pnpm test:slow north-star`, and compare the logged `WER=`
 and `RTF=` lines before and after a change.

@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readdirSync, symlinkSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { readWave } from "@open-minutes/audio/wav";
+import { readWav } from "@open-minutes/codecs";
 
 import { computeSpeakerEmbeddings } from "@open-minutes/audio/embed";
 import { diarizeAudio } from "@open-minutes/audio/diarize";
@@ -11,10 +11,10 @@ import {
   alignSpeakers,
   segmentsToSpeechRuns,
 } from "@open-minutes/core/transcription";
-import { parsePsv, serializePsv } from "@open-minutes/fixtures/psv";
-import { getMeetingData } from "@open-minutes/fixtures/test-data";
+import { parsePsv, serializePsv } from "@open-minutes/datasets/psv";
+import { getMeetingData } from "@open-minutes/datasets/datums";
 import { N_DIMENSIONS } from "@open-minutes/core/voice_embeddings";
-import { getMeetingAudio } from "@open-minutes/fixtures/audio";
+import { getMeetingAudio } from "@open-minutes/datasets/audio";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const RUNS_DIR = join(HERE, "..", "test-runs");
@@ -30,7 +30,7 @@ describe("diarize", () => {
       cpDirSymlinked(meeting.meetingDir, runDir);
 
       const audioPath = await getMeetingAudio(meeting).then((a) => a.path);
-      const wave = readWave(audioPath);
+      const wave = await readWav(audioPath);
       const turns = await diarizeAudio(wave);
 
       // Keep the transcription slice from the existing golden; relabel speakers.
