@@ -61,6 +61,8 @@ formatting and runs the fast tests.
   databases in tests, and reaching production.
 - [Testing](docs/contributing/testing.md): the kinds of tests and how to run
   the slow ones.
+- [Recordings and scouts](docs/contributing/recordings.md): how recordings
+  are found on the sites that publish them, judged, and their audio stored.
 - [Meeting audio](docs/contributing/audio.md): how a meeting's audio gets from
   where it's published to the speech models.
 - [Deploying](docs/contributing/deploy.md): how production is deployed and why

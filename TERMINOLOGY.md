@@ -29,16 +29,16 @@ _Avoid_: jargon, dictionary, vocabulary, mishearings
 One word or phrase in a glossary: its headword (the correct spelling), its meaning, its variants (other correct spellings) and how it has been misheard.
 _Avoid_: term, word (that is a word of a transcript)
 
-**Meeting source**:
-Where a body's meetings are published, scanned for new ones: a YouTube channel or playlist, or an Alaska Legislature committee on akleg.gov. A body has at most one; bodies that share a YouTube channel each get a playlist on it.
-_Avoid_: video source, feed, playlist, channel (unless it really is one)
+**Scout**:
+Code that watches one place on a site, such as a YouTube channel or the Alaska Legislature's committees on akleg.gov, and reports each new recording there. It may also decide whether a recording is a meeting and which bodies it belongs to.
+_Avoid_: lister, crawler, feed, meeting source
 
 **Site**:
 A website meetings are published on, YouTube or akleg.gov, from which we get a recording's metadata and audio.
 _Avoid_: platform, provider, host
 
 **Recording**:
-One item published on a site that may be a meeting: a YouTube video, or a meeting page on akleg.gov with an audio file and usually a video. Its audio is what we transcribe. It has an ID on its site, its recording ID: a YouTube video ID, or an akleg.gov meeting ID like `HRES 2018-09-10 14:00:00`. A meeting has exactly one.
+One item published on a site that may be a meeting: a YouTube video, or a meeting page on akleg.gov with an audio file and usually a video. Its audio is what we transcribe. It has an ID on its site, its external ID: a YouTube video ID, or an akleg.gov meeting ID like `HRES 2018-09-10 14:00:00`. A meeting has exactly one.
 _Avoid_: video (unless it is one), stream, clip, media, item, post, listing, site ref
 
 ### Meetings and transcripts
