@@ -178,9 +178,12 @@ URL uploaded as a secret in the same request (`wrangler deploy
 --secrets-file`). It comments the URL on the PR and deletes both when the PR
 closes.
 
-The branch persists across pushes, so data reviewers enter survives. If a push
-edits a migration the branch already has (`.diverged` in `pnpm db status --json`),
-the workflow resets the branch from production before migrating.
+The branch persists across pushes, so data reviewers enter survives. It
+expires 3 days after the PR's last push, so idle PRs don't use up the Neon
+project's branch limit; until the next push forks it again from production,
+that PR's preview has no database. If a push edits a migration the branch
+already has (`.diverged` in `pnpm db status --json`), the workflow resets the
+branch from production before migrating.
 
 It's opt-in: it needs the `NEON_API_KEY` and `CLOUDFLARE_API_TOKEN` secrets,
 the `NEON_PROJECT_ID` and `CLOUDFLARE_ACCOUNT_ID` variables, and a registered
