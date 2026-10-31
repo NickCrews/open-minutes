@@ -3,9 +3,9 @@ import { existsSync, mkdirSync, readdirSync, symlinkSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { transcribeAudio } from "@open-minutes/audio/transcribe";
-import { serializeVadRunsPsv } from "@open-minutes/fixtures/psv";
-import { getMeetingData } from "@open-minutes/fixtures/test-data";
-import { getMeetingAudio } from "@open-minutes/fixtures/audio";
+import { serializeVadRunsPsv } from "@open-minutes/datasets/psv";
+import { getMeetingData } from "@open-minutes/datasets/datums";
+import { getMeetingAudio } from "@open-minutes/datasets/audio";
 import { cleanSpeechSegments } from "@open-minutes/core/rules";
 import { compareTranscripts } from "@open-minutes/core/transcription";
 
@@ -48,7 +48,7 @@ describe("transcribe", () => {
         const meeting = getMeetingData(slug);
         const runDir = join(RUNS_DIR, slug);
         cpDirSymlinked(meeting.meetingDir, runDir);
-        // Goldens hold cleaned text (see `pnpm fixtures check`), so compare
+        // Goldens hold cleaned text (see `pnpm datasets:check`), so compare
         // against transcribe → clean output.
         const audio = await getMeetingAudio(meeting);
         const wallStart = Date.now();

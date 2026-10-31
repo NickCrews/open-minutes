@@ -3,10 +3,12 @@
 // transcription-quality/north-star.test.ts, which outranks these; see the
 // README.md there.
 import { beforeAll, describe, expect, it } from "vite-plus/test";
-import { existsSync, mkdirSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
-import sherpa_onnx from "sherpa-onnx-node";
+import {
+  readWav,
+  resample,
+  SAMPLE_RATE,
+  type WaveForm,
+} from "@open-minutes/codecs";
 import {
   ensureModelFiles,
   loadTranscriptionModels,
@@ -21,56 +23,12 @@ import {
   MAX_WORD_SEC,
   type TranscriptWord,
 } from "@open-minutes/core/transcription";
-import { halfUntranscribedRollCall } from "@open-minutes/fixtures/clips";
-import { readWave } from "./wav";
-
-const HERE = dirname(fileURLToPath(import.meta.url));
-const RUNS_DIR = join(HERE, "..", "test-runs");
+import { halfUntranscribedRollCall } from "@open-minutes/datasets/clips";
 
 // transcribeAudio requires 16 kHz mono, but the model's bundled en.wav is 24 kHz.
-// Resample it once (memoized on disk) for the unit tests. Done here rather than
-// with ffmpeg so CI's test job needs no system binaries.
-function sample16kHz(): string {
-  const src = ensureModelFiles().test_wavs["en.wav"];
-  const dest = join(RUNS_DIR, "en-16k.wav");
-  if (!existsSync(dest)) {
-    mkdirSync(RUNS_DIR, { recursive: true });
-    const wave = sherpa_onnx.readWave(src);
-    sherpa_onnx.writeWave(dest, {
-      samples: resample(wave.samples, wave.sampleRate, 16_000),
-      sampleRate: 16_000,
-    });
-  }
-  return dest;
-}
-
-/**
- * Windowed-sinc resampling of mono samples, low-passed at the lower Nyquist
- * frequency so downsampling doesn't alias. Good enough for a test fixture.
- */
-function resample(samples: Float32Array, from: number, to: number) {
-  const ratio = from / to;
-  const cutoff = Math.min(1, to / from); // as a fraction of the input Nyquist
-  const halfWidth = Math.ceil(16 / cutoff);
-  const out = new Float32Array(Math.floor(samples.length / ratio));
-  for (let i = 0; i < out.length; i++) {
-    const center = i * ratio;
-    let sum = 0;
-    for (
-      let j = Math.ceil(center - halfWidth);
-      j <= Math.floor(center + halfWidth);
-      j++
-    ) {
-      if (j < 0 || j >= samples.length) continue;
-      const x = j - center;
-      const sinc =
-        x === 0 ? 1 : Math.sin(Math.PI * cutoff * x) / (Math.PI * cutoff * x);
-      const window = 0.5 + 0.5 * Math.cos((Math.PI * x) / halfWidth); // Hann
-      sum += samples[j]! * cutoff * sinc * window;
-    }
-    out[i] = sum;
-  }
-  return out;
+async function sample16kHz(): Promise<WaveForm> {
+  const wave = await readWav(ensureModelFiles().test_wavs["en.wav"]);
+  return resample(wave, SAMPLE_RATE);
 }
 
 // Parakeet reports one timestamp per token — the token's onset — and no
@@ -119,14 +77,15 @@ describe("VAD_MIN_SILENCE_SEC", () => {
 describe("transcribe", () => {
   // Downloading the ~460MB model (on a cold cache) and loading it (always,
   // several seconds) take longer than a test's default 5s timeout, so neither
-  // happens inside a test. Resampling the sample wav is memoized here too.
-  beforeAll(() => {
+  // happens inside a test.
+  let sample: WaveForm;
+  beforeAll(async () => {
     loadTranscriptionModels();
-    sample16kHz();
+    sample = await sample16kHz();
   }, 10 * 60_000);
 
   it("transcribes a 4 second audio sample", async () => {
-    const segments = await transcribeAudio(sample16kHz());
+    const segments = await transcribeAudio(sample);
     const words = segments.flatMap((s) => s.words);
     expect(words.map((w) => w.text)).toEqual([
       "Ask",
@@ -168,10 +127,15 @@ describe("transcribe", () => {
     // exceed MERGE_WINDOW_SEC so each run lands in its own decode window (otherwise
     // they'd merge into one window and decode serially); the silence itself is never
     // decoded — each window slices only its own run — so this stays cheap.
-    const base = sherpa_onnx.readWave(sample16kHz());
-    const sr = base.sampleRate;
+    const sr = sample.sampleRate;
     const silence = new Float32Array(Math.round((MERGE_WINDOW_SEC + 1) * sr));
-    const parts = [base.samples, silence, base.samples, silence, base.samples];
+    const parts = [
+      sample.samples,
+      silence,
+      sample.samples,
+      silence,
+      sample.samples,
+    ];
     const samples = new Float32Array(parts.reduce((n, p) => n + p.length, 0));
     let off = 0;
     for (const p of parts) {
@@ -225,10 +189,10 @@ const DECODE_TIMEOUT = 60_000;
 
 describe("transcribeRange on the GBOS roll call", () => {
   // Its transcript is missing the first half of the roll call, at 0:12–0:21.
-  const wave = readWave(halfUntranscribedRollCall().wavPath);
-
-  beforeAll(() => {
+  let wave: WaveForm;
+  beforeAll(async () => {
     loadTranscriptionModels();
+    wave = await readWav(halfUntranscribedRollCall().wavPath);
   }, 10 * 60_000);
 
   it(

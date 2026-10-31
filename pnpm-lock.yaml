@@ -27,9 +27,12 @@ importers:
       '@open-minutes/db':
         specifier: workspace:*
         version: link:packages/db
-      '@open-minutes/fixtures':
+      '@open-minutes/seed':
         specifier: workspace:*
-        version: link:packages/fixtures
+        version: link:packages/seed
+      '@open-minutes/youtube':
+        specifier: workspace:*
+        version: link:packages/youtube
       '@open-minutes/ytdlp':
         specifier: workspace:*
         version: link:packages/ytdlp
@@ -52,9 +55,9 @@ importers:
         specifier: ^4.3.6
         version: 4.3.6
     devDependencies:
-      '@open-minutes/audio':
+      '@open-minutes/codecs':
         specifier: workspace:*
-        version: link:../audio
+        version: link:../codecs
       '@types/node':
         specifier: ^24
         version: 24.19.2
@@ -74,9 +77,9 @@ importers:
         specifier: ^1.12.39
         version: 1.12.39
     devDependencies:
-      '@open-minutes/fixtures':
+      '@open-minutes/datasets':
         specifier: workspace:*
-        version: link:../fixtures
+        version: link:../datasets
       '@types/node':
         specifier: ^24
         version: 24.19.2
@@ -84,10 +87,17 @@ importers:
         specifier: 'catalog:'
         version: 1.4.0(@types/node@24.19.2)(@vitest/ui@5.0.5(vitest@5.0.5))(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(typescript@5.9.3)
 
-  packages/blobstore: {}
+  packages/blobstore:
+    dependencies:
+      aws4fetch:
+        specifier: ^1.0.20
+        version: 1.0.20
 
   packages/codecs:
     dependencies:
+      '@evan/opus':
+        specifier: ^1.0.3
+        version: 1.0.3
       mpg123-decoder:
         specifier: ^1.0.3
         version: 1.0.3
@@ -117,21 +127,12 @@ importers:
 
   packages/datasets:
     dependencies:
-      '@open-minutes/audio':
-        specifier: workspace:*
-        version: link:../audio
       '@open-minutes/core':
         specifier: workspace:*
         version: link:../core
-      '@open-minutes/db':
+      '@open-minutes/meeting-audio':
         specifier: workspace:*
-        version: link:../db
-      '@open-minutes/fixtures':
-        specifier: workspace:*
-        version: link:../fixtures
-      drizzle-orm:
-        specifier: 1.0.0-beta.21
-        version: 1.0.0-beta.21(@neondatabase/serverless@1.1.0)(@types/mssql@9.1.11(@azure/core-client@1.10.1))(mssql@11.0.1(@azure/core-client@1.10.1))(postgres@3.4.9)(zod@4.3.6)
+        version: link:../meeting-audio
     devDependencies:
       '@types/node':
         specifier: ^24
@@ -165,22 +166,6 @@ importers:
         specifier: 'catalog:'
         version: 1.4.0(@types/node@24.19.2)(@vitest/ui@5.0.5(vitest@5.0.5))(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(typescript@5.9.3)
 
-  packages/fixtures:
-    dependencies:
-      '@open-minutes/core':
-        specifier: workspace:*
-        version: link:../core
-      '@open-minutes/meeting-audio':
-        specifier: workspace:*
-        version: link:../meeting-audio
-    devDependencies:
-      '@types/node':
-        specifier: ^24
-        version: 24.19.2
-      vite-plus:
-        specifier: 'catalog:'
-        version: 1.4.0(@types/node@24.19.2)(@vitest/ui@5.0.5(vitest@5.0.5))(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(typescript@5.9.3)
-
   packages/glossary:
     devDependencies:
       '@types/node':
@@ -204,6 +189,31 @@ importers:
       '@open-minutes/youtube':
         specifier: workspace:*
         version: link:../youtube
+    devDependencies:
+      '@types/node':
+        specifier: ^24
+        version: 24.19.2
+      vite-plus:
+        specifier: 'catalog:'
+        version: 1.4.0(@types/node@24.19.2)(@vitest/ui@5.0.5(vitest@5.0.5))(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(typescript@5.9.3)
+
+  packages/seed:
+    dependencies:
+      '@open-minutes/audio':
+        specifier: workspace:*
+        version: link:../audio
+      '@open-minutes/core':
+        specifier: workspace:*
+        version: link:../core
+      '@open-minutes/datasets':
+        specifier: workspace:*
+        version: link:../datasets
+      '@open-minutes/db':
+        specifier: workspace:*
+        version: link:../db
+      drizzle-orm:
+        specifier: 1.0.0-beta.21
+        version: 1.0.0-beta.21(@neondatabase/serverless@1.1.0)(@types/mssql@9.1.11(@azure/core-client@1.10.1))(mssql@11.0.1(@azure/core-client@1.10.1))(postgres@3.4.9)(zod@4.3.6)
     devDependencies:
       '@types/node':
         specifier: ^24
@@ -278,6 +288,9 @@ importers:
 
   packages/youtube:
     dependencies:
+      '@open-minutes/codecs':
+        specifier: workspace:*
+        version: link:../codecs
       '@open-minutes/core':
         specifier: workspace:*
         version: link:../core
@@ -285,9 +298,6 @@ importers:
         specifier: workspace:*
         version: link:../ytdlp
     devDependencies:
-      '@open-minutes/audio':
-        specifier: workspace:*
-        version: link:../audio
       '@types/node':
         specifier: ^24
         version: 24.19.2
@@ -1010,6 +1020,9 @@ packages:
 
   '@eshaz/web-worker@1.2.2':
     resolution: {integrity: sha512-WxXiHFmD9u/owrzempiDlBB1ZYqiLnm9s6aPc8AlFQalq2tKmqdmMr9GXOupDgzXtqnBipj8Un0gkIm7Sjf8mw==}
+
+  '@evan/opus@1.0.3':
+    resolution: {integrity: sha512-ADfwIad83W1LuiZDNMjDMDNQRsPz8rj5xnDLExhVWTnA5wGJCLntOn12Ir5rxGBqdfo10QhnNVdd2+gXiZ6xCg==}
 
   '@floating-ui/core@1.8.0':
     resolution: {integrity: sha512-0CIZ5itps/8x7BG8dEIhs53BvCUH2PCoogtakwRTut+Arm58sJooJ0AuZhLw2HJYIR5cMLNPBSS728sPho2khQ==}
@@ -2156,6 +2169,9 @@ packages:
   assertion-error@2.0.1:
     resolution: {integrity: sha512-Izi8RQcffqCeNVgFigKli1ssklIbpHnCYc6AknXGYoB6grJqyeby7jv12JUQgmTAnIDnbck1uxksT4dzN3PWBA==}
     engines: {node: '>=12'}
+
+  aws4fetch@1.0.20:
+    resolution: {integrity: sha512-/djoAN709iY65ETD6LKCtyyEI04XIBP5xVvfmNxsEP0uJB5tyaGBztSryRr4HqMStr9R06PisQE7m9zDTXKu6g==}
 
   babel-dead-code-elimination@1.0.12:
     resolution: {integrity: sha512-GERT7L2TiYcYDtYk1IpD+ASAYXjKbLTDPhBtYj7X1NuRMDTMtAx9kyBenub1Ev41lo91OHCKdmP+egTDmfQ7Ig==}
@@ -3960,6 +3976,8 @@ snapshots:
 
   '@eshaz/web-worker@1.2.2': {}
 
+  '@evan/opus@1.0.3': {}
+
   '@floating-ui/core@1.8.0':
     dependencies:
       '@floating-ui/utils': 0.2.12
@@ -4924,6 +4942,8 @@ snapshots:
       dequal: 2.0.3
 
   assertion-error@2.0.1: {}
+
+  aws4fetch@1.0.20: {}
 
   babel-dead-code-elimination@1.0.12:
     dependencies:

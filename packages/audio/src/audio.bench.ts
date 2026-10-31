@@ -1,13 +1,12 @@
 import { test } from "vite-plus/test";
-import { halfUntranscribedRollCall } from "@open-minutes/fixtures/clips";
-import { untranscribedSpeech } from "./coverage.js";
+import { halfUntranscribedRollCall } from "@open-minutes/datasets/clips";
 import { detectSpeech } from "./vad.js";
 import {
   loadTranscriptionModels,
   transcribeAudio,
   transcribeRange,
 } from "./transcribe.js";
-import { readWave } from "./wav.js";
+import { readWav } from "@open-minutes/codecs";
 
 // How long the audio models take per minute of meeting audio, so swapping a
 // model (or its settings) shows what it costs. The clip is exactly one minute,
@@ -17,8 +16,7 @@ import { readWave } from "./wav.js";
 // Models load before timing starts; loading isn't per minute of audio.
 
 const rollCall = halfUntranscribedRollCall();
-const wave = readWave(rollCall.wavPath);
-const words = rollCall.segments.flatMap((s) => s.words);
+const wave = await readWav(rollCall.wavPath);
 const opts = {
   // Each run takes a second or more, so a handful is plenty.
   iterations: 5,
@@ -39,12 +37,4 @@ test("per minute of audio", async ({ bench }) => {
     }),
     opts,
   );
-});
-
-test("finding untranscribed speech on the clip", async ({ bench }) => {
-  await bench("speech runs + decoding the one stretch it finds", async () => {
-    for (const s of untranscribedSpeech(detectSpeech(wave), words)) {
-      await transcribeRange(wave, s.start, s.end);
-    }
-  }).run(opts);
 });

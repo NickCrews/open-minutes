@@ -9,9 +9,7 @@
     "./embed": "./src/embed.ts",
     "./embed-model": "./src/embed-model.ts",
     "./models": "./src/all-models.ts",
-    "./vad": "./src/vad.ts",
-    "./coverage": "./src/coverage.ts",
-    "./wav": "./src/wav.ts"
+    "./vad": "./src/vad.ts"
   },
   "scripts": {
     "test": "vp test run",
@@ -25,7 +23,7 @@
     "sherpa-onnx-node": "^1.12.39"
   },
   "devDependencies": {
-    "@open-minutes/fixtures": "workspace:*",
+    "@open-minutes/datasets": "workspace:*",
     "@types/node": "catalog:",
     "vite-plus": "catalog:"
   }

@@ -52,19 +52,22 @@ export class YtDlpError extends Error {
 
 /**
  * Runs yt-dlp once with `args`, with no proxy logic. Rejects with a
- * {@link YtDlpError} carrying yt-dlp's stdout and stderr.
+ * {@link YtDlpError} carrying yt-dlp's stdout and stderr, or with `signal`'s
+ * reason once it aborts, which kills yt-dlp.
  */
 export function run(
   args: readonly string[],
+  { signal }: { signal?: AbortSignal } = {},
 ): Promise<{ stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
     execFile(
       "yt-dlp",
       [...JS_RUNTIME_ARGS, ...args],
       // A busy channel's flat playlist runs to several MB.
-      { maxBuffer: 100 * 1024 * 1024, env: ytDlpEnv() },
+      { maxBuffer: 100 * 1024 * 1024, env: ytDlpEnv(), signal },
       (error, stdout, stderr) => {
-        if (error) reject(new YtDlpError(args, stdout, stderr, error));
+        if (signal?.aborted) reject(signal.reason);
+        else if (error) reject(new YtDlpError(args, stdout, stderr, error));
         else resolve({ stdout, stderr });
       },
     );
