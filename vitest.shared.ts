@@ -1,4 +1,4 @@
-import { defineConfig } from "vitest/config";
+import { defineConfig } from "vite-plus";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
@@ -14,7 +14,7 @@ export default defineConfig({
       {
         name: "slow",
         description:
-          "Slow diarization/transcription tests over full meetings (~10-20 min each on CPU). Skipped unless SLOW=1; run via `pnpm test:slow` or `pnpm test:all`.",
+          "Tests that take more than 10 seconds. Skipped unless SLOW=1; run via `pnpm test:slow` or `pnpm test:all`.",
         // WARNING: the timeout might not actually have an effect for the ML-heavy tests:
         // Vitest cannot interrupt synchronous native code (like in sherpa-onnx), it only can abort within the JS event loop.
         timeout: 25 * 60 * 1000, // a full 166-min meeting diarizes in ~8-10 min; headroom for CI/background

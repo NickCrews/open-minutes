@@ -2,10 +2,8 @@
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import sherpa_onnx, {
-  type OfflineSpeakerDiarization,
-  type WaveForm,
-} from "sherpa-onnx-node";
+import sherpa_onnx, { type OfflineSpeakerDiarization } from "sherpa-onnx-node";
+import { ensureWaveForm, type WaveForm } from "@open-minutes/codecs";
 
 import { ensureDownloaded, type ModelSpec } from "./model.js";
 import {
@@ -18,7 +16,6 @@ import {
   NUM_THREADS,
   speakerCentroid,
 } from "./embed.js";
-import { ensureWaveAudio } from "./wav.js";
 import type { DiarizationTurn } from "@open-minutes/core/transcription";
 
 // Ported from OpenWhispr's offline speaker-diarization path. This module owns
@@ -65,7 +62,7 @@ const MERGE_THRESHOLD = 0.5;
 export async function diarizeAudio(
   audio: string | WaveForm,
 ): Promise<DiarizationTurn[]> {
-  const wave = await ensureWaveAudio(audio);
+  const wave = await ensureWaveForm(audio);
   const diarizer = getDiarizer();
   assertSampleRate(wave.sampleRate, diarizer.sampleRate);
 
@@ -229,11 +226,11 @@ function getDiarizer(): OfflineSpeakerDiarization {
 async function cli() {
   const audioPath = process.argv[2];
   if (!audioPath) {
-    console.error("Usage: tsx diarize.ts <path-to-wav-webm-or-mp3>");
+    console.error("Usage: vpx diarize.ts <path-to-wav-webm-or-mp3>");
     process.exit(1);
   }
   // Decoded once, for both stages.
-  const wave = await ensureWaveAudio(audioPath);
+  const wave = await ensureWaveForm(audioPath);
   const turns = await diarizeAudio(wave);
   const speakers = new Set(turns.map((t) => t.speakerNum));
   console.log(

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { alignWords, type AlignedWordPair, type AlignmentOp } from "./wer";
 import type { TranscriptWord } from "./types";
 

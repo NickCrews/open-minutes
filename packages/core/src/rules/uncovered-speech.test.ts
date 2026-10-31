@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 import { seg } from "./testing";
 import * as uncoveredSpeech from "./uncovered-speech";
 import { uncoveredSpans } from "./uncovered-speech";

@@ -1,4 +1,4 @@
-import { beforeAll, test as baseTest } from "vitest";
+import { beforeAll, test as baseTest } from "vite-plus/test";
 import type { DB } from "../index";
 import {
   createTestDb,
@@ -13,7 +13,7 @@ import {
 //   import { test } from "@open-minutes/db/testing/vitest";
 //   test("plays in its own sandbox", async ({ db }) => { ... });   // empty
 //
-//   const test = dbTest({ data: dataset("bodies") });              // seeded
+//   const test = dbTest({ data: datasetState("bodies") });         // seeded
 //   test("starts from the bodies", async ({ db }) => { ... });
 //
 // Kept separate from ./index so non-vitest callers (scripts, CLIs) can import
@@ -42,7 +42,7 @@ export function dbTest(
   }, options.setupTimeoutMs ?? 120_000);
 
   return baseTest.extend<{ testDb: TestDb; db: DB }>({
-    // eslint-disable-next-line no-empty-pattern
+    // oxlint-disable-next-line no-empty-pattern
     testDb: async ({}, use) => {
       const testDb = await createTestDb(options);
       try {

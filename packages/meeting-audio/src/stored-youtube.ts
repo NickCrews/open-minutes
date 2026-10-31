@@ -1,86 +1,112 @@
-import { access, mkdir, rename, writeFile } from "node:fs/promises";
+import { mkdir, rename, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import type { AudioProvider } from "@open-minutes/core/audio-provider";
-import { blobStore } from "@open-minutes/blobstore";
+import type { SiteAdapter } from "@open-minutes/core/site-adapter";
 import {
+  type BlobStoreWriter,
+  blobStore,
+  blobStoreWriterFromEnv,
+} from "@open-minutes/blobstore";
+import {
+  type FetchedVideo,
   type YouTube,
-  type YtDlpInfo,
-  metadataFromYtDlpInfo,
+  fetchVideoViaWorkflow,
+  metadataFromJson,
   videoId,
-  youtubeFromEnv,
+  youtube,
 } from "@open-minutes/youtube";
-import { fetchYoutubeVideoFile, parseJson } from "./fetch-youtube-audio";
 
 /**
- * YouTube videos' metadata and audio from the blob store, where the
- * fetch-youtube-audio workflow puts them (see ./fetch-youtube-audio), so
- * this works where YouTube blocks yt-dlp (CI, servers). When the store can't
- * supply a video, `youtube` gets it instead.
+ * YouTube videos' metadata and audio from the blob store, so this works
+ * where YouTube blocks yt-dlp (CI, servers). When the store can't supply a
+ * video, `youtube` gets it instead.
  *
  * With `dispatchToken` (a GitHub token allowed to run the fetch-youtube-audio
- * workflow), a video missing from the store is first fetched into it by that
- * workflow, which is how CI gets videos YouTube won't give its runners.
+ * workflow), a video missing from the store is fetched by that workflow
+ * instead (see `fetchVideoViaWorkflow`), which is how CI gets videos YouTube
+ * won't give its runners. With `writer` too, what the workflow fetched is
+ * stored, so the next miss is a hit.
  *
  * The stored audio is a speech-quality re-encode of YouTube's (still Opus in
- * WebM), so decoded it is very close to what `youtube` downloads (correlation
- * ~0.997 on speech, same length, no lag) but not byte-identical; golden
- * fixtures' sha256 are of the stored audio's WAV.
+ * WebM), the same as `youtube` downloads; golden fixtures' sha256 are of the
+ * stored audio's WAV.
  */
 export function storedYoutube(
   youtube: YouTube,
-  { dispatchToken }: { dispatchToken?: string } = {},
-): AudioProvider {
+  {
+    dispatchToken,
+    writer,
+  }: { dispatchToken?: string; writer?: BlobStoreWriter | null } = {},
+): SiteAdapter {
   const blobs = blobStore();
-  const fetchFile = (
+  // One workflow run per video, however many of its files are asked for.
+  const fetched = new Map<string, Promise<FetchedVideo>>();
+  const fetchAndStore = async (
     id: string,
-    pick: Parameters<typeof fetchYoutubeVideoFile>[2],
-  ) => fetchYoutubeVideoFile(blobs, id, pick, dispatchToken);
+    token: string,
+  ): Promise<FetchedVideo> => {
+    const video = await fetchVideoViaWorkflow(id, token);
+    if (writer) {
+      const files = blobs.youtube(id);
+      await writer.put(
+        files.metadataJson,
+        video.metadataJson,
+        "application/json",
+      );
+      await writer.put(files.speechWebm, video.speechWebm, "audio/webm");
+      console.error(`Stored ${id} in the blob store.`);
+    }
+    return video;
+  };
+  const getFile = async (
+    id: string,
+    which: keyof FetchedVideo,
+  ): Promise<Uint8Array | null> => {
+    const stored = await blobs.youtube(id)[which].get();
+    if (stored || !dispatchToken) return stored;
+    let video = fetched.get(id);
+    if (!video) {
+      video = fetchAndStore(id, dispatchToken);
+      // A failed run isn't remembered, so a later call tries again.
+      video.catch(() => fetched.delete(id));
+      fetched.set(id, video);
+    }
+    return (await video)[which];
+  };
   return {
+    site: youtube.site,
     audioExtension: youtube.audioExtension,
     async getMetadata(videoIdOrUrl) {
-      const info = await fetchFile(
-        videoId(videoIdOrUrl),
-        (files) => files.infoJson,
-      );
-      return info
-        ? metadataFromYtDlpInfo(parseJson(info) as YtDlpInfo)
+      const metadata = await getFile(videoId(videoIdOrUrl), "metadataJson");
+      return metadata
+        ? metadataFromJson(metadata)
         : youtube.getMetadata(videoIdOrUrl);
     },
-    async ensureAudioDownloaded(
-      videoIdOrUrl,
-      path,
-      { overwrite = false } = {},
-    ) {
-      const exists = await access(path).then(
-        () => true,
-        () => false,
-      );
-      if (exists && !overwrite) return { downloaded: false };
-
+    async downloadAudio(videoIdOrUrl, path, { signal } = {}) {
       const id = videoId(videoIdOrUrl);
       // Progress goes to stderr so callers' stdout stays machine-readable.
       console.error(`Getting audio for ${id} from the blob store...`);
-      const webm = await fetchFile(id, (files) => files.speechWebm);
+      const webm = await getFile(id, "speechWebm");
       if (!webm) {
-        return youtube.ensureAudioDownloaded(videoIdOrUrl, path, { overwrite });
+        return youtube.downloadAudio(videoIdOrUrl, path, { signal });
       }
       await mkdir(dirname(path), { recursive: true });
       // Written beside `path` and moved into place, so an interrupted write
       // never leaves a partial file at `path`.
       await writeFile(`${path}.part`, webm);
       await rename(`${path}.part`, path);
-      return { downloaded: true };
     },
   };
 }
 
 /**
- * {@link storedYoutube} configured from the environment: YouTube from
- * `youtubeFromEnv`, the blob store from BLOB_STORE_PUBLIC_URL (see
- * `blobStore`), and the dispatch token from YOUTUBE_AUDIO_DISPATCH_TOKEN.
+ * {@link storedYoutube} configured from the environment: yt-dlp's routes from
+ * YOUTUBE_EGRESS, the blob store from BLOB_STORE_PUBLIC_URL (see `blobStore`)
+ * and its keys (see `blobStoreWriterFromEnv`), and the dispatch token from
+ * YOUTUBE_AUDIO_DISPATCH_TOKEN.
  */
-export function storedYoutubeFromEnv(env = process.env): AudioProvider {
-  return storedYoutube(youtubeFromEnv(env), {
+export function storedYoutubeFromEnv(env = process.env): SiteAdapter {
+  return storedYoutube(youtube(), {
     dispatchToken: env.YOUTUBE_AUDIO_DISPATCH_TOKEN || undefined,
+    writer: blobStoreWriterFromEnv(env),
   });
 }

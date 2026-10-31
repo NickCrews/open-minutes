@@ -1,5 +1,5 @@
-import type { Span } from "../chapters";
 import { formatClock } from "../clock";
+import { mergeSpans, type Span, subtract } from "../span";
 import {
   type RuleMeeting,
   type Severity,
@@ -42,25 +42,13 @@ export function uncoveredSpans(
   speech: readonly Span[],
   chapters: readonly Span[],
 ): Span[] {
-  const covers = [...chapters].sort((a, b) => a.start - b.start);
-  const uncovered: Span[] = [];
-  for (const s of [...speech].sort((a, b) => a.start - b.start)) {
-    let at = s.start;
-    for (const c of covers) {
-      if (c.end <= at) continue;
-      if (c.start >= s.end) break;
-      if (c.start > at) uncovered.push({ start: at, end: c.start });
-      at = Math.max(at, c.end);
-      if (at >= s.end) break;
-    }
-    if (at < s.end) uncovered.push({ start: at, end: s.end });
-  }
+  const byStart = (a: Span, b: Span) => a.start - b.start;
+  const uncovered = subtract(
+    [...speech].sort(byStart),
+    [...chapters].sort(byStart),
+  );
   // Merge pieces that touch, so a gap spanning several segments counts once.
-  const merged: Span[] = [];
-  for (const u of uncovered) {
-    const last = merged.at(-1);
-    if (last && u.start <= last.end) last.end = Math.max(last.end, u.end);
-    else merged.push({ ...u });
-  }
-  return merged.filter((u) => u.end - u.start > MAX_UNCOVERED_SPEECH_SECS);
+  return mergeSpans(uncovered, 0).filter(
+    (u) => u.end - u.start > MAX_UNCOVERED_SPEECH_SECS,
+  );
 }

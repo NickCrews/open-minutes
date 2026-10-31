@@ -1,4 +1,11 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vite-plus/test";
 import { existsSync } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -109,6 +116,22 @@ describe("runWithEgress", () => {
     expect(vi.mocked(run).mock.calls[0]![0]).toEqual(ARGS);
     expect(up).not.toHaveBeenCalled();
     expect(down).not.toHaveBeenCalled();
+  });
+
+  it("tries no more routes once its signal aborts", async () => {
+    const controller = new AbortController();
+    const calls = fakeYtDlp(() => {
+      controller.abort(new Error("stop"));
+      return ytDlpError(BOT_CHECK);
+    });
+    await expect(
+      runWithEgress(ARGS, { ...quiet, signal: controller.signal }),
+    ).rejects.toThrow("stop");
+    expect(calls).toEqual(["direct"]);
+    expect(vi.mocked(run).mock.calls[0]![1]).toEqual({
+      signal: controller.signal,
+    });
+    expect(up).not.toHaveBeenCalled();
   });
 
   it("starts WARP when direct is blocked, and stops it after", async () => {

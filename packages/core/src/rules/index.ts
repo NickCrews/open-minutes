@@ -1,4 +1,4 @@
-// The rules a meeting's data must follow. @open-minutes/fixtures checks the
+// The rules a meeting's data must follow. @open-minutes/datasets checks the
 // golden fixture files against them. A caller loads the meeting into a
 // RuleMeeting, runs checkMeeting, and maps the indices in each issue back to
 // whatever its readers can act on, such as file:line.
@@ -41,7 +41,7 @@ import * as uncoveredSpeech from "./uncovered-speech";
 import * as wordOutOfOrder from "./word-out-of-order";
 import * as zoningDistrict from "./zoning-district";
 
-export type { RuleMeeting, RuleSegment } from "./common";
+export type { RuleMeeting, RuleSegment, Severity } from "./common";
 export {
   CLEANING_RULE_SPECS,
   cleanGroups,

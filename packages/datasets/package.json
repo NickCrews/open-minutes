@@ -1,24 +1,29 @@
 {
   "name": "@open-minutes/datasets",
   "version": "0.1.0",
-  "description": "Open Minutes datasets: named sets of test-data rows, declared in specs/, that `pnpm db up --data` and dbTest seed",
+  "description": "Open Minutes test data: golden jurisdictions, bodies, people and meetings, the datasets that select from them, and the tools that load and check them",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/datasets.ts",
+    "./datums": "./src/datums.ts",
+    "./psv": "./src/psv.ts",
+    "./audio": "./src/audio.ts",
+    "./clips": "./src/clips.ts",
+    "./fix": "./src/fix.ts",
+    "./check": "./src/check.ts"
   },
   "scripts": {
-    "test": "vitest run",
+    "check": "vpx src/check-cli.ts",
+    "fix": "vpx src/fix-cli.ts",
+    "test": "vp test run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@open-minutes/audio": "workspace:*",
     "@open-minutes/core": "workspace:*",
-    "@open-minutes/db": "workspace:*",
-    "@open-minutes/fixtures": "workspace:*",
-    "drizzle-orm": "1.0.0-beta.21"
+    "@open-minutes/meeting-audio": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "^25.6.0",
-    "vitest": "^4.0.18"
+    "@types/node": "catalog:",
+    "vite-plus": "catalog:"
   }
 }

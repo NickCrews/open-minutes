@@ -9,16 +9,13 @@
     "./embed": "./src/embed.ts",
     "./embed-model": "./src/embed-model.ts",
     "./models": "./src/all-models.ts",
-    "./vad": "./src/vad.ts",
-    "./span": "./src/span.ts",
-    "./coverage": "./src/coverage.ts",
-    "./wav": "./src/wav.ts"
+    "./vad": "./src/vad.ts"
   },
   "scripts": {
-    "test": "vitest run",
+    "test": "vp test run",
     "typecheck": "tsc --noEmit",
-    "bench": "vitest bench --run",
-    "models": "tsx src/models-cli.ts"
+    "bench": "vp test bench --run --reporter verbose",
+    "models": "vpx src/models-cli.ts"
   },
   "dependencies": {
     "@open-minutes/codecs": "workspace:*",
@@ -26,9 +23,8 @@
     "sherpa-onnx-node": "^1.12.39"
   },
   "devDependencies": {
-    "@open-minutes/fixtures": "workspace:*",
-    "@types/node": "^22.19.17",
-    "tsx": "^4.21.0",
-    "vitest": "^4.0.18"
+    "@open-minutes/datasets": "workspace:*",
+    "@types/node": "catalog:",
+    "vite-plus": "catalog:"
   }
 }

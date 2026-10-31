@@ -1,8 +1,10 @@
 declare module "sherpa-onnx-node" {
   // These are best guesses of the types/interfaces based on the usage in our codebase and the sherpa-onnx documentation. Please adjust as needed.
+  /** Audio waveform: samples (array of float32 in [-1, 1]) and sample rate (Hz). */
   export interface WaveForm {
-    sampleRate: number;
     samples: Float32Array;
+    /** Sample rate in Hz. */
+    sampleRate: number;
   }
   export function readWave(path: string): WaveForm;
   export function writeWave(path: string, wave: WaveForm): boolean;

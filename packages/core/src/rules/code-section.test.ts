@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import * as codeSection from "./code-section";
 import { fixWith, foundTexts } from "./testing";
 

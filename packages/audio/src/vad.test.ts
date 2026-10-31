@@ -1,8 +1,8 @@
-import { beforeAll, describe, expect, it } from "vitest";
-import { halfUntranscribedRollCall } from "@open-minutes/fixtures/clips";
-import { clip, gaps, type Span, totalSecs } from "./span";
+import { beforeAll, describe, expect, it } from "vite-plus/test";
+import { halfUntranscribedRollCall } from "@open-minutes/datasets/clips";
+import { clip, gaps, type Span, totalSecs } from "@open-minutes/core/span";
 import { detectSpeech } from "./vad";
-import { readWave } from "./wav";
+import { readWav } from "@open-minutes/codecs";
 
 // Silero VAD on a checked-in minute of a real meeting: what it hears, not
 // just that it runs.
@@ -12,8 +12,8 @@ describe("detectSpeech on the GBOS roll call", () => {
 
   // Downloading the VAD model on a cold cache takes longer than a test's
   // default timeout.
-  beforeAll(() => {
-    runs = detectSpeech(readWave(halfUntranscribedRollCall().wavPath));
+  beforeAll(async () => {
+    runs = detectSpeech(await readWav(halfUntranscribedRollCall().wavPath));
   }, 10 * 60_000);
 
   it("finds speech runs in order, inside the clip", () => {

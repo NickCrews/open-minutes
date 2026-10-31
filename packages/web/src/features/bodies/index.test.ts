@@ -6,7 +6,7 @@ import {
   meetingsTable,
 } from "@open-minutes/db";
 import { test } from "@open-minutes/db/testing/vitest";
-import { describe, expect } from "vitest";
+import { describe, expect } from "vite-plus/test";
 import { getAllBodies, getBodyById } from "./index";
 
 async function insertBody(db: DB, name: string): Promise<number> {

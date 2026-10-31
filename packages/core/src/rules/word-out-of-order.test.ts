@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { seg } from "./testing";
 import * as wordOutOfOrder from "./word-out-of-order";
 

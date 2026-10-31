@@ -7,15 +7,16 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "test": "vitest run",
+    "test": "vp test run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@evan/opus": "^1.0.3",
     "mpg123-decoder": "^1.0.3",
     "opus-decoder": "^0.7.12"
   },
   "devDependencies": {
-    "@types/node": "^22.19.17",
-    "vitest": "^4.0.18"
+    "@types/node": "catalog:",
+    "vite-plus": "catalog:"
   }
 }

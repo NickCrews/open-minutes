@@ -1,13 +1,13 @@
-#!/usr/bin/env tsx
+#!/usr/bin/env vpx
 // The `youtube` CLI, for shell scripts and workflows such as
-// fetch-youtube-audio.yml. Progress and errors go to stderr; results go to
-// stdout.
+// fetch-youtube-audio.yml. Progress and errors go to stderr.
 import { copyFile, mkdir, readdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import process from "node:process";
 import { defineCommand, runMain } from "citty";
 import { egressPaths, parseRoutes } from "@open-minutes/ytdlp";
-import { fetchVideo, youtubeConfigFromEnv } from ".";
+import { metadataToJson } from "./core";
+import { type YouTubeOptions, youtube } from "./site-adapter";
 
 /**
  * Copies WARP's and Tor's logs into `dir`, plus `last-error.txt` holding
@@ -31,7 +31,7 @@ const fetch = defineCommand({
   meta: {
     name: "fetch",
     description:
-      "Download a video's original audio to <dir>/audio.webm and yt-dlp's metadata to <dir>/info.json (minus its stream URLs). " +
+      "Write a video's RecordingMetadata to <dir>/metadata.json and its audio, re-encoded for speech, to <dir>/speech.webm, with youtube(). " +
       "Goes direct first; if YouTube refuses, installs (on Linux with apt and sudo), starts and then stops WARP or Tor. " +
       "On failure, <dir>/logs/last-error.txt says why, beside WARP's and Tor's logs.",
   },
@@ -43,7 +43,7 @@ const fetch = defineCommand({
     },
     dir: {
       type: "positional",
-      description: "Where to write audio.webm and info.json",
+      description: "Where to write metadata.json and speech.webm",
       required: true,
     },
     routes: {
@@ -64,18 +64,19 @@ const fetch = defineCommand({
     },
   },
   async run({ args }) {
-    const config = youtubeConfigFromEnv();
-    if (args.routes) config.routes = parseRoutes(args.routes);
-    if (args.install) config.installEgress = { debDir: args.debs };
+    const options: YouTubeOptions = {};
+    if (args.routes) options.routes = parseRoutes(args.routes);
+    if (args.install) options.installEgress = { debDir: args.debs };
     let error: string | undefined;
     try {
-      const { audio, info, route } = await fetchVideo(
-        args.video,
-        args.dir,
-        config,
+      await mkdir(args.dir, { recursive: true });
+      const yt = youtube(options);
+      const metadata = await yt.getMetadata(args.video);
+      await writeFile(
+        join(args.dir, "metadata.json"),
+        metadataToJson(metadata),
       );
-      console.error(`Fetched via ${route}`);
-      console.log(JSON.stringify({ audio, info, route }));
+      await yt.downloadAudio(args.video, join(args.dir, "speech.webm"));
     } catch (e) {
       error = (e as Error).message;
       console.error(error);

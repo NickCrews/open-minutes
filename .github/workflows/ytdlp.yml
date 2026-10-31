@@ -11,6 +11,7 @@ on:
     paths:
       - packages/ytdlp/**
       - packages/youtube/**
+      - packages/codecs/**
       - .github/workflows/ytdlp.yml
       - .github/workflows/fetch-youtube-audio.yml
   schedule:

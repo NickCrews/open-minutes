@@ -1,13 +1,22 @@
 import { createReadStream } from "node:fs";
 import { open, readFile } from "node:fs/promises";
-import { mp3ToWav } from "./mp3";
-import { webmOpusToWav } from "./opus";
+import { decodeMp3 } from "./mp3";
+import { decodeOpusWebm } from "./opus";
+import { readWav, SAMPLE_RATE, writeWav } from "./wav";
+import { readAllSamples, type WaveForm } from "./waveform";
 
-export { mp3ToWav, Resampler } from "./mp3";
-export { webmOpusToWav } from "./opus";
-export { SAMPLE_RATE } from "./wav";
+export { decodeMp3 } from "./mp3";
+export { resample, Resampler } from "./resample";
+export {
+  decodeOpusWebm,
+  encodeOpusWebm,
+  encodeSpeechWebm,
+  type OpusEncodeOptions,
+} from "./opus";
+export { readWav, SAMPLE_RATE, writeWav } from "./wav";
+export { readAllSamples, type WaveForm } from "./waveform";
 
-/** The audio formats this package reads, as sites serve them. */
+/** The audio formats this package reads. */
 export type AudioFormat = "wav" | "webm" | "mp3";
 
 /**
@@ -40,17 +49,31 @@ export async function audioFormatOf(path: string): Promise<AudioFormat> {
 }
 
 /**
- * Decodes the WebM/Opus or MP3 file at `src` to `dest` as 16 kHz mono 16-bit
- * WAV. The format is read from the file's bytes, not its name.
+ * `audio` as mono samples: a waveform as it is, a WAV file as it is (see
+ * {@link readWav}), or a WebM/Opus or MP3 file decoded to 16 kHz.
+ */
+export async function ensureWaveForm(
+  audio: string | WaveForm,
+): Promise<WaveForm> {
+  if (typeof audio !== "string") return audio;
+  const format = await audioFormatOf(audio);
+  if (format === "wav") return readWav(audio);
+  const samples = await readAllSamples(decodedSamples(audio, format));
+  return { samples, sampleRate: SAMPLE_RATE };
+}
+
+/**
+ * Decodes the WebM/Opus or MP3 file at `src` to `dest` as 16 kHz mono 16-bit WAV.
+ * Writes beside `dest` first, so an interrupted decode never leaves a partial file at `dest`.
  */
 export async function decodeToWav(src: string, dest: string) {
   const format = await audioFormatOf(src);
-  switch (format) {
-    case "webm":
-      return webmOpusToWav(await readFile(src), dest);
-    case "mp3":
-      return mp3ToWav(createReadStream(src), dest);
-    case "wav":
-      throw new Error(`${src} is already WAV`);
-  }
+  if (format === "wav") throw new Error(`${src} is already WAV`);
+  await writeWav(decodedSamples(src, format), dest);
+}
+
+/** The file at `path`'s audio as 16 kHz mono samples. */
+async function* decodedSamples(path: string, format: "webm" | "mp3") {
+  if (format === "webm") yield* decodeOpusWebm(await readFile(path));
+  else yield* decodeMp3(createReadStream(path));
 }

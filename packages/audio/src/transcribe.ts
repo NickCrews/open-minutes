@@ -4,13 +4,12 @@ import { fileURLToPath } from "node:url";
 import { availableParallelism } from "node:os";
 import { ensureDownloaded, ModelSpec } from "./model.js";
 import { EXPECTED_SAMPLE_RATE } from "./embed.js";
-import { ensureWaveAudio } from "./wav.js";
+import { ensureWaveForm, type WaveForm } from "@open-minutes/codecs";
 
 import sherpa_onnx, {
   type OfflineRecognizer,
   type OfflineRecognizerResult,
   type Vad,
-  type WaveForm,
 } from "sherpa-onnx-node";
 import type {
   SpeechSegment,
@@ -127,7 +126,7 @@ export async function transcribeAudio(
   options: TranscribeOptions = {},
 ): Promise<SpeechSegment[]> {
   const wallStart = Date.now();
-  const wave = await ensureWaveAudio(audio);
+  const wave = await ensureWaveForm(audio);
   assertSampleRate(wave.sampleRate);
   const duration = wave.samples.length / wave.sampleRate;
   const { tracing } = options;
@@ -461,7 +460,7 @@ export function tokensToWords(
 async function cli() {
   const audioPath = process.argv[2];
   if (!audioPath) {
-    console.error("Usage: tsx transcribe.ts <path-to-audio-file>");
+    console.error("Usage: vpx transcribe.ts <path-to-audio-file>");
     process.exit(1);
   }
   const result = await transcribeAudio(audioPath);

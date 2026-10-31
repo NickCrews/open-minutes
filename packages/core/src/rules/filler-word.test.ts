@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import * as fillerWord from "./filler-word";
 import { isFillerWord } from "./filler-word";
 import { fixWith, words } from "./testing";

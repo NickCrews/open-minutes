@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { readFileSync } from "node:fs";
 import {
   akleg,
@@ -180,11 +180,13 @@ describe("getMetadata", () => {
     const { source } = fake(MEETINGS_ON_DATE);
     expect(await source.getMetadata("HRES 2018-09-10 14:00:00")).toEqual({
       id: "HRES 2018-09-10 14:00:00",
+      permalink:
+        "https://www.akleg.gov/basis/Meeting/Detail?Meeting=HRES%202018-09-10%2014:00:00",
       channelId: "HRES",
       title: "House RESOURCES - 2018-09-10 14:00:00",
       description: "Anch LIO AUDITORIUM",
       durationSecs: 10746.5,
-      uploadDate: "2018-09-10",
+      publishedAt: null,
     });
   });
 });
