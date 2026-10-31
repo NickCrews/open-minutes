@@ -112,16 +112,50 @@ const committeesResponse = z.object({
 });
 
 /**
- * A response body as `schema`. Errors come back as XML with HTTP 200
- * (`<Basis><Error><Code>FormatException</Code>...`), which this reports.
+ * An error the BASIS API reported. The message has its code
+ * ("FormatException"), where it came from, and the response body, whose
+ * description has the server's timestamp for the error.
  */
-export function parse<T>(schema: z.ZodType<T>, body: string): T {
-  if (body.trimStart().startsWith("<")) {
+export class BasisError extends Error {
+  /** The error's code, eg "FormatException". */
+  readonly code: string;
+
+  constructor(
+    /** The response body, as the API sent it. */
+    readonly body: string,
+    /** Which request got it, eg the query and try. */
+    context?: string,
+  ) {
     const code = /<Code>([^<]*)<\/Code>/.exec(body)?.[1] ?? "unknown";
-    throw new Error(`akleg.gov BASIS API error: ${code}`);
+    super(
+      `akleg.gov BASIS API error: ${code}${context ? ` (${context})` : ""}\n` +
+        body.slice(0, 2000),
+    );
+    this.code = code;
   }
+}
+
+/**
+ * A response body as `schema`. Errors come back as XML with HTTP 200
+ * (`<Basis><Error><Code>FormatException</Code>...`), which this throws as a
+ * {@link BasisError} with `context` in its message.
+ */
+export function parse<T>(
+  schema: z.ZodType<T>,
+  body: string,
+  context?: string,
+): T {
+  if (body.trimStart().startsWith("<")) throw new BasisError(body, context);
   return schema.parse(JSON.parse(body));
 }
+
+/**
+ * BASIS error codes the API sometimes returns for a valid query, and not on
+ * the next try. A malformed query gets a FormatException every time.
+ */
+const TRANSIENT_BASIS_ERRORS = new Set(["XmlSchemaValidationException"]);
+/** Tries of a BASIS query before a transient error is thrown. */
+const BASIS_TRIES = 3;
 
 /** A recording of a meeting. */
 export interface MediaFile {
@@ -227,6 +261,11 @@ export function toMetadata(meeting: AkLegMeeting): RecordingMetadata {
 export interface AkLegConfig {
   /** Replaces the global fetch; tests pass a fake. */
   fetch?: typeof fetch;
+  /**
+   * Milliseconds before the first retry of a BASIS query that got a transient
+   * error; each later retry waits that much longer again. 1000 if omitted.
+   */
+  retryDelayMs?: number;
 }
 
 /**
@@ -256,6 +295,7 @@ export interface AkLeg extends SiteAdapter {
 /** An {@link AkLeg} that uses `config`. Does no I/O until a method is called. */
 export function akleg(config: AkLegConfig = {}): AkLeg {
   const fetchFn = config.fetch ?? fetch;
+  const retryDelayMs = config.retryDelayMs ?? 1000;
 
   async function get(
     url: string,
@@ -271,7 +311,10 @@ export function akleg(config: AkLegConfig = {}): AkLeg {
 
   /**
    * One BASIS query. The query (eg "meetings;date=09/10/2018;chamber=H,media")
-   * goes in a header; ",media" adds each meeting's recordings.
+   * goes in a header; ",media" adds each meeting's recordings. A transient
+   * error (see {@link TRANSIENT_BASIS_ERRORS}) is retried, up to
+   * {@link BASIS_TRIES} tries in all. Each retry is logged to stderr with the
+   * error, so errors a retry recovers from are still on record.
    */
   async function basis<T>(
     schema: z.ZodType<T>,
@@ -279,16 +322,25 @@ export function akleg(config: AkLegConfig = {}): AkLeg {
     legislature: number,
   ): Promise<T> {
     const section = query.split(";")[0];
-    const res = await get(
-      `${BASE}/publicservice/basis/${section}?minifyresult=true&json=true&session=${legislature}`,
-      {
+    const url = `${BASE}/publicservice/basis/${section}?minifyresult=true&json=true&session=${legislature}`;
+    for (let tries = 1; ; tries++) {
+      const res = await get(url, {
         headers: {
           "X-Alaska-Legislature-Basis-Version": "1.4",
           "X-Alaska-Legislature-Basis-Query": query,
         },
-      },
-    );
-    return parse(schema, await res.text());
+      });
+      const context = `query "${query}", GET ${url}, try ${tries} of ${BASIS_TRIES}`;
+      try {
+        return parse(schema, await res.text(), context);
+      } catch (error) {
+        const transient =
+          error instanceof BasisError && TRANSIENT_BASIS_ERRORS.has(error.code);
+        if (!transient || tries >= BASIS_TRIES) throw error;
+        console.error(`${(error as Error).message}\nRetrying...`);
+      }
+      await new Promise((resolve) => setTimeout(resolve, retryDelayMs * tries));
+    }
   }
 
   async function getMeeting(meetingIdOrUrl: string): Promise<AkLegMeeting> {
