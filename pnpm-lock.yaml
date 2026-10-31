@@ -297,6 +297,9 @@ importers:
       '@open-minutes/ytdlp':
         specifier: workspace:*
         version: link:../ytdlp
+      citty:
+        specifier: ^0.1.6
+        version: 0.1.6
     devDependencies:
       '@types/node':
         specifier: ^24

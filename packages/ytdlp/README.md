@@ -43,7 +43,10 @@ manager keeps them up, and skips a route found blocked, until `close()`.
 
 A route that can't run here is skipped: WARP needs Linux, root (or
 passwordless sudo) and UDP; Tor needs to be unpacked by `installWarpAndTor`
-or on `PATH`. When no route works, `runWithEgress` rejects with an
+or on `PATH`. With the `install` option, a route that's only missing its
+unpacked daemon is installed first, once, if the machine can install them
+(Linux with apt, and root or passwordless sudo), and its .deb files are kept
+in `install.debDir` for caching. When no route works, `runWithEgress` rejects with an
 `EgressError` whose `routes` say what happened on each, `blocked` (with
 yt-dlp's last error) or `unavailable` (with the reason and what to install).
 Downloading from YouTube works from a residential connection, or from Linux
