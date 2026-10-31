@@ -23,7 +23,15 @@ describe("checkMeeting", () => {
       await codes({
         bodyCount: 1,
         segments: [seg("a", [1, "Hello."]), seg("b", [2, "Hi."])],
-        chapters: [{ start: 0, end: 2.5, title: "Greetings", bullets: [] }],
+        chapters: [
+          {
+            start: 0,
+            end: 2.5,
+            title: "Greetings",
+            summary: "Greetings.",
+            bullets: [],
+          },
+        ],
       }),
     ).toEqual([]);
   });
@@ -101,7 +109,11 @@ describe("the written-form rules", () => {
   ) =>
     (
       await checkMeeting(
-        { segments: [{ speaker: null, words: words(sentence) }] },
+        {
+          segments: [
+            { speakerNumber: null, person: null, words: words(sentence) },
+          ],
+        },
         specs,
       )
     ).map((i) => `${i.code}: ${"text" in i ? i.text : ""}`);
@@ -221,7 +233,11 @@ describe("fixMeeting", () => {
     const sentence =
       "AO twenty twenty six dash twenty passes five zero at seven PM on march twenty first for thirty six thousand dollars.";
     const { meeting } = await fixMeeting(
-      { segments: [{ speaker: "a", words: words(sentence) }] },
+      {
+        segments: [
+          { speakerNumber: null, person: "a", words: words(sentence) },
+        ],
+      },
       [...RULE_SPECS, ...BODY_RULE_SPECS],
     );
     expect(text(meeting.segments[0]!.words)).toBe(

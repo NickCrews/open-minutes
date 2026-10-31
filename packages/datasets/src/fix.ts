@@ -17,8 +17,9 @@ import {
   RULE_SPECS,
   TRANSCRIPT_RULE_SPECS,
 } from "@open-minutes/core/rules";
-import { ruleMeeting, ruleSegment } from "./check";
-import { type GoldenSegment, parsePsv, serializePsv } from "./psv";
+import { ruleMeeting } from "./check";
+import type { Segment } from "@open-minutes/core/transcript";
+import { parsePsv, serializePsv } from "./psv";
 import {
   bodyRuleCodes,
   getMeetingData,
@@ -32,31 +33,17 @@ export interface FileFix {
   fixed: MeetingIssue[];
 }
 
-/** Golden segments as the meeting rules take them, keeping their labels. */
-function labeled(segments: readonly GoldenSegment[]) {
-  return segments.map((s) => ({ ...ruleSegment(s), label: s.speaker }));
-}
-
-/** Back to golden segments: one a fix took the speaker from is unlabeled. */
-function unlabeled(segments: ReturnType<typeof labeled>): GoldenSegment[] {
-  return segments.map((s) => ({
-    speaker: s.speaker === null ? { kind: "unlabeled" } : s.label,
-    words: [...s.words],
-  }));
-}
-
 /**
  * Apply the transcript rules' fixes to golden segments, eg clean each
  * speaker's words and drop a segment left with none. Returns the segments
  * given if nothing changed.
  */
 export async function fixGoldenSegments(
-  segments: readonly GoldenSegment[],
-): Promise<{ segments: readonly GoldenSegment[]; fixed: MeetingIssue[] }> {
-  const given = { segments: labeled(segments) };
+  segments: readonly Segment<string>[],
+): Promise<{ segments: readonly Segment<string>[]; fixed: MeetingIssue[] }> {
+  const given = { segments };
   const { meeting, fixed } = await fixMeeting(given, TRANSCRIPT_RULE_SPECS);
-  if (meeting === given) return { segments, fixed };
-  return { segments: unlabeled(meeting.segments), fixed };
+  return { segments: meeting.segments, fixed };
 }
 
 /**
@@ -82,7 +69,7 @@ export async function fixMeetingDir(dir: string): Promise<FileFix[]> {
   const golden = getMeetingData(basename(dir), root);
   const given = {
     ...ruleMeeting(golden),
-    segments: labeled(golden.segments),
+    segments: golden.segments,
     chapters: golden.chapters?.chapters ?? null,
   };
   const codes = bodyRuleCodes(golden.body_slugs, root);
@@ -105,7 +92,7 @@ export async function fixMeetingDir(dir: string): Promise<FileFix[]> {
   }
   if (meeting.segments !== given.segments) {
     const file = transcriptPath(dir)!;
-    writeFileSync(file, serializePsv(unlabeled(meeting.segments)));
+    writeFileSync(file, serializePsv(meeting.segments));
     rewritten.push({
       file,
       fixed: fixed.filter((v) => "segmentIndex" in v),

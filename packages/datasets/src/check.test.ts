@@ -177,7 +177,8 @@ describe("checkPsv", () => {
 describe("checkChapters", () => {
   const segments = [
     {
-      speaker: { kind: "unlabeled" as const },
+      speakerNumber: null,
+      person: null,
       words: [0, 100, 200, 300].map((start) => ({ text: "w", start })),
     },
   ];

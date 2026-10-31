@@ -4,7 +4,7 @@
 // Second." The reply is someone else's voice, so it belongs in its own
 // segment under whoever was asked.
 
-import type { TranscriptWord } from "../transcription";
+import type { Word } from "../transcript";
 import type { AtWord, Fixed, RuleMeeting, Severity, Violation } from "./common";
 
 /** A whole sentence that answers a roll call, a question or a call for a motion. */
@@ -50,7 +50,7 @@ export interface FoldedAnswerMatch {
 const TITLE = /^(Mr|Ms|Mrs|Dr|St)\.$/;
 
 /** Sentences as [first word index, text]. */
-function sentences(words: readonly TranscriptWord[]): [number, string][] {
+function sentences(words: readonly Word[]): [number, string][] {
   const out: [number, string][] = [];
   let start = 0;
   words.forEach((w, i) => {
@@ -75,9 +75,7 @@ function sentences(words: readonly TranscriptWord[]): [number, string][] {
  * "So moved.") a call for a motion; and a "Second." or "So moved." that
  * opens a segment whose next sentence restates the motion.
  */
-export function foldedAnswers(
-  words: readonly TranscriptWord[],
-): FoldedAnswerMatch[] {
+export function foldedAnswers(words: readonly Word[]): FoldedAnswerMatch[] {
   const found: FoldedAnswerMatch[] = [];
   const sents = sentences(words);
   // "Second. Moved by Ms. Brawley, seconded by Mr. Volland.": whoever
@@ -179,7 +177,8 @@ export function fix<M extends RuleMeeting>(
         pieces.push({ ...seg, words: seg.words.slice(from, v.wordIndex) });
       pieces.push({
         ...seg,
-        speaker: null,
+        speakerNumber: null,
+        person: null,
         words: seg.words.slice(v.wordIndex, to),
       });
       from = to;

@@ -1,14 +1,26 @@
 // Word Error Rate via Levenshtein distance over normalized word tokens.
-// WER = (substitutions + deletions + insertions) / reference_word_count.
+// WER = (substitutions + deletions + insertions) / reference word count.
 
-import type { TranscriptWord } from "./types";
+import type { Word } from "../transcript";
 
 export interface WERResult {
   wer: number;
   substitutions: number;
   deletions: number;
   insertions: number;
-  ref_word_count: number;
+  refWordCount: number;
+}
+
+/** WER from the edit counts. An empty reference scores 0 against an empty hypothesis, else 1. */
+function wordErrorRate(
+  edits: { substitutions: number; deletions: number; insertions: number },
+  refWordCount: number,
+  hypWordCount: number,
+): number {
+  if (refWordCount === 0) return hypWordCount === 0 ? 0 : 1;
+  return (
+    (edits.substitutions + edits.deletions + edits.insertions) / refWordCount
+  );
 }
 
 function normalizeForWER(text: string): string[] {
@@ -28,14 +40,12 @@ export function computeWER(reference: string, hypothesis: string): WERResult {
   const hyp = normalizeForWER(hypothesis);
   const ops = alignTokens(ref, hyp);
   const { substitutions, deletions, insertions } = tallyOps(ops);
-  const ref_word_count = ref.length;
-  const wer =
-    ref_word_count === 0
-      ? hyp.length === 0
-        ? 0
-        : 1
-      : (substitutions + deletions + insertions) / ref_word_count;
-  return { wer, substitutions, deletions, insertions, ref_word_count };
+  const edits = { substitutions, deletions, insertions };
+  return {
+    wer: wordErrorRate(edits, ref.length, hyp.length),
+    ...edits,
+    refWordCount: ref.length,
+  };
 }
 
 const ALIGNMENT_OPS = ["match", "sub", "del", "ins"] as const;
@@ -52,8 +62,8 @@ export interface AlignedWordPair {
 // are compared after normalizeToken() so punctuation/case differences don't
 // register as substitutions.
 export function alignWords(
-  ref: readonly TranscriptWord[],
-  hyp: readonly TranscriptWord[],
+  ref: readonly Word[],
+  hyp: readonly Word[],
 ): AlignedWordPair[] {
   const refTokens = ref.map((w) => normalizeToken(w.text));
   const hypTokens = hyp.map((w) => normalizeToken(w.text));
@@ -174,13 +184,8 @@ function tallyOps(ops: readonly AlignedWordPair[]): {
   return { matches, substitutions, deletions, insertions };
 }
 
-export interface TranscriptComparison {
-  wer: number;
+export interface TranscriptComparison extends WERResult {
   matches: number;
-  substitutions: number;
-  deletions: number;
-  insertions: number;
-  refWordCount: number;
   hypWordCount: number;
   // Onset error stats over matched-only pairs (substitutions excluded —
   // they may be different words and timestamps aren't meaningful to compare).
@@ -194,19 +199,13 @@ export interface TranscriptComparison {
 }
 
 export function compareTranscripts(
-  ref: readonly TranscriptWord[],
-  hyp: readonly TranscriptWord[],
+  ref: readonly Word[],
+  hyp: readonly Word[],
 ): TranscriptComparison {
   const ops = alignWords(ref, hyp);
-  const { matches, substitutions, deletions, insertions } = tallyOps(ops);
+  const { matches, ...edits } = tallyOps(ops);
   const refWordCount = ref.length;
   const hypWordCount = hyp.length;
-  const wer =
-    refWordCount === 0
-      ? hypWordCount === 0
-        ? 0
-        : 1
-      : (substitutions + deletions + insertions) / refWordCount;
 
   const startErrs: number[] = [];
   for (const op of ops) {
@@ -217,11 +216,9 @@ export function compareTranscripts(
   }
 
   return {
-    wer,
+    wer: wordErrorRate(edits, refWordCount, hypWordCount),
     matches,
-    substitutions,
-    deletions,
-    insertions,
+    ...edits,
     refWordCount,
     hypWordCount,
     matchedPairs: startErrs.length,

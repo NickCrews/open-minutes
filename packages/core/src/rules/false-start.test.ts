@@ -24,7 +24,13 @@ describe("false-start", () => {
   it("reports each word it would drop", () => {
     expect(
       falseStart.rule({
-        segments: [{ speaker: null, words: words("about six- sixteen units") }],
+        segments: [
+          {
+            speakerNumber: null,
+            person: null,
+            words: words("about six- sixteen units"),
+          },
+        ],
       }),
     ).toEqual([
       {

@@ -1,5 +1,5 @@
 import { createMemo, For, Show } from "solid-js";
-import { LAST_WORD_DURATION_SEC } from "@open-minutes/core/transcription";
+import { LAST_WORD_DURATION_SEC } from "@open-minutes/core/transcript";
 import { PersonHoverCard } from "~/features/people/person-hover-card";
 import { formatSecsDuration, intervalToSecs } from "~/lib/format";
 import {

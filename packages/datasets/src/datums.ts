@@ -1,6 +1,8 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { type GoldenSegment, parsePsv, parseTimestamp } from "./psv";
+import type { Chapter } from "@open-minutes/core/chapters";
+import type { Segment } from "@open-minutes/core/transcript";
+import { parsePsv, parseTimestamp } from "./psv";
 import type { MeetingSource } from "@open-minutes/core/meeting-source";
 import { ianaTimezoneError } from "@open-minutes/core/timezone";
 import {
@@ -69,7 +71,7 @@ export interface GoldenMeeting {
   /** "HH:MM:SS" in `timezone`, or null if unknown. */
   time: string | null;
   duration_secs: number;
-  segments: GoldenSegment[];
+  segments: Segment<string>[];
   /** The meeting's chapters, from chapters.json; null if it has none. */
   chapters: GoldenChapters | null;
   meetingDir: string; // path to the meeting's fixture directory (used internally for loading audio and PSV)
@@ -83,19 +85,13 @@ export interface GoldenChapterGeneration {
   reviewed_by_human: boolean;
 }
 
-export interface GoldenChapter {
-  /** Seconds into the meeting. "H:MM:SS.ss" in chapters.json. */
-  start: number;
-  end: number;
-  title: string;
-  summary: string;
-  bullets: string[];
-}
-
-/** A meeting's chapters.json: one generation's chapters, in order. */
+/**
+ * A meeting's chapters.json: one generation's chapters, in order. Times are
+ * "H:MM:SS.ss" in the file and seconds once loaded.
+ */
 export interface GoldenChapters {
   generation: GoldenChapterGeneration;
-  chapters: GoldenChapter[];
+  chapters: Chapter[];
 }
 
 export interface Datums {

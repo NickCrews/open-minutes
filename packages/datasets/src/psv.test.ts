@@ -5,9 +5,9 @@ import {
   parsePsv,
   serializePsv,
   serializeVadRunsPsv,
-  type GoldenSegment,
 } from "./psv";
-import type { SpeechSegment } from "@open-minutes/core/transcription";
+import type { Segment } from "@open-minutes/core/transcript";
+import type { SpeechRun } from "@open-minutes/core/transcription";
 
 describe("psv timestamps", () => {
   it("round-trips through parse/format", () => {
@@ -31,20 +31,23 @@ describe("psv parse/serialize", () => {
       '2:45:25.60|meta|{"begin_speaker": "unlabeled"}',
       "2:45:25.60|text|Nice!",
     ].join("\n");
-    expect(parsePsv(content)).toEqual<GoldenSegment[]>([
+    expect(parsePsv(content)).toEqual<Segment<string>[]>([
       {
-        speaker: { kind: "segmented", cluster: 2 },
+        speakerNumber: 2,
+        person: null,
         words: [
           { text: "Uh", start: 0.08 },
           { text: "certainly", start: 0.64 },
         ],
       },
       {
-        speaker: { kind: "segmented", cluster: 4 },
+        speakerNumber: 4,
+        person: null,
         words: [{ text: "What", start: 9921.28 }],
       },
       {
-        speaker: { kind: "unlabeled" },
+        speakerNumber: null,
+        person: null,
         words: [{ text: "Nice!", start: 9925.6 }],
       },
     ]);
@@ -55,9 +58,10 @@ describe("psv parse/serialize", () => {
       '0:00:00.00|meta|{"begin_speaker": "identified:margaret-tyler"}',
       "0:00:00.08|text|Hello",
     ].join("\n");
-    expect(parsePsv(content)).toEqual<GoldenSegment[]>([
+    expect(parsePsv(content)).toEqual<Segment<string>[]>([
       {
-        speaker: { kind: "identified", person: "margaret-tyler" },
+        speakerNumber: null,
+        person: "margaret-tyler",
         words: [{ text: "Hello", start: 0.08 }],
       },
     ]);
@@ -90,7 +94,7 @@ describe("psv parse/serialize", () => {
   });
 
   it("emits vad span markers interleaved with each run's words", () => {
-    const runs: SpeechSegment[] = [
+    const runs: SpeechRun[] = [
       {
         start: 0.08,
         end: 1.0,
@@ -115,7 +119,7 @@ describe("psv parse/serialize", () => {
   });
 
   it("skips vad markers when parsing, recovering the flat word list", () => {
-    const runs: SpeechSegment[] = [
+    const runs: SpeechRun[] = [
       {
         start: 0.08,
         end: 1.0,
@@ -127,9 +131,10 @@ describe("psv parse/serialize", () => {
         words: [{ text: "there", start: 1.1 }],
       },
     ];
-    expect(parsePsv(serializeVadRunsPsv(runs))).toEqual<GoldenSegment[]>([
+    expect(parsePsv(serializeVadRunsPsv(runs))).toEqual<Segment<string>[]>([
       {
-        speaker: { kind: "unlabeled" },
+        speakerNumber: null,
+        person: null,
         words: [
           { text: "Hello", start: 0.08 },
           { text: "there", start: 1.1 },
@@ -139,20 +144,23 @@ describe("psv parse/serialize", () => {
   });
 
   it("round-trips segments through serialize/parse", () => {
-    const segments: GoldenSegment[] = [
+    const segments: Segment<string>[] = [
       {
-        speaker: { kind: "unlabeled" },
+        speakerNumber: null,
+        person: null,
         words: [
           { text: "Uh", start: 0.08 },
           { text: "$10", start: 0.64 },
         ],
       },
       {
-        speaker: { kind: "segmented", cluster: 2 },
+        speakerNumber: 2,
+        person: null,
         words: [{ text: "Thanks!", start: 1.28 }],
       },
       {
-        speaker: { kind: "identified", person: "margaret-tyler" },
+        speakerNumber: null,
+        person: "margaret-tyler",
         words: [{ text: "Hi", start: 2.0 }],
       },
     ];

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { cleanGroups, cleanSpeechSegments, cleanWords } from "./clean";
+import { cleanGroups, cleanSpeechRuns, cleanWords } from "./clean";
 import { text, words } from "./testing";
 
 function clean(sentence: string, step?: number): string {
@@ -31,8 +31,8 @@ describe("cleanWords", () => {
 describe("cleanGroups", () => {
   it("never reaches across a group boundary", () => {
     const groups = cleanGroups([
-      { speaker: "a", words: words("I") },
-      { speaker: "b", words: words("I agree") },
+      { speakerNumber: null, person: "a", words: words("I") },
+      { speakerNumber: null, person: "b", words: words("I agree") },
     ]);
     expect(groups.map((g) => text(g.words))).toEqual(["I", "I agree"]);
   });
@@ -40,20 +40,24 @@ describe("cleanGroups", () => {
   it("keeps group properties and may leave a group empty", () => {
     expect(
       cleanGroups([
-        { speaker: "a", words: words("Um.") },
-        { speaker: "b", words: words("uh, yes") },
+        { speakerNumber: null, person: "a", words: words("Um.") },
+        { speakerNumber: null, person: "b", words: words("uh, yes") },
       ]),
     ).toEqual([
-      { speaker: "a", words: [] },
-      { speaker: "b", words: [{ text: "yes", start: 0.3 }] },
+      { speakerNumber: null, person: "a", words: [] },
+      {
+        speakerNumber: null,
+        person: "b",
+        words: [{ text: "yes", start: 0.3 }],
+      },
     ]);
   });
 });
 
-describe("cleanSpeechSegments", () => {
+describe("cleanSpeechRuns", () => {
   it("cleans each VAD run and keeps it, even emptied", () => {
     expect(
-      cleanSpeechSegments([
+      cleanSpeechRuns([
         { start: 0, end: 1, words: words("Um.") },
         { start: 1, end: 2, words: words("the the vote") },
       ]),

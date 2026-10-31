@@ -11,11 +11,7 @@ import {
   alignSpeakers,
   segmentsToSpeechRuns,
 } from "@open-minutes/core/transcription";
-import {
-  parsePsv,
-  serializePsv,
-  toGoldenSegment,
-} from "@open-minutes/datasets/psv";
+import { parsePsv, serializePsv } from "@open-minutes/datasets/psv";
 import { getMeetingData } from "@open-minutes/datasets/datums";
 import { N_DIMENSIONS } from "@open-minutes/core/voice_embeddings";
 import { getMeetingAudio } from "@open-minutes/datasets/audio";
@@ -45,15 +41,16 @@ describe("diarize", () => {
         segmentsToSpeechRuns(meeting.segments),
         turns,
       );
-      // Diarization only knows anonymous clusters; lift them into golden segments
-      // (segmented:spk-N). A human relabels the recurring ones to identified:<slug>.
-      const goldenSegments = aligned.map(toGoldenSegment);
-      serializePsv(goldenSegments, { path: join(runDir, "diarized.gen.psv") });
+      // Diarization only knows speaker numbers, written as segmented:spk-N. A
+      // human relabels the recurring ones to identified:<slug>.
+      serializePsv(aligned, { path: join(runDir, "diarized.gen.psv") });
 
       // A board meeting has multiple speakers, in order, within the recording.
       const duration = wave.samples.length / wave.sampleRate;
       expect(turns.length).toBeGreaterThan(0);
-      expect(new Set(turns.map((t) => t.speakerNum)).size).toBeGreaterThan(1);
+      expect(new Set(turns.map((t) => t.speakerNumber)).size).toBeGreaterThan(
+        1,
+      );
       for (let i = 0; i < turns.length; i++) {
         const t = turns[i]!;
         expect(t.end).toBeGreaterThanOrEqual(t.start);
@@ -73,8 +70,8 @@ describe("diarize", () => {
       expect(aligned.flatMap((s) => s.words).length).toBe(words.length);
 
       // The golden re-parses cleanly and carries speaker labels.
-      const reparsed = parsePsv(serializePsv(goldenSegments));
-      expect(reparsed.every((s) => s.speaker.kind !== "unlabeled")).toBe(true);
+      const reparsed = parsePsv(serializePsv(aligned));
+      expect(reparsed.every((s) => s.speakerNumber !== null)).toBe(true);
     });
   }
 });

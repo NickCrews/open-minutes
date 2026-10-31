@@ -8,17 +8,12 @@ import {
   RULE_SPECS,
   type RuleMeeting,
   RULE_SPECS_BY_CODE,
-  type RuleSegment,
   type Severity,
   TRANSCRIPT_RULE_SPECS,
 } from "@open-minutes/core/rules";
 import { formatClock } from "@open-minutes/core/clock";
-import {
-  formatSpeaker,
-  type GoldenSegment,
-  parsePsv,
-  parseTimestamp,
-} from "./psv";
+import type { Segment } from "@open-minutes/core/transcript";
+import { parsePsv, parseTimestamp } from "./psv";
 import {
   bodyRuleCodes,
   type GoldenMeeting,
@@ -197,10 +192,10 @@ interface PsvLines {
 function readPsv(
   content: string,
   file: string,
-): { issues: Issue[]; segments?: GoldenSegment[]; lines: PsvLines } {
+): { issues: Issue[]; segments?: Segment<string>[]; lines: PsvLines } {
   const issues: Issue[] = [];
   const lines: PsvLines = { markers: [], words: [] };
-  let segments: GoldenSegment[];
+  let segments: Segment<string>[];
   try {
     segments = parsePsv(content);
   } catch (err) {
@@ -247,24 +242,8 @@ export function ruleMeeting(meeting: GoldenMeeting): RuleMeeting {
     title: meeting.title,
     bodyCount: meeting.body_slugs.length,
     durationSecs: meeting.duration_secs,
-    segments: ruleSegments(meeting.segments),
+    segments: meeting.segments,
     chapters: meeting.chapters?.chapters ?? null,
-  };
-}
-
-/** Golden segments as the meeting rules take them. */
-function ruleSegments(segments: readonly GoldenSegment[]): RuleSegment[] {
-  return segments.map(ruleSegment);
-}
-
-/** A golden segment as the meeting rules take it. */
-export function ruleSegment(segment: GoldenSegment): RuleSegment {
-  return {
-    speaker:
-      segment.speaker.kind === "unlabeled"
-        ? null
-        : formatSpeaker(segment.speaker),
-    words: segment.words,
   };
 }
 
@@ -354,10 +333,7 @@ export async function checkPsv(
 ): Promise<Issue[]> {
   const { issues, segments, lines } = readPsv(content, file);
   if (segments)
-    for (const i of await checkMeeting(
-      { segments: ruleSegments(segments) },
-      TRANSCRIPT_RULE_SPECS,
-    ))
+    for (const i of await checkMeeting({ segments }, TRANSCRIPT_RULE_SPECS))
       if ("segmentIndex" in i) issues.push(atPsvLine(i, file, lines));
   return issues.sort((a, b) => (a.line ?? 0) - (b.line ?? 0));
 }
@@ -369,7 +345,7 @@ export async function checkPsv(
 export async function checkChapters(
   content: string,
   file: string,
-  segments: readonly GoldenSegment[],
+  segments: readonly Segment<string>[],
   durationSecs?: number,
 ): Promise<Issue[]> {
   let raw: unknown;
@@ -392,7 +368,7 @@ export async function checkChapters(
   const { chapters } = parsed;
   const lines = chapterStartLines(content);
   const found = await checkMeeting(
-    { segments: ruleSegments(segments), chapters, durationSecs },
+    { segments, chapters, durationSecs },
     CHAPTER_RULE_SPECS,
   );
   return found

@@ -1,16 +1,7 @@
 // The types every rule shares, and helpers for more than one rule.
 
-import type { ChapterSpan } from "../chapters";
-import { LAST_WORD_DURATION_SEC, type TranscriptWord } from "../transcription";
-
-export interface RuleSegment {
-  /**
-   * Who spoke it, as a key: segments with equal keys are the same speaker.
-   * Null for unattributed speech.
-   */
-  speaker: string | null;
-  words: readonly TranscriptWord[];
-}
+import type { Chapter } from "../chapters";
+import { LAST_WORD_DURATION_SEC, type Segment } from "../transcript";
 
 /** A meeting as the rules take it. */
 export interface RuleMeeting {
@@ -21,9 +12,9 @@ export interface RuleMeeting {
   bodyCount?: number;
   durationSecs?: number | null;
   /** In the order they're stored. */
-  segments: readonly RuleSegment[];
+  segments: readonly Segment<string | number>[];
   /** In order. Empty, null or absent when the meeting has none. */
-  chapters?: readonly ChapterSpan[] | null;
+  chapters?: readonly Chapter[] | null;
 }
 
 /** One problem a rule found. Rules add the data needed to fix it. */
@@ -101,9 +92,6 @@ export function speechSpans(meeting: RuleMeeting) {
     }));
 }
 
-export function chapterName(
-  chapters: readonly ChapterSpan[],
-  i: number,
-): string {
+export function chapterName(chapters: readonly Chapter[], i: number): string {
   return `chapter ${i + 1} (${JSON.stringify(chapters[i]!.title)})`;
 }

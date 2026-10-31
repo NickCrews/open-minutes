@@ -40,9 +40,7 @@ describe("audio voiceprints", () => {
     // The dataset seeds only speakers, so each person here was voiceprinted
     // from this meeting's audio.
     const identified = new Set(
-      meeting.segments.flatMap((s) =>
-        s.speaker.kind === "identified" ? [s.speaker.person] : [],
-      ),
+      meeting.segments.flatMap((s) => (s.person === null ? [] : [s.person])),
     );
     const people = await db
       .select({ slug: peopleTable.slug })

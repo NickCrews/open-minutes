@@ -1,3 +1,7 @@
+import {
+  speakerKey as transcriptSpeakerKey,
+  UNATTRIBUTED,
+} from "@open-minutes/core/transcript";
 import type { getMeetingById } from "./index";
 
 type Meeting = Awaited<ReturnType<typeof getMeetingById>>;
@@ -26,19 +30,14 @@ export type SpeakerIdentity = {
   colorSlot: number | null;
 };
 
-/** Segments with no person and no diarization label — speech we can't attribute. */
-const UNATTRIBUTED = "unattributed";
-
 export const SPEAKER_COLOR_COUNT = 8;
 
-/**
- * Speakers are keyed by person when there is one, so a voice that diarization
- * split across several speaker numbers still reads as a single speaker.
- */
+/** A segment row's speaker key, as `speakerKey` in @open-minutes/core/transcript. */
 export function speakerKey(segment: Segment): string {
-  if (segment.person) return `person:${segment.person.id}`;
-  if (segment.speaker_number != null) return `number:${segment.speaker_number}`;
-  return UNATTRIBUTED;
+  return transcriptSpeakerKey({
+    speakerNumber: segment.speaker_number,
+    person: segment.person?.id ?? null,
+  });
 }
 
 /**

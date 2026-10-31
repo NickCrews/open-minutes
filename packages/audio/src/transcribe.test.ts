@@ -19,10 +19,8 @@ import {
   type TranscribeWindowEndEvent,
   VAD_MIN_SILENCE_SEC,
 } from "./transcribe";
-import {
-  MAX_WORD_SEC,
-  type TranscriptWord,
-} from "@open-minutes/core/transcription";
+import { type Word } from "@open-minutes/core/transcript";
+import { MAX_WORD_SEC } from "@open-minutes/core/transcription";
 import { halfUntranscribedRollCall } from "@open-minutes/datasets/clips";
 
 // transcribeAudio requires 16 kHz mono, but the model's bundled en.wav is 24 kHz.
@@ -122,7 +120,7 @@ describe("transcribe", () => {
     }
   });
 
-  it("processes speech segments in parallel", async () => {
+  it("processes speech runs in parallel", async () => {
     // Build audio with several speech runs separated by long silence. The gap must
     // exceed MERGE_WINDOW_SEC so each run lands in its own decode window (otherwise
     // they'd merge into one window and decode serially); the silence itself is never
@@ -176,11 +174,11 @@ describe("transcribe", () => {
 });
 
 /** Words as lowercase text without punctuation, for loose matching. */
-const plain = (words: readonly TranscriptWord[]) =>
+const plain = (words: readonly Word[]) =>
   words.map((w) => w.text.toLowerCase().replace(/[^\p{L}\p{N}']/gu, ""));
 
 /** Whether `phrase` occurs as consecutive words in `words`. */
-function hears(words: readonly TranscriptWord[], phrase: string): boolean {
+function hears(words: readonly Word[], phrase: string): boolean {
   return ` ${plain(words).join(" ")} `.includes(` ${phrase} `);
 }
 

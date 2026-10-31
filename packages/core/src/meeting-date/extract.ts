@@ -12,7 +12,7 @@
 // times are wall-clock "HH:MM" (24h) — deliberately separate, since either can
 // be known without the other.
 
-import type { TranscriptWord } from "../transcription/types";
+import type { Word } from "../transcript";
 
 export interface ParsedMeetingDateTime {
   /** Wall-clock date, "YYYY-MM-DD". */
@@ -435,7 +435,7 @@ export const OPENING_WINDOW_SECS = 10 * 60;
  * 20th"), so only the opening is worth reading.
  */
 export function openingText(
-  segments: ReadonlyArray<{ words: TranscriptWord[] }>,
+  segments: ReadonlyArray<{ words: Word[] }>,
   maxSecs: number = OPENING_WINDOW_SECS,
 ): string {
   const words: string[] = [];

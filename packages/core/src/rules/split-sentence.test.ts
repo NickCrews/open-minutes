@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vite-plus/test";
-import type { TranscriptWord } from "../transcription";
+import type { Word } from "../transcript";
 import * as splitSentence from "./split-sentence";
 import { seg, text } from "./testing";
 
 /** Words at the given onsets: "word@onset" pairs separated by spaces. */
-function onsets(spec: string): TranscriptWord[] {
+function onsets(spec: string): Word[] {
   return spec.split(" ").map((pair) => {
     const [text, start] = pair.split("@");
     return { text: text!, start: Number(start) };
@@ -34,7 +34,11 @@ describe("split-sentence", () => {
   it("says nothing when the same speaker is either side", () => {
     expect(
       splitSentence.rule({
-        segments: segments.map((s) => ({ ...s, speaker: "a" })),
+        segments: segments.map((s) => ({
+          ...s,
+          speakerNumber: null,
+          person: "a",
+        })),
       }),
     ).toEqual([]);
   });
