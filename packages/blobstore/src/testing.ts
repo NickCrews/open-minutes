@@ -17,14 +17,15 @@ export function memoryBlobStore(): {
   blobs: Map<string, MemoryBlob>;
 } {
   const blobs = new Map<string, MemoryBlob>();
-  const store = storeOf((key) => ({
+  const store = storeOf((key, contentType) => ({
     key,
     url: `memory:${key}`,
+    contentType,
     get: async () => blobs.get(key)?.body ?? null,
   }));
   const writer: BlobStoreWriter = {
-    put: async (file, body, contentType) => {
-      blobs.set(file.key, { body, contentType });
+    put: async (file, body) => {
+      blobs.set(file.key, { body, contentType: file.contentType });
     },
   };
   return { store, writer, blobs };

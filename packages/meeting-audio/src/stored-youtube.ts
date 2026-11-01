@@ -41,11 +41,7 @@ export function storedYoutube(
       if (stored) return metadataFromJson(stored);
       const metadata = await youtube.getMetadata(id);
       if (writer) {
-        await writer.put(
-          files.metadataJson,
-          metadataToJson(metadata),
-          "application/json",
-        );
+        await writer.put(files.metadataJson, metadataToJson(metadata));
         console.error(`Stored ${id}'s metadata in the blob store.`);
       }
       return metadata;
@@ -60,7 +56,7 @@ export function storedYoutube(
         await youtube.downloadAudio(id, path, { signal });
         if (writer) {
           const audio = new Uint8Array(await readFile(path));
-          await writer.put(files.speechWebm, audio, "audio/webm");
+          await writer.put(files.speechWebm, audio);
           console.error(`Stored ${id}'s audio in the blob store.`);
         }
         return;
