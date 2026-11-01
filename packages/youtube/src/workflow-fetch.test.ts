@@ -13,7 +13,9 @@ import { fetchVideoViaWorkflow } from "./workflow-fetch";
 const token = process.env.YOUTUBE_AUDIO_DISPATCH_TOKEN;
 
 describe("fetchVideoViaWorkflow", () => {
-  it.skipIf(!token)(
+  // A test's own skip overrides its tags' skip, so this repeats the slow
+  // tag's SLOW=1 condition.
+  it.skipIf(!token || process.env.SLOW !== "1")(
     "gets a video's metadata and speech audio from a workflow run",
     // A run takes 2-6 minutes, plus any queue.
     { tags: ["slow"], timeout: 20 * 60_000 },

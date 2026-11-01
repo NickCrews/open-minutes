@@ -60,6 +60,13 @@ jobs:
       YOUTUBE_AUDIO_DISPATCH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
+
+      # Start Postgres in the background, so pulling its image and initdb
+      # happen while the steps below run. The first test that needs it runs
+      # `docker compose up --wait` too, which waits for this one to finish.
+      - name: Start Postgres
+        run: docker compose up -d --quiet-pull postgres > "$RUNNER_TEMP/postgres-up.log" 2>&1 &
+
       - uses: ./.github/actions/setup
 
       # The pipeline's ONNX models are ~650MB. Fetch them in their own step,
@@ -87,8 +94,6 @@ jobs:
           path: packages/audio-ml/src/models
           key: ${{ steps.models.outputs.key }}
 
-      # Postgres starts the way it does for a developer: the first test that
-      # needs it finds nothing on localhost:5432 and runs `docker compose up`.
       - name: Test
         run: pnpm test
 
