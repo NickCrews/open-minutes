@@ -3,7 +3,7 @@
 #   metadata.json  the video's RecordingMetadata, as metadataToJson writes it
 #   speech.webm    YouTube's Opus audio, re-encoded to 16 kHz mono Opus at
 #                  24 kbps (~11 MB per hour)
-# The script runs youtube() from @open-minutes/youtube, the same code that
+# `youtube fetch` runs youtube() from @open-minutes/youtube, the same code that
 # fetches a video locally, so the files match what a local fetch gives.
 # If every download attempt fails, the only artifact is error.json instead.
 #
@@ -56,23 +56,21 @@ jobs:
         with:
           path: ${{ runner.temp }}/debs
           key: ${{ steps.debs.outputs.key }}
-      - name: Install Cloudflare WARP and Tor
-        run: packages/ytdlp/egress/install.sh "$RUNNER_TEMP/debs"
-      # Saved right away rather than at the end of the job, so a failed
-      # download doesn't lose it.
+
+      # YouTube refuses a runner's own IP, so after one direct attempt (a few
+      # seconds) this installs WARP and Tor, fetches through them, and stops
+      # them. Installs yt-dlp too.
+      - name: Fetch the metadata and audio
+        env:
+          YOUTUBE_EGRESS_STATE: ${{ runner.temp }}/youtube-egress
+        run: pnpm exec youtube fetch "$VIDEO_ID" "$OUT" --debs "$RUNNER_TEMP/debs"
+      # Saved even when the fetch failed, so the next run has the .debs. A run
+      # that went direct downloaded none, and saves nothing.
       - uses: actions/cache/save@v4
-        if: steps.debs-cache.outputs.cache-hit != 'true'
+        if: "!cancelled() && steps.debs-cache.outputs.cache-hit != 'true'"
         with:
           path: ${{ runner.temp }}/debs
           key: ${{ steps.debs.outputs.key }}
-
-      # Installs yt-dlp too. YouTube always refuses a runner's own IP, so
-      # direct isn't tried.
-      - name: Fetch the metadata and audio
-        env:
-          YOUTUBE_EGRESS: warp,tor
-          YOUTUBE_EGRESS_STATE: ${{ runner.temp }}/youtube-egress
-        run: pnpm exec vpx .github/scripts/fetch-youtube-audio.ts "$VIDEO_ID" "$OUT"
 
       # Unzipped (archive: false takes one file, named after it), so clients
       # download the files as they are.

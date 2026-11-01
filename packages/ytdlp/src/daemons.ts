@@ -50,6 +50,18 @@ function canRunAsRoot() {
   return spawnSync("sudo", ["-n", "true"], { stdio: "ignore" }).status === 0;
 }
 
+/**
+ * Whether {@link installWarpAndTor} can run here: Linux with apt, and root or
+ * passwordless sudo.
+ */
+export function canInstall(): boolean {
+  if (process.platform !== "linux") return false;
+  if (spawnSync("apt-get", ["--version"], { stdio: "ignore" }).error) {
+    return false;
+  }
+  return canRunAsRoot();
+}
+
 /** Why `service` can't run on this machine, or null if it may. */
 export async function unavailableReason(
   service: Service,
