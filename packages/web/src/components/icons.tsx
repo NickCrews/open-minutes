@@ -141,3 +141,33 @@ export function PlayheadIcon(props: IconProps) {
     </Icon>
   );
 }
+
+/** A head and shoulders, for a person. */
+export function PersonIcon(props: IconProps) {
+  return (
+    <Icon class={props.class}>
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21a8 8 0 0 1 16 0" />
+    </Icon>
+  );
+}
+
+/** A calendar page, for a meeting. */
+export function CalendarIcon(props: IconProps) {
+  return (
+    <Icon class={props.class}>
+      <rect x="3" y="5" width="18" height="16" rx="2" />
+      <path d="M3 10h18M8 3v4M16 3v4" />
+    </Icon>
+  );
+}
+
+/** A columned building, for a body such as a board or assembly. */
+export function BuildingIcon(props: IconProps) {
+  return (
+    <Icon class={props.class}>
+      <path d="M3 21h18M4 10h16M12 3 3 8v2h18V8Z" />
+      <path d="M6 10v8M10 10v8M14 10v8M18 10v8M4 18h16" />
+    </Icon>
+  );
+}
