@@ -20,5 +20,5 @@ Gets a meeting's audio. Two parts:
   meetings' audio from here, and checks a golden meeting's audio against its
   `_audio_sha256` for the slow tests.
 
-It doesn't depend on `@open-minutes/audio` or `@open-minutes/datasets`, so
+It doesn't depend on `@open-minutes/audio-ml` or `@open-minutes/datasets`, so
 both can use it.

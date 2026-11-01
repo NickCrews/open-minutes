@@ -11,7 +11,7 @@
 // behaviour changes in kind, not by a point.
 
 import { beforeAll, describe, expect, it } from "vite-plus/test";
-import { transcribeRange } from "@open-minutes/audio/transcribe";
+import { transcribeRange } from "@open-minutes/audio-ml/transcribe";
 import { readWav, type WaveForm } from "@open-minutes/codecs";
 import { getMeetingData } from "@open-minutes/datasets/datums";
 import {

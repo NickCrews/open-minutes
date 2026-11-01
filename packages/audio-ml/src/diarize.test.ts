@@ -5,8 +5,8 @@ import { fileURLToPath } from "node:url";
 
 import { readWav } from "@open-minutes/codecs";
 
-import { computeSpeakerEmbeddings } from "@open-minutes/audio/embed";
-import { diarizeAudio } from "@open-minutes/audio/diarize";
+import { computeSpeakerEmbeddings } from "@open-minutes/audio-ml/embed";
+import { diarizeAudio } from "@open-minutes/audio-ml/diarize";
 import {
   alignSpeakers,
   segmentsToSpeechRuns,

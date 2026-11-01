@@ -1,5 +1,5 @@
 {
-  "name": "@open-minutes/audio",
+  "name": "@open-minutes/audio-ml",
   "version": "0.1.0",
   "description": "Open Minutes speech processing: transcribe, diarize and embed meeting audio with local ONNX models",
   "type": "module",

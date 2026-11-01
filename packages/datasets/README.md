@@ -17,7 +17,7 @@ Those rows are the datums. A dataset is a named combination of them, declared
 by a JSON file in [`datasets/`](datasets/): which meetings, which people, and
 where their voiceprints come from. `@open-minutes/datasets` reads and checks
 those files. This package doesn't touch a database, so packages that only read
-the datums (like `@open-minutes/audio`'s tests) don't depend on
+the datums (like `@open-minutes/audio-ml`'s tests) don't depend on
 `@open-minutes/db`.
 [`@open-minutes/seed`](../seed/README.md) seeds a database with a dataset.
 

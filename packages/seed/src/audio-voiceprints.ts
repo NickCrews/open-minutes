@@ -2,7 +2,7 @@ import {
   LAST_WORD_DURATION_SEC,
   type DiarizationTurn,
 } from "@open-minutes/core/transcription";
-import { computeSpeakerEmbeddings } from "@open-minutes/audio/embed";
+import { computeSpeakerEmbeddings } from "@open-minutes/audio-ml/embed";
 import { getMeetingAudio } from "@open-minutes/datasets/audio";
 import type { GoldenMeeting } from "@open-minutes/datasets/datums";
 import type { Voiceprints } from "./voiceprints";
@@ -11,7 +11,7 @@ import type { Voiceprints } from "./voiceprints";
 // past" an end-to-end test recognizes a later, unseen meeting against. The
 // same person (by slug) learned here must be re-identified there purely from
 // their voice. seed.ts imports this module only for a dataset that asks for
-// it, since @open-minutes/audio/embed loads sherpa-onnx's native module.
+// it, since @open-minutes/audio-ml/embed loads sherpa-onnx's native module.
 
 /**
  * One voiceprint per person, from the audio spans they speak in the first

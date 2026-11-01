@@ -16,7 +16,7 @@
     "check": "pnpm typecheck && pnpm run format:check && pnpm run lint && pnpm run test",
     "web:dev": "pnpm --filter @open-minutes/web run dev",
     "db": "pnpm --silent --filter @open-minutes/db run db",
-    "models": "pnpm --silent --filter @open-minutes/audio run models",
+    "models": "pnpm --silent --filter @open-minutes/audio-ml run models",
     "datasets:check": "pnpm --silent --filter @open-minutes/datasets run check",
     "datasets:fix": "pnpm --silent --filter @open-minutes/datasets run fix",
     "deploy:prod": "pnpm --filter @open-minutes/web run deploy"
