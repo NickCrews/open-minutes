@@ -23,7 +23,7 @@ import { z } from "zod";
  * Guarded on both sides of the wire by the same `canEdit` that hides the button.
  */
 const saveMeetingDate = createServerFn({ method: "POST" })
-  .inputValidator(
+  .validator(
     z.object({ id: z.int().positive(), date: z.string(), time: z.string() }),
   )
   .handler(async ({ data }) => {

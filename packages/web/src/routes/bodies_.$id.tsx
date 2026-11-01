@@ -13,7 +13,7 @@ import { db } from "~/server/db";
 import { z } from "zod";
 
 const fetchBody = createServerFn({ method: "GET" })
-  .inputValidator(z.int().positive())
+  .validator(z.int().positive())
   .handler(({ data }) => getBodyById(db(), data));
 
 export const Route = createFileRoute("/bodies_/$id")({

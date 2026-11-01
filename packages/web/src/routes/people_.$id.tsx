@@ -15,12 +15,12 @@ import { db } from "~/server/db";
 import { z } from "zod";
 
 const fetchPerson = createServerFn({ method: "GET" })
-  .inputValidator(z.int().positive())
+  .validator(z.int().positive())
   .handler(({ data }) => getPersonById(db(), data));
 
 /** Guarded on both sides of the wire by the same `canEdit` that hides the button. */
 const savePersonName = createServerFn({ method: "POST" })
-  .inputValidator(z.object({ id: z.int().positive(), name: z.string() }))
+  .validator(z.object({ id: z.int().positive(), name: z.string() }))
   .handler(({ data }) => {
     assertCanEdit("names");
     return updatePersonName(db(), data.id, data.name);

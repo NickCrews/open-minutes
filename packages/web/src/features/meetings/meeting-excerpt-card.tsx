@@ -39,7 +39,7 @@ const PREVIEW_LIMIT = 3;
 
 /** A meeting's whole transcript, fetched when its card first opens. */
 const fetchMeetingSegments = createServerFn({ method: "GET" })
-  .inputValidator(z.int().positive())
+  .validator(z.int().positive())
   .handler(({ data }) => getMeetingSegments(db(), data));
 
 export type ExcerptMeeting = MeetingWhen & {
