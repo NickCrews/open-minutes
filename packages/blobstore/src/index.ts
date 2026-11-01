@@ -60,7 +60,7 @@ export interface BlobStore {
  */
 export function blobStore(base?: string): BlobStore {
   base = baseUrl(base);
-  const file = (key: string): BlobFile => {
+  return storeOf((key) => {
     const url = `${base.replace(/\/$/, "")}/${key}`;
     return {
       key,
@@ -73,7 +73,41 @@ export function blobStore(base?: string): BlobStore {
         return new Uint8Array(await res.arrayBuffer());
       },
     };
+  });
+}
+
+/** A blob in a {@link memoryBlobStore}. */
+export interface MemoryBlob {
+  body: Uint8Array;
+  contentType: string;
+}
+
+/**
+ * An empty blob store kept in memory, with the same keys as
+ * {@link blobStore}, and a writer to it. `blobs` holds what was written, by
+ * key. For tests of code that reads and writes the store.
+ */
+export function memoryBlobStore(): {
+  store: BlobStore;
+  writer: BlobStoreWriter;
+  blobs: Map<string, MemoryBlob>;
+} {
+  const blobs = new Map<string, MemoryBlob>();
+  const store = storeOf((key) => ({
+    key,
+    url: `memory:${key}`,
+    get: async () => blobs.get(key)?.body ?? null,
+  }));
+  const writer: BlobStoreWriter = {
+    put: async (file, body, contentType) => {
+      blobs.set(file.key, { body, contentType });
+    },
   };
+  return { store, writer, blobs };
+}
+
+/** The store's files, each made by `file` from its key. */
+function storeOf(file: (key: string) => BlobFile): BlobStore {
   return {
     youtube(youtubeId) {
       const prefix = `youtube/${encodeURIComponent(youtubeId)}`;

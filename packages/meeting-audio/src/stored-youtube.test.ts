@@ -5,11 +5,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { ensureWaveForm } from "@open-minutes/codecs";
 import { fileURLToPath } from "node:url";
-import type {
-  BlobFile,
-  BlobStore,
-  BlobStoreWriter,
-} from "@open-minutes/blobstore";
+import { memoryBlobStore } from "@open-minutes/blobstore";
 import type { YouTube } from "@open-minutes/youtube";
 import { storedYoutube } from "./stored-youtube";
 
@@ -62,34 +58,8 @@ describe("storedYoutube", () => {
       downloadAudio: async (_id, path) => copyFile(tones, path),
     };
 
-    /** An empty blob store in memory, and a writer to it. */
-    const memoryStore = () => {
-      const blobs = new Map<
-        string,
-        { body: Uint8Array; contentType: string }
-      >();
-      const file = (key: string): BlobFile => ({
-        key,
-        url: `memory:${key}`,
-        get: async () => blobs.get(key)?.body ?? null,
-      });
-      const store: BlobStore = {
-        youtube: (id) => ({
-          metadataJson: file(`youtube/${id}/metadata.json`),
-          speechWebm: file(`youtube/${id}/speech.webm`),
-        }),
-        duckdbExport: file("exports/open-minutes.duckdb"),
-      };
-      const writer: BlobStoreWriter = {
-        put: async (file, body, contentType) => {
-          blobs.set(file.key, { body, contentType });
-        },
-      };
-      return { store, writer, blobs };
-    };
-
     it("gets the metadata from YouTube and stores it", async () => {
-      const { store, writer, blobs } = memoryStore();
+      const { store, writer, blobs } = memoryBlobStore();
       const metadata = await storedYoutube(fromYoutube, {
         store,
         writer,
@@ -110,7 +80,7 @@ describe("storedYoutube", () => {
     it("gets the audio from YouTube and stores it", async () => {
       const dir = await mkdtemp(join(tmpdir(), "stored-youtube-miss-"));
       try {
-        const { store, writer, blobs } = memoryStore();
+        const { store, writer, blobs } = memoryBlobStore();
         const path = join(dir, "audio.webm");
         await storedYoutube(fromYoutube, { store, writer }).downloadAudio(
           "QUF1uLgzL-s",
