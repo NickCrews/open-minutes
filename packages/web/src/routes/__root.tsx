@@ -8,6 +8,7 @@ import {
 import type { JSX } from "solid-js";
 import { HydrationScript } from "solid-js/web";
 import { fetchPublicConfig } from "~/server/config";
+import { SearchBar } from "~/features/search/search-bar";
 import appCss from "~/styles/app.css?url";
 
 export const Route = createRootRoute({
@@ -55,32 +56,28 @@ function RootComponent() {
           Learn what that means
         </Link>
       </div>
-      {/* A fixed height that never wraps (it scrolls sideways if it must),
-          so full-viewport pages like the meeting page can subtract it. */}
-      <nav class="flex h-12 items-center gap-4 overflow-x-auto whitespace-nowrap border-b px-4 text-sm sm:text-base">
-        <Link to="/" class="font-semibold hover:underline">
-          Home
-        </Link>
-        <Link to="/meetings" class="text-muted-foreground hover:underline">
-          Meetings
-        </Link>
-        <Link to="/people" class="text-muted-foreground hover:underline">
-          People
-        </Link>
-        <Link to="/bodies" class="text-muted-foreground hover:underline">
-          Boards &amp; Councils
-        </Link>
-        <Link
-          to="/search"
-          search={{ q: "" }}
-          class="text-muted-foreground hover:underline"
-        >
-          Search
-        </Link>
-        <Link to="/about" class="text-muted-foreground hover:underline">
-          About
-        </Link>
-      </nav>
+      {/* A fixed height that never wraps (the links scroll sideways if they
+          must), so full-viewport pages like the meeting page can subtract it. */}
+      <header class="flex h-12 items-center gap-4 border-b px-4">
+        <nav class="flex min-w-0 flex-1 items-center gap-4 overflow-x-auto whitespace-nowrap text-sm sm:text-base">
+          <Link to="/" class="font-semibold hover:underline">
+            Home
+          </Link>
+          <Link to="/meetings" class="text-muted-foreground hover:underline">
+            Meetings
+          </Link>
+          <Link to="/people" class="text-muted-foreground hover:underline">
+            People
+          </Link>
+          <Link to="/bodies" class="text-muted-foreground hover:underline">
+            Boards &amp; Councils
+          </Link>
+          <Link to="/about" class="text-muted-foreground hover:underline">
+            About
+          </Link>
+        </nav>
+        <SearchBar />
+      </header>
       <main class="p-4">
         <Outlet />
       </main>

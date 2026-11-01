@@ -69,6 +69,15 @@ export function CloseIcon(props: IconProps) {
   );
 }
 
+export function SearchIcon(props: IconProps) {
+  return (
+    <Icon class={props.class}>
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-4-4" />
+    </Icon>
+  );
+}
+
 export function PlayIcon(props: IconProps) {
   return (
     <Icon class={props.class}>
