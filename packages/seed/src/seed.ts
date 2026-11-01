@@ -11,7 +11,7 @@ import {
   segmentsTable,
 } from "@open-minutes/db";
 import { LAST_WORD_DURATION_SEC } from "@open-minutes/core/transcription";
-import { transcriptFingerprint } from "@open-minutes/core/transcript-fingerprint";
+import { transcriptFingerprint } from "./transcript-fingerprint";
 import {
   getMeetingData,
   loadBodies,
