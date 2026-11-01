@@ -14,10 +14,33 @@ export interface BlobFile {
   /** Its public URL. */
   url: string;
   /** The Content-Type it's stored with, like `audio/webm`. */
-  contentType: string;
+  contentType: ContentType;
   /** Its contents, or null if it isn't stored. Throws on any other failure. */
   get(): Promise<Uint8Array | null>;
 }
+
+/**
+ * A MIME type, like `audio/webm`. Editors suggest the common ones listed
+ * here, but any string is allowed: `string & {}` keeps TypeScript from
+ * merging the list into plain `string`, which would drop the suggestions.
+ */
+export type ContentType =
+  | "application/json"
+  | "application/octet-stream"
+  | "application/pdf"
+  | "audio/mpeg"
+  | "audio/ogg"
+  | "audio/wav"
+  | "audio/webm"
+  | "image/jpeg"
+  | "image/png"
+  | "image/webp"
+  | "text/csv"
+  | "text/html"
+  | "text/plain"
+  | "video/mp4"
+  | "video/webm"
+  | (string & {});
 
 /**
  * What the store keeps for a YouTube video, since YouTube blocks yt-dlp from

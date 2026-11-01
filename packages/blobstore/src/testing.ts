@@ -1,10 +1,10 @@
-import type { BlobStore, BlobStoreWriter } from "./index";
+import type { BlobStore, BlobStoreWriter, ContentType } from "./index";
 import { storeOf } from "./layout";
 
 /** A blob in a {@link memoryBlobStore}. */
 export interface MemoryBlob {
   body: Uint8Array;
-  contentType: string;
+  contentType: ContentType;
 }
 
 /**
