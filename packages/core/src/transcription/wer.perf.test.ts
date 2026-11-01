@@ -147,7 +147,10 @@ describe("alignWords cross-validation against full-matrix oracle", () => {
 describe("alignWords on full-meeting-sized transcripts", () => {
   // The golden fixtures are ~21k–27k words. The old full-matrix DP allocates two
   // (m+1)×(n+1) matrices (~600M cells, multiple GB) and OOMs V8 here.
-  it("aligns ~25k-word sequences without OOM, with a controlled diff", () => {
+  // Takes several seconds. The timeout is generous: the point is it finishes at
+  // all (no OOM), and it still catches a gross perf regression without being
+  // flaky on a loaded CI box.
+  it("aligns ~25k-word sequences without OOM", { timeout: 60_000 }, () => {
     const N = 25_000;
     const rng = mulberry32(7);
     const ref = makeWords(N, rng);
@@ -164,9 +167,7 @@ describe("alignWords on full-meeting-sized transcripts", () => {
       if (hyp[i]!.text !== ref[i]!.text) expectedSubs++;
     }
 
-    const t0 = Date.now();
     const ops = alignWords(ref, hyp);
-    const elapsed = Date.now() - t0;
 
     const counts = { match: 0, sub: 0, del: 0, ins: 0 };
     for (const o of ops) counts[o.op]++;
@@ -176,8 +177,5 @@ describe("alignWords on full-meeting-sized transcripts", () => {
     expect(counts.ins).toBe(0);
     expect(counts.match).toBe(N - expectedSubs);
     expect(ops).toHaveLength(N);
-    // Generous ceiling: the point is it finishes at all (no OOM). Catches a gross
-    // perf regression without being flaky on a loaded CI box.
-    expect(elapsed).toBeLessThan(60_000);
   });
 });
