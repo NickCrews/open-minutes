@@ -5,6 +5,7 @@
  * too.
  */
 import { AwsClient } from "aws4fetch";
+import { storeOf } from "./layout";
 
 /** One file in the blob store, which may or may not exist yet. */
 export interface BlobFile {
@@ -60,7 +61,7 @@ export interface BlobStore {
  */
 export function blobStore(base?: string): BlobStore {
   base = baseUrl(base);
-  const file = (key: string): BlobFile => {
+  return storeOf((key) => {
     const url = `${base.replace(/\/$/, "")}/${key}`;
     return {
       key,
@@ -73,17 +74,7 @@ export function blobStore(base?: string): BlobStore {
         return new Uint8Array(await res.arrayBuffer());
       },
     };
-  };
-  return {
-    youtube(youtubeId) {
-      const prefix = `youtube/${encodeURIComponent(youtubeId)}`;
-      return {
-        metadataJson: file(`${prefix}/metadata.json`),
-        speechWebm: file(`${prefix}/speech.webm`),
-      };
-    },
-    duckdbExport: file("exports/open-minutes.duckdb"),
-  };
+  });
 }
 
 /**
