@@ -2,7 +2,7 @@ import { describe, expect, it } from "vite-plus/test";
 import { existsSync, mkdirSync, readdirSync, symlinkSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { transcribeAudio } from "@open-minutes/audio/transcribe";
+import { transcribeAudio } from "@open-minutes/audio-ml/transcribe";
 import { serializeVadRunsPsv } from "@open-minutes/datasets/psv";
 import { getMeetingData } from "@open-minutes/datasets/datums";
 import { getMeetingAudio } from "@open-minutes/datasets/audio";
@@ -14,7 +14,7 @@ import { compareTranscripts } from "@open-minutes/core/transcription";
 // What we actually care about is how many words of a meeting we get right and
 // how long it takes: word error rate against the hand-corrected goldens, and
 // runtime as a fraction of the audio's length. Every other transcription test
-// (parakeet.characterization.test.ts, @open-minutes/audio's unit tests) is
+// (parakeet.characterization.test.ts, @open-minutes/audio-ml's unit tests) is
 // scaffolding in support of these two numbers. When a change to transcribeAudio
 // is in question, this is the test that decides it: run it before and after
 // (`pnpm test:slow north-star`) and compare the logged WER and RTF.

@@ -65,7 +65,7 @@ importers:
         specifier: 'catalog:'
         version: 1.4.0(@types/node@24.19.2)(@vitest/ui@5.0.5(vitest@5.0.5))(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(typescript@5.9.3)
 
-  packages/audio:
+  packages/audio-ml:
     dependencies:
       '@open-minutes/codecs':
         specifier: workspace:*
@@ -199,9 +199,9 @@ importers:
 
   packages/seed:
     dependencies:
-      '@open-minutes/audio':
+      '@open-minutes/audio-ml':
         specifier: workspace:*
-        version: link:../audio
+        version: link:../audio-ml
       '@open-minutes/core':
         specifier: workspace:*
         version: link:../core

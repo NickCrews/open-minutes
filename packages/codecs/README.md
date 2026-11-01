@@ -1,7 +1,7 @@
 # @open-minutes/codecs
 
 Decodes the audio meeting sites serve to the 16 kHz mono 16-bit WAV that
-[`@open-minutes/audio`](../audio/README.md)'s models want, and re-encodes
+[`@open-minutes/audio-ml`](../audio-ml/README.md)'s models want, and re-encodes
 YouTube's audio for the blob store:
 
 - `decodeOpusWebm`: a WebM/Opus file's audio as 16 kHz mono samples, an async
