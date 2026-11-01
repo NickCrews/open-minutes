@@ -198,8 +198,8 @@ client need none and get the same 403.
   YouTube sees changes on every connection and nothing in the session can pin
   it. Claude Code on the web can't replace the `fetch-youtube-audio`
   workflow.
-- **The 2026-10-01 caveat is settled: the 403s come from the rotating
-  egress.** On 2026-10-26 the player request passed the bot check, the stream
+- **In the sandboxes, the 403s come from the rotating egress, not the bot
+  check.** On 2026-10-26 the player request passed the bot check, the stream
   URL was bound to a private address that changed on the next request, and
   the download got 403 with clients that need no PO token. A download from
   the bound address can't be tried from these sandboxes; on GitHub's runners,
@@ -210,7 +210,7 @@ client need none and get the same 403.
 | Option                                         | Works?                                                                                                   | Cost / burden                                                          |
 | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
 | Cookies from a signed-in account               | Reliable, per yt-dlp's docs                                                                              | Throwaway account (YouTube may ban it); cookies expire and rotate      |
-| Another player client                          | Metadata yes from Google-network sandboxes, no from runners; downloads 403 everywhere                    | None; breaks when YouTube changes                                      |
+| Another player client                          | Metadata yes from Google-network sandboxes, no from runners; downloads 403 in the sandboxes              | None; breaks when YouTube changes                                      |
 | PO tokens (bgutil-ytdlp-pot-provider + `mweb`) | Not on GitHub runners: the IP block comes first (2026-10-02)                                             | A sidecar server; breaks when YouTube changes                          |
 | Residential proxy (`--proxy`)                  | Reported reliable. The player request must go through it too, since stream URLs are bound to its address | Roughly $1–7/GB; a 90-minute meeting's audio is ~50–90 MB              |
 | Self-hosted runner or cron on a home machine   | Works (it's a residential IP)                                                                            | The machine must be on; self-hosted runners on a public repo need care |
