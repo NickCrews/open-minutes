@@ -1,10 +1,10 @@
 # @open-minutes/core
 
-Domain code shared by every other package, with no database, I/O, or heavy dependencies:
-transcript and timeline types, transcript cleaning and speaker alignment, word
+Domain code shared by every other package, with no database or heavy
+dependencies: transcript types, transcript cleaning and speaker alignment, word
 error rate, chapter rules, reading a meeting's date from its title and
 transcript, the interfaces a meeting source implements, voice-embedding
-constants, and `.env.local` loading.
+constants, and `.env.local` loading (its only I/O).
 
 ## Rules
 
