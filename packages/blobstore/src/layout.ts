@@ -1,8 +1,8 @@
-import type { BlobFile, BlobStore } from "./index";
+import type { BlobFile, BlobStore, ContentType } from "./index";
 
 /** The store's files, each made by `file` from its key and content type. */
 export function storeOf(
-  file: (key: string, contentType: string) => BlobFile,
+  file: (key: string, contentType: ContentType) => BlobFile,
 ): BlobStore {
   return {
     youtube(youtubeId) {
