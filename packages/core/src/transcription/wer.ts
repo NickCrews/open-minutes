@@ -60,56 +60,150 @@ export function alignWords(
   return alignTokens(refTokens, hypTokens);
 }
 
-// Needleman–Wunsch alignment with a memory-conscious layout.
+// Needleman–Wunsch alignment, computed only within a diagonal band.
 //
-// The naive version of this DP allocates two full (m+1)×(n+1) matrices: a
-// `number[][]` cost grid and a `string[][]` back-pointer grid. On full-meeting
-// transcripts (~21k–27k words) those are ~470M–720M cells of *boxed* values —
-// each a heap pointer to a double or an interned string — which totals well over
-// 7 GB and OOMs V8's old-space (~4 GB). `compareTranscripts(golden, golden)`
-// alone OOMs in ~3s with no ASR involved.
+// Every cell (i, j) on an optimal alignment path has cost >= |i - j|, so when
+// the edit distance is d, the path stays within the band |i - j| <= d. We fill
+// only a band of half-width k (cells outside count as infinite cost). If the
+// band's final cost is <= k, it is the true distance. Otherwise it is still an
+// upper bound on the distance, so the next band uses the smaller of that bound
+// and 2k.
+// That is O((m+n)·d) time and memory rather than O(m·n): a 25k-word transcript
+// with a few hundred edits fills ~12M cells, not ~625M.
 //
-// Two changes keep the exact same algorithm and output but slash peak memory:
-//   1. Cost only ever reads the previous and current row, so it lives in two
-//      Int32Array rows (O(n)) instead of a full matrix.
-//   2. Back-pointers are packed one byte per cell in a single flat Uint8Array
-//      (off-heap backing store), not a (m+1)×(n+1) array-of-arrays of strings.
-// That brings a 27k×27k alignment from ~7+ GB down to ~700 MB — comfortably
-// under the heap limit — so full meetings align without OOM.
+// The alignment is identical to the full-matrix DP, tie-breaks included. Within
+// the band, every cell on an optimal path gets its exact cost. A neighbor whose
+// cost the band inflates is not on an optimal path, so its true cost already
+// loses the comparison. wer.perf.test.ts cross-validates against the full
+// matrix on hundreds of random inputs.
 //
-// Tie-break priority is preserved exactly: sub/match > del > ins. The byte codes
-// below are compared with strict `<` against the running minimum (del checked
-// before ins), which is equivalent to the original `min === subCost ? ... :
-// min === delCost ? ...` cascade. wer.perf.test.ts cross-validates this against
-// the original full-matrix implementation on hundreds of random inputs.
+// Tie-break priority: sub/match > del > ins. The comparisons below use strict
+// `<` against the running minimum, with del checked before ins.
 //
-// Memory is still O(m·n) for the back-pointer buffer. If transcripts ever grow
-// well beyond meeting scale, Hirschberg's algorithm would drop this to
-// O(min(m,n)) at the cost of ~2× the time and a much trickier tie-break.
+// Back-pointers are one byte per band cell in a flat Uint8Array. Once the band
+// would be as wide as a full row, the full matrix is filled instead, so memory
+// never exceeds (m+1)·(n+1) bytes.
 const OP_MATCH = 0;
 const OP_SUB = 1;
 const OP_DEL = 2;
 const OP_INS = 3;
 
+const INF = 1 << 29;
+const INITIAL_BAND = 64;
+
 function alignTokens(
-  ref: readonly string[],
-  hyp: readonly string[],
+  refTokens: readonly string[],
+  hypTokens: readonly string[],
 ): AlignedWordPair[] {
+  // Integer ids make the inner loop's equality test a number compare.
+  const ids = new Map<string, number>();
+  const toIds = (tokens: readonly string[]): Int32Array => {
+    const out = new Int32Array(tokens.length);
+    for (let i = 0; i < tokens.length; i++) {
+      const t = tokens[i]!;
+      let id = ids.get(t);
+      if (id === undefined) {
+        id = ids.size;
+        ids.set(t, id);
+      }
+      out[i] = id;
+    }
+    return out;
+  };
+  const ref = toIds(refTokens);
+  const hyp = toIds(hypTokens);
+  const m = ref.length;
+  const n = hyp.length;
+
+  let k = Math.max(Math.abs(m - n), INITIAL_BAND);
+  for (;;) {
+    if (2 * k >= n) {
+      const width = n + 1;
+      return backtrace(fillFull(ref, hyp), m, n, (i, j) => i * width + j);
+    }
+    const { back, cost } = fillBand(ref, hyp, k);
+    if (cost <= k) {
+      const width = 2 * k + 1;
+      return backtrace(back, m, n, (i, j) => i * width + j - i + k);
+    }
+    k = Math.min(cost, 2 * k);
+  }
+}
+
+// Fills the band |i - j| <= k. Cell (i, j) lives at row i, column j - i + k.
+// Returns the back-pointers and the band's cost for (m, n), which equals the
+// edit distance if it is <= k and is an upper bound on it otherwise.
+function fillBand(
+  ref: Int32Array,
+  hyp: Int32Array,
+  k: number,
+): { back: Uint8Array; cost: number } {
+  const m = ref.length;
+  const n = hyp.length;
+  const width = 2 * k + 1;
+  const back = new Uint8Array(width * (m + 1));
+  // Cost rows are indexed by band column + 1, so columns -1 and `width` are
+  // INF sentinels for the neighbors just outside the band.
+  let prev = new Int32Array(width + 2).fill(INF);
+  let cur = new Int32Array(width + 2).fill(INF);
+
+  for (let j = 0; j <= Math.min(n, k); j++) {
+    prev[j + k + 1] = j;
+    back[j + k] = OP_INS; // row 0: only insertions reach these cells
+  }
+  for (let i = 1; i <= m; i++) {
+    cur.fill(INF);
+    const rowBase = i * width;
+    const jlo = Math.max(0, i - k);
+    const jhi = Math.min(n, i + k);
+    const refTok = ref[i - 1];
+    let j = jlo;
+    if (j === 0) {
+      cur[k - i + 1] = i;
+      back[rowBase + k - i] = OP_DEL; // column 0: only deletions reach here
+      j = 1;
+    }
+    for (; j <= jhi; j++) {
+      const c = j - i + k + 1;
+      const isMatch = refTok === hyp[j - 1];
+      const subCost = prev[c]! + (isMatch ? 0 : 1);
+      const delCost = prev[c + 1]! + 1;
+      const insCost = cur[c - 1]! + 1;
+      let min = subCost;
+      let op = isMatch ? OP_MATCH : OP_SUB;
+      if (delCost < min) {
+        min = delCost;
+        op = OP_DEL;
+      }
+      if (insCost < min) {
+        min = insCost;
+        op = OP_INS;
+      }
+      cur[c] = min;
+      back[rowBase + c - 1] = op;
+    }
+    const tmp = prev;
+    prev = cur;
+    cur = tmp;
+  }
+  return { back, cost: prev[n - m + k + 1]! };
+}
+
+function fillFull(ref: Int32Array, hyp: Int32Array): Uint8Array {
   const m = ref.length;
   const n = hyp.length;
   const width = n + 1;
   const back = new Uint8Array(width * (m + 1));
-
   let prev = new Int32Array(n + 1);
   let cur = new Int32Array(n + 1);
   for (let j = 1; j <= n; j++) {
     prev[j] = j;
-    back[j] = OP_INS; // row 0: only insertions reach these cells
+    back[j] = OP_INS;
   }
   for (let i = 1; i <= m; i++) {
     cur[0] = i;
     const rowBase = i * width;
-    back[rowBase] = OP_DEL; // column 0: only deletions reach these cells
+    back[rowBase] = OP_DEL;
     const refTok = ref[i - 1];
     for (let j = 1; j <= n; j++) {
       const isMatch = refTok === hyp[j - 1];
@@ -133,12 +227,21 @@ function alignTokens(
     prev = cur;
     cur = tmp;
   }
+  return back;
+}
 
+// Walks back-pointers from (m, n). `index` maps cell (i, j) into `back`.
+function backtrace(
+  back: Uint8Array,
+  m: number,
+  n: number,
+  index: (i: number, j: number) => number,
+): AlignedWordPair[] {
   const ops: AlignedWordPair[] = [];
   let i = m;
   let j = n;
   while (i > 0 || j > 0) {
-    const op = back[i * width + j]!;
+    const op = back[index(i, j)]!;
     if (op === OP_MATCH || op === OP_SUB) {
       ops.push({ op: ALIGNMENT_OPS[op]!, refIdx: i - 1, hypIdx: j - 1 });
       i--;
