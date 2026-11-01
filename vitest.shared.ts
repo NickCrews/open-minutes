@@ -10,6 +10,8 @@ export default defineConfig({
   test: {
     environment: "node",
     setupFiles: [join(ROOT, "test-setup.ts")],
+    // A test's own skip (it.skipIf, it.runIf, { skip }) overrides its tags'
+    // skip, so a tagged test with its own skip condition must repeat the tag's.
     tags: [
       {
         name: "slow",

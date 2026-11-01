@@ -17,6 +17,25 @@ and the fast tests. The root `package.json` lists the other test commands.
   or from Linux with WARP and Tor installed, as in CI (see the
   [ytdlp README](../../packages/ytdlp/README.md)).
 
+A test's own skip condition (`it.skipIf`, `it.runIf`, `{ skip }`) overrides
+the `skip` of its tags. A slow test that also skips for another reason has to
+repeat the tag's condition, as in `it.skipIf(!token || process.env.SLOW !== "1")`.
+
+## Running some of the tests
+
+`pnpm test` passes its arguments to Vitest:
+
+```sh
+pnpm test --project @open-minutes/core   # one package
+pnpm test --project @open-minutes/core --project @open-minutes/db
+pnpm test packages/core/src/rules        # files under a path
+pnpm test -t "alignWords"                # tests whose name matches
+pnpm test --changed main                 # tests affected by changes since main
+```
+
+`pnpm exec vp test` runs in watch mode and reruns only the tests affected by
+each edit. The same arguments work there, and with `pnpm test:slow`.
+
 ## Hand-edited datums
 
 The golden meetings in [`packages/datasets`](../../packages/datasets/README.md)
