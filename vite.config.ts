@@ -4,6 +4,7 @@ export default defineConfig({
   test: {
     projects: [
       "./packages/audio-ml/vitest.config.ts",
+      "./packages/blobstore/vitest.config.ts",
       "./packages/codecs/vitest.config.ts",
       "./packages/core/vitest.config.ts",
       "./packages/datasets/vitest.config.ts",

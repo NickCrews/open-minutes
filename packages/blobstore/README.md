@@ -18,8 +18,8 @@ await audio.get(); // its bytes, or null if it isn't stored
 store.duckdbExport.url;
 ```
 
-Each file is a `BlobFile` (`key`, `url`, `get`), reached by what it is rather
-than by building its key:
+Each file is a `BlobFile` (`key`, `url`, `contentType`, `get`), reached by
+what it is rather than by building its key:
 
 - `youtube(id)`: a YouTube video's `metadataJson` (its `RecordingMetadata`)
   and `speechWebm`, which `storedYoutube` in
@@ -34,16 +34,13 @@ with this package.
 
 `blobStoreWriterFromEnv(process.env)` writes files, given the keys in
 `BLOB_STORE_ENDPOINT`, `BLOB_STORE_BUCKET`, `BLOB_STORE_ACCESS_KEY_ID` and
-`BLOB_STORE_SECRET_ACCESS_KEY` (see `.env.example`); without them it returns
-null.
+`BLOB_STORE_SECRET_ACCESS_KEY` (see `.env.example`); without any of them it
+returns null, and with only some it throws.
 
 ```ts
 const writer = blobStoreWriterFromEnv(process.env);
-await writer?.put(
-  store.youtube("9HoIM5INxpI").metadataJson,
-  bytes,
-  "application/json",
-);
+// Stored as application/json, the file's content type.
+await writer?.put(store.youtube("9HoIM5INxpI").metadataJson, bytes);
 ```
 
 `blobStore()` reads the `BLOB_STORE_PUBLIC_URL` environment variable where
