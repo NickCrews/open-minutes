@@ -52,5 +52,6 @@ project's bucket. The browser has no environment, so the web app passes the
 URL its server is configured with (`useBlobStore` in
 `packages/web/src/lib/blob-store.ts`).
 
-For tests, `memoryBlobStore()` gives an empty store in memory with the same
-keys, a writer to it, and `blobs`, what was written by key.
+For tests, `memoryBlobStore()` from `@open-minutes/blobstore/testing` gives an
+empty store in memory with the same keys, a writer to it, and `blobs`, what
+was written by key.

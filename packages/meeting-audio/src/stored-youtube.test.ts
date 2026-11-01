@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { ensureWaveForm } from "@open-minutes/codecs";
 import { fileURLToPath } from "node:url";
-import { memoryBlobStore } from "@open-minutes/blobstore";
+import { memoryBlobStore } from "@open-minutes/blobstore/testing";
 import type { YouTube } from "@open-minutes/youtube";
 import { storedYoutube } from "./stored-youtube";
 
