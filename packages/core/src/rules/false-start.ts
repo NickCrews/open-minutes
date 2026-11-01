@@ -13,6 +13,9 @@ export type FalseStart = DroppedWord<typeof code>;
 
 export const defaultSeverity = "error" satisfies Severity;
 
+/** Its fix cleans recognizer output. */
+export const cleans = true;
+
 // A word the speaker broke off and then restarted in full: the recognizer
 // writes the fragment with a trailing hyphen ("six- sixteen", "re- reconsider").
 // Only when the next word completes the fragment: a hyphen is also how the

@@ -2,7 +2,7 @@
 // @open-minutes/core/rules to a meeting's files: meeting.json, the transcript
 // and chapters.json. Goldens must look like cleaned pipeline output, or every
 // disfluency the pipeline strips would count against it as a deletion; the
-// cleaning rules' fixes (see core/rules/clean.ts) do that here too.
+// cleaning rules' fixes (see `cleans` in core/rules/index.ts) do that here too.
 // `pnpm datasets:fix` rewrites the files; check.ts reports what is left, so
 // `pnpm datasets:check`, the fixture tests and the post-edit hook all catch
 // what it can't fix.

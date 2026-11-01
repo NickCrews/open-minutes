@@ -23,7 +23,6 @@ The same rules serve two purposes:
   clean, or transcription output would be scored against disfluencies it
   removed on purpose, so a golden that breaks a cleaning rule is an error.
 
-To add a cleanup, write a rule with a fix and tests, register it as a cleaning
-rule in [`src/rules/index.ts`](src/rules/index.ts) and
-[`src/rules/clean.ts`](src/rules/clean.ts), then run `pnpm datasets:fix` and
-review the change to the goldens.
+To add a cleanup, write a rule with a fix, tests and `export const cleans =
+true`, add it to `RULE_SPECS` in [`src/rules/index.ts`](src/rules/index.ts),
+then run `pnpm datasets:fix` and review the change to the goldens.

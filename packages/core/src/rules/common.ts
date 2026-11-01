@@ -63,6 +63,11 @@ export interface RuleSpec<V extends Violation = Violation> {
    * rewrite the data alone determines, and says which they were. Segments and chapters keep any
    * properties beyond what the rules look at.
    */
+  /**
+   * Set on a rule whose fix cleans raw recognizer output (see `cleanGroups`).
+   * Such a rule must have a synchronous `rule` and a `fix`.
+   */
+  cleans?: true;
   fix?<M extends RuleMeeting>(
     meeting: M,
     violations: readonly V[],

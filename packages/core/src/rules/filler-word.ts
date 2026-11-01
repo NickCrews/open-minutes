@@ -13,6 +13,9 @@ export type FillerWord = DroppedWord<typeof code>;
 
 export const defaultSeverity = "error" satisfies Severity;
 
+/** Its fix cleans recognizer output. */
+export const cleans = true;
+
 // Hesitation sounds with no lexical content, matched case-insensitively against
 // the word stripped of punctuation. Deliberately narrow: "oh", "ah", "hmm" and
 // "mm-hmm" often carry meaning ("Oh, I see"; "Mm-hmm" for yes), and "uh-huh" /

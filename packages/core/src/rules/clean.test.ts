@@ -1,10 +1,26 @@
 import { describe, expect, it } from "vite-plus/test";
-import { cleanGroups, cleanSpeechSegments, cleanWords } from "./clean";
+import {
+  CLEANING_RULE_SPECS,
+  cleanGroups,
+  cleanSpeechSegments,
+  cleanWords,
+} from "./index";
 import { text, words } from "./testing";
 
 function clean(sentence: string, step?: number): string {
   return text(cleanWords(words(sentence, step)));
 }
+
+describe("CLEANING_RULE_SPECS", () => {
+  it("runs the dash rule first, so the other rules see hyphens", () => {
+    expect(CLEANING_RULE_SPECS.map((s) => s.code)).toEqual([
+      "typographic-dash",
+      "filler-word",
+      "false-start",
+      "stutter",
+    ]);
+  });
+});
 
 describe("cleanWords", () => {
   it("lets a dashed fragment be a false start", () => {

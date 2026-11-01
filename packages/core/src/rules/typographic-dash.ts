@@ -22,6 +22,9 @@ export type TypographicDash = Violation<typeof code> &
 
 export const defaultSeverity = "error" satisfies Severity;
 
+/** Its fix cleans recognizer output. */
+export const cleans = true;
+
 const PLAIN_HYPHEN = "has an en or em dash; write a plain hyphen (-)";
 
 function chapterHasDash(c: ChapterSpan): boolean {

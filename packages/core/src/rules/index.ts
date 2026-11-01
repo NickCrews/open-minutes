@@ -12,11 +12,25 @@
 // go in ./common.ts. To add a rule, write its module and add it to
 // RULE_SPECS, or to BODY_RULE_SPECS if only some bodies follow it; its code
 // and violation type follow from it.
+//
+// Rules that export `cleans = true` also clean raw recognizer output: their
+// fixes run on it before it is aligned or stored. The recognizer transcribes
+// verbatim, so its output is full of disfluencies (hesitations, stutters,
+// abandoned word fragments) that a reader of meeting minutes doesn't need.
+// These rules are conservative: a missed disfluency costs a little
+// readability, but deleting a word someone meant changes the record.
 
 import * as agendaItem from "./agenda-item";
 import * as billNumber from "./bill-number";
 import * as chapterSize from "./chapter-size";
-import type { RuleMeeting, RuleSpec, Severity } from "./common";
+import type { SpeechSegment, TranscriptWord } from "../transcription";
+import type {
+  RuleMeeting,
+  RuleSegment,
+  RuleSpec,
+  Severity,
+  Violation,
+} from "./common";
 import * as codeSection from "./code-section";
 import * as date from "./date";
 import * as emptySegment from "./empty-segment";
@@ -42,12 +56,6 @@ import * as wordOutOfOrder from "./word-out-of-order";
 import * as zoningDistrict from "./zoning-district";
 
 export type { RuleMeeting, RuleSegment, Severity } from "./common";
-export {
-  CLEANING_RULE_SPECS,
-  cleanGroups,
-  cleanSpeechSegments,
-  cleanWords,
-} from "./clean";
 
 /**
  * The rules every meeting follows, in the order
@@ -219,4 +227,49 @@ export async function fixMeeting<
       throw new Error(`fixes still changing the meeting after ${pass} passes`);
   }
   return { meeting: current, fixed: fixed as IssueOf<S[number]>[] };
+}
+
+/** The rules whose fixes clean a transcript, in {@link RULE_SPECS} order. */
+export const CLEANING_RULE_SPECS = RULE_SPECS.filter(
+  (spec): spec is Extract<(typeof RULE_SPECS)[number], { cleans: true }> =>
+    "cleans" in spec && spec.cleans === true,
+);
+
+/** How many times a clean runs the fixes before giving up on them settling. */
+const MAX_CLEAN_PASSES = 10;
+
+/**
+ * Apply the cleaning rules' fixes to each group's words (a speaker's segment,
+ * a VAD run) until they change nothing. A fix never reaches across groups,
+ * since the next may be another speaker ("Yes." / "Yes." on a roll call is
+ * not a stutter). Groups keep their other properties, and kept words their
+ * onsets and other properties; a group may be left with no words.
+ */
+export function cleanGroups<G extends RuleSegment>(groups: readonly G[]): G[] {
+  let meeting: RuleMeeting & { segments: readonly G[] } = { segments: groups };
+  for (let pass = 0; ; pass++) {
+    const before = meeting;
+    for (const spec of CLEANING_RULE_SPECS as readonly RuleSpec<Violation>[]) {
+      const violations = spec.rule(meeting) as Violation[];
+      meeting = spec.fix!(meeting, violations).meeting;
+    }
+    if (meeting === before) return [...meeting.segments];
+    if (pass === MAX_CLEAN_PASSES)
+      throw new Error(`cleaning still changing words after ${pass} passes`);
+  }
+}
+
+/** {@link cleanGroups} for one continuous run of words. */
+export function cleanWords<W extends TranscriptWord>(words: readonly W[]): W[] {
+  return cleanGroups([{ speaker: null, words }])[0]!.words as W[];
+}
+
+/** The pipeline's clean stage: {@link cleanGroups} over transcribeAudio's VAD runs. */
+export function cleanSpeechSegments(
+  segments: readonly SpeechSegment[],
+): SpeechSegment[] {
+  const cleaned = cleanGroups(
+    segments.map((s) => ({ speaker: null, words: s.words })),
+  );
+  return segments.map((s, i) => ({ ...s, words: [...cleaned[i]!.words] }));
 }

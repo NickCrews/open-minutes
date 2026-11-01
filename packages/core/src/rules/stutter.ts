@@ -14,6 +14,9 @@ export type Stutter = DroppedWord<typeof code>;
 
 export const defaultSeverity = "error" satisfies Severity;
 
+/** Its fix cleans recognizer output. */
+export const cleans = true;
+
 // Words that are never correctly said twice in a row, so a doubled one is a
 // stutter ("I I think", "the the budget"). Words that CAN legitimately double
 // are left out on purpose: "that that", "had had", "is is" / "was was" / "are
