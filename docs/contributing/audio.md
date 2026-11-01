@@ -57,4 +57,4 @@ slow tests; see [testing.md](testing.md).
 - [`packages/meeting-audio`](../../packages/meeting-audio/README.md): reading
   from the store, and the per-machine cache.
 - [`packages/codecs`](../../packages/codecs/README.md): decoding.
-- [`packages/audio`](../../packages/audio/README.md): the speech models.
+- [`packages/audio-ml`](../../packages/audio-ml/README.md): the speech models.

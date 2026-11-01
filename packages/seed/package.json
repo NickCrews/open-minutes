@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@open-minutes/audio": "workspace:*",
+    "@open-minutes/audio-ml": "workspace:*",
     "@open-minutes/core": "workspace:*",
     "@open-minutes/datasets": "workspace:*",
     "@open-minutes/db": "workspace:*",

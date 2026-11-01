@@ -1,4 +1,4 @@
-# @open-minutes/audio
+# @open-minutes/audio-ml
 
 Speech processing for meeting audio, run locally with
 [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx). Given a meeting's audio
@@ -17,7 +17,7 @@ and decode paths with [`@open-minutes/codecs`](../codecs/README.md)'s
 The ONNX models (~650MB) are downloaded into `src/models/` (gitignored) the
 first time each is used, or all at once with `pnpm models`.
 
-`@open-minutes/audio/vad` finds where someone is talking (Silero VAD,
+`@open-minutes/audio-ml/vad` finds where someone is talking (Silero VAD,
 with pauses down to 0.2 s), as a list of `Span`s from
 `@open-minutes/core/span`, which also clips, merges, subtracts and totals
 them and finds the gaps between them (the pauses). It caches nothing:

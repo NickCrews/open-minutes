@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { EMBEDDING_MODEL_SPEC } from "@open-minutes/audio/embed-model";
+import { EMBEDDING_MODEL_SPEC } from "@open-minutes/audio-ml/embed-model";
 import {
   type Dataset,
   datasetHash,

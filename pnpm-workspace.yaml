@@ -1,5 +1,7 @@
 packages:
   - "packages/*"
+# Only install package versions published at least 2 weeks ago (in minutes).
+minimumReleaseAge: 20160
 onlyBuiltDependencies:
   - esbuild
   - protobufjs

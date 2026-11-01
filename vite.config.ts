@@ -3,7 +3,7 @@ import { defineConfig } from "vite-plus";
 export default defineConfig({
   test: {
     projects: [
-      "./packages/audio/vitest.config.ts",
+      "./packages/audio-ml/vitest.config.ts",
       "./packages/codecs/vitest.config.ts",
       "./packages/core/vitest.config.ts",
       "./packages/datasets/vitest.config.ts",
@@ -144,10 +144,10 @@ export default defineConfig({
         },
       },
       {
-        // sherpa-onnx-node ships no types, so audio declares them itself. Its
+        // sherpa-onnx-node ships no types, so audio-ml declares them itself. Its
         // modules reference that declaration file so that packages importing
         // them typecheck without having to include it themselves.
-        files: ["packages/audio/src/**"],
+        files: ["packages/audio-ml/src/**"],
         rules: { "typescript/triple-slash-reference": "off" },
       },
       {

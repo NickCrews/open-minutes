@@ -4,7 +4,8 @@
   "description": "Open Minutes' blob store: read a file from the project's public bucket by key, from Node or the browser",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./testing": "./src/testing.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

@@ -76,7 +76,7 @@ jobs:
         id: models-cache
         uses: actions/cache/restore@v4
         with:
-          path: packages/audio/src/models
+          path: packages/audio-ml/src/models
           key: ${{ steps.models.outputs.key }}
       - name: Download the models
         run: pnpm models
@@ -84,7 +84,7 @@ jobs:
         if: steps.models-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
-          path: packages/audio/src/models
+          path: packages/audio-ml/src/models
           key: ${{ steps.models.outputs.key }}
 
       # Postgres starts the way it does for a developer: the first test that

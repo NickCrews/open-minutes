@@ -55,10 +55,9 @@ function makeWords(n: number, rng: () => number): TranscriptWord[] {
   return words;
 }
 
-// Oracle: the original full-matrix Needleman–Wunsch this module used to ship.
-// Kept here (and only here) so we can assert Hirschberg produces a *byte-identical*
-// alignment — same ops, same indices, same tie-breaks — on inputs small enough
-// that the O(m·n) matrices fit in memory.
+// Oracle: plain full-matrix Needleman–Wunsch. Used to assert alignWords
+// produces a *byte-identical* alignment — same ops, same indices, same
+// tie-breaks — on inputs small enough that the O(m·n) matrices fit in memory.
 function referenceAlign(
   ref: readonly string[],
   hyp: readonly string[],
@@ -117,6 +116,28 @@ function toTokens(words: readonly TranscriptWord[]): string[] {
   return words.map((x) => x.text);
 }
 
+// A copy of `src` with roughly `rate` of its words deleted, substituted, or
+// preceded by an inserted word.
+function mutate(
+  src: readonly TranscriptWord[],
+  rate: number,
+  rng: () => number,
+): TranscriptWord[] {
+  const out: TranscriptWord[] = [];
+  const vocab = makeWords(src.length, rng);
+  for (let i = 0; i < src.length; i++) {
+    const r = rng();
+    if (r < rate / 3) continue;
+    if (r < (2 * rate) / 3) {
+      out.push(vocab[i]!);
+      continue;
+    }
+    if (r < rate) out.push(vocab[i]!);
+    out.push(src[i]!);
+  }
+  return out;
+}
+
 describe("alignWords cross-validation against full-matrix oracle", () => {
   it("matches the oracle on many random small/medium inputs (incl. sub/del/ins ties)", () => {
     const rng = mulberry32(1234);
@@ -128,6 +149,20 @@ describe("alignWords cross-validation against full-matrix oracle", () => {
       const got = alignWords(ref, hyp);
       const want = referenceAlign(toTokens(ref), toTokens(hyp));
       expect(got).toEqual(want);
+    }
+  });
+
+  it("matches the oracle on long, similar inputs (narrow and widening bands)", () => {
+    const rng = mulberry32(5678);
+    for (let trial = 0; trial < 40; trial++) {
+      const ref = makeWords(200 + Math.floor(rng() * 300), rng);
+      const hyp = mutate(ref, rng() * 0.6, rng);
+      expect(alignWords(ref, hyp)).toEqual(
+        referenceAlign(toTokens(ref), toTokens(hyp)),
+      );
+      expect(alignWords(hyp, ref)).toEqual(
+        referenceAlign(toTokens(hyp), toTokens(ref)),
+      );
     }
   });
 
@@ -145,8 +180,10 @@ describe("alignWords cross-validation against full-matrix oracle", () => {
 });
 
 describe("alignWords on full-meeting-sized transcripts", () => {
-  // The golden fixtures are ~21k–27k words. The old full-matrix DP allocates two
-  // (m+1)×(n+1) matrices (~600M cells, multiple GB) and OOMs V8 here.
+  // The golden fixtures are ~21k–27k words. A full-matrix DP with boxed values
+  // needs multiple GB here and OOMs V8; a full-matrix fill of any kind takes
+  // 5-10s. With a few hundred edits the band stays narrow, so this runs well
+  // under the default test timeout.
   it("aligns ~25k-word sequences without OOM, with a controlled diff", () => {
     const N = 25_000;
     const rng = mulberry32(7);
@@ -164,9 +201,7 @@ describe("alignWords on full-meeting-sized transcripts", () => {
       if (hyp[i]!.text !== ref[i]!.text) expectedSubs++;
     }
 
-    const t0 = Date.now();
     const ops = alignWords(ref, hyp);
-    const elapsed = Date.now() - t0;
 
     const counts = { match: 0, sub: 0, del: 0, ins: 0 };
     for (const o of ops) counts[o.op]++;
@@ -176,8 +211,5 @@ describe("alignWords on full-meeting-sized transcripts", () => {
     expect(counts.ins).toBe(0);
     expect(counts.match).toBe(N - expectedSubs);
     expect(ops).toHaveLength(N);
-    // Generous ceiling: the point is it finishes at all (no OOM). Catches a gross
-    // perf regression without being flaky on a loaded CI box.
-    expect(elapsed).toBeLessThan(60_000);
   });
 });
