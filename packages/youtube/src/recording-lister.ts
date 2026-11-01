@@ -1,7 +1,4 @@
-import type {
-  ListedRecording,
-  RecordingLister,
-} from "@open-minutes/core/recording-lister";
+import type { ListedRecording, RecordingLister } from "@open-minutes/core/site";
 import { ensureYtDlpInstalled, run } from "@open-minutes/ytdlp";
 
 /**

@@ -1,4 +1,4 @@
-import type { RecordingMetadata } from "@open-minutes/core/site-adapter";
+import type { RecordingMetadata } from "@open-minutes/core/site";
 
 /** The 11-character video ID, from either an ID or a watch/youtu.be URL. */
 export function videoId(videoIdOrUrl: string): string {

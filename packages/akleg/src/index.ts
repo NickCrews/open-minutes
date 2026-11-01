@@ -4,20 +4,18 @@ import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { dirname } from "node:path";
 import { z } from "zod";
-import type { RecordingLister } from "@open-minutes/core/recording-lister";
 import type {
+  RecordingLister,
   RecordingMetadata,
   SiteAdapter,
-} from "@open-minutes/core/site-adapter";
+} from "@open-minutes/core/site";
 
-export type {
-  RecordingMetadata,
-  SiteAdapter,
-} from "@open-minutes/core/site-adapter";
 export type {
   ListedRecording,
   RecordingLister,
-} from "@open-minutes/core/recording-lister";
+  RecordingMetadata,
+  SiteAdapter,
+} from "@open-minutes/core/site";
 
 const BASE = "https://www.akleg.gov";
 

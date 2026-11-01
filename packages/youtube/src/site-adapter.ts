@@ -1,9 +1,6 @@
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import type {
-  RecordingMetadata,
-  SiteAdapter,
-} from "@open-minutes/core/site-adapter";
+import type { RecordingMetadata, SiteAdapter } from "@open-minutes/core/site";
 import {
   EgressError,
   type EgressOptions,

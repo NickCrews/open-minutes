@@ -1,6 +1,6 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import type { SiteAdapter } from "@open-minutes/core/site-adapter";
+import type { SiteAdapter } from "@open-minutes/core/site";
 import {
   type BlobStore,
   type BlobStoreWriter,

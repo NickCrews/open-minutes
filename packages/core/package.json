@@ -5,8 +5,6 @@
   "exports": {
     "./dotenv": "./src/dotenv.ts",
     "./site": "./src/site.ts",
-    "./site-adapter": "./src/site-adapter.ts",
-    "./recording-lister": "./src/recording-lister.ts",
     "./meeting-source": "./src/meeting-source.ts",
     "./meeting-date": "./src/meeting-date/index.ts",
     "./transcription": "./src/transcription/index.ts",
@@ -14,7 +12,6 @@
     "./chapters": "./src/chapters.ts",
     "./clock": "./src/clock.ts",
     "./rules": "./src/rules/index.ts",
-    "./transcript-fingerprint": "./src/transcript-fingerprint.ts",
     "./text": "./src/text.ts",
     "./timezone": "./src/timezone.ts",
     "./span": "./src/span.ts"
