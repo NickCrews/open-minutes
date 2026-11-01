@@ -13,7 +13,7 @@ import { db } from "~/server/db";
 import { z } from "zod";
 
 const fetchSearchResults = createServerFn({ method: "GET" })
-  .inputValidator(z.string())
+  .validator(z.string())
   .handler(({ data }) => searchSegments(db(), data));
 
 export const Route = createFileRoute("/search")({
