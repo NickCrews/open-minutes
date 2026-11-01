@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 # Helpers for up.sh, rotate.sh and down.sh: start, re-exit and stop Cloudflare
 # WARP (in proxy mode) and Tor as SOCKS proxies for yt-dlp. See
-# docs/research/youtube-in-ci.md for why, and for what the waits below are for.
+# docs/research/youtube-on-servers.md for why, and for what the waits below are for.
 #
 # YOUTUBE_EGRESS_ROOT  where install.sh unpacked WARP and Tor
 #                      (default /opt/youtube-egress). Tor is taken from PATH
