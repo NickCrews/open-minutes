@@ -13,5 +13,8 @@
   },
   "dependencies": {
     "aws4fetch": "^1.0.20"
+  },
+  "devDependencies": {
+    "vite-plus": "catalog:"
   }
 }
