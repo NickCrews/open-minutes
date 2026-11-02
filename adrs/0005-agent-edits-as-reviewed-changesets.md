@@ -13,6 +13,12 @@ and "the data changed" where a human or another agent can review the work, no
 record of a session's edits as one unit, and no way to test a set of edits
 before it lands.
 
+Agents also read untrusted input. Anyone can say anything during public
+comment, including text written to steer an agent, and it reaches the agent
+word for word in the transcript. So the harness, not the prompt, has to limit
+what an agent can change, and a reviewer has to be able to catch an agent that
+was steered.
+
 ## Decision
 
 An agent's work product is a **changeset**: one SQL file of data changes and
@@ -150,6 +156,21 @@ transcript with relabelled segments highlighted) rather than as SQL, alongside
 the `check_meeting` change and the rationale. Approving applies the changeset
 at once, against the row diff the reviewer saw.
 
+A reviewer agent has the same read-only access as the author: main, the
+transcript, people and audio tools, and `om changeset query` on after. It
+doesn't see the author's session, so it judges the edits rather than the
+argument for them, and text in the meeting that steered the author doesn't
+reach it through the author's reasoning. It uses a different model or prompt
+from the author, so the two share fewer blind spots.
+
+The reviewer approves or rejects the changeset as a whole, and its comments
+point at individual changes, so one disputed relabel doesn't hide forty good
+word fixes. The author revises `migration.sql` and re-checks, or replies. The
+reviewer keeps its context across rounds, so it can check its requests were
+addressed. After a fixed number of rounds, the author moves the changes still
+disputed into a separate changeset that goes to a human, and the reviewer
+approves or rejects the rest.
+
 ### Applying
 
 Applying is a check that commits, and takes about as long:
@@ -244,8 +265,9 @@ changesets.
 
 ### Lifecycle
 
-draft → proposed → applied. A proposed changeset can instead end rejected or
-superseded, or become conflicted on apply, which sends it back to draft.
+draft → proposed → applied. A proposed changeset goes back to draft when the
+reviewer asks for changes or it conflicts on apply. It can instead end
+rejected or superseded.
 
 ## Alternatives considered
 
