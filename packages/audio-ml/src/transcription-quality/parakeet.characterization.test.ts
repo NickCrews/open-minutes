@@ -168,18 +168,28 @@ describe("Parakeet (characterization, not requirements)", () => {
     "can emit nothing for seconds of plain speech in a long pass",
     { tags: ["slow"] },
     async () => {
-      // The chair reads the Open Meetings Act notice at 0:49-0:57. Decoded
-      // as part of [20.9, 123.9), the model predicts blanks straight through
-      // it, and the next word out is "Supervisors.310", the end of a statute
-      // number glued to the word before the hole. Moving the window's start doesn't bring it back;
-      // ending the window earlier, or decoding the stretch on its own, does.
+      // The chair reads the Open Meetings Act notice at 0:49-0:57 (~17
+      // words). In a ~100 s window, the model sometimes predicts blanks
+      // straight through it, and the next word out is "Supervisors.310", the
+      // end of a statute number glued to the word before the hole. Whether
+      // it does flips with the window's framing: measured 2026-11, windows
+      // ending at 123.9 and starting every 4 s from 0 to 44 dropped it in 6
+      // of 12; starting at 20.9 and ending anywhere from 105 to 130 dropped
+      // it, ending at 100 or 140 didn't. Which windows drop it also differs
+      // between CPUs. Windows of 20-60 s around it have never dropped it.
       // So what drops a stretch is the rest of the window (the encoder
-      // attends to all of it), not the stretch, and no window length is
-      // safe from it.
+      // attends to all of it), not the stretch, and a long window can lose
+      // any stretch by chance.
       const inHole = (ws: TranscriptWord[]) =>
         ws.filter((w) => w.start >= 49 && w.start < 57.5);
-      for (const start of [15, 20.9, 30, 40])
-        expect(inHole(await decode(start, 123.9))).toEqual([]);
+      const counts: number[] = [];
+      for (let start = 0; start <= 44; start += 4)
+        counts.push(inHole(await decode(start, 123.9)).length);
+      console.log(
+        `[parakeet] words in 49-57.5 s, windows [0..44, 123.9): ${counts.join(" ")}`,
+      );
+      expect(counts.filter((n) => n === 0).length).toBeGreaterThanOrEqual(2);
+      expect(counts.filter((n) => n > 10).length).toBeGreaterThanOrEqual(2);
       expect(inHole(await decode(20.9, 80)).length).toBeGreaterThan(10);
       expect(inHole(await decode(45, 65)).length).toBeGreaterThan(10);
     },
