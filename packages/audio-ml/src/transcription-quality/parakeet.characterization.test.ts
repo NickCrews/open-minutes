@@ -165,23 +165,68 @@ describe("Parakeet (characterization, not requirements)", () => {
   );
 
   it(
-    "can emit nothing for seconds of plain speech in a long pass",
+    "sometimes misses seconds of speech in a long pass that a short one catches",
     { tags: ["slow"] },
     async () => {
-      // The chair reads the Open Meetings Act notice at 0:49-0:57. Decoded
-      // as part of [20.9, 123.9), the model predicts blanks straight through
-      // it, and the next word out is "Supervisors.310", the end of a statute
-      // number glued to the word before the hole. Moving the window's start doesn't bring it back;
-      // ending the window earlier, or decoding the stretch on its own, does.
-      // So what drops a stretch is the rest of the window (the encoder
-      // attends to all of it), not the stretch, and no window length is
-      // safe from it.
-      const inHole = (ws: TranscriptWord[]) =>
-        ws.filter((w) => w.start >= 49 && w.start < 57.5);
-      for (const start of [15, 20.9, 30, 40])
-        expect(inHole(await decode(start, 123.9))).toEqual([]);
-      expect(inHole(await decode(20.9, 80)).length).toBeGreaterThan(10);
-      expect(inHole(await decode(45, 65)).length).toBeGreaterThan(10);
+      // The same 4 minutes of six regions, cut into back-to-back 120 s
+      // windows and, separately, 30 s ones. A gap is a run of 5+ consecutive
+      // golden words one pass misses, of which the other pass catches at
+      // least 80%. Measured 2026-11: 10 gaps in the 120 s pass, 1 in the
+      // 30 s pass (over all 12 regions, 14 and 4). A 120 s gap is often a
+      // whole sentence of plain speech, decoded as blanks straight through.
+      // Which stretches drop flips with the window's exact start and end,
+      // and with the CPU: the Open Meetings Act notice at 0:49-0:57 dropped
+      // in 6 of 12 windows ending at 123.9 and starting every 4 s from 0 to
+      // 44, with the next word out "Supervisors.310", the end of a statute
+      // number glued to the word before the gap. So what drops a stretch is
+      // the rest of the window (the encoder attends to all of it), not the
+      // stretch, and a long window can lose any stretch by chance.
+      const minRun = 5;
+      const passHits = async (region: number, length: number) => {
+        const hits: boolean[] = [];
+        for (let start = region; start < region + 240; start += length)
+          hits.push(
+            ...found(
+              refIn(start, start + length),
+              await decode(start, start + length),
+            ),
+          );
+        return hits;
+      };
+      /** Runs of `minRun`+ words `miss` missed and `other` mostly caught. */
+      const gaps = (miss: boolean[], other: boolean[]) => {
+        const out: [number, number][] = [];
+        for (let i = 0; i < miss.length;) {
+          let j = i;
+          while (j < miss.length && !miss[j]) j++;
+          const caught = other.slice(i, j).filter(Boolean).length;
+          if (j - i >= minRun && caught >= 0.8 * (j - i)) out.push([i, j]);
+          i = Math.max(j, i + 1);
+        }
+        return out;
+      };
+      let longGaps = 0;
+      let shortGaps = 0;
+      for (const region of regions.slice(0, 6)) {
+        const words = refIn(region, region + 240);
+        const long = await passHits(region, 120);
+        const short = await passHits(region, 30);
+        for (const [i, j] of gaps(long, short)) {
+          longGaps++;
+          console.log(
+            `[parakeet] 120 s pass missed ${j - i} words at ${words[i]!.start.toFixed(1)} s: ${words
+              .slice(i, j)
+              .map((w) => w.text)
+              .join(" ")}`,
+          );
+        }
+        shortGaps += gaps(short, long).length;
+      }
+      console.log(
+        `[parakeet] gaps: 120 s pass ${longGaps}; 30 s pass ${shortGaps}`,
+      );
+      expect(longGaps).toBeGreaterThanOrEqual(3);
+      expect(longGaps).toBeGreaterThan(shortGaps);
     },
   );
 
