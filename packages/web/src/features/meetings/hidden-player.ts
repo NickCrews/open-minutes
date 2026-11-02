@@ -13,9 +13,9 @@ export type PlayableMeeting = { id: number; youtubeId: string };
  *
  * It plays each meeting through a player of its own, of one of two kinds, and is what the page
  * sees: which meeting is playing, where, and whether it's playing.
- * - The blob store's copy of the audio (`createStoredAudioPlayer`) where
- *   there is one and the browser can play WebM Opus (not Safari before 17,
- *   eg): it starts in well under a second.
+ * - The blob store's copy of the video's audio (`createStoredAudioPlayer`),
+ *   speech Opus in WebM, where there is one and the browser can play it (not
+ *   Safari before 17, eg): it starts in well under a second.
  * - A hidden YouTube embed (`createYouTubeAudioPlayer`) otherwise, including
  *   when the store turns out not to have the meeting, mid-play or not.
  * `prepare` gets the right one loading before the first click.
@@ -58,13 +58,14 @@ export function createHiddenPlayer() {
   });
 
   /**
-   * `youtubeId`'s player: from the store if this browser can play it (the
-   * store may still turn out not to have the meeting), else YouTube.
+   * `youtubeId`'s player: from the store if this browser can play the
+   * store's YouTube audio (the store may still turn out not to have the
+   * meeting), else YouTube.
    */
   const playerFor = (youtubeId: string): AudioPlayer => {
     let player = players.get(youtubeId);
     if (player) return player;
-    player = canPlayWebmOpus()
+    player = canPlayStoredYoutubeAudio()
       ? createStoredAudioPlayer({
           ...reportsFor(youtubeId),
           url: blobs().recording("youtube", youtubeId).audio.url,
@@ -164,8 +165,11 @@ export type HiddenPlayer = ReturnType<typeof createHiddenPlayer>;
 
 let webmOpus: boolean | undefined;
 
-/** Whether `<audio>` can play the store's audio, Opus in WebM. */
-function canPlayWebmOpus(): boolean {
+/**
+ * Whether `<audio>` can play the store's audio for a YouTube video, speech
+ * Opus in WebM (see `RecordingFiles.audio` in @open-minutes/blobstore).
+ */
+function canPlayStoredYoutubeAudio(): boolean {
   webmOpus ??= new Audio().canPlayType('audio/webm; codecs="opus"') !== "";
   return webmOpus;
 }
