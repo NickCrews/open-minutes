@@ -168,7 +168,12 @@ export async function readWav(path: string): Promise<WaveForm> {
     bytes.byteOffset + bytes.length,
   );
   if (audioFormat === "pcm" && bitsPerSample === 16) {
-    const samples = Float32Array.from(new Int16Array(data), (s) => s / 32768);
+    // Not Float32Array.from(pcm, map): V8 collects a mapped source into an
+    // ordinary array first, which can't hold the ~140M+ samples of a
+    // meeting over 2.5 hours.
+    const pcm = new Int16Array(data);
+    const samples = new Float32Array(pcm.length);
+    for (let i = 0; i < pcm.length; i++) samples[i] = pcm[i]! / 32768;
     return { samples, sampleRate };
   }
   if (audioFormat === "float" && bitsPerSample === 32) {
