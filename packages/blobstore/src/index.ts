@@ -54,7 +54,8 @@ export type ContentType =
  * Keyed by the recording's ID, so a recording edited in place on its site
  * (a YouTube video trimmed, or its audio muted over a copyright claim) keeps
  * its old audio here. That's rare for meetings, and the golden fixtures'
- * sha256 checks would catch it.
+ * sha256 checks would catch it. A joint akleg.gov meeting has one ID per
+ * chamber, sharing one recording, so its files are stored once per chamber.
  */
 export interface RecordingFiles {
   /**
