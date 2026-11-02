@@ -11,7 +11,7 @@ too.
 import { blobStore } from "@open-minutes/blobstore";
 
 const store = blobStore(); // or blobStore("https://...")
-const audio = store.youtube("9HoIM5INxpI").speechWebm;
+const audio = store.recording("youtube", "9HoIM5INxpI").audio;
 audio.key; // "youtube/9HoIM5INxpI/speech.webm"
 audio.url; // its public URL
 await audio.get(); // its bytes, or null if it isn't stored
@@ -21,10 +21,13 @@ store.duckdbExport.url;
 Each file is a `BlobFile` (`key`, `url`, `contentType`, `get`), reached by
 what it is rather than by building its key:
 
-- `youtube(id)`: a YouTube video's `metadataJson` (its `RecordingMetadata`)
-  and `speechWebm`, which `storedYoutube` in
+- `recording(site, id)`: a recording's `metadataJson` (its
+  `RecordingMetadata`) and `audio`, which `storedSite` in
   [`@open-minutes/meeting-audio`](../meeting-audio/README.md) makes and
-  stores.
+  stores. A YouTube video's are under `youtube/<video ID>/`, its audio
+  `speech.webm`; an akleg.gov meeting's under
+  `akleg/<meeting ID without spaces or colons>/` (`HRES_2018-09-10_140000`),
+  its audio `audio.mp3`.
 - `duckdbExport`: production's public data as one DuckDB file, which the
   [`export-duckdb`](../../.github/workflows/export-duckdb.yml) workflow
   writes nightly.
@@ -40,7 +43,10 @@ returns null, and with only some it throws.
 ```ts
 const writer = blobStoreWriterFromEnv(process.env);
 // Stored as application/json, the file's content type.
-await writer?.put(store.youtube("9HoIM5INxpI").metadataJson, bytes);
+await writer?.put(
+  store.recording("youtube", "9HoIM5INxpI").metadataJson,
+  bytes,
+);
 ```
 
 `blobStore()` reads the `BLOB_STORE_PUBLIC_URL` environment variable where

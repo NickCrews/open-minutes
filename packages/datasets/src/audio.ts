@@ -14,7 +14,8 @@ export async function getMeetingAudio(
   meeting: GoldenMeeting,
 ): Promise<CachedAudio> {
   const audio = await getCachedAudio({
-    youtubeId: meeting.youtube_id,
+    site: "youtube",
+    id: meeting.youtube_id,
     sha256: meeting._audio_sha256,
   });
 

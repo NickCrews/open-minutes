@@ -4,10 +4,10 @@ Where Open Minutes gets meetings published on YouTube. It implements
 `@open-minutes/core`'s `RecordingLister` for a channel or playlist (`youtubeSource`:
 the videos in it) and `SiteAdapter` for a video (`youtube`: its metadata, and
 its audio). Each lives in its own file, named after the interface. `core.ts`
-holds the helpers that `@open-minutes/meeting-audio` also uses: `videoId`,
-`metadataToJson` and `metadataFromJson`, the form the blob store
-([`@open-minutes/blobstore`](../blobstore/README.md)) and the workflow below
-keep metadata in, and `metadataFromYtDlpInfo`, which reads yt-dlp's info JSON.
+holds `videoId` and `metadataFromYtDlpInfo`, which reads yt-dlp's info JSON.
+The workflow below writes metadata as `metadataToJson` in
+`@open-minutes/core/site` does, the form the blob store
+([`@open-minutes/blobstore`](../blobstore/README.md)) keeps it in.
 
 `youtube()` gets each video the first way that works:
 

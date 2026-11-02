@@ -358,6 +358,7 @@ export function akleg(config: AkLegConfig = {}): AkLeg {
   return {
     site: "akleg",
     audioExtension: "mp3",
+    recordingId: meetingId,
     async meetingsOfCommittee(committee, legislature) {
       const chamber = committee.slice(0, 1);
       const code = committee.slice(1);

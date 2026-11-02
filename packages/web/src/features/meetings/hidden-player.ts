@@ -67,7 +67,7 @@ export function createHiddenPlayer() {
     player = canPlayWebmOpus()
       ? createStoredAudioPlayer({
           ...reportsFor(youtubeId),
-          url: blobs().youtube(youtubeId).speechWebm.url,
+          url: blobs().recording("youtube", youtubeId).audio.url,
           onUnavailable: () => fallBack(youtubeId),
         })
       : youtube.player({ ...reportsFor(youtubeId), youtubeId });

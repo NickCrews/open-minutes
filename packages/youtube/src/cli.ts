@@ -6,7 +6,7 @@ import { join } from "node:path";
 import process from "node:process";
 import { defineCommand, runMain } from "citty";
 import { egressPaths, parseRoutes } from "@open-minutes/ytdlp";
-import { metadataToJson } from "./core";
+import { metadataToJson } from "@open-minutes/core/site";
 import { type YouTubeOptions, youtube } from "./site-adapter";
 
 /**

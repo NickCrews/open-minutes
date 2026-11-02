@@ -4,7 +4,7 @@ import {
   readAllSamples,
   SAMPLE_RATE,
 } from "@open-minutes/codecs";
-import { metadataFromJson } from "./core";
+import { metadataFromJson } from "@open-minutes/core/site";
 import { fetchVideoViaWorkflow } from "./workflow-fetch";
 
 // Runs the real fetch-youtube-audio workflow, so it needs a token allowed to

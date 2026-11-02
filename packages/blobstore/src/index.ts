@@ -5,7 +5,8 @@
  * too.
  */
 import { AwsClient } from "aws4fetch";
-import { storeOf } from "./layout";
+import type { Site } from "@open-minutes/core/site";
+import { keyPath, storeOf } from "./layout";
 
 /** One file in the blob store, which may or may not exist yet. */
 export interface BlobFile {
@@ -43,31 +44,38 @@ export type ContentType =
   | (string & {});
 
 /**
- * What the store keeps for a YouTube video, since YouTube blocks yt-dlp from
- * datacenter IPs (CI, servers). `storedYoutube` in
- * @open-minutes/meeting-audio makes and stores these files.
+ * What the store keeps for a recording, so it can be had where its site
+ * blocks downloads (YouTube blocks yt-dlp from datacenter IPs, like CI's and
+ * servers') or stops serving it. `storedSite` in @open-minutes/meeting-audio
+ * makes and stores these files.
  *
- * Keyed by video ID, so a video edited in place on YouTube (trimmed, or audio
- * muted over a copyright claim) keeps its old audio there. That's rare for
- * meetings, and the golden fixtures' sha256 checks would catch it.
+ * Keyed by the recording's ID, so a recording edited in place on its site
+ * (a YouTube video trimmed, or its audio muted over a copyright claim) keeps
+ * its old audio here. That's rare for meetings, and the golden fixtures'
+ * sha256 checks would catch it.
  */
-export interface YoutubeVideoFiles {
+export interface RecordingFiles {
   /**
-   * The video's `RecordingMetadata` (@open-minutes/core/site-adapter) as
+   * The recording's `RecordingMetadata` (@open-minutes/core/site) as
    * JSON, with `publishedAt` as an ISO 8601 string.
    */
   metadataJson: BlobFile;
   /**
-   * YouTube's Opus audio re-encoded to 16 kHz mono Opus in WebM at 24 kbps
-   * (~11 MB per hour), plenty for the models, which take 16 kHz mono.
+   * The audio its site's `SiteAdapter.downloadAudio` saves. For YouTube,
+   * YouTube's Opus re-encoded to 16 kHz mono Opus in WebM at 24 kbps
+   * (~11 MB per hour), plenty for the models, which take 16 kHz mono. For
+   * akleg.gov, the meeting's MP3 as akleg.gov serves it.
    */
-  speechWebm: BlobFile;
+  audio: BlobFile;
 }
 
 /** The blob store's files, by what they are; see {@link blobStore}. */
 export interface BlobStore {
-  /** A YouTube video's files. */
-  youtube(youtubeId: string): YoutubeVideoFiles;
+  /**
+   * A recording's files, by its site and its ID there (a YouTube video ID,
+   * or an akleg.gov meeting ID; see `SiteAdapter.recordingId`).
+   */
+  recording(site: Site, id: string): RecordingFiles;
   /**
    * Production's public data as one DuckDB file, rebuilt nightly by the
    * export-duckdb workflow (.github/workflows/export-duckdb.yml).
@@ -84,7 +92,7 @@ export interface BlobStore {
 export function blobStore(base?: string): BlobStore {
   base = baseUrl(base);
   return storeOf((key, contentType) => {
-    const url = `${base.replace(/\/$/, "")}/${key}`;
+    const url = `${base.replace(/\/$/, "")}/${keyPath(key)}`;
     return {
       key,
       url,
@@ -152,7 +160,7 @@ export function blobStoreWriter(keys: BlobStoreKeys): BlobStoreWriter {
   const bucketUrl = `${keys.endpoint.replace(/\/$/, "")}/${keys.bucket}`;
   return {
     async put(file, body) {
-      const url = `${bucketUrl}/${file.key}`;
+      const url = `${bucketUrl}/${keyPath(file.key)}`;
       const res = await client.fetch(url, {
         method: "PUT",
         body,
