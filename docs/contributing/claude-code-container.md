@@ -1,20 +1,22 @@
 # Claude Code in a cloud container
 
-Last updated: 2026-11-02. If something here is out of date, please open a PR
-to fix it.
-
 This covers what differs from [Getting started](../../CONTRIBUTING.md#getting-started)
-when you are Claude Code running in a claude.ai cloud container.
+when you are Claude Code running in a claude.ai cloud container. If something
+here is out of date, please open a PR to fix it.
 
 ## Node and pnpm
 
-The container ships Node 22 (`/opt/node22`) and pnpm 10.28, while
-`devEngines` in `package.json` pins Node `^24.11.0` and pnpm `10.33.0`.
-`pnpm install` still completes with the container's versions, so install
-dependencies with plain `pnpm install`.
+`node` on `PATH` is Node 22 (`/opt/node22`), but `devEngines` in
+`package.json` pins Node `^24.11.0` and pnpm `10.33.0`. Node 24 is installed
+at `/opt/node24`, and its corepack fetches the pinned pnpm:
 
-`vp` is not on `PATH`. Run it through the workspace: `pnpm exec vp ...`, or
-use the root scripts (`pnpm test`, `pnpm lint`, `pnpm check`, ...).
+```sh
+export PATH=/opt/node24/bin:$PATH
+corepack pnpm@10.33.0 install
+```
+
+After install, `vp` is in `node_modules/.bin`: run it as `pnpm exec vp ...`,
+or use the root scripts (`pnpm test`, `pnpm lint`, `pnpm check`, ...).
 
 `pnpm install` warns `Ignored build scripts: workerd`. The dev server runs
 without approving it.
@@ -47,11 +49,11 @@ installs it system-wide.
 
 From the container, YouTube metadata works (with the `mweb` and
 `web_embedded` clients) but every audio download fails with HTTP 403 from
-`googlevideo.com`. Audio has to come from the blob store or the
-`fetch-youtube-audio` workflow (see [Meeting audio](audio.md)).
-
-If deno is on `PATH`, yt-dlp runs it and it may leave a `deno.lock` in the
-working tree. Don't commit it.
+`googlevideo.com`. The `warp` and `tor` egress routes can't help: the
+container's only egress is an HTTPS proxy, which carries neither WARP's UDP
+nor Tor's TCP ports (see the [ytdlp README](../../packages/ytdlp/README.md#routes)).
+Audio has to come from the blob store or the `fetch-youtube-audio` workflow
+(see [Meeting audio](audio.md)).
 
 ## Long-running processes
 
@@ -60,17 +62,8 @@ Restart them if needed, or point the user at the PR's preview deployment.
 
 ## Tests
 
-- `AI_AGENT` is set in the container, so Vitest hides the console output of
-  passing tests. Add `--reporter=default` to see it (for example the `WER=`
-  lines of the transcription evals).
-- `packages/core/src/transcription/wer.perf.test.ts` is timing-based and can
-  fail when the whole suite runs in parallel. Rerun it alone before treating
-  a failure as real.
-
-## Repository gotchas
-
-- `.gitignore` ignores every directory named `models/`, anywhere in the tree.
-  A new directory with that name won't show up in `git status`.
+`AI_AGENT` is set, which changes Vitest's output; see
+[Testing](testing.md#running-some-of-the-tests).
 
 ## GitHub
 

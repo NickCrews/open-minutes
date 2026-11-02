@@ -39,6 +39,14 @@ pnpm test --changed main                 # tests affected by changes since main
 `pnpm exec vp test` runs in watch mode and reruns only the tests affected by
 each edit. The same arguments work there, and with `pnpm test:slow`.
 
+When `AI_AGENT` is set, as it is under Claude Code, Vitest hides the console
+output of passing tests. Add `--reporter=default` to see it, for example the
+`WER=` lines of the transcription evals.
+
+`packages/core/src/transcription/wer.perf.test.ts` aligns full-meeting-sized
+transcripts and has failed when the whole suite ran in parallel on a loaded
+machine. Rerun it alone before treating a failure as real.
+
 ## Hand-edited datums
 
 The golden meetings in [`packages/datasets`](../../packages/datasets/README.md)
