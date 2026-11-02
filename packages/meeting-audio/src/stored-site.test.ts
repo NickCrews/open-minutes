@@ -123,6 +123,23 @@ describe("storedSite", () => {
         ).toEqual(metadata);
       });
 
+      it("doesn't store metadata without a duration", async () => {
+        const { store, writer, blobs } = memoryBlobStore();
+        const unposted: SiteAdapter = {
+          ...fromSite,
+          getMetadata: async (r) => ({
+            ...(await fromSite.getMetadata(r)),
+            durationSecs: null,
+          }),
+        };
+        const metadata = await storedSite(unposted, {
+          store,
+          writer,
+        }).getMetadata(ref);
+        expect(metadata).toMatchObject({ id, durationSecs: null });
+        expect(blobs.has(`${prefix}/metadata.json`)).toBe(false);
+      });
+
       it("gets the audio from the site and stores it", async () => {
         const dir = await mkdtemp(join(tmpdir(), "stored-site-miss-"));
         try {

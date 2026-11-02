@@ -46,7 +46,10 @@ export function storedSite(
       const stored = await files.metadataJson.get();
       if (stored) return metadataFromJson(stored);
       const metadata = await adapter.getMetadata(id);
-      if (writer) {
+      // No duration means the site has no audio for it yet (an akleg.gov
+      // meeting not yet posted, a YouTube stream still live), so its
+      // metadata isn't final and isn't stored.
+      if (writer && metadata.durationSecs !== null) {
         await writer.put(files.metadataJson, metadataToJson(metadata));
         console.error(`Stored ${id}'s metadata in the blob store.`);
       }
