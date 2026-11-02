@@ -9,6 +9,7 @@ import { createHash } from "node:crypto";
 import { rm, stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { recordingDir } from "@open-minutes/blobstore";
 import { decodeToWav, SAMPLE_RATE } from "@open-minutes/codecs";
 import type { Site } from "@open-minutes/core/site";
 import { storedSiteFromEnv } from "./stored-site";
@@ -37,7 +38,7 @@ export interface RecordingRef {
 }
 
 function meetingCacheDir({ site, id }: RecordingRef): string {
-  return join(CACHE_ROOT, site, encodeURIComponent(id));
+  return join(CACHE_ROOT, site, recordingDir(site, id));
 }
 
 /**

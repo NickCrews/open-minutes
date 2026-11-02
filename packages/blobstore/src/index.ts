@@ -8,6 +8,8 @@ import { AwsClient } from "aws4fetch";
 import type { Site } from "@open-minutes/core/site";
 import { keyPath, storeOf } from "./layout";
 
+export { recordingDir } from "./layout";
+
 /** One file in the blob store, which may or may not exist yet. */
 export interface BlobFile {
   /** Its key in the bucket, like `exports/open-minutes.duckdb`. */
