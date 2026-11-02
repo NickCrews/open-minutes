@@ -55,10 +55,6 @@ settings are described in [`.env.example`](.env.example).
 Before committing, run `pnpm check`, which typechecks, lints, checks
 formatting and runs the fast tests.
 
-If you are Claude Code running in a cloud container, read
-[docs/contributing/claude-code-container.md](docs/contributing/claude-code-container.md)
-first.
-
 ## Guides
 
 - [The database](docs/contributing/db.md): resetting it, changing the schema,
@@ -69,6 +65,8 @@ first.
   where it's published to the speech models.
 - [Deploying](docs/contributing/deploy.md): how production is deployed and why
   we only roll forward.
+- [Claude Code in a cloud container](docs/contributing/claude-code-container.md):
+  read this first if you are Claude Code running in a cloud container.
 
 ## Documentation
 
