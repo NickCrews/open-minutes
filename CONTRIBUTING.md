@@ -55,6 +55,10 @@ settings are described in [`.env.example`](.env.example).
 Before committing, run `pnpm check`, which typechecks, lints, checks
 formatting and runs the fast tests.
 
+If you are Claude Code running in a cloud container, read
+[docs/contributing/claude-code-container.md](docs/contributing/claude-code-container.md)
+first.
+
 ## Guides
 
 - [The database](docs/contributing/db.md): resetting it, changing the schema,
