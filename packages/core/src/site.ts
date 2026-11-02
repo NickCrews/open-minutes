@@ -12,6 +12,12 @@ export type Site = (typeof SITES)[number];
  */
 export interface SiteAdapter {
   readonly site: Site;
+  /**
+   * The recording's ID on the site, from either an ID or a URL to it: a
+   * YouTube video ID, or an akleg.gov meeting ID. The other methods take
+   * either form; this gives the one to key stored files by.
+   */
+  recordingId(recordingIdOrUrl: string): string;
   /** The recording's title, publisher and so on. */
   getMetadata(recordingIdOrUrl: string): Promise<RecordingMetadata>;
   /** The extension of the files {@link downloadAudio} saves, for naming them. */
@@ -43,6 +49,28 @@ export interface RecordingMetadata {
    * meeting happens on or before it.
    */
   publishedAt: Date | null;
+}
+
+/**
+ * `metadata` as JSON, the way the blob store and the fetch-youtube-audio
+ * workflow keep it: `publishedAt` is an ISO 8601 string.
+ */
+export function metadataToJson(
+  metadata: RecordingMetadata,
+): Uint8Array<ArrayBuffer> {
+  return new TextEncoder().encode(`${JSON.stringify(metadata, null, 2)}\n`);
+}
+
+/** The {@link RecordingMetadata} in JSON from {@link metadataToJson}. */
+export function metadataFromJson(json: Uint8Array): RecordingMetadata {
+  const raw = JSON.parse(new TextDecoder().decode(json)) as Omit<
+    RecordingMetadata,
+    "publishedAt"
+  > & { publishedAt: string | null };
+  return {
+    ...raw,
+    publishedAt: raw.publishedAt === null ? null : new Date(raw.publishedAt),
+  };
 }
 
 /**

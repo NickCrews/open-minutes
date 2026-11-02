@@ -28,11 +28,21 @@ describe("blobStoreWriterFromEnv", () => {
 describe("blobStore", () => {
   it("gives each file the content type it's stored with", () => {
     const store = blobStore("https://blobs.example/");
-    const video = store.youtube("9HoIM5INxpI");
-    expect(video.speechWebm).toMatchObject({
+    const video = store.recording("youtube", "9HoIM5INxpI");
+    expect(video.audio).toMatchObject({
       url: "https://blobs.example/youtube/9HoIM5INxpI/speech.webm",
       contentType: "audio/webm",
     });
     expect(video.metadataJson.contentType).toBe("application/json");
+  });
+
+  it("keys an akleg.gov meeting by its ID without spaces or colons", () => {
+    const store = blobStore("https://blobs.example/");
+    const meeting = store.recording("akleg", "SL&C 2018-09-10 14:00:00");
+    expect(meeting.audio).toMatchObject({
+      key: "akleg/SL&C_2018-09-10_140000/audio.mp3",
+      url: "https://blobs.example/akleg/SL%26C_2018-09-10_140000/audio.mp3",
+      contentType: "audio/mpeg",
+    });
   });
 });

@@ -1,6 +1,10 @@
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import type { RecordingMetadata, SiteAdapter } from "@open-minutes/core/site";
+import {
+  type RecordingMetadata,
+  type SiteAdapter,
+  metadataFromJson,
+} from "@open-minutes/core/site";
 import {
   EgressError,
   type EgressOptions,
@@ -10,7 +14,6 @@ import {
 import { encodeSpeechWebm } from "@open-minutes/codecs";
 import {
   type YtDlpInfo,
-  metadataFromJson,
   metadataFromYtDlpInfo,
   videoId,
   videoUrl,
@@ -172,6 +175,7 @@ export function youtube(options: YouTubeOptions = {}): YouTube {
   return {
     site: "youtube",
     audioExtension: "webm",
+    recordingId: videoId,
     getMetadata: (videoIdOrUrl) =>
       orViaWorkflow(
         videoIdOrUrl,

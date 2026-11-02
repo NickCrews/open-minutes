@@ -1,6 +1,7 @@
 # Fetches what the pipeline needs from one YouTube video and publishes it as
 # this run's artifacts, one unzipped file each, kept for a day:
-#   metadata.json  the video's RecordingMetadata, as metadataToJson writes it
+#   metadata.json  the video's RecordingMetadata, as metadataToJson in
+#                  @open-minutes/core writes it
 #   speech.webm    YouTube's Opus audio, re-encoded to 16 kHz mono Opus at
 #                  24 kbps (~11 MB per hour)
 # `youtube fetch` runs youtube() from @open-minutes/youtube, the same code that
@@ -9,7 +10,7 @@
 #
 # youtube() (via fetchVideoViaWorkflow in packages/youtube/src/workflow-fetch.ts)
 # dispatches this when YouTube refuses yt-dlp every route from where it runs,
-# follows the run, and downloads the artifacts; storedYoutube stores them in
+# follows the run, and downloads the artifacts; storedSite stores them in
 # the blob store if it has its keys. This workflow never touches the blob store, so it needs no
 # secrets.
 #

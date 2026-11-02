@@ -89,6 +89,9 @@ importers:
 
   packages/blobstore:
     dependencies:
+      '@open-minutes/core':
+        specifier: workspace:*
+        version: link:../core
       aws4fetch:
         specifier: ^1.0.20
         version: 1.0.20
@@ -181,6 +184,9 @@ importers:
 
   packages/meeting-audio:
     dependencies:
+      '@open-minutes/akleg':
+        specifier: workspace:*
+        version: link:../akleg
       '@open-minutes/blobstore':
         specifier: workspace:*
         version: link:../blobstore
