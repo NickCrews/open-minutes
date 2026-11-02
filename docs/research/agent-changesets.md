@@ -100,50 +100,43 @@ the harness canonicalizes each:
 
 Two row diffs match when their canonical forms are equal.
 
-### Agent UX
-
-The agent is an ordinary coding agent (bash, read, write, edit). It writes
-`migration.sql`, and optionally `rationale.md`. The harness takes those files
-as the final product.
-
-The agent works in a loop of editing the file and running the harness:
-
-- `om changeset check`: runs a check and prints the first failed assertion if
-  any, else a summary of the row diff and the change in rule violations (fixed
-  and introduced).
-- `om changeset query '<sql>'`: runs the query on after, inside a check.
-
-After is always rebuilt from the file, so the file and the result can't
-drift apart. The agent also keeps read-only access to main.
-
-A changeset covers one meeting or one task, so review stays manageable and
-conflicts stay rare.
-
 ### Playgrounds
 
-For anything a check can't show (trying a sequence of edits, setting up a
-state to test a changeset against), the agent makes playgrounds: throwaway
-databases it owns outright, as many as it likes.
+A playground is a throwaway database the agent owns outright. The agent has
+total freedom in its playgrounds and makes as many as it likes. It starts in
+one, `proposal`, holding the meetings its task is about. These are its
+primitives:
 
-- `om playground new [--meeting <slug>]... [--from <playground>] [--full]`
-  makes one and prints its name. By default it holds the named meetings with
-  their segments and chapters, plus all of `people`, `bodies` and
-  `jurisdictions`, copied from main with `COPY` over a read-only connection,
-  in foreign key order. Ids are kept, and the sequences continue from main's.
-  `--from` copies another playground with `CREATE DATABASE ... TEMPLATE`.
-  `--full` copies all of main.
-- `om playground reset <name>` puts it back as it was made, from a template
-  saved at creation.
-- `om playground diff <name>` shows its row diff since creation. The capture
-  triggers come with the schema, and a database setting on each playground
-  makes them record every session's changes, not only `changeset`'s.
-- `om playground list` and `om playground rm <name>`. Playgrounds unused for a
-  day are dropped, and `pnpm db prune` lists the rest.
+- **SQL.** `psql` on any playground, running any statement as the
+  playground's owner. Main is read-only.
+- **Rules.** `om check [--db <playground>] [--meeting <slug>]...` checks
+  meetings against the rules and prints the violations. Without `--db` it
+  checks main.
+- **Playgrounds.**
+  - `om playground new <name> [--meeting <slug>]... [--from <playground>]
+    [--full]` makes one. By default it holds the named meetings with their
+    segments and chapters, plus all of `people`, `bodies` and
+    `jurisdictions`, copied from main with `COPY` over a read-only
+    connection, in foreign key order. Ids are kept, and the sequences
+    continue from main's. `--from` branches another playground with
+    `CREATE DATABASE ... TEMPLATE`. `--full` copies all of main.
+  - `om playground reset <name>` puts it back as it was made, from a
+    template saved at creation.
+  - `om playground diff <name>` shows its row diff since creation. The
+    capture triggers come with the schema, and a database setting on each
+    playground makes them record every session's changes, not only
+    `changeset`'s.
+  - `om playground list` and `om playground rm <name>`. Playgrounds unused
+    for a day are dropped, and `pnpm db prune` lists the rest.
+- **Changesets.** `om changeset check [--db <playground>]` runs
+  `migration.sql` in a rolled-back transaction (see [Checking](#checking)),
+  against main by default, and prints the first failed assertion if any, else
+  a summary of the row diff and the change in rule violations (fixed and
+  introduced). `om changeset query '<sql>'` runs a query on the after state,
+  inside the same rolled-back transaction.
 
-Every `om` command takes `--db <playground>`, so `om changeset check` and
-`om changeset query` run against a playground the same way as
-against main. A playground never feeds main: the product is still
-`migration.sql`, checked against main.
+A playground never feeds main: the product is `migration.sql`, checked
+against main.
 
 Playgrounds are databases on the same Postgres server as main, so they need
 no infrastructure beyond the server main already runs on. The harness's role
@@ -154,6 +147,29 @@ while main is busy. `CREATE DATABASE ... TEMPLATE` can't copy main directly,
 because the source must have no other connections; `--full` copies from a
 snapshot of main that is refreshed when stale, or uses a Neon branch where
 main is on Neon.
+
+### Agent UX
+
+The agent is an ordinary coding agent (bash, read, write, edit) with the
+primitives above. Its product is `migration.sql`, and optionally
+`rationale.md`; the harness takes those files as the final product.
+
+What we expect an agent to do with them:
+
+1. Read the meeting in `proposal` and check it against the rules.
+2. Try edits there with SQL, checking the rules as it goes. Reset `proposal`
+   when an approach fails, or branch it with `--from` to try two side by
+   side.
+3. Write the edits that worked into `migration.sql`, using `om playground
+   diff` to see what they changed.
+4. Run `om changeset check` against main until its assertions pass and it
+   introduces no violations, then propose it.
+
+The after state of `om changeset check` is always rebuilt from the file, so
+the file and the result can't drift apart.
+
+A changeset covers one meeting or one task, so review stays manageable and
+conflicts stay rare.
 
 ### Review
 
