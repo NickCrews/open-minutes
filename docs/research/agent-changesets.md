@@ -109,8 +109,8 @@ as the final product.
 The agent works in a loop of editing the file and running the harness:
 
 - `om changeset check`: runs a check and prints the first failed assertion if
-  any, else a summary of the row diff and the change in rule issues (fixed and
-  introduced).
+  any, else a summary of the row diff and the change in rule violations (fixed
+  and introduced).
 - `om changeset query '<sql>'`: runs the query on after, inside a check.
 
 After is always rebuilt from the file, so the file and the result can't
@@ -156,7 +156,7 @@ is refreshed when stale, or uses a Neon branch where main is on Neon.
 
 The reviewer, human or agent, reads the row diff, shown in domain terms (eg a
 transcript with relabelled segments highlighted) rather than as SQL, alongside
-the change in rule issues and the rationale. Approving applies the changeset
+the change in rule violations and the rationale. Approving applies the changeset
 at once, against the row diff the reviewer saw.
 
 A reviewer agent has the same read-only access as the author: main, and
