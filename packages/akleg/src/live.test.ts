@@ -1,12 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { readWave } from "@open-minutes/audio/wav";
+import { ensureWaveForm } from "@open-minutes/codecs";
 import { akleg, aklegSource } from "./index";
 
 // Against the live akleg.gov, so a change to its API or media server fails
-// here, in CI, rather than in an ingest. index.test.ts covers the parsing
+// here, in CI, rather than in production. index.test.ts covers the parsing
 // offline; these check the API still answers the way its fixtures say. They
 // use past meetings, whose records shouldn't change, so a failure means
 // akleg.gov changed (or is down), not the data. ~10 s in all when akleg.gov is
@@ -43,7 +43,7 @@ describe("akleg.gov, live", { timeout: 60_000 }, () => {
   it("lists the current Legislature's meetings", async () => {
     // Early in a new Legislature this may be empty; it must still parse.
     await expect(
-      aklegSource({ committee: "HRES" }).listVideos(),
+      aklegSource({ committee: "HRES" }).listRecordings(),
     ).resolves.toBeInstanceOf(Array);
   });
 
@@ -55,21 +55,13 @@ describe("akleg.gov, live", { timeout: 60_000 }, () => {
     });
   });
 
-  it(
-    "downloads and decodes a meeting's audio",
-    { timeout: 120_000 },
-    async () => {
-      // A 7.5-minute meeting: a 3.6 MB MP3.
-      const path = join(mkdtempSync(join(tmpdir(), "akleg-")), "audio.wav");
-      const result = await source.ensureAudioDownloaded(
-        "HRES 2025-04-04 13:00:00",
-        path,
-      );
-      expect(result).toEqual({ downloaded: true });
-      const wave = readWave(path);
-      expect(wave.sampleRate).toBe(16_000);
-      // The API says 451.508 s; the decoded MP3 is about half a second shorter.
-      expect(Math.abs(wave.samples.length / 16_000 - 451.5)).toBeLessThan(1);
-    },
-  );
+  it("downloads a meeting's MP3 audio", { timeout: 120_000 }, async () => {
+    // A 7.5-minute meeting: a 3.6 MB MP3.
+    const path = join(mkdtempSync(join(tmpdir(), "akleg-")), "audio.mp3");
+    await source.downloadAudio("HRES 2025-04-04 13:00:00", path);
+    const wave = await ensureWaveForm(path);
+    expect(wave.sampleRate).toBe(16_000);
+    // The API says 451.508 s; the decoded MP3 is about half a second shorter.
+    expect(Math.abs(wave.samples.length / 16_000 - 451.5)).toBeLessThan(1);
+  });
 });

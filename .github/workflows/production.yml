@@ -161,7 +161,7 @@ jobs:
           NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
           NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
         run: |
-          DATABASE_URL_PROD=$(npx --yes neonctl@2 connection-string \
+          DATABASE_URL_PROD=$(pnpm --silent dlx neonctl@2 connection-string \
             --project-id "$NEON_PROJECT_ID" --no-analytics)
           echo "::add-mask::$DATABASE_URL_PROD"
           if [[ "$DATABASE_URL_PROD" != postgres* ]]; then

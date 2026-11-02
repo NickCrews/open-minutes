@@ -1,4 +1,4 @@
-import { describe, expect } from "vitest";
+import { describe, expect } from "vite-plus/test";
 import { ianaTimezoneError as jsTimezoneError } from "@open-minutes/core/timezone";
 import { test } from "./testing/vitest";
 import { bodiesTable, jurisdictionsTable, meetingsTable } from "./schema";

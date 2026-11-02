@@ -15,7 +15,7 @@ import { z } from "zod";
 
 /**
  * Dates and times are entered by hand as the wall clock read in the meeting's own
- * timezone — the form on the agenda, and the form they're stored in (ADR 0004),
+ * timezone — the form on the agenda, and the form they're stored in,
  * so nothing is converted on the way in. The time is optional: often the day is
  * all anyone knows, and leaving it blank stores "time unknown" rather than a
  * made-up midnight. Clearing the date clears the time with it.
@@ -23,7 +23,7 @@ import { z } from "zod";
  * Guarded on both sides of the wire by the same `canEdit` that hides the button.
  */
 const saveMeetingDate = createServerFn({ method: "POST" })
-  .inputValidator(
+  .validator(
     z.object({ id: z.int().positive(), date: z.string(), time: z.string() }),
   )
   .handler(async ({ data }) => {
@@ -39,8 +39,8 @@ const saveMeetingDate = createServerFn({ method: "POST" })
 
 /**
  * When a meeting happened, in its timezone: the date, plus the time when
- * it's known. In development it doubles as an editor, since ingestion can't
- * derive either and someone has to read it off the video — that's also why the
+ * it's known. In development it doubles as an editor, since nothing
+ * derives either from a recording and someone has to read it off the video — that's also why the
  * unset state stays visible there instead of collapsing away: an unset date is
  * the thing you came to fix.
  *

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import * as splitNumeral from "./split-numeral";
 import { fixWith, foundTexts } from "./testing";
 

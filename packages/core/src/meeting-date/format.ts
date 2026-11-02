@@ -1,5 +1,5 @@
 // When a meeting happened, as stored: a wall-clock `date` ("2026-06-14") and an
-// optional `time` ("19:30:00") in the body's own timezone. See ADR 0004.
+// optional `time` ("19:30:00") in the meeting's own timezone.
 //
 // Everything here works on those strings directly and never builds a local JS
 // Date from them. A wall-clock reading has no instant attached, so any trip
@@ -9,9 +9,9 @@
 
 /** The two columns a meeting's "when" lives in, as drizzle returns them. */
 export interface MeetingWhen {
-  /** "YYYY-MM-DD" in the body's timezone, or null when unknown. */
+  /** "YYYY-MM-DD" in the meeting's timezone, or null when unknown. */
   date: string | null;
-  /** "HH:MM:SS" in the body's timezone, or null when unknown. */
+  /** "HH:MM:SS" in the meeting's timezone, or null when unknown. */
   time: string | null;
 }
 

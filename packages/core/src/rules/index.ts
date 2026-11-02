@@ -1,8 +1,7 @@
-// The rules a meeting's data must follow, wherever it lives: rows in the
-// database (checked by @open-minutes/agents after every edit) or golden
-// fixture files (checked by @open-minutes/fixtures). Each caller loads the
-// meeting into a RuleMeeting, runs checkMeeting, and maps the indices in
-// each issue back to whatever its readers can act on: row ids, or file:line.
+// The rules a meeting's data must follow. @open-minutes/datasets checks the
+// golden fixture files against them. A caller loads the meeting into a
+// RuleMeeting, runs checkMeeting, and maps the indices in each issue back to
+// whatever its readers can act on, such as file:line.
 //
 // Each rule is a module named for its code that exports a RuleSpec: its
 // `code`, `rule` (a function from the meeting to the violations it finds),
@@ -42,7 +41,7 @@ import * as uncoveredSpeech from "./uncovered-speech";
 import * as wordOutOfOrder from "./word-out-of-order";
 import * as zoningDistrict from "./zoning-district";
 
-export type { RuleMeeting, RuleSegment } from "./common";
+export type { RuleMeeting, RuleSegment, Severity } from "./common";
 export {
   CLEANING_RULE_SPECS,
   cleanGroups,
@@ -51,7 +50,7 @@ export {
 } from "./clean";
 
 /**
- * The rules every meeting follows, golden or in the database, in the order
+ * The rules every meeting follows, in the order
  * checkMeeting reports them.
  */
 export const RULE_SPECS = [

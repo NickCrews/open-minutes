@@ -3,15 +3,12 @@
 Where Open Minutes gets meetings published by the Alaska Legislature on
 [akleg.gov](https://www.akleg.gov), a peer of
 [`@open-minutes/youtube`](../youtube). It lists a committee's recorded
-meetings, and implements `@open-minutes/core`'s `AudioProvider` for a
-meeting: its metadata, and its audio as 16 kHz mono WAV. It knows nothing about
-the database or what happens to the audio next. `aklegSource({ committee:
+meetings, and implements `@open-minutes/core`'s `SiteAdapter` for a
+meeting: its metadata, and its MP3 audio. `aklegSource({ committee:
 "HRES" })` is a committee as a body's meeting source
-(`{"type":"akleg_committee","committee":"HRES"}`): core's `VideoLister`,
-which `om available` takes.
+(`{"type":"akleg_committee","committee":"HRES"}`): core's `RecordingLister`.
 
-`om available` and `om ingest` use it for bodies whose meeting source is a
-committee; their meetings are stored with `site_kind` `akleg`. The site's player
+Meetings from a committee are stored with `site_kind` `akleg`. The site's player
 can't play them yet. See [docs/research/akleg.md](../../docs/research/akleg.md)
 for how akleg.gov publishes meetings, how to play them on our site, and
 what's left to do.
@@ -23,27 +20,25 @@ from scraping its pages. Responses are checked with zod, so if the API
 changes the fields used here, the call fails with an error instead of
 returning wrong data.
 
-`getMetadata` maps a meeting onto `VideoMetadata`:
+`getMetadata` maps a meeting onto `RecordingMetadata`:
 
 - **Channel ID:** the chamber and committee code (`HRES`).
 - **Title:** `House RESOURCES - 2018-09-10 14:00:00`, from which
   `resolveMeetingDateTime` reads the date and time.
-- **Upload date:** akleg.gov gives none, so the meeting's own date.
+- **Permalink:** the meeting's page on akleg.gov.
+- **Published at:** null; akleg.gov doesn't say when it published a
+  recording.
 
 ## Audio
 
-The MP3 "FTR" recording is decoded as it downloads with libmpg123 compiled to
-WebAssembly (`mpg123-decoder`), so, as for YouTube, no ffmpeg is needed and the
-output is the same on every machine. MP3 can't be decoded straight to 16 kHz
-as Opus can, so the channels are averaged and resampled with a polyphase
-windowed-sinc filter (`Resampler` in `mp3.ts`). A 3-hour meeting takes about a
-minute and 160 MB of memory. Its WAV matches ffmpeg's (`-ar 16000 -ac 1`) to a
-correlation of 0.9999999, about 1 ms apart (ffmpeg trims the encoder delay).
+The MP3 "FTR" recording is saved as akleg.gov serves it, streamed to disk.
+[`@open-minutes/codecs`](../codecs/README.md) decodes it to 16 kHz WAV, with
+no ffmpeg.
 
 ## Tests
 
-- `index.test.ts` and `mp3.test.ts` run offline, on trimmed real API responses
-  (`src/fixtures/`) and a generated MP3.
+- `index.test.ts` runs offline, on trimmed real API responses
+  (`src/fixtures/`).
 - `live.test.ts` runs against akleg.gov itself (~10 s), with every
   `pnpm test` and in CI. It checks known past meetings field by field, lists
   the current Legislature, and downloads and decodes a 7.5-minute meeting. A

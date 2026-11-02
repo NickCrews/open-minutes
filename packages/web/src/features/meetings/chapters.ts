@@ -7,11 +7,8 @@ import {
   speakerKey,
 } from "./speaker-identity";
 
-export {
-  chapterIndexAt,
-  resolveLinkTime,
-  type Span,
-} from "@open-minutes/core/chapters";
+export { chapterIndexAt, resolveLinkTime } from "@open-minutes/core/chapters";
+export type { Span } from "@open-minutes/core/span";
 
 type Meeting = Awaited<ReturnType<typeof getMeetingById>>;
 export type Chapter = Meeting["chapters"][number];

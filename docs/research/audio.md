@@ -14,8 +14,9 @@ YouTube (via yt-dlp) each time something needs it, and keep it only in
 untracked per-machine caches. That causes three problems:
 
 - **YouTube is an unreliable source for automation.** From datacenter IPs
-  (CI runners, cloud machines) audio downloads fail on YouTube's bot check.
-  See [youtube-in-ci.md](youtube-in-ci.md).
+  (CI runners, cloud machines) audio downloads fail, on YouTube's bot check or
+  because stream URLs are bound to an address that keeps changing.
+  See [youtube-on-servers.md](youtube-on-servers.md).
 - **We don't keep what we've processed.** If a video is taken down, edited or
   re-encoded, we can't reproduce a transcript or re-run a better model on it.
 - **Things that should be simple are expensive or faked.** The dev dataset's
@@ -26,7 +27,7 @@ untracked per-machine caches. That causes three problems:
 
 - **Recording**: the audio of one meeting, as one file.
 - **Golden meeting**: a meeting with a hand-verified transcript in
-  `packages/fixtures/test-data/`, used by tests, benchmarks and seeded datasets.
+  `packages/datasets/datums/`, used by tests, benchmarks and seeded datasets.
 - **Ingested meeting**: any meeting the pipeline has processed into the
   database.
 - **Store**: wherever recordings live long-term, outside any one machine.
@@ -190,8 +191,8 @@ tests.
 ## Constraints and known facts
 
 - YouTube blocks audio downloads from datacenter IPs without cookies, PO
-  tokens or a residential egress; listing videos and fetching metadata are
-  workable ([youtube-in-ci.md](youtube-in-ci.md)).
+  tokens or a stable residential egress; listing videos and fetching metadata
+  are workable ([youtube-on-servers.md](youtube-on-servers.md)).
 - GitHub: files over 100 MB are rejected, repos are best kept under ~1 GB, LFS
   has bandwidth quotas, Actions caches are capped at 10 GB per repo, and jobs
   at 6 hours.
@@ -218,8 +219,8 @@ tests.
    goldens.
 4. **What does CI cache:** recordings only, or also prepared model input?
    This trades cache size against preparation time (R9).
-5. **Do we keep the ingest work directory's other artifacts** (raw
-   transcription and diarization) alongside the recording, so reprocessing can
+5. **Do we keep intermediate artifacts** (raw transcription and
+   diarization) alongside the recording, so reprocessing can
    restart from any stage?
 6. **Retention and takedowns.** Are there recordings we'd be asked to remove,
    and what happens to transcripts if so? Public meeting recordings are

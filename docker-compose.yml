@@ -1,6 +1,8 @@
 services:
   postgres:
-    image: pgvector/pgvector:pg17
+    # Match prod's major version. To see prod's version, run
+    # `SELECT version();` on console.neon.tech.
+    image: pgvector/pgvector:pg18
     environment:
       POSTGRES_DB: open_minutes
       POSTGRES_USER: postgres
@@ -8,7 +10,9 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      # Postgres 18 images keep PGDATA at /var/lib/postgresql/18/docker and
+      # expect the volume mounted one level up.
+      - postgres18_data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d open_minutes"]
       interval: 5s
@@ -16,4 +20,4 @@ services:
       retries: 5
 
 volumes:
-  postgres_data:
+  postgres18_data:

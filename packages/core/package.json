@@ -4,29 +4,27 @@
   "type": "module",
   "exports": {
     "./dotenv": "./src/dotenv.ts",
-    "./audio-provider": "./src/audio-provider.ts",
-    "./video-lister": "./src/video-lister.ts",
+    "./site": "./src/site.ts",
     "./meeting-source": "./src/meeting-source.ts",
-    "./timeline": "./src/timeline.ts",
     "./meeting-date": "./src/meeting-date/index.ts",
     "./transcription": "./src/transcription/index.ts",
     "./voice_embeddings": "./src/voice_embeddings/index.ts",
     "./chapters": "./src/chapters.ts",
     "./clock": "./src/clock.ts",
     "./rules": "./src/rules/index.ts",
-    "./transcript-fingerprint": "./src/transcript-fingerprint.ts",
     "./text": "./src/text.ts",
-    "./timezone": "./src/timezone.ts"
+    "./timezone": "./src/timezone.ts",
+    "./span": "./src/span.ts"
   },
   "scripts": {
-    "test": "vitest run",
+    "test": "vp test run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "dotenv": "^17.4.2"
   },
   "devDependencies": {
-    "@types/node": "^25.6.0",
-    "vitest": "^4.0.18"
+    "@types/node": "catalog:",
+    "vite-plus": "catalog:"
   }
 }

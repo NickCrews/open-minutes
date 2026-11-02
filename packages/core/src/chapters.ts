@@ -1,6 +1,8 @@
 // A meeting's chapters, as the web page navigates them. The rules chapters
 // must follow are in ./rules, with the rest of the meeting rules.
 
+import type { Span } from "./span";
+
 /** The part of a chapter the rules look at, with times in seconds. */
 export interface ChapterSpan {
   start: number;
@@ -8,12 +10,6 @@ export interface ChapterSpan {
   title: string;
   summary?: string;
   bullets: readonly string[];
-}
-
-/** A stretch of audio, in seconds, eg a segment or a gap. */
-export interface Span {
-  start: number;
-  end: number;
 }
 
 /**

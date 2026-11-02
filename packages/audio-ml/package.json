@@ -1,0 +1,30 @@
+{
+  "name": "@open-minutes/audio-ml",
+  "version": "0.1.0",
+  "description": "Open Minutes speech processing: transcribe, diarize and embed meeting audio with local ONNX models",
+  "type": "module",
+  "exports": {
+    "./transcribe": "./src/transcribe.ts",
+    "./diarize": "./src/diarize.ts",
+    "./embed": "./src/embed.ts",
+    "./embed-model": "./src/embed-model.ts",
+    "./models": "./src/all-models.ts",
+    "./vad": "./src/vad.ts"
+  },
+  "scripts": {
+    "test": "vp test run",
+    "typecheck": "tsc --noEmit",
+    "bench": "vp test bench --run --reporter verbose",
+    "models": "vpx src/models-cli.ts"
+  },
+  "dependencies": {
+    "@open-minutes/codecs": "workspace:*",
+    "@open-minutes/core": "workspace:*",
+    "sherpa-onnx-node": "^1.12.39"
+  },
+  "devDependencies": {
+    "@open-minutes/datasets": "workspace:*",
+    "@types/node": "catalog:",
+    "vite-plus": "catalog:"
+  }
+}

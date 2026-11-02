@@ -90,7 +90,7 @@ The Worker reads all of its configuration from its environment, on the server
 The browser gets only what that file's `PublicConfig` passes it, with the
 first page.
 
-- **Plain values** (like `OBJECT_STORE_PUBLIC_URL`) are `vars` in
+- **Plain values** (like `BLOB_STORE_PUBLIC_URL`) are `vars` in
   [`packages/web/wrangler.jsonc`](../../packages/web/wrangler.jsonc). Dev, PR
   previews and production all read them from there; change one by committing.
 - **Secrets** (`DATABASE_URL`) never go in that file: the dev server passes

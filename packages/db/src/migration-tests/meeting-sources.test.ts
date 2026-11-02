@@ -1,4 +1,4 @@
-import { describe, expect } from "vitest";
+import { describe, expect } from "vite-plus/test";
 import { sqlData } from "../testing";
 import { dbTest } from "../testing/vitest";
 

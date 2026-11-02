@@ -1,4 +1,4 @@
-import { defineConfig } from "vite";
+import { defineConfig, lazyPlugins } from "vite-plus";
 import { cloudflare } from "@cloudflare/vite-plugin";
 import { tanstackStart } from "@tanstack/solid-start/plugin/vite";
 import solidPlugin from "vite-plugin-solid";
@@ -9,7 +9,7 @@ import { prepareDevDatabase } from "./vite/dev-database";
 // Load this config with `--configLoader runner`, as the package.json scripts do.
 // The dev-database import pulls in @open-minutes/db's TypeScript source. Vite's
 // default config loader hands workspace packages to plain node, which can't
-// resolve their extensionless imports, so bare `npx vite` fails with
+// resolve their extensionless imports, so bare `vp build` fails with
 // ERR_MODULE_NOT_FOUND (e.g. db/src/schema). Use `pnpm dev` / `pnpm build`, or
 // pass the flag yourself.
 export default defineConfig(async ({ command, isPreview }) => {
@@ -25,7 +25,7 @@ export default defineConfig(async ({ command, isPreview }) => {
         "~": path.resolve(import.meta.dirname, "src"),
       },
     },
-    plugins: [
+    plugins: lazyPlugins(() => [
       tailwindcss(),
       // Runs the SSR environment in workerd (dev) and emits a Workers bundle
       // (build). Must come before tanstackStart().
@@ -38,6 +38,6 @@ export default defineConfig(async ({ command, isPreview }) => {
       }),
       tanstackStart(),
       solidPlugin({ ssr: true }),
-    ],
+    ]),
   };
 });

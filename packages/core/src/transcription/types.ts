@@ -1,10 +1,8 @@
 /**
- * A recognized word and the onset of its first token. Only the onset is stored:
- * the recognizer reports no durations, so any "end" would be an estimate. Where
- * word-level ends are needed (speaker alignment), they are derived from the
- * surrounding structure — a word lasts until the next word in its speech run
- * starts, or until the run ends. Where only a segment-level end is needed, it is
- * approximated as the last word's onset plus {@link LAST_WORD_DURATION_SEC}.
+ * A recognized word and the onset of its first token. The recognizer reports no
+ * durations, so a word is taken to last until the next word in its speech run
+ * starts, and a segment to end {@link LAST_WORD_DURATION_SEC} after its last
+ * word's onset.
  */
 export interface TranscriptWord {
   text: string;
@@ -12,32 +10,21 @@ export interface TranscriptWord {
 }
 
 /**
- * Assumed duration of a segment's final word when approximating the segment's
- * end from word onsets alone. Mirrored in the SQL function `words_end_secs`
- * (see the drop-word-end-timestamps migration) — keep the two in sync.
+ * Assumed duration of a segment's final word. The SQL function `words_end_secs`
+ * (packages/db/src/migrations/20260720000542_derive-segment-times-from-words)
+ * uses the same value; keep the two in sync.
  */
 export const LAST_WORD_DURATION_SEC = 0.5;
 
 /**
- * A contiguous run of speech detected by voice-activity detection (VAD),
- * together with the words recognized within it. This is the unit transcribeAudio
- * emits: the audio is split at silences (not arbitrary time boundaries), so a
- * segment never cuts a word mid-utterance.
- *
- * Distinct from {@link TranscriptSegment}, which groups words by *speaker* and
- * carries no time bounds. A SpeechSegment is speaker-agnostic and time-bounded.
+ * A run of speech between silences, found by voice-activity detection (VAD),
+ * with the words recognized in it; what transcribeAudio emits. Unlike
+ * {@link TranscriptSegment}, it has time bounds and no speaker.
  */
 export interface SpeechSegment {
-  /**
-   * Seconds from the start of the audio to where this speech run begins — the
-   * silence-trimmed boundary VAD detected, i.e. the start of the audio actually
-   * fed to the recognizer. Surrounding silence is excluded.
-   */
+  /** Seconds from the start of the audio to the run's start, silence excluded. */
   start: number;
-  /**
-   * Seconds from the start of the audio to where this speech run ends
-   * (start + (samples.length / sampleRate)). Surrounding silence is excluded.
-   */
+  /** Seconds from the start of the audio to the run's end, silence excluded. */
   end: number;
   /** Words recognized in this run. Timestamps are absolute (offset by `start`). */
   words: TranscriptWord[];

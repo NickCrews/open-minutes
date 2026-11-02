@@ -5,7 +5,7 @@ import {
   meetingsTable,
 } from "@open-minutes/db";
 import { test } from "@open-minutes/db/testing/vitest";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { getLlmsTxtData, renderLlmsTxt, type LlmsTxtBody } from "./llms-txt";
 
 const ORIGIN = "https://om.example";

@@ -9,40 +9,20 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as SearchRouteImport } from './routes/search'
-import { Route as PeopleRouteImport } from './routes/people'
-import { Route as MeetingsRouteImport } from './routes/meetings'
-import { Route as LlmsDottxtRouteImport } from './routes/llms[.]txt'
-import { Route as BodiesRouteImport } from './routes/bodies'
-import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as PeopleIdRouteImport } from './routes/people_.$id'
-import { Route as MeetingsIdRouteImport } from './routes/meetings_.$id'
+import { Route as AboutRouteImport } from './routes/about'
+import { Route as BodiesRouteImport } from './routes/bodies'
+import { Route as LlmsDottxtRouteImport } from './routes/llms[.]txt'
+import { Route as MeetingsRouteImport } from './routes/meetings'
+import { Route as PeopleRouteImport } from './routes/people'
+import { Route as SearchRouteImport } from './routes/search'
 import { Route as BodiesIdRouteImport } from './routes/bodies_.$id'
+import { Route as MeetingsIdRouteImport } from './routes/meetings_.$id'
+import { Route as PeopleIdRouteImport } from './routes/people_.$id'
 
-const SearchRoute = SearchRouteImport.update({
-  id: '/search',
-  path: '/search',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PeopleRoute = PeopleRouteImport.update({
-  id: '/people',
-  path: '/people',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MeetingsRoute = MeetingsRouteImport.update({
-  id: '/meetings',
-  path: '/meetings',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LlmsDottxtRoute = LlmsDottxtRouteImport.update({
-  id: '/llms.txt',
-  path: '/llms.txt',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BodiesRoute = BodiesRouteImport.update({
-  id: '/bodies',
-  path: '/bodies',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AboutRoute = AboutRouteImport.update({
@@ -50,14 +30,34 @@ const AboutRoute = AboutRouteImport.update({
   path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const BodiesRoute = BodiesRouteImport.update({
+  id: '/bodies',
+  path: '/bodies',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PeopleIdRoute = PeopleIdRouteImport.update({
-  id: '/people_/$id',
-  path: '/people/$id',
+const LlmsDottxtRoute = LlmsDottxtRouteImport.update({
+  id: '/llms.txt',
+  path: '/llms.txt',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MeetingsRoute = MeetingsRouteImport.update({
+  id: '/meetings',
+  path: '/meetings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PeopleRoute = PeopleRouteImport.update({
+  id: '/people',
+  path: '/people',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SearchRoute = SearchRouteImport.update({
+  id: '/search',
+  path: '/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BodiesIdRoute = BodiesIdRouteImport.update({
+  id: '/bodies_/$id',
+  path: '/bodies/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MeetingsIdRoute = MeetingsIdRouteImport.update({
@@ -65,9 +65,9 @@ const MeetingsIdRoute = MeetingsIdRouteImport.update({
   path: '/meetings/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
-const BodiesIdRoute = BodiesIdRouteImport.update({
-  id: '/bodies_/$id',
-  path: '/bodies/$id',
+const PeopleIdRoute = PeopleIdRouteImport.update({
+  id: '/people_/$id',
+  path: '/people/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -162,39 +162,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/solid-router' {
   interface FileRoutesByPath {
-    '/search': {
-      id: '/search'
-      path: '/search'
-      fullPath: '/search'
-      preLoaderRoute: typeof SearchRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/people': {
-      id: '/people'
-      path: '/people'
-      fullPath: '/people'
-      preLoaderRoute: typeof PeopleRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/meetings': {
-      id: '/meetings'
-      path: '/meetings'
-      fullPath: '/meetings'
-      preLoaderRoute: typeof MeetingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/llms.txt': {
-      id: '/llms.txt'
-      path: '/llms.txt'
-      fullPath: '/llms.txt'
-      preLoaderRoute: typeof LlmsDottxtRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/bodies': {
-      id: '/bodies'
-      path: '/bodies'
-      fullPath: '/bodies'
-      preLoaderRoute: typeof BodiesRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/about': {
@@ -204,18 +176,46 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/bodies': {
+      id: '/bodies'
+      path: '/bodies'
+      fullPath: '/bodies'
+      preLoaderRoute: typeof BodiesRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/people_/$id': {
-      id: '/people_/$id'
-      path: '/people/$id'
-      fullPath: '/people/$id'
-      preLoaderRoute: typeof PeopleIdRouteImport
+    '/llms.txt': {
+      id: '/llms.txt'
+      path: '/llms.txt'
+      fullPath: '/llms.txt'
+      preLoaderRoute: typeof LlmsDottxtRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/meetings': {
+      id: '/meetings'
+      path: '/meetings'
+      fullPath: '/meetings'
+      preLoaderRoute: typeof MeetingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/people': {
+      id: '/people'
+      path: '/people'
+      fullPath: '/people'
+      preLoaderRoute: typeof PeopleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/search': {
+      id: '/search'
+      path: '/search'
+      fullPath: '/search'
+      preLoaderRoute: typeof SearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bodies_/$id': {
+      id: '/bodies_/$id'
+      path: '/bodies/$id'
+      fullPath: '/bodies/$id'
+      preLoaderRoute: typeof BodiesIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/meetings_/$id': {
@@ -225,11 +225,11 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof MeetingsIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/bodies_/$id': {
-      id: '/bodies_/$id'
-      path: '/bodies/$id'
-      fullPath: '/bodies/$id'
-      preLoaderRoute: typeof BodiesIdRouteImport
+    '/people_/$id': {
+      id: '/people_/$id'
+      path: '/people/$id'
+      fullPath: '/people/$id'
+      preLoaderRoute: typeof PeopleIdRouteImport
       parentRoute: typeof rootRouteImport
     }
   }

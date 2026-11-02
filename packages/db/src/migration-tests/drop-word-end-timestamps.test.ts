@@ -1,4 +1,4 @@
-import { describe, expect } from "vitest";
+import { describe, expect } from "vite-plus/test";
 import { LAST_WORD_DURATION_SEC } from "@open-minutes/core/transcription";
 import { sqlData } from "../testing";
 import { dbTest, test as latestTest } from "../testing/vitest";

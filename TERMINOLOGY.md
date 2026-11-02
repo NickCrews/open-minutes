@@ -21,27 +21,35 @@ _Avoid_: muni, board, council, committee, organization, group
 A stable, unique handle in lowercase kebab-case that names a row the same way in every database, unlike its id, and doesn't change when it's renamed. Code, static data, the fixtures, the command line and file paths refer to a row by it. Every jurisdiction (`moa`) and body (`gbos`) has one; so does every known person (`margaret-tyler`), the key for their identity across meetings, and every golden fixture meeting (`gbos-2026-03-23`, its fixture directory's name). Other meetings and people have none and go by their id.
 _Avoid_: name, short name, handle, key, muni slug, body id, fixture name, meeting key
 
+**Glossary**:
+The local words of a region, such as Anchorage or Girdwood: what each means and how speech recognition mishears it. It applies to bodies by jurisdiction or by body, and builds on the glossaries of the regions around it. A meeting's glossary merges those of all its bodies. People's names aren't in it.
+_Avoid_: jargon, dictionary, vocabulary, mishearings
+
+**Glossary entry**:
+One word or phrase in a glossary: its headword (the correct spelling), its meaning, its variants (other correct spellings) and how it has been misheard.
+_Avoid_: term, word (that is a word of a transcript)
+
 **Meeting source**:
 Where a body's meetings are published, scanned for new ones: a YouTube channel or playlist, or an Alaska Legislature committee on akleg.gov. A body has at most one; bodies that share a YouTube channel each get a playlist on it.
 _Avoid_: video source, feed, playlist, channel (unless it really is one)
 
 **Site**:
-A website meetings are published on, YouTube or akleg.gov, from which we get a meeting's metadata and audio. A meeting has an ID on its site: a YouTube video ID, or an akleg.gov meeting ID like `HRES 2018-09-10 14:00:00`.
+A website meetings are published on, YouTube or akleg.gov, from which we get a recording's metadata and audio.
 _Avoid_: platform, provider, host
+
+**Recording**:
+One item published on a site that may be a meeting: a YouTube video, or a meeting page on akleg.gov with an audio file and usually a video. Its audio is what we transcribe. It has an ID on its site, its recording ID: a YouTube video ID, or an akleg.gov meeting ID like `HRES 2018-09-10 14:00:00`. A meeting has exactly one.
+_Avoid_: video (unless it is one), stream, clip, media, item, post, listing, site ref
 
 ### Meetings and transcripts
 
 **Meeting**:
-One gathering of one body, or of several in a joint meeting, recorded as one video; the unit we ingest, store, and display.
+One gathering of one body, or of several in a joint meeting, with exactly one recording; the unit we transcribe, store, and display.
 _Avoid_: session, hearing, event, recording, video
 
 **Joint meeting**:
 A meeting held by several bodies together, such as the Girdwood Board of Supervisors and the Girdwood Land Use Committee. It counts as a meeting of each of them, and none of them comes first.
 _Avoid_: combined meeting, shared meeting, host body, co-host, primary body
-
-**Video**:
-The YouTube recording of a meeting, from which its audio comes. An akleg.gov meeting has an audio recording, which is what we transcribe, and usually a video too.
-_Avoid_: stream, clip, media
 
 **Meeting date**:
 The local calendar day a meeting took place, in the meeting's own timezone. May be unknown.
@@ -77,7 +85,7 @@ _Avoid_: talk time, airtime
 ### Speakers and people
 
 A speaker is local to one meeting; a person is global across all meetings
-(see [ADR 0002](adrs/0002-two-tier-speaker-identity.md)).
+(see [docs/speaker-identity.md](docs/speaker-identity.md)).
 
 **Speaker**:
 A distinct voice within one meeting, as shown in that meeting's transcript. Meaningless outside its meeting.
@@ -150,19 +158,11 @@ their name is "Bob", but we don't know the full identity of the person.
 **Full Recognition**:
 We recognize this speaker as an exact person, eg "Jennifer Wingard, the GBOS co-chair in 2026".
 
-### Pipeline
+### Audio processing
 
 **Span**:
 A stretch of a meeting's audio, from start to end in seconds from the start of the file.
 _Avoid_: range, interval, from/to.
-
-**Ingestion**:
-Running one meeting's recording through transcription, diarization, alignment, and recognition, then storing the meeting and its segments all at once.
-_Avoid_: import, processing, scraping, sync
-
-**Available meeting**:
-A meeting on a body's meeting source that hasn't been ingested yet.
-_Avoid_: available video, new video, pending video, backlog
 
 **Transcription**:
 The process of turning audio into a Transcript.
@@ -186,18 +186,14 @@ _Avoid_: segment, turn (alone)
 The stage that assigns each word to the diarization turn it overlaps most and groups consecutive same-speaker words into segments.
 _Avoid_: merging, matching
 
-**Work directory**:
-A meeting's cache of stage outputs (audio, transcription, diarization) kept between pipeline runs.
-_Avoid_: cache dir, temp dir
+### Datums, datasets and evaluation
 
-### Test data and evaluation
-
-**Test data**:
-The checked-in jurisdictions, bodies, people, and golden meetings that seeding loads.
-_Avoid_: fixtures, seed data, snapshot
+**Datums**:
+The checked-in jurisdictions, bodies, people, and golden meetings, in `packages/datasets/datums/`: the atoms that datasets combine.
+_Avoid_: test data, fixtures, seed data, snapshot
 
 **Golden meeting**:
-A meeting in the test data: its metadata, golden transcript, and audio.
+A meeting in the datums: its metadata, golden transcript, and audio.
 _Avoid_: test meeting, sample
 
 **Golden transcript**:
@@ -209,7 +205,7 @@ A transcript a test run produces for inspection. Never ground truth.
 _Avoid_: golden, output
 
 **PSV**:
-The pipe-separated, one-word-per-line format of golden transcripts (see [ADR 0001](adrs/0001-psv-golden-transcript-format.md)).
+The pipe-separated, one-word-per-line format of golden transcripts (see [the datasets README](packages/datasets/README.md#transcript-format)).
 _Avoid_: CSV, TSV, transcript file
 
 **Speaker label**:
@@ -217,8 +213,12 @@ The speaker of a golden transcript's segment, tagged with how much we know: unla
 _Avoid_: speaker tag, speaker id
 
 **Seeding**:
-Loading test data into a database as established truth, including building each known person's voiceprint from their golden segments.
+Loading a dataset into a database as established truth, including building each known person's voiceprint from their golden segments.
 _Avoid_: importing, populating
+
+**Dataset**:
+A named combination of datums that seeding loads, declared by a JSON file in `packages/datasets/datasets/`, such as `bodies` (only jurisdictions and bodies) or `all` (every golden meeting, with placeholder voiceprints). `pnpm db up --data <name>` and `dbTest` take one.
+_Avoid_: spec, seed, fixture set, golden data, dev data
 
 **WER**:
 Word error rate: how far a pipeline transcript's words are from a golden transcript's, as a fraction of the golden transcript's word count.
@@ -227,7 +227,7 @@ _Avoid_: accuracy, error
 ### Meeting rules
 
 **Rule**:
-A requirement a meeting's data must meet, applied the same way to the database and to golden meetings, such as `split-sentence`. Each rule is a file in `packages/core/src/rules/`.
+A requirement a meeting's data must meet, such as `split-sentence`. Each rule is a file in `packages/core/src/rules/`.
 _Avoid_: check, checker, validator, lint
 
 **Rule code**:
@@ -247,11 +247,11 @@ How a rule's violations are reported; each rule gives a default. `error` means t
 _Avoid_: level
 
 **Issue**:
-A violation with its severity and its location: row ids in the database, or file and line in the test data.
+A violation with its severity and its location: file and line in the datums.
 _Avoid_: diagnostic, finding, problem
 
 **Check**:
-To run the rules over a meeting, as `check_meeting` and `pnpm fixtures:check` do. Only a verb; what it runs are rules.
+To run the rules over a meeting, as `pnpm datasets:check` does. Only a verb; what it runs are rules.
 _Avoid_: lint, validate
 
 **Fix**:

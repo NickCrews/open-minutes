@@ -43,7 +43,7 @@ export function findConfig(
 /**
  * Loads the config at `path`, else $DBRANCH_CONFIG, else the nearest
  * dbranch.config.ts. The file is TypeScript, so this needs a TypeScript-aware
- * runtime (tsx, vitest, vite).
+ * runtime (vpx, vitest, vite).
  */
 export async function loadConfig(path?: string): Promise<DbConfig> {
   const file = path ?? process.env.DBRANCH_CONFIG ?? findConfig();

@@ -1,0 +1,32 @@
+# Restores the pipeline's ONNX models (~650MB) from the Actions cache, or
+# downloads them and caches them. Run it as its own step, so no test pays for
+# (or times out on) the download. The cache key is the models' specs (URLs and
+# files), so only a change to a model busts it. Needs ./.github/actions/setup
+# first.
+name: Get the models
+description: Restore or download the pipeline's ONNX models
+
+runs:
+  using: composite
+  steps:
+    - name: Compute the models' cache key
+      id: key
+      shell: bash
+      run: |
+        pnpm -s models --list > "$RUNNER_TEMP/models.jsonl"
+        echo "key=onnx-models-$(sha256sum < "$RUNNER_TEMP/models.jsonl" | cut -c1-16)" >> "$GITHUB_OUTPUT"
+    - name: Restore the models
+      id: cache
+      uses: actions/cache/restore@v4
+      with:
+        path: packages/audio-ml/src/models
+        key: ${{ steps.key.outputs.key }}
+    - name: Download the models
+      shell: bash
+      run: pnpm models
+    - name: Save the models
+      if: steps.cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: packages/audio-ml/src/models
+        key: ${{ steps.key.outputs.key }}

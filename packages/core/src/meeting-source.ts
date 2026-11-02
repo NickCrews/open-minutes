@@ -1,12 +1,12 @@
 /**
- * Where a body's meetings are published, which `om available` scans for new
- * ones: `bodies.meeting_source`. A body has at most one. A body that shares a
- * YouTube channel with its siblings (the Assembly, P&Z and the school board all
- * publish to the MOA channel) gets its own playlist on it instead.
+ * Where a body's meetings are published: `bodies.meeting_source`. A body has
+ * at most one. A body that shares a YouTube channel with its siblings (the
+ * Assembly, P&Z and the school board all publish to the MOA channel) gets its
+ * own playlist on it instead.
  *
  * Stored as JSON, so adding a kind means a new member here, a case in the
- * `bodies_meeting_source_valid` check (see the db schema), and a lister in the
- * pipeline.
+ * `bodies_meeting_source_valid` check (see the db schema), and a `RecordingLister`
+ * for it.
  */
 export type MeetingSource =
   | {

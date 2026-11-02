@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 import { chapterIndexAt, resolveLinkTime } from "./chapters";
 
 const chapter = (start: number, end: number) => ({ start, end });

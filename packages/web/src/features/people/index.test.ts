@@ -9,7 +9,7 @@ import {
 } from "@open-minutes/db";
 import { test } from "@open-minutes/db/testing/vitest";
 import { N_DIMENSIONS as VOICE_N_DIMENSIONS } from "@open-minutes/core/voice_embeddings";
-import { describe, expect } from "vitest";
+import { describe, expect } from "vite-plus/test";
 import { getAllPeople } from "./index";
 
 /** These tests never compare voices; the column is just not-null. */

@@ -7,7 +7,10 @@ test-runs/
 *.gen.*
 
 # Downloaded ONNX models
-models/
+packages/audio-ml/src/models/
+
+# Written by deno when yt-dlp runs it
+deno.lock
 
 # Node
 node_modules/
@@ -24,3 +27,4 @@ dist/
 .tanstack
 .wrangler
 __pycache__/
+.vitest/

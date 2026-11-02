@@ -47,7 +47,7 @@ import {
  * declaration changes (or the database is new).
  */
 export interface DataState {
-  /** Human-readable name, e.g. "golden". */
+  /** Human-readable name, e.g. "bodies". */
   name: string;
   /** Changes whenever `apply` would produce different rows. */
   fingerprint: string;

@@ -1,4 +1,4 @@
-#!/usr/bin/env tsx
+#!/usr/bin/env vpx
 // The database harness CLI, behind the root `pnpm db` script. See
 // docs/contributing/db.md. The datasets `--data` can name come from the
 // repository's dbranch.config.ts (see ./config.ts), so this package imports no

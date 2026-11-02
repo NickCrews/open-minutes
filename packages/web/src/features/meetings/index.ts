@@ -12,8 +12,8 @@ export function getAllMeetings(db: DB) {
 }
 
 /**
- * Sets when a meeting happened, or clears it back to unknown. Ingestion can't
- * derive this — YouTube's publish and stream times don't reliably match when
+ * Sets when a meeting happened, or clears it back to unknown. Nothing derives
+ * this from a recording — YouTube's publish and stream times don't reliably match when
  * the body actually gavelled in — so it arrives from a human (or a parser)
  * reading the video or agenda. `date` ("YYYY-MM-DD") and `time` ("HH:MM:SS")
  * are wall-clock readings in the meeting's timezone; a null `time` means the day

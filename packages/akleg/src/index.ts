@@ -1,18 +1,21 @@
-import { access, mkdir } from "node:fs/promises";
+import { createWriteStream } from "node:fs";
+import { mkdir, rename, rm } from "node:fs/promises";
+import { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
 import { dirname } from "node:path";
 import { z } from "zod";
 import type {
-  AudioProvider,
-  VideoMetadata,
-} from "@open-minutes/core/audio-provider";
-import type { VideoLister } from "@open-minutes/core/video-lister";
-import { mp3ToWav } from "./mp3";
+  RecordingLister,
+  RecordingMetadata,
+  SiteAdapter,
+} from "@open-minutes/core/site";
 
 export type {
-  AudioProvider,
-  VideoMetadata,
-} from "@open-minutes/core/audio-provider";
-export type { ListedVideo, VideoLister } from "@open-minutes/core/video-lister";
+  ListedRecording,
+  RecordingLister,
+  RecordingMetadata,
+  SiteAdapter,
+} from "@open-minutes/core/site";
 
 const BASE = "https://www.akleg.gov";
 
@@ -107,16 +110,50 @@ const committeesResponse = z.object({
 });
 
 /**
- * A response body as `schema`. Errors come back as XML with HTTP 200
- * (`<Basis><Error><Code>FormatException</Code>...`), which this reports.
+ * An error the BASIS API reported. The message has its code
+ * ("FormatException"), where it came from, and the response body, whose
+ * description has the server's timestamp for the error.
  */
-export function parse<T>(schema: z.ZodType<T>, body: string): T {
-  if (body.trimStart().startsWith("<")) {
+export class BasisError extends Error {
+  /** The error's code, eg "FormatException". */
+  readonly code: string;
+
+  constructor(
+    /** The response body, as the API sent it. */
+    readonly body: string,
+    /** Which request got it, eg the query and try. */
+    context?: string,
+  ) {
     const code = /<Code>([^<]*)<\/Code>/.exec(body)?.[1] ?? "unknown";
-    throw new Error(`akleg.gov BASIS API error: ${code}`);
+    super(
+      `akleg.gov BASIS API error: ${code}${context ? ` (${context})` : ""}\n` +
+        body.slice(0, 2000),
+    );
+    this.code = code;
   }
+}
+
+/**
+ * A response body as `schema`. Errors come back as XML with HTTP 200
+ * (`<Basis><Error><Code>FormatException</Code>...`), which this throws as a
+ * {@link BasisError} with `context` in its message.
+ */
+export function parse<T>(
+  schema: z.ZodType<T>,
+  body: string,
+  context?: string,
+): T {
+  if (body.trimStart().startsWith("<")) throw new BasisError(body, context);
   return schema.parse(JSON.parse(body));
 }
+
+/**
+ * BASIS error codes the API sometimes returns for a valid query, and not on
+ * the next try. A malformed query gets a FormatException every time.
+ */
+const TRANSIENT_BASIS_ERRORS = new Set(["XmlSchemaValidationException"]);
+/** Tries of a BASIS query before a transient error is thrown. */
+const BASIS_TRIES = 3;
 
 /** A recording of a meeting. */
 export interface MediaFile {
@@ -199,22 +236,22 @@ export function mainAudio(meeting: AkLegMeeting): MediaFile | undefined {
 }
 
 /**
- * {@link VideoMetadata} for a meeting. akleg.gov has no channels: the
+ * {@link RecordingMetadata} for a meeting. akleg.gov has no channels: the
  * chamber and committee code ("HRES") stand in for one, as they're what a
  * body's meetings share. The title ends with the scheduled start as
  * "YYYY-MM-DD hh:mm:ss", which the pipeline reads the meeting's date and time
- * from. akleg.gov gives no publication date, so the meeting's own date stands
- * in for it.
+ * from. akleg.gov doesn't say when it published a recording.
  */
-export function toMetadata(meeting: AkLegMeeting): VideoMetadata {
+export function toMetadata(meeting: AkLegMeeting): RecordingMetadata {
   const audio = mainAudio(meeting);
   return {
     id: meeting.id,
+    permalink: meetingUrl(meeting.id),
     channelId: meeting.id.split(" ")[0]!,
     title: `${meeting.committee} - ${meeting.date} ${meeting.time}`,
     description: meeting.location,
     durationSecs: audio ? audio.durationSecs : null,
-    uploadDate: meeting.date,
+    publishedAt: null,
   };
 }
 
@@ -222,6 +259,11 @@ export function toMetadata(meeting: AkLegMeeting): VideoMetadata {
 export interface AkLegConfig {
   /** Replaces the global fetch; tests pass a fake. */
   fetch?: typeof fetch;
+  /**
+   * Milliseconds before the first retry of a BASIS query that got a transient
+   * error; each later retry waits that much longer again. 1000 if omitted.
+   */
+  retryDelayMs?: number;
 }
 
 /**
@@ -229,10 +271,13 @@ export interface AkLegConfig {
  * through its BASIS API. Create one with {@link akleg}; tests pass a fake
  * instead.
  *
- * Its {@link AudioProvider} methods take a meeting ID or meeting page URL
+ * Its {@link SiteAdapter} methods take a meeting ID or meeting page URL
  * where YouTube's take a video ID or URL.
  */
-export interface AkLeg extends AudioProvider {
+export interface AkLeg extends SiteAdapter {
+  readonly site: "akleg";
+  /** The extension of the files {@link downloadAudio} saves, for naming them. */
+  readonly audioExtension: "mp3";
   /**
    * The meetings of a committee (by chamber and code, "HRES") in a Legislature
    * (34 for 2025-2026; see {@link legislatureOf}) that have audio, newest
@@ -248,16 +293,26 @@ export interface AkLeg extends AudioProvider {
 /** An {@link AkLeg} that uses `config`. Does no I/O until a method is called. */
 export function akleg(config: AkLegConfig = {}): AkLeg {
   const fetchFn = config.fetch ?? fetch;
+  const retryDelayMs = config.retryDelayMs ?? 1000;
 
-  async function get(url: string, headers?: Record<string, string>) {
-    const res = await fetchFn(url, { headers });
+  async function get(
+    url: string,
+    {
+      headers,
+      signal,
+    }: { headers?: Record<string, string>; signal?: AbortSignal } = {},
+  ) {
+    const res = await fetchFn(url, { headers, signal });
     if (!res.ok) throw new Error(`GET ${url}: HTTP ${res.status}`);
     return res;
   }
 
   /**
    * One BASIS query. The query (eg "meetings;date=09/10/2018;chamber=H,media")
-   * goes in a header; ",media" adds each meeting's recordings.
+   * goes in a header; ",media" adds each meeting's recordings. A transient
+   * error (see {@link TRANSIENT_BASIS_ERRORS}) is retried, up to
+   * {@link BASIS_TRIES} tries in all. Each retry is logged to stderr with the
+   * error, so errors a retry recovers from are still on record.
    */
   async function basis<T>(
     schema: z.ZodType<T>,
@@ -265,14 +320,25 @@ export function akleg(config: AkLegConfig = {}): AkLeg {
     legislature: number,
   ): Promise<T> {
     const section = query.split(";")[0];
-    const res = await get(
-      `${BASE}/publicservice/basis/${section}?minifyresult=true&json=true&session=${legislature}`,
-      {
-        "X-Alaska-Legislature-Basis-Version": "1.4",
-        "X-Alaska-Legislature-Basis-Query": query,
-      },
-    );
-    return parse(schema, await res.text());
+    const url = `${BASE}/publicservice/basis/${section}?minifyresult=true&json=true&session=${legislature}`;
+    for (let tries = 1; ; tries++) {
+      const res = await get(url, {
+        headers: {
+          "X-Alaska-Legislature-Basis-Version": "1.4",
+          "X-Alaska-Legislature-Basis-Query": query,
+        },
+      });
+      const context = `query "${query}", GET ${url}, try ${tries} of ${BASIS_TRIES}`;
+      try {
+        return parse(schema, await res.text(), context);
+      } catch (error) {
+        const transient =
+          error instanceof BasisError && TRANSIENT_BASIS_ERRORS.has(error.code);
+        if (!transient || tries >= BASIS_TRIES) throw error;
+        console.error(`${(error as Error).message}\nRetrying...`);
+      }
+      await new Promise((resolve) => setTimeout(resolve, retryDelayMs * tries));
+    }
   }
 
   async function getMeeting(meetingIdOrUrl: string): Promise<AkLegMeeting> {
@@ -290,6 +356,8 @@ export function akleg(config: AkLegConfig = {}): AkLeg {
   }
 
   return {
+    site: "akleg",
+    audioExtension: "mp3",
     async meetingsOfCommittee(committee, legislature) {
       const chamber = committee.slice(0, 1);
       const code = committee.slice(1);
@@ -312,24 +380,29 @@ export function akleg(config: AkLegConfig = {}): AkLeg {
     getMeeting,
     getMetadata: async (meetingIdOrUrl) =>
       toMetadata(await getMeeting(meetingIdOrUrl)),
-    async ensureAudioDownloaded(meetingIdOrUrl, path, { overwrite } = {}) {
+    async downloadAudio(meetingIdOrUrl, path, { signal } = {}) {
       await mkdir(dirname(path), { recursive: true });
-      const exists = await access(path).then(
-        () => true,
-        () => false,
-      );
-      if (exists && !overwrite) return { downloaded: false };
       const meeting = await getMeeting(meetingIdOrUrl);
       const audio = mainAudio(meeting);
       if (!audio)
         throw new Error(`No audio for akleg.gov meeting ${meeting.id}`);
       // Progress goes to stderr so callers' stdout stays machine-readable.
       console.error(`Downloading audio from ${audio.url} to ${path}...`);
-      const res = await get(audio.url);
+      const res = await get(audio.url, { signal });
       if (!res.body) throw new Error(`GET ${audio.url}: no body`);
-      // Decoded as it downloads; see mp3ToWav.
-      await mp3ToWav(chunksOf(res.body), path);
-      return { downloaded: true };
+      // Written beside `path` and moved into place, so an interrupted download
+      // never leaves a partial file at `path`.
+      const part = `${path}.part`;
+      try {
+        await pipeline(
+          Readable.from(chunksOf(res.body)),
+          createWriteStream(part),
+          { signal },
+        );
+        await rename(part, path);
+      } finally {
+        await rm(part, { force: true });
+      }
     },
   };
 }
@@ -347,14 +420,14 @@ export interface AkLegSource {
 
 /**
  * Lists the meetings with audio in `source`, newest first, using `config`.
- * Does no I/O until {@link VideoLister.listVideos} is called.
+ * Does no I/O until {@link RecordingLister.listRecordings} is called.
  */
 export function aklegSource(
   source: AkLegSource,
   config: AkLegConfig = {},
-): VideoLister {
+): RecordingLister {
   return {
-    async listVideos() {
+    async listRecordings() {
       const legislature =
         source.legislature ?? legislatureOf(new Date().getFullYear());
       const meetings = await akleg(config).meetingsOfCommittee(

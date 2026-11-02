@@ -31,7 +31,7 @@ export interface ParseOptions {
    */
   fallbackYear?: number;
   /**
-   * The day the video was published, "YYYY-MM-DD". When there is no year to
+   * The day the recording was published, "YYYY-MM-DD". When there is no year to
    * read or fall back to, a month and day take the latest year in which they
    * fall on or before this day, since a meeting can't be published before it
    * happens: uploaded 2026-01-13, "December 12th" is 2025-12-12.
@@ -567,7 +567,7 @@ function minutesOf(time: string): number {
  * ("Regular Meeting June 16, 2026" for a 2025 meeting) and so are
  * misrecognized words, so `warnings` records them for a human to check.
  *
- * Pass the video's `uploadDate` so a date with no year anywhere (a title
+ * Pass the recording's `uploadDate` so a date with no year anywhere (a title
  * without a date, a chair saying "March 5th") can still be placed in time.
  */
 export function resolveMeetingDateTime(
