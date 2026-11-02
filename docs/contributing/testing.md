@@ -11,7 +11,10 @@ and the fast tests. The root `package.json` lists the other test commands.
 - **Slow tests** take more than 10 seconds. Most transcribe or diarize whole
   golden meetings and score the result, which takes 10–20 minutes each on CPU.
   They're skipped unless you ask for them with `pnpm test:slow` or
-  `pnpm test:all`.
+  `pnpm test:all`. The `test-slow` workflow runs them weekly on main, on PRs
+  that touch the pipeline, and from the Actions tab on any branch. It runs each
+  test as its own job and tabulates every meeting's WER and real-time factor on
+  the run's page.
 - **yt-dlp tests** run yt-dlp against YouTube. They're skipped unless you ask
   with `pnpm test:ytdlp` or `pnpm test:all`. They pass from a home connection,
   or from Linux with WARP and Tor installed, as in CI (see the
