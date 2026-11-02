@@ -2,7 +2,8 @@
 # `pnpm check`, a build of the web app (built, not deployed), and the database
 # checks: schema and migrations agree, and migrations apply cleanly to an empty
 # database. Each is its own job, so each shows up as its own check on a PR and
-# one failing doesn't hide the others. Slow (SLOW=1) tests are not run here.
+# one failing doesn't hide the others. Slow (SLOW=1) tests are not run here;
+# test-slow.yml runs them.
 #
 # Applying a PR's migrations to a copy of production is pr-preview.yml's job.
 #
@@ -69,30 +70,7 @@ jobs:
 
       - uses: ./.github/actions/setup
 
-      # The pipeline's ONNX models are ~650MB. Fetch them in their own step,
-      # so no test pays for (or times out on) the download. The cache key is
-      # the models' specs (URLs and files), so only a change to a model busts
-      # it. Restore and save are separate so a cache miss is saved even when
-      # the tests then fail.
-      - name: Compute the models' cache key
-        id: models
-        run: |
-          pnpm -s models --list > "$RUNNER_TEMP/models.jsonl"
-          echo "key=onnx-models-$(sha256sum < "$RUNNER_TEMP/models.jsonl" | cut -c1-16)" >> "$GITHUB_OUTPUT"
-      - name: Restore the models
-        id: models-cache
-        uses: actions/cache/restore@v4
-        with:
-          path: packages/audio-ml/src/models
-          key: ${{ steps.models.outputs.key }}
-      - name: Download the models
-        run: pnpm models
-      - name: Save the models
-        if: steps.models-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: packages/audio-ml/src/models
-          key: ${{ steps.models.outputs.key }}
+      - uses: ./.github/actions/get-models
 
       - name: Test
         run: pnpm test
