@@ -145,12 +145,15 @@ Every `om` command takes `--db <playground>`, so `om changeset check` and
 against main. A playground never feeds main: the product is still
 `migration.sql`, checked against main.
 
-Playgrounds live on a scratch Postgres server, not production's. A copy scoped
-to a meeting takes well under a second whatever main's size, and needs only a
-read connection to main, so it works on any provider and while main is busy.
-`CREATE DATABASE ... TEMPLATE` can't copy main directly, because the source
-must have no other connections; `--full` copies from a snapshot of main that
-is refreshed when stale, or uses a Neon branch where main is on Neon.
+Playgrounds are databases on the same Postgres server as main, so they need
+no infrastructure beyond the server main already runs on. The harness's role
+needs `CREATEDB` there, and each playground is owned by its own role. A copy
+scoped to a meeting is small, takes well under a second whatever main's size,
+and needs only a read connection to main, so it works on any provider and
+while main is busy. `CREATE DATABASE ... TEMPLATE` can't copy main directly,
+because the source must have no other connections; `--full` copies from a
+snapshot of main that is refreshed when stale, or uses a Neon branch where
+main is on Neon.
 
 ### Review
 
@@ -276,6 +279,11 @@ rejected or superseded.
 
 - **Commit each edit as the agent makes it.** No review, no unit of work, no
   testing before the data changes.
+- **Playgrounds as schemas inside main's database.** Needs no `CREATEDB`, and
+  copies are `INSERT ... SELECT` within one database. But `CREATE TABLE ...
+  (LIKE ...)` copies neither foreign keys nor triggers, so the harness would
+  recreate them per schema, and playground rows would land in production's
+  backups.
 - **Check on a branch instead of main.** A branch drifts from main as soon
   as it's made, so a check there doesn't say what applying would do. Branches
   are for exploring (see [Playgrounds](#playgrounds)); checks run on main.
