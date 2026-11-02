@@ -13,7 +13,8 @@ Gets a meeting's audio. Two parts:
   `blobStore().recording()` in [`@open-minutes/blobstore`](../blobstore/README.md).
 - `getCachedAudio`: a recording's audio decoded to 16 kHz mono WAV (by
   [`@open-minutes/codecs`](../codecs/README.md)) in the per-machine cache,
-  `~/.cache/open-minutes/meetings/<site>/<id>/`, downloaded through
+  `~/.cache/open-minutes/meetings/<site>/<id>/` (the ID as
+  `recordingDir` in `@open-minutes/blobstore` writes it), downloaded through
   `storedSiteFromEnv` on first use, and optionally checked against an
   expected sha256. `getMeetingAudio` in `@open-minutes/datasets/audio` reads
   meetings' audio from here, and checks a golden meeting's audio against its

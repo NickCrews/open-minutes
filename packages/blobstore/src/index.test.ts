@@ -45,4 +45,11 @@ describe("blobStore", () => {
       contentType: "audio/mpeg",
     });
   });
+
+  it.each(["", ".", "..", "a/b"])("refuses %j as a recording ID", (id) => {
+    const store = blobStore("https://blobs.example/");
+    expect(() => store.recording("youtube", id)).toThrow(
+      "Not a youtube recording ID",
+    );
+  });
 });

@@ -5,10 +5,11 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { ensureWaveForm } from "@open-minutes/codecs";
 import { fileURLToPath } from "node:url";
+import { blobStore } from "@open-minutes/blobstore";
 import { memoryBlobStore } from "@open-minutes/blobstore/testing";
 import type { SiteAdapter } from "@open-minutes/core/site";
-import { meetingId } from "@open-minutes/akleg";
-import { videoId } from "@open-minutes/youtube";
+import { akleg, meetingId } from "@open-minutes/akleg";
+import { videoId, youtube } from "@open-minutes/youtube";
 import { storedSite } from "./stored-site";
 
 /**
@@ -50,6 +51,20 @@ const fixture = (name: string) =>
   fileURLToPath(new URL(`../../codecs/src/fixtures/${name}`, import.meta.url));
 
 describe("storedSite", () => {
+  it.each([
+    { adapter: youtube(), id: "QUF1uLgzL-s" },
+    { adapter: akleg(), id: "HRES 2018-09-10 14:00:00" },
+  ])(
+    "stores $adapter.site audio under the extension its adapter saves",
+    ({ adapter, id }) => {
+      const { key } = blobStore("https://blobs.example/").recording(
+        adapter.site,
+        id,
+      ).audio;
+      expect(key.endsWith(`.${adapter.audioExtension}`)).toBe(true);
+    },
+  );
+
   it("downloads a YouTube video's WebM audio from the blob store, replacing what's there", async () => {
     const dir = await mkdtemp(join(tmpdir(), "stored-site-audio-"));
     try {
