@@ -69,7 +69,7 @@ table).
 - **Apply by replay.** Run the SQL again as `changeset` on current main, and
   commit only if its row changes equal the approved ones after
   canonicalizing: each inserted row's id becomes a placeholder (`<new people
-1>`) wherever it appears, including foreign key columns found from the
+  1>`) wherever it appears, including foreign key columns found from the
   catalog, and columns with a `now()` default are dropped.
 - **Apply by diff.** Apply the approved row changes themselves, as a
   privileged role. Each change moves a row from its before-image to its
@@ -83,12 +83,12 @@ table).
 ### Changesets, written without regard to ids
 
 - **new person (CTE):** `WITH p AS (INSERT INTO people ... RETURNING id)
-UPDATE segments SET person_id = (SELECT id FROM p) WHERE meeting_id = 1 AND
-speaker_number = 3`.
+  UPDATE segments SET person_id = (SELECT id FROM p) WHERE meeting_id = 1 AND
+  speaker_number = 3`.
 - **new person (by slug):** insert, then `UPDATE ... SET person_id = (SELECT
-id FROM people WHERE slug = 'bob-jones') WHERE id IN (3, 5)`.
+  id FROM people WHERE slug = 'bob-jones') WHERE id IN (3, 5)`.
 - **new person (currval):** insert, then `SET person_id =
-currval('people_id_seq')`.
+  currval('people_id_seq')`.
 - **split segment:** insert a copy of segment 4 with its last words, trim
   segment 4.
 - **replace chapters:** delete meeting 1's chapters, insert a generation and
