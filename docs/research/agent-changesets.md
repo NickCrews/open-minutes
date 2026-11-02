@@ -122,8 +122,8 @@ conflicts stay rare.
 ### Playgrounds
 
 For anything a check can't show (trying a sequence of edits, setting up a
-state to test a changeset against), the agent makes playgrounds: throwaway databases it owns
-outright, as many as it likes.
+state to test a changeset against), the agent makes playgrounds: throwaway
+databases it owns outright, as many as it likes.
 
 - `om playground new [--meeting <slug>]... [--from <playground>] [--full]`
   makes one and prints its name. By default it holds the named meetings with
@@ -161,9 +161,10 @@ at once, against the row diff the reviewer saw.
 
 A reviewer agent has the same read-only access as the author: main, and
 `om changeset query` on after. It doesn't see the author's session, so it
-judges the edits rather than the argument for them, and text in the meeting that steered the author doesn't
-reach it through the author's reasoning. It uses a different model or prompt
-from the author, so the two share fewer blind spots.
+judges the edits rather than the argument for them, and text in the meeting
+that steered the author doesn't reach it through the author's reasoning. It
+uses a different model or prompt from the author, so the two share fewer
+blind spots.
 
 The reviewer approves or rejects the changeset as a whole, and its comments
 point at individual changes, so one disputed relabel doesn't hide forty good
