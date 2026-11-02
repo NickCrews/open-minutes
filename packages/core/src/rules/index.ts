@@ -28,6 +28,7 @@ import * as money from "./money";
 import * as monthCapital from "./month-capital";
 import * as noBodies from "./no-bodies";
 import * as percent from "./percent";
+import * as repeatedWord from "./repeated-word";
 import * as segmentOutOfOrder from "./segment-out-of-order";
 import * as spelledNumber from "./spelled-number";
 import * as splitNumeral from "./split-numeral";
@@ -62,6 +63,7 @@ export const RULE_SPECS = [
   fillerWord,
   falseStart,
   stutter,
+  repeatedWord,
   splitSentence,
   foldedAnswer,
   spokenSeparator,
@@ -87,6 +89,7 @@ export const TRANSCRIPT_RULE_SPECS = [
   fillerWord,
   falseStart,
   stutter,
+  repeatedWord,
   splitSentence,
   foldedAnswer,
   spokenSeparator,
