@@ -10,7 +10,6 @@ import {
   peopleTable,
   segmentsTable,
 } from "@open-minutes/db";
-import { LAST_WORD_DURATION_SEC } from "@open-minutes/core/transcript";
 import { transcriptFingerprint } from "./transcript-fingerprint";
 import {
   getMeetingData,
@@ -27,7 +26,7 @@ import { placeholderVoiceprints } from "./voiceprints";
  * Bump when seedDataset's behavior changes in a way the datasets and datums
  * don't capture. Every dataset's fingerprint includes it.
  */
-export const SEED_VERSION = 1;
+export const SEED_VERSION = 2;
 
 /** Per-table count of rows inserted by a seed. */
 export type SeedSummary = Record<string, number>;
@@ -107,22 +106,17 @@ export async function seedDataset(
     })),
   );
 
-  const meetingRows = meetings.map((m, i) => {
-    const lastWord = m.segments.flatMap((s) => s.words).at(-1);
-    return {
-      id: i + 1,
-      slug: m.slug,
-      timezone: m.timezone,
-      site_kind: "youtube" as const,
-      site_id: m.youtube_id,
-      title: m.title,
-      date: m.date,
-      time: m.time,
-      duration_secs: lastWord
-        ? sql`make_interval(secs => ${lastWord.start + LAST_WORD_DURATION_SEC})`
-        : null,
-    };
-  });
+  const meetingRows = meetings.map((m, i) => ({
+    id: i + 1,
+    slug: m.slug,
+    timezone: m.timezone,
+    site_kind: "youtube" as const,
+    site_id: m.youtube_id,
+    title: m.title,
+    date: m.date,
+    time: m.time,
+    duration_secs: sql`make_interval(secs => ${m.duration_secs})`,
+  }));
 
   const segments = meetings.flatMap((m, i) =>
     m.segments

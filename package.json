@@ -19,11 +19,14 @@
     "models": "pnpm --silent --filter @open-minutes/audio-ml run models",
     "datasets:check": "pnpm --silent --filter @open-minutes/datasets run check",
     "datasets:fix": "pnpm --silent --filter @open-minutes/datasets run fix",
+    "transcript": "pnpm --silent --filter @open-minutes/edit run transcript",
+    "goldens": "pnpm --silent --filter @open-minutes/edit run goldens",
     "deploy:prod": "pnpm --filter @open-minutes/web run deploy"
   },
   "devDependencies": {
     "@open-minutes/datasets": "workspace:*",
     "@open-minutes/db": "workspace:*",
+    "@open-minutes/edit": "workspace:*",
     "@open-minutes/seed": "workspace:*",
     "@open-minutes/youtube": "workspace:*",
     "@open-minutes/ytdlp": "workspace:*",

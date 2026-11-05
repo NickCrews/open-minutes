@@ -95,8 +95,8 @@ describe("checkPsv", () => {
         ),
       ),
     ).toEqual([
-      '2: error: filler "Um," should not be in a transcript; run `pnpm datasets:fix`',
-      '3: error: stutter "the" should not be in a transcript; run `pnpm datasets:fix`',
+      '2: error: filler "Um," should not be in a transcript; run `pnpm transcript fix` on the meeting and export it again',
+      '3: error: stutter "the" should not be in a transcript; run `pnpm transcript fix` on the meeting and export it again',
     ]);
   });
 
@@ -145,9 +145,9 @@ describe("checkPsv", () => {
         ),
       ),
     ).toEqual([
-      "1: error: speaker marker with no words after it; run `pnpm datasets:fix`",
+      "1: error: speaker marker with no words after it; run `pnpm transcript fix` on the meeting and export it again",
       "4: error: word onset 0:00:01.50 is before the previous word's (0:00:02.00); words must be in time order",
-      "5: error: speaker marker with no words after it; run `pnpm datasets:fix`",
+      "5: error: speaker marker with no words after it; run `pnpm transcript fix` on the meeting and export it again",
     ]);
   });
 

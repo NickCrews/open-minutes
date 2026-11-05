@@ -233,7 +233,7 @@ conventions so text search and agents can find it:
 - Dashes are plain hyphens ("4-1", "2019-2022"), never en or em dashes.
   The `typographic-dash` rule in @open-minutes/core reports them, so
   `pnpm datasets:check` does too, and its fix
-  (`pnpm datasets:fix`) writes plain hyphens.
+  (`pnpm transcript fix`) writes plain hyphens.
 - Procedural chapters get plain, predictable titles: "Call to order and roll
   call", "Approval of agenda and minutes", "Adjournment".
 

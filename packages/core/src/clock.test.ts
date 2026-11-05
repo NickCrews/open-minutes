@@ -9,7 +9,7 @@ describe("clock", () => {
     expect(formatClock(2 * 3600 + 45 * 60 + 21.28)).toBe("2:45:21.28");
   });
 
-  it("round-trips psvtool's format", () => {
+  it("round-trips the H:MM:SS.ss format", () => {
     expect(formatClock(3723.4)).toBe("1:02:03.40");
     expect(parseClock("1:02:03.40")).toBeCloseTo(3723.4);
     expect(parseClock("2:03")).toBe(123);

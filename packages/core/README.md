@@ -18,12 +18,15 @@ The same rules serve two purposes:
 - **Cleaning** the recognizer's verbatim output, by applying the fixes of the
   cleaning rules (filler words such as "um", stuttered words such as
   "the the").
-- **Checking** the hand-edited golden meetings in
-  [`@open-minutes/datasets`](../datasets/README.md). Goldens must already be
+- **Checking** meetings: the golden meetings in
+  [`@open-minutes/datasets`](../datasets/README.md), and any meeting in a
+  database with `pnpm transcript check` (see
+  [`@open-minutes/edit`](../edit/README.md)). Goldens must already be
   clean, or transcription output would be scored against disfluencies it
   removed on purpose, so a golden that breaks a cleaning rule is an error.
 
 To add a cleanup, write a rule with a fix and tests, register it as a cleaning
 rule in [`src/rules/index.ts`](src/rules/index.ts) and
-[`src/rules/clean.ts`](src/rules/clean.ts), then run `pnpm datasets:fix` and
-review the change to the goldens.
+[`src/rules/clean.ts`](src/rules/clean.ts), then run `pnpm transcript fix` on each golden
+meeting in production, export them with `pnpm goldens export`, and review the
+change to the goldens.

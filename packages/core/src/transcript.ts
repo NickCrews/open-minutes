@@ -53,3 +53,58 @@ export function speakerKey(
   if (segment.speakerNumber !== null) return `number:${segment.speakerNumber}`;
   return UNATTRIBUTED;
 }
+
+/** Who a segment says is speaking: its speaker number and its person. */
+export type Speaker<Person = never> = Pick<
+  Segment<Person>,
+  "speakerNumber" | "person"
+>;
+
+/**
+ * Parse a speaker label, as the golden transcripts write one:
+ *
+ * - "unlabeled": neither a speaker number nor a person.
+ * - "segmented:spk-<n>": speaker number n.
+ * - "identified:<slug>": the known person with that slug.
+ */
+export function parseSpeakerLabel(label: string): Speaker<string> {
+  if (label === "unlabeled") return { speakerNumber: null, person: null };
+  if (label.startsWith("segmented:")) {
+    const m = label.slice("segmented:".length).match(/^spk-(\d+)$/);
+    if (!m)
+      throw new Error(
+        `Invalid segmented speaker label (expected "segmented:spk-<n>"): ${JSON.stringify(label)}`,
+      );
+    return { speakerNumber: Number(m[1]), person: null };
+  }
+  if (label.startsWith("identified:")) {
+    const person = label.slice("identified:".length);
+    if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(person)) {
+      throw new Error(
+        `Invalid identified speaker slug (expected kebab-case, eg "identified:margaret-tyler"): ${JSON.stringify(label)}`,
+      );
+    }
+    return { speakerNumber: null, person };
+  }
+  throw new Error(`Unknown speaker label: ${JSON.stringify(label)}`);
+}
+
+/**
+ * The speaker label for a segment's speaker. A label holds a person or a
+ * speaker number, not both, so a segment with both throws rather than lose
+ * one.
+ */
+export function formatSpeakerLabel({
+  speakerNumber,
+  person,
+}: Speaker<string>): string {
+  if (person !== null) {
+    if (speakerNumber !== null)
+      throw new Error(
+        `A speaker label can't hold both person ${JSON.stringify(person)} and speaker number ${speakerNumber}`,
+      );
+    return `identified:${person}`;
+  }
+  if (speakerNumber !== null) return `segmented:spk-${speakerNumber}`;
+  return "unlabeled";
+}

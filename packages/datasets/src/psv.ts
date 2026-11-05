@@ -38,7 +38,11 @@
 import { readFileSync, writeFileSync } from "node:fs";
 
 import { formatClock } from "@open-minutes/core/clock";
-import type { Segment } from "@open-minutes/core/transcript";
+import {
+  formatSpeakerLabel,
+  parseSpeakerLabel,
+  type Segment,
+} from "@open-minutes/core/transcript";
 import type { SpeechRun } from "@open-minutes/core/transcription";
 
 // Internal line-level representation. Not part of the public API.
@@ -65,48 +69,6 @@ export function parseTimestamp(str: string): number {
   // The format stores centisecond precision; round away float-summation noise
   // (e.g. 60 + 14.96 -> 74.96000000000001) so round-trips compare exactly.
   return Math.round(seconds * 100) / 100;
-}
-
-/** Who a `begin_speaker` label says is speaking. */
-type Speaker = Pick<Segment<string>, "speakerNumber" | "person">;
-
-function parseSpeaker(label: string): Speaker {
-  if (label === "unlabeled") return { speakerNumber: null, person: null };
-  if (label.startsWith("segmented:")) {
-    const m = label.slice("segmented:".length).match(/^spk-(\d+)$/);
-    if (!m)
-      throw new Error(
-        `Invalid segmented speaker label (expected "segmented:spk-<n>"): ${JSON.stringify(label)}`,
-      );
-    return { speakerNumber: Number(m[1]), person: null };
-  }
-  if (label.startsWith("identified:")) {
-    const person = label.slice("identified:".length);
-    if (!/^[a-z0-9][a-z0-9-]*$/.test(person)) {
-      throw new Error(
-        `Invalid identified speaker slug (expected kebab-case, eg "identified:margaret-tyler"): ${JSON.stringify(label)}`,
-      );
-    }
-    return { speakerNumber: null, person };
-  }
-  throw new Error(`Unknown speaker label: ${JSON.stringify(label)}`);
-}
-
-/**
- * The `begin_speaker` label for a segment's speaker. A label holds a person or
- * a speaker number, not both, so a segment with both throws rather than lose
- * one.
- */
-function formatSpeaker({ speakerNumber, person }: Speaker): string {
-  if (person !== null) {
-    if (speakerNumber !== null)
-      throw new Error(
-        `A PSV speaker label can't hold both person ${JSON.stringify(person)} and speaker number ${speakerNumber}`,
-      );
-    return `identified:${person}`;
-  }
-  if (speakerNumber !== null) return `segmented:spk-${speakerNumber}`;
-  return "unlabeled";
 }
 
 function parseEvents(content: string): PsvEvent[] {
@@ -194,7 +156,7 @@ export function parsePsv(source: string | { path: string }): Segment<string>[] {
           `Unsupported meta event (expected begin_speaker): ${JSON.stringify(event.data)}`,
         );
       }
-      current = { ...parseSpeaker(label), words: [] };
+      current = { ...parseSpeakerLabel(label), words: [] };
       segments.push(current);
     } else {
       if (!current) {
@@ -225,7 +187,7 @@ export function serializePsv(
   for (const segment of segments) {
     const start = segment.words[0]?.start ?? 0;
     rows.push(
-      `${formatClock(start)}|meta|${JSON.stringify({ begin_speaker: formatSpeaker(segment) })}`,
+      `${formatClock(start)}|meta|${JSON.stringify({ begin_speaker: formatSpeakerLabel(segment) })}`,
     );
     for (const w of segment.words) {
       rows.push(`${formatClock(w.start)}|text|${w.text}`);
