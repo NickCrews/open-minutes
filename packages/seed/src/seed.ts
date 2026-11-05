@@ -13,7 +13,6 @@ import {
   segmentsTable,
 } from "@open-minutes/db";
 import { siteAdapter } from "@open-minutes/meeting-audio";
-import { LAST_WORD_DURATION_SEC } from "@open-minutes/core/transcript";
 import { transcriptFingerprint } from "./transcript-fingerprint";
 import {
   getMeetingData,
@@ -115,12 +114,9 @@ export async function seedDataset(
   // Each fixture's recording has the same id as its meeting. Its audio is in
   // the blob store already.
   const storedAt = new Date();
-  const durations = meetings.map((m) => {
-    const lastWord = m.segments.flatMap((s) => s.words).at(-1);
-    return lastWord
-      ? sql`make_interval(secs => ${lastWord.start + LAST_WORD_DURATION_SEC})`
-      : null;
-  });
+  const durations = meetings.map(
+    (m) => sql`make_interval(secs => ${m.duration_secs})`,
+  );
   const recordingRows = meetings.map((m, i) => ({
     id: i + 1,
     site: m.site,

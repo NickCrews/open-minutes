@@ -6,9 +6,14 @@ the speech models. Nothing here ships to production.
 [`datums/`](datums/) holds the jurisdictions, bodies (with their meeting
 sources), people and golden meetings. Adding a body means adding rows there.
 Each golden meeting is a directory of its metadata, its transcript
-(`golden.psv`) and its chapters. The `transcript-cleanup` and
+(`golden.psv`) and its chapters.
+
+The golden meetings and `people.jsonl` are exported from production with
+`pnpm goldens export`: to correct one, edit the meeting in production with
+`pnpm transcript` and export it again (see
+[`@open-minutes/edit`](../edit/README.md)). The `transcript-cleanup` and
 `people-records` skills in [`.claude/skills/`](../../.claude/skills/)
-describe how to edit them.
+describe how.
 
 `@open-minutes/datasets/audio` gets a golden meeting's audio and checks that
 it's the audio its transcript was timed to.
@@ -42,7 +47,6 @@ new segment, labeled in one of three forms (see
 - `segmented:spk-<n>`: a voice the diarizer separated, local to this meeting.
 - `identified:<slug>`: a person in `people.jsonl`, the same in every meeting.
 
-When editing by hand, keep one word per line and keep timestamps absolute.
 The full grammar is in [`src/psv.ts`](src/psv.ts). Why PSV and not JSON, CSV
 or a binary format is in
 [docs/research/golden-transcript-format.md](../../docs/research/golden-transcript-format.md).
@@ -54,9 +58,11 @@ Golden meetings must follow the rules in
 
 ```sh
 pnpm datasets:check [file ...]   # report violations; errors fail it and the tests
-pnpm datasets:fix [file ...]     # apply every rule's fix in place
+pnpm datasets:fix file.psv ...   # apply the transcript rules' fixes to a PSV that isn't a golden
 ```
 
-`--help` describes the options. A Claude Code hook in
+A golden is fixed in the database, with `pnpm transcript fix`, and exported
+again. `--help` describes the options. A Claude Code hook in
 [`.claude/settings.json`](../../.claude/settings.json) runs the check after
-every edit, so an agent sees a problem on the turn it makes it.
+every edit to these files. `pnpm transcript check` runs the same meeting
+rules on a meeting in a database.

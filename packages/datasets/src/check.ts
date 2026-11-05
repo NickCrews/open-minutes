@@ -282,13 +282,13 @@ function earlierSegmentLines(
     : `earlier segments at lines ${at}`;
 }
 
-/** An issue's message, pointing at `pnpm datasets:fix` when its rule's fix resolves it. */
+/** An issue's message, pointing at `pnpm transcript fix` when its rule's fix resolves it. */
 function withFixHint(issue: MeetingIssue): string {
   const fixable =
     "fix" in RULE_SPECS_BY_CODE[issue.code] &&
     !(issue.code === "segment-out-of-order" && issue.interleaves.length);
   return fixable
-    ? `${issue.message}; run \`pnpm datasets:fix\``
+    ? `${issue.message}; run \`pnpm transcript fix\` on the meeting and export it again`
     : issue.message;
 }
 

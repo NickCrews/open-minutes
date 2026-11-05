@@ -1,31 +1,18 @@
-// Fixing checked-in fixtures: applies the fixes of the rules in
-// @open-minutes/core/rules to a meeting's files: meeting.json, the transcript
-// and chapters.json. Goldens must look like cleaned pipeline output, or every
-// disfluency the pipeline strips would count against it as a deletion; the
-// cleaning rules' fixes (see core/rules/clean.ts) do that here too.
-// `pnpm datasets:fix` rewrites the files; check.ts reports what is left, so
-// `pnpm datasets:check`, the fixture tests and the post-edit hook all catch
-// what it can't fix.
+// Applies the transcript rules' fixes in @open-minutes/core/rules to a PSV
+// file that isn't a golden, such as a pipeline run's output. Goldens are
+// exported from the database, so they are fixed there, with
+// `pnpm transcript fix` (see @open-minutes/edit). Also writes chapters.json.
 
 import { readFileSync, writeFileSync } from "node:fs";
-import { basename, join, resolve } from "node:path";
 import { formatClock } from "@open-minutes/core/clock";
 import {
-  BODY_RULE_SPECS,
   fixMeeting,
   type MeetingIssue,
-  RULE_SPECS,
   TRANSCRIPT_RULE_SPECS,
 } from "@open-minutes/core/rules";
-import { ruleMeeting } from "./check";
 import type { Segment } from "@open-minutes/core/transcript";
 import { parsePsv, serializePsv } from "./psv";
-import {
-  bodyRuleCodes,
-  getMeetingData,
-  type GoldenChapters,
-  transcriptPath,
-} from "./datums";
+import type { GoldenChapters } from "./datums";
 
 /** A file the fixes rewrote, and the violations they fixed in it. */
 export interface FileFix {
@@ -56,60 +43,6 @@ export async function fixTranscriptFile(path: string): Promise<FileFix[]> {
   if (segments === before) return [];
   writeFileSync(path, serializePsv(segments));
   return [{ file: path, fixed }];
-}
-
-/**
- * Apply the fix of every rule the meeting follows, its bodies' own included,
- * to a meeting directory, rewriting meeting.json, the transcript and
- * chapters.json where something changed. Returns what it rewrote. Throws if
- * the meeting doesn't load.
- */
-export async function fixMeetingDir(dir: string): Promise<FileFix[]> {
-  const root = resolve(dir, "../..");
-  const golden = getMeetingData(basename(dir), root);
-  const given = {
-    ...ruleMeeting(golden),
-    segments: golden.segments,
-    chapters: golden.chapters?.chapters ?? null,
-  };
-  const codes = bodyRuleCodes(golden.body_slugs, root);
-  const { meeting, fixed } = await fixMeeting(given, [
-    ...RULE_SPECS,
-    ...BODY_RULE_SPECS.filter((spec) => codes.includes(spec.code)),
-  ]);
-  const rewritten: FileFix[] = [];
-  if (meeting.title !== given.title) {
-    // In place, so the rest of the file keeps its formatting.
-    const file = join(dir, "meeting.json");
-    writeFileSync(
-      file,
-      readFileSync(file, "utf8").replace(
-        JSON.stringify(given.title),
-        JSON.stringify(meeting.title),
-      ),
-    );
-    rewritten.push({ file, fixed: fixed.filter((v) => "field" in v) });
-  }
-  if (meeting.segments !== given.segments) {
-    const file = transcriptPath(dir)!;
-    writeFileSync(file, serializePsv(meeting.segments));
-    rewritten.push({
-      file,
-      fixed: fixed.filter((v) => "segmentIndex" in v),
-    });
-  }
-  if (golden.chapters && meeting.chapters !== given.chapters) {
-    const file = join(dir, "chapters.json");
-    writeFileSync(
-      file,
-      serializeChapters({ ...golden.chapters, chapters: meeting.chapters! }),
-    );
-    rewritten.push({
-      file,
-      fixed: fixed.filter((v) => "chapterIndex" in v),
-    });
-  }
-  return rewritten;
 }
 
 /** A meeting's chapters as chapters.json, times as "H:MM:SS.ss". */
