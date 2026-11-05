@@ -1,13 +1,14 @@
 ---
 name: people-records
-description: Conventions for a person's name and bio in Open Minutes. Use when adding or editing a person in packages/datasets/datums/people.jsonl.
+description: Conventions for a person's slug, name and bio in Open Minutes. Use when naming a person or writing their bio, in the database or for packages/datasets/datums/people.jsonl.
 ---
 
 # People records
 
-A person has a `slug`, a `name` and a `bio`. In golden fixtures they live in
-`packages/datasets/datums/people.jsonl`, one JSON object per line; check
-with `pnpm datasets:check`.
+A person has a `slug`, a `name` and a `bio`. Set them in the database with a
+`person` op (`pnpm transcript apply`; see the `transcript-cleanup` skill).
+`pnpm goldens export` writes the people a golden meeting names to
+`packages/datasets/datums/people.jsonl`, one JSON object per line.
 
 ## Rules
 

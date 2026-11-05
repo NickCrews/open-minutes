@@ -4,7 +4,9 @@
   "description": "Seeds a database with an Open Minutes dataset, for `pnpm db up --data` and dbTest",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./audio-voiceprints": "./src/audio-voiceprints.ts",
+    "./transcript-fingerprint": "./src/transcript-fingerprint.ts"
   },
   "scripts": {
     "test": "vp test run",
