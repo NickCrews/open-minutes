@@ -16,9 +16,9 @@ import {
   tokensToWords,
   transcribeAudio,
   transcribeRange,
+  TRANSCRIBE_VAD_OPTIONS,
   type TranscribeWindowEndEvent,
 } from "./transcribe";
-import { TRANSCRIBE_VAD } from "./vad";
 import { type Word } from "@open-minutes/core/transcript";
 import { MAX_WORD_SEC } from "@open-minutes/core/transcription";
 import { halfUntranscribedRollCall } from "@open-minutes/datasets/clips";
@@ -61,14 +61,14 @@ describe("tokensToWords", () => {
   });
 });
 
-describe("TRANSCRIBE_VAD.minSilenceSecs", () => {
+describe("TRANSCRIBE_VAD_OPTIONS.minSilenceSecs", () => {
   // The whole safety argument for deriving word ends from onsets rests on this
   // one inequality: a derived word is shorter than the shortest silence VAD
   // will cut at, so no word can span a pause and be credited to whoever speaks
   // after it. The two constants live in different packages; this is what
   // stops them drifting apart.
   it("is longer than any derived word, so no word spans a VAD cut", () => {
-    expect(MAX_WORD_SEC).toBeLessThan(TRANSCRIBE_VAD.minSilenceSecs);
+    expect(MAX_WORD_SEC).toBeLessThan(TRANSCRIBE_VAD_OPTIONS.minSilenceSecs);
   });
 });
 

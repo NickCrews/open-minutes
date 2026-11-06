@@ -27,17 +27,10 @@ export interface DetectSpeechOptions {
   maxSpeechSecs?: number;
 }
 
-/**
- * The settings transcribeAudio cuts the audio with. `MAX_WORD_SEC` in core
- * must stay below `minSilenceSecs`, so a derived word end can't reach across
- * a pause into the next speaker's turn. `maxSpeechSecs` keeps every run under
- * Parakeet's ~400 s single-pass cap.
- */
-export const TRANSCRIBE_VAD = {
-  minSilenceSecs: 0.5,
-  minSpeechSecs: 0.25,
-  maxSpeechSecs: 300,
-} as const satisfies DetectSpeechOptions;
+/** Downloads the VAD model if it is missing. */
+export function loadVadModel(): void {
+  ensureDownloaded(VAD_MODEL_SPEC);
+}
 
 /** Samples per Silero window at 16 kHz. */
 const WINDOW_SIZE = 512;
