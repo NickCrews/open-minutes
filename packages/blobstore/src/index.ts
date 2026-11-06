@@ -64,10 +64,9 @@ export interface RecordingFiles {
    */
   metadataJson: BlobFile;
   /**
-   * The audio its site's `SiteAdapter.downloadAudio` saves. For YouTube,
-   * YouTube's Opus re-encoded to 16 kHz mono Opus in WebM at 24 kbps
-   * (~11 MB per hour), plenty for the models, which take 16 kHz mono. For
-   * akleg.gov, the meeting's MP3 as akleg.gov serves it.
+   * The audio its site's `SiteAdapter.downloadAudio` saves: the site's audio
+   * encoded for speech, 16 kHz mono Opus in WebM at 24 kbps (~11 MB per
+   * hour), plenty for the models, which take 16 kHz mono.
    */
   audio: BlobFile;
 }

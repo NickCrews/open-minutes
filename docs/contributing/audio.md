@@ -5,8 +5,10 @@ models.
 
 ## Getting the audio
 
-Each source package fetches the audio its site serves: the YouTube source uses
-yt-dlp, and the Alaska Legislature source downloads akleg.gov's MP3s directly.
+Each source package fetches the audio its site serves and encodes it for
+speech as small, low-bitrate Opus: the YouTube source downloads YouTube's Opus
+with yt-dlp, and the Alaska Legislature source streams akleg.gov's MP3s
+directly.
 
 YouTube blocks yt-dlp from servers and CI runners ("sign in to confirm you're
 not a bot"), so YouTube audio is also kept in the project's blob store, a
@@ -15,9 +17,9 @@ a video reads it from the store first. On a miss it runs yt-dlp, which works
 from a home connection and, elsewhere, goes through Cloudflare WARP or Tor
 when they're installed. When YouTube refuses every route and a GitHub token
 is set, it runs a GitHub Actions workflow that does the same on a runner and
-publishes the results as the run's artifacts. Either way the audio is
-re-encoded to small, low-bitrate Opus, and both are stored in the blob store
-if the code has the store's keys.
+publishes the results as the run's artifacts. Either way, the audio and
+metadata are stored in the blob store if the code has the store's keys.
+akleg.gov's audio goes through the store the same way.
 [`.env.example`](../../.env.example) lists the settings, and
 [youtube-on-servers.md](../research/youtube-on-servers.md) explains how the workaround
 was chosen.
@@ -32,8 +34,8 @@ isn't already on your `PATH`.
 
 ## Decoding and caching
 
-The models want 16 kHz mono WAV. Opus and MP3 are decoded, and Opus is
-re-encoded, in WebAssembly, so nothing needs ffmpeg. Decoded audio is cached
+The models want 16 kHz mono WAV. Opus and MP3 are decoded, and encoded to
+Opus, in WebAssembly, so nothing needs ffmpeg. Decoded audio is cached
 per machine, so each meeting is downloaded and decoded once.
 
 ## Speech models

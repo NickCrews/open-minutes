@@ -75,7 +75,7 @@ export async function getCachedAudio(
   // `sha256` is of the decoded WAV, so the download is decoded here and only
   // the WAV kept.
   const adapter = storedSiteFromEnv(recording.site);
-  const sourcePath = join(dir, `audio.${adapter.audioExtension}`);
+  const sourcePath = join(dir, "speech.webm");
   try {
     await adapter.downloadAudio(recording.id, sourcePath);
     await decodeToWav(sourcePath, audioPath);

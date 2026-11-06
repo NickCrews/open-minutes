@@ -5,11 +5,10 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { ensureWaveForm } from "@open-minutes/codecs";
 import { fileURLToPath } from "node:url";
-import { blobStore } from "@open-minutes/blobstore";
 import { memoryBlobStore } from "@open-minutes/blobstore/testing";
 import type { SiteAdapter } from "@open-minutes/core/site";
-import { akleg, meetingId } from "@open-minutes/akleg";
-import { videoId, youtube } from "@open-minutes/youtube";
+import { meetingId } from "@open-minutes/akleg";
+import { videoId } from "@open-minutes/youtube";
 import { storedSite } from "./stored-site";
 
 /**
@@ -19,7 +18,6 @@ import { storedSite } from "./stored-site";
 function unreachable(site: "youtube" | "akleg"): SiteAdapter {
   return {
     site,
-    audioExtension: site === "youtube" ? "webm" : "mp3",
     recordingId: site === "youtube" ? videoId : meetingId,
     getMetadata: async () => {
       throw new Error("unexpected getMetadata call");
@@ -51,20 +49,6 @@ const fixture = (name: string) =>
   fileURLToPath(new URL(`../../codecs/src/fixtures/${name}`, import.meta.url));
 
 describe("storedSite", () => {
-  it.each([
-    { adapter: youtube(), id: "QUF1uLgzL-s" },
-    { adapter: akleg(), id: "HRES 2018-09-10 14:00:00" },
-  ])(
-    "stores $adapter.site audio under the extension its adapter saves",
-    ({ adapter, id }) => {
-      const { key } = blobStore("https://blobs.example/").recording(
-        adapter.site,
-        id,
-      ).audio;
-      expect(key.endsWith(`.${adapter.audioExtension}`)).toBe(true);
-    },
-  );
-
   it("downloads a YouTube video's WebM audio from the blob store, replacing what's there", async () => {
     const dir = await mkdtemp(join(tmpdir(), "stored-site-audio-"));
     try {
@@ -86,8 +70,6 @@ describe("storedSite", () => {
       ref: "https://youtu.be/QUF1uLgzL-s",
       id: "QUF1uLgzL-s",
       prefix: "youtube/QUF1uLgzL-s",
-      audioName: "speech.webm",
-      contentType: "audio/webm",
       audio: fixture("tones.webm"),
     },
     {
@@ -95,13 +77,11 @@ describe("storedSite", () => {
       ref: "https://www.akleg.gov/basis/Meeting/Detail?Meeting=HRES%202018-09-10%2014:00:00",
       id: "HRES 2018-09-10 14:00:00",
       prefix: "akleg/HRES_2018-09-10_140000",
-      audioName: "audio.mp3",
-      contentType: "audio/mpeg",
-      audio: fixture("tones.mp3"),
+      audio: fixture("tones.webm"),
     },
   ])(
     "for a $site recording missing from the store",
-    ({ site, ref, id, prefix, audioName, contentType, audio }) => {
+    ({ site, ref, id, prefix, audio }) => {
       const fromSite = serving(unreachable(site), audio);
 
       it("gets the metadata from the site and stores it", async () => {
@@ -144,20 +124,20 @@ describe("storedSite", () => {
         const dir = await mkdtemp(join(tmpdir(), "stored-site-miss-"));
         try {
           const { store, writer, blobs } = memoryBlobStore();
-          const path = join(dir, audioName);
+          const path = join(dir, "speech.webm");
           await storedSite(fromSite, { store, writer }).downloadAudio(
             ref,
             path,
           );
-          const stored = blobs.get(`${prefix}/${audioName}`)!;
-          expect(stored.contentType).toBe(contentType);
+          const stored = blobs.get(`${prefix}/speech.webm`)!;
+          expect(stored.contentType).toBe("audio/webm");
           expect(new Uint8Array(readFileSync(path))).toEqual(
             new Uint8Array(readFileSync(audio)),
           );
           expect(stored.body).toEqual(new Uint8Array(readFileSync(audio)));
 
           // The next one reads it from the store.
-          const again = join(dir, `again-${audioName}`);
+          const again = join(dir, "again.webm");
           await storedSite(unreachable(site), { store }).downloadAudio(
             id,
             again,

@@ -191,15 +191,20 @@ export async function encodeOpusWebm(
 }
 
 /**
- * Opus-in-WebM audio re-encoded for speech: 16 kHz mono at 24 kbps, ~11 MB
- * per hour, plenty for the models, which take 16 kHz mono. On speech it
- * decodes to the same length as the original, at zero lag, with correlation
- * ~0.997. A 90-minute meeting takes about a minute.
+ * 16 kHz mono samples, in chunks of any size, encoded for speech: Opus in
+ * WebM at 24 kbps, ~11 MB per hour, plenty for the models, which take 16 kHz
+ * mono. Re-encoding YouTube's Opus this way decodes to the same length as the
+ * original on speech, at zero lag, with correlation ~0.997. A 90-minute
+ * meeting takes about a minute.
+ *
+ * ```ts
+ * const speech = await encodeSpeechWebm(decodeMp3(mp3));
+ * ```
  */
 export async function encodeSpeechWebm(
-  webm: Uint8Array,
+  samples: AsyncIterable<Float32Array>,
 ): Promise<Uint8Array<ArrayBuffer>> {
-  return encodeOpusWebm(decodeOpusWebm(webm), { bitrate: 24_000 });
+  return encodeOpusWebm(samples, { bitrate: 24_000 });
 }
 
 function readAscii(buf: Uint8Array, start: number, end: number): string {

@@ -48,6 +48,9 @@ importers:
 
   packages/akleg:
     dependencies:
+      '@open-minutes/codecs':
+        specifier: workspace:*
+        version: link:../codecs
       '@open-minutes/core':
         specifier: workspace:*
         version: link:../core
@@ -55,9 +58,6 @@ importers:
         specifier: ^4.3.6
         version: 4.6.7
     devDependencies:
-      '@open-minutes/codecs':
-        specifier: workspace:*
-        version: link:../codecs
       '@types/node':
         specifier: ^24
         version: 24.19.2

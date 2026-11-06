@@ -55,9 +55,9 @@ describe("akleg.gov, live", { timeout: 60_000 }, () => {
     });
   });
 
-  it("downloads a meeting's MP3 audio", { timeout: 120_000 }, async () => {
+  it("downloads a meeting's audio", { timeout: 120_000 }, async () => {
     // A 7.5-minute meeting: a 3.6 MB MP3.
-    const path = join(mkdtempSync(join(tmpdir(), "akleg-")), "audio.mp3");
+    const path = join(mkdtempSync(join(tmpdir(), "akleg-")), "speech.webm");
     await source.downloadAudio("HRES 2025-04-04 13:00:00", path);
     const wave = await ensureWaveForm(path);
     expect(wave.sampleRate).toBe(16_000);

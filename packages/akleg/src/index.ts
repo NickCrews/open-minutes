@@ -1,9 +1,7 @@
-import { createWriteStream } from "node:fs";
-import { mkdir, rename, rm } from "node:fs/promises";
-import { Readable } from "node:stream";
-import { pipeline } from "node:stream/promises";
+import { mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { z } from "zod";
+import { decodeMp3, encodeSpeechWebm } from "@open-minutes/codecs";
 import type {
   RecordingLister,
   RecordingMetadata,
@@ -276,8 +274,6 @@ export interface AkLegConfig {
  */
 export interface AkLeg extends SiteAdapter {
   readonly site: "akleg";
-  /** The extension of the files {@link downloadAudio} saves, for naming them. */
-  readonly audioExtension: "mp3";
   /**
    * The meetings of a committee (by chamber and code, "HRES") in a Legislature
    * (34 for 2025-2026; see {@link legislatureOf}) that have audio, newest
@@ -357,7 +353,6 @@ export function akleg(config: AkLegConfig = {}): AkLeg {
 
   return {
     site: "akleg",
-    audioExtension: "mp3",
     recordingId: meetingId,
     async meetingsOfCommittee(committee, legislature) {
       const chamber = committee.slice(0, 1);
@@ -381,6 +376,10 @@ export function akleg(config: AkLegConfig = {}): AkLeg {
     getMeeting,
     getMetadata: async (meetingIdOrUrl) =>
       toMetadata(await getMeeting(meetingIdOrUrl)),
+    /**
+     * Streams the meeting's MP3 from akleg.gov, decoding as it downloads, and
+     * writes it to `path` encoded for speech.
+     */
     async downloadAudio(meetingIdOrUrl, path, { signal } = {}) {
       await mkdir(dirname(path), { recursive: true });
       const meeting = await getMeeting(meetingIdOrUrl);
@@ -388,18 +387,17 @@ export function akleg(config: AkLegConfig = {}): AkLeg {
       if (!audio)
         throw new Error(`No audio for akleg.gov meeting ${meeting.id}`);
       // Progress goes to stderr so callers' stdout stays machine-readable.
-      console.error(`Downloading audio from ${audio.url} to ${path}...`);
+      console.error(
+        `Downloading audio from ${audio.url} and encoding it for speech to ${path}...`,
+      );
       const res = await get(audio.url, { signal });
       if (!res.body) throw new Error(`GET ${audio.url}: no body`);
-      // Written beside `path` and moved into place, so an interrupted download
+      const speech = await encodeSpeechWebm(decodeMp3(chunksOf(res.body)));
+      // Written beside `path` and moved into place, so an interrupted write
       // never leaves a partial file at `path`.
       const part = `${path}.part`;
       try {
-        await pipeline(
-          Readable.from(chunksOf(res.body)),
-          createWriteStream(part),
-          { signal },
-        );
+        await writeFile(part, speech);
         await rename(part, path);
       } finally {
         await rm(part, { force: true });

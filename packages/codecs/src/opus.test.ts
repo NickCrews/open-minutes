@@ -82,7 +82,7 @@ describe("encodeOpusWebm", () => {
 describe("encodeSpeechWebm", () => {
   // Like the decoder, the encoder is WebAssembly, so its output is pinned.
   it("gives the same bytes on every run", async () => {
-    const webm = await encodeSpeechWebm(readFileSync(TONES));
+    const webm = await encodeSpeechWebm(decodeOpusWebm(readFileSync(TONES)));
     expect(
       createHash("sha256").update(webm).digest("hex"),
     ).toMatchInlineSnapshot(

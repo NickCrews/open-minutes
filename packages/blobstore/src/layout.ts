@@ -8,10 +8,9 @@ export function storeOf(
   return {
     recording(site, id) {
       const prefix = `${site}/${recordingDir(site, id)}`;
-      const audio = AUDIO[site];
       return {
         metadataJson: file(`${prefix}/metadata.json`, "application/json"),
-        audio: file(`${prefix}/${audio.name}`, audio.contentType),
+        audio: file(`${prefix}/speech.webm`, "audio/webm"),
       };
     },
     duckdbExport: file(
@@ -20,12 +19,6 @@ export function storeOf(
     ),
   };
 }
-
-/** Each site's audio file: what its `SiteAdapter.downloadAudio` saves. */
-const AUDIO: Record<Site, { name: string; contentType: ContentType }> = {
-  youtube: { name: "speech.webm", contentType: "audio/webm" },
-  akleg: { name: "audio.mp3", contentType: "audio/mpeg" },
-};
 
 /**
  * The directory a recording's files are in, under its site's: its ID, with an
