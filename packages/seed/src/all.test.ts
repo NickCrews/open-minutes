@@ -19,8 +19,8 @@ const test = dbTest({ data: datasetState("all") });
 describe('the "all" dataset', () => {
   test("seeds every golden meeting, with transcripts", async ({ db }) => {
     const meetings = await db.select().from(meetingsTable);
-    expect(meetings.map((m) => m.site_id).sort()).toEqual(
-      snapshot.meetings.map((m) => m.youtube_id).sort(),
+    expect(meetings.map((m) => `${m.site_kind}:${m.site_id}`).sort()).toEqual(
+      snapshot.meetings.map((m) => `${m.site}:${m.external_id}`).sort(),
     );
     expect(meetings.map((m) => m.slug).sort()).toEqual(
       snapshot.meetings.map((m) => m.slug).sort(),

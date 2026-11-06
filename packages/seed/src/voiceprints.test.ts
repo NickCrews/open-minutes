@@ -27,7 +27,7 @@ describe("audio voiceprints", () => {
   }) => {
     const meeting = getMeetingData(SLUG);
     const meetings = await db.select().from(meetingsTable);
-    expect(meetings.map((m) => m.site_id)).toEqual([meeting.youtube_id]);
+    expect(meetings.map((m) => m.site_id)).toEqual([meeting.external_id]);
     expect(meetings.map((m) => m.slug)).toEqual([SLUG]);
 
     const [row] = (await db.execute(
