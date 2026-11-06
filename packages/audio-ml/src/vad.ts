@@ -1,49 +1,88 @@
 /// <reference path="./sherpa-onnx-node.d.ts" />
 import sherpa from "sherpa-onnx-node";
-import type { WaveForm } from "@open-minutes/codecs";
-import { ensureDownloaded } from "./model.js";
-import { VAD_MODEL_SPEC } from "./transcribe.js";
+import { type AudioInput, ensureWaveForm } from "@open-minutes/codecs";
+import { ensureDownloaded, type ModelSpec } from "./model.js";
 import { EXPECTED_SAMPLE_RATE } from "./embed.js";
 import type { Span } from "@open-minutes/core/span";
 
-// Where in the audio someone is talking, by Silero VAD, independent of any
-// transcript. The transcriber runs the same model to cut the audio into
-// chunks, but with a 0.5 s minimum silence; here pauses down to 0.2 s count,
-// so a turn boundary between two speakers shows up as a gap.
+// Silero VAD: where in the audio someone is talking, independent of any
+// transcript.
+export const VAD_MODEL_SPEC = {
+  name: "silero_vad",
+  url: "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/silero_vad.onnx",
+  single_file: true,
+  files: {
+    "silero_vad.onnx": true,
+  },
+} as const satisfies ModelSpec;
 
-const VAD_THRESHOLD = 0.5;
-const VAD_MIN_SILENCE_SEC = 0.2;
-const VAD_MIN_SPEECH_SEC = 0.1;
-const VAD_MAX_SPEECH_SEC = 60;
-const VAD_WINDOW_SIZE = 512;
+export interface DetectSpeechOptions {
+  /** Speech-probability threshold. */
+  threshold?: number;
+  /** Shortest pause that ends a run. */
+  minSilenceSecs?: number;
+  /** Drop runs shorter than this. */
+  minSpeechSecs?: number;
+  /** Force-split runs longer than this. */
+  maxSpeechSecs?: number;
+}
 
-/** Every speech run in `wave`, in time order. */
-export function detectSpeech(wave: WaveForm): Span[] {
+/**
+ * The settings transcribeAudio cuts the audio with. `MAX_WORD_SEC` in core
+ * must stay below `minSilenceSecs`, so a derived word end can't reach across
+ * a pause into the next speaker's turn. `maxSpeechSecs` keeps every run under
+ * Parakeet's ~400 s single-pass cap.
+ */
+export const TRANSCRIBE_VAD = {
+  minSilenceSecs: 0.5,
+  minSpeechSecs: 0.25,
+  maxSpeechSecs: 300,
+} as const satisfies DetectSpeechOptions;
+
+/** Samples per Silero window at 16 kHz. */
+const WINDOW_SIZE = 512;
+
+/**
+ * Speech runs found by Silero VAD, in time order. Runs force-split at
+ * `maxSpeechSecs` that touch end to end are joined back together.
+ */
+export async function detectSpeech(
+  audio: AudioInput,
+  {
+    threshold = 0.5,
+    minSilenceSecs = 0.2,
+    minSpeechSecs = 0.1,
+    maxSpeechSecs = 60,
+  }: DetectSpeechOptions = {},
+): Promise<Span[]> {
+  const wave = await ensureWaveForm(audio);
   const files = ensureDownloaded(VAD_MODEL_SPEC).files;
   const vad = new sherpa.Vad(
     {
       sileroVad: {
         model: files["silero_vad.onnx"],
-        threshold: VAD_THRESHOLD,
-        minSilenceDuration: VAD_MIN_SILENCE_SEC,
-        minSpeechDuration: VAD_MIN_SPEECH_SEC,
-        maxSpeechDuration: VAD_MAX_SPEECH_SEC,
-        windowSize: VAD_WINDOW_SIZE,
+        threshold,
+        minSilenceDuration: minSilenceSecs,
+        minSpeechDuration: minSpeechSecs,
+        maxSpeechDuration: maxSpeechSecs,
+        windowSize: WINDOW_SIZE,
       },
       sampleRate: EXPECTED_SAMPLE_RATE,
       numThreads: 1,
       provider: "cpu",
       debug: 0,
     },
-    VAD_MAX_SPEECH_SEC + 5,
+    // The circular buffer must hold the longest run.
+    maxSpeechSecs + 5,
   );
   const runs: Span[] = [];
+  // Keep only each run's bounds: vad.front() copies the run's samples, and
+  // holding on to them would duplicate the audio.
   const drain = () => {
     while (!vad.isEmpty()) {
       const seg = vad.front();
       const start = seg.start / wave.sampleRate;
       const end = (seg.start + seg.samples.length) / wave.sampleRate;
-      // Runs force-split at VAD_MAX_SPEECH_SEC abut; join them back up.
       const last = runs.at(-1);
       if (last && start - last.end <= 0.01) last.end = end;
       else runs.push({ start, end });
@@ -51,8 +90,8 @@ export function detectSpeech(wave: WaveForm): Span[] {
     }
   };
   const { samples } = wave;
-  for (let i = 0; i + VAD_WINDOW_SIZE <= samples.length; i += VAD_WINDOW_SIZE) {
-    vad.acceptWaveform(samples.subarray(i, i + VAD_WINDOW_SIZE));
+  for (let i = 0; i + WINDOW_SIZE <= samples.length; i += WINDOW_SIZE) {
+    vad.acceptWaveform(samples.subarray(i, i + WINDOW_SIZE));
     drain();
   }
   vad.flush();

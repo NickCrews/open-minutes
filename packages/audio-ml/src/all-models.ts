@@ -1,5 +1,6 @@
 import { ensureDownloaded, type ModelSpec } from "./model.js";
-import { TRANSCRIPTION_MODEL_SPEC, VAD_MODEL_SPEC } from "./transcribe.js";
+import { TRANSCRIPTION_MODEL_SPEC } from "./transcribe.js";
+import { VAD_MODEL_SPEC } from "./vad.js";
 import { SEGMENTATION_MODEL_SPEC } from "./diarize.js";
 import { EMBEDDING_MODEL_SPEC } from "./embed.js";
 

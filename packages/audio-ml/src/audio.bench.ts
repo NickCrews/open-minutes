@@ -26,8 +26,8 @@ const opts = {
 
 test("per minute of audio", async ({ bench }) => {
   await bench.compare(
-    bench("speech runs (Silero VAD, 0.2 s pauses)", () => {
-      detectSpeech(wave);
+    bench("speech runs (Silero VAD, 0.2 s pauses)", async () => {
+      await detectSpeech(wave);
     }),
     bench("transcribeRange, one pass", async () => {
       await transcribeRange(wave, 0, 60);

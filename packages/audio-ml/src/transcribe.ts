@@ -4,12 +4,16 @@ import { fileURLToPath } from "node:url";
 import { availableParallelism } from "node:os";
 import { ensureDownloaded, ModelSpec } from "./model.js";
 import { EXPECTED_SAMPLE_RATE } from "./embed.js";
-import { ensureWaveForm, type WaveForm } from "@open-minutes/codecs";
+import {
+  type AudioInput,
+  ensureWaveForm,
+  type WaveForm,
+} from "@open-minutes/codecs";
+import { detectSpeech, TRANSCRIBE_VAD, VAD_MODEL_SPEC } from "./vad.js";
 
 import sherpa_onnx, {
   type OfflineRecognizer,
   type OfflineRecognizerResult,
-  type Vad,
 } from "sherpa-onnx-node";
 import type { Word } from "@open-minutes/core/transcript";
 import type { SpeechRun } from "@open-minutes/core/transcription";
@@ -35,16 +39,6 @@ export const TRANSCRIPTION_MODEL_SPEC = {
   },
 } as const satisfies ModelSpec;
 
-// Silero VAD — finds speech/silence boundaries so we can chunk at silences.
-export const VAD_MODEL_SPEC = {
-  name: "silero_vad",
-  url: "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/silero_vad.onnx",
-  single_file: true,
-  files: {
-    "silero_vad.onnx": true,
-  },
-} as const satisfies ModelSpec;
-
 // How well this does is measured, and what the model does is written down, in
 // ./transcription-quality/ (see its README.md). Judge a change here by the
 // north star there: word error rate and runtime.
@@ -61,18 +55,9 @@ export const VAD_MODEL_SPEC = {
 // mid-utterance — we use Silero VAD to split the audio at silences. VAD picks the
 // cut points (never mid-word); we then merge consecutive runs back into windows of
 // up to MERGE_WINDOW_SEC (see below) so each decode gets real context, keeping
-// every pass well under the ~400s cap. VAD_MAX_SPEECH_SEC force-splits any single
-// run longer than 5 min (preferring the last silence) so no run alone exceeds it.
-const VAD_THRESHOLD = 0.5; // speech-probability threshold
-// Pause length that ends a speech run (the cut points). Exported because
-// MAX_WORD_SEC (in core's transcription/align.ts) must stay below it — a
-// derived word end that could span a pause this long would reach into the next
-// speaker's turn.
-export const VAD_MIN_SILENCE_SEC = 0.5;
-const VAD_MIN_SPEECH_SEC = 0.25; // discard speech blips shorter than this
-const VAD_MAX_SPEECH_SEC = 300; // force-split runs longer than this (stays under Parakeet's ~400s cap)
-const VAD_WINDOW_SIZE = 512; // samples per Silero window at 16 kHz
-const VAD_BUFFER_SEC = VAD_MAX_SPEECH_SEC + 5; // circular buffer must hold the longest run
+// every pass well under the ~400s cap. TRANSCRIBE_VAD.maxSpeechSecs force-splits
+// any single run longer than 5 min (preferring the last silence) so no run alone
+// exceeds it.
 
 // VAD splits at every silence, so a meeting yields ~1000 runs, many under 0.5s.
 // Decoding each run alone starves Parakeet of context (hurting accuracy) and pays
@@ -80,7 +65,8 @@ const VAD_BUFFER_SEC = VAD_MAX_SPEECH_SEC + 5; // circular buffer must hold the 
 // up to this many seconds and decode each in one pass — comfortably under the
 // ~400s cap, but large enough to give the model real surrounding context. The
 // window is a contiguous slice (inter-run silences included, so timestamps stay
-// linear); a single run longer than this still becomes its own window (≤300s).
+// linear); a single run longer than this still becomes its own window
+// (≤ TRANSCRIBE_VAD.maxSpeechSecs).
 export const MERGE_WINDOW_SEC = 120;
 
 // Transcribe speech runs in parallel, but bounded: a long meeting produces ~1000
@@ -120,7 +106,7 @@ export interface TranscribeOptions {
  * timestamps, in time order. Returns [] for silence. Input must be 16 kHz mono.
  */
 export async function transcribeAudio(
-  audio: string | WaveForm,
+  audio: AudioInput,
   options: TranscribeOptions = {},
 ): Promise<SpeechRun[]> {
   const wallStart = Date.now();
@@ -129,7 +115,10 @@ export async function transcribeAudio(
   const duration = wave.samples.length / wave.sampleRate;
   const { tracing } = options;
 
-  const speechRuns = detectSpeechRuns(wave);
+  const speechRuns = (await detectSpeech(wave, TRANSCRIBE_VAD)).map((r) => ({
+    startSample: Math.round(r.start * wave.sampleRate),
+    endSample: Math.round(r.end * wave.sampleRate),
+  }));
   const windows = mergeRuns(speechRuns, wave.sampleRate);
   // Progress goes to stderr so callers' stdout stays machine-readable.
   console.error(
@@ -231,7 +220,7 @@ interface SpeechWindow {
  * Coalesce consecutive VAD runs into windows of up to MERGE_WINDOW_SEC. A run is
  * appended to the current window while the window's total span stays within the
  * cap; otherwise it opens a new window. A single run longer than the cap (up to
- * VAD_MAX_SPEECH_SEC) becomes its own window — still under Parakeet's ~400s limit.
+ * TRANSCRIBE_VAD.maxSpeechSecs) becomes its own window — still under Parakeet's ~400s limit.
  */
 function mergeRuns(
   runs: readonly SampleSpan[],
@@ -279,39 +268,6 @@ function splitWordsIntoRuns(
     segments[ri]!.words.push(word);
   }
   return segments;
-}
-
-/**
- * Run Silero VAD over the whole waveform, returning speech runs in time order.
- * We keep only the sample-index bounds, not vad.front()'s copied samples — those
- * are discarded immediately so we never duplicate the audio (see transcribeAudio,
- * which slices zero-copy views from the original waveform).
- */
-function detectSpeechRuns(wave: WaveForm): SampleSpan[] {
-  const vad = getVad();
-  vad.reset();
-
-  const runs: SampleSpan[] = [];
-  const drain = () => {
-    while (!vad.isEmpty()) {
-      const seg = vad.front();
-      runs.push({
-        startSample: seg.start,
-        endSample: seg.start + seg.samples.length,
-      });
-      vad.pop();
-    }
-  };
-
-  const { samples } = wave;
-  for (let i = 0; i + VAD_WINDOW_SIZE <= samples.length; i += VAD_WINDOW_SIZE) {
-    vad.acceptWaveform(samples.subarray(i, i + VAD_WINDOW_SIZE));
-    drain();
-  }
-  vad.flush();
-  drain();
-
-  return runs;
 }
 
 /** Map over items with a bounded number of in-flight async calls, preserving input order. */
@@ -375,38 +331,13 @@ function getRecognizer() {
   return { recognizer: _recognizer, modelFiles };
 }
 
-let _vad: Vad | null = null;
-
-function getVad(): Vad {
-  if (_vad) return _vad;
-  const files = ensureDownloaded(VAD_MODEL_SPEC).files;
-  _vad = new sherpa_onnx.Vad(
-    {
-      sileroVad: {
-        model: files["silero_vad.onnx"],
-        threshold: VAD_THRESHOLD,
-        minSilenceDuration: VAD_MIN_SILENCE_SEC,
-        minSpeechDuration: VAD_MIN_SPEECH_SEC,
-        maxSpeechDuration: VAD_MAX_SPEECH_SEC,
-        windowSize: VAD_WINDOW_SIZE,
-      },
-      sampleRate: EXPECTED_SAMPLE_RATE,
-      numThreads: 1,
-      provider: "cpu",
-      debug: 0,
-    },
-    VAD_BUFFER_SEC,
-  );
-  return _vad;
-}
-
 /**
  * Downloads (if missing) and loads the recognizer and VAD now, rather than on
  * the first transcribeAudio call. Loading the recognizer alone takes seconds.
  */
 export function loadTranscriptionModels(): void {
   getRecognizer();
-  getVad();
+  ensureDownloaded(VAD_MODEL_SPEC);
 }
 
 export function ensureModelFiles() {

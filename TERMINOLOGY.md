@@ -171,8 +171,8 @@ it should be able to look up the voiceprints of the speakers already in the data
 _Avoid_: ASR, speech-to-text, captioning
 
 **Speech run**:
-A stretch of audio between silences, fed to the recognizer. Knows nothing about speakers.
-_Avoid_: segment, chunk
+A span in which voice activity detection (VAD) hears speech. Knows nothing about speakers.
+_Avoid_: VAD segment, segment, chunk
 
 **Diarization**:
 The stage that splits audio into diarization turns and groups them into clusters by voice, knowing nothing about who anyone is.

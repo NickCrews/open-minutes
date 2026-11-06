@@ -5,6 +5,9 @@ export interface WaveForm {
   sampleRate: number;
 }
 
+/** Audio to run a model over: a path to an audio file, or decoded samples. */
+export type AudioInput = string | WaveForm;
+
 /** All of `samples`, as one array. */
 export async function readAllSamples(
   samples: AsyncIterable<Float32Array> | Iterable<Float32Array>,
