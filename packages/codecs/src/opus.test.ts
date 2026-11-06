@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
-import { decodeOpusWebm, encodeOpusWebm, encodeSpeechWebm } from "./opus";
+import { decodeOpusWebm, encodeOpusWebm } from "./opus";
 import { readAllSamples } from "./waveform";
 
 // 1.5 s of stereo Opus in WebM: 440 Hz on the left, 1000 Hz on the right.
@@ -52,9 +52,7 @@ describe("encodeOpusWebm", () => {
   it("writes WebM that decodes to the samples given, length included", async () => {
     const original = await readAllSamples(decodeOpusWebm(readFileSync(TONES)));
     // Chunks that don't line up with Opus frames.
-    const webm = await encodeOpusWebm(chunked(original, 777), {
-      bitrate: 24_000,
-    });
+    const webm = await encodeOpusWebm(chunked(original, 777));
     const decoded = await readAllSamples(decodeOpusWebm(webm));
     expect(decoded.length).toBe(original.length);
     expect(amplitude(decoded, 440, 16_000)).toBeCloseTo(0.0625, 2);
@@ -62,9 +60,7 @@ describe("encodeOpusWebm", () => {
   });
 
   it("writes a file with no audio", async () => {
-    const webm = await encodeOpusWebm(chunked(new Float32Array(0), 1), {
-      bitrate: 24_000,
-    });
+    const webm = await encodeOpusWebm(chunked(new Float32Array(0), 1));
     expect((await readAllSamples(decodeOpusWebm(webm))).length).toBe(0);
   });
 
@@ -73,16 +69,12 @@ describe("encodeOpusWebm", () => {
       yield new Float32Array(1000);
       throw new Error("download failed");
     }
-    await expect(
-      encodeOpusWebm(failing(), { bitrate: 24_000 }),
-    ).rejects.toThrow("download failed");
+    await expect(encodeOpusWebm(failing())).rejects.toThrow("download failed");
   });
-});
 
-describe("encodeSpeechWebm", () => {
   // Like the decoder, the encoder is WebAssembly, so its output is pinned.
   it("gives the same bytes on every run", async () => {
-    const webm = await encodeSpeechWebm(decodeOpusWebm(readFileSync(TONES)));
+    const webm = await encodeOpusWebm(decodeOpusWebm(readFileSync(TONES)));
     expect(
       createHash("sha256").update(webm).digest("hex"),
     ).toMatchInlineSnapshot(

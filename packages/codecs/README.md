@@ -6,14 +6,13 @@ sites' audio for speech for the blob store:
 
 - `decodeOpusWebm`: a WebM/Opus file's audio as 16 kHz mono samples, an async
   iterable of batches. libopus is asked for 16 kHz mono directly.
-- `encodeOpusWebm`: 16 kHz mono samples, as an async iterable of chunks, to a
-  WebM/Opus file that decodes to exactly those samples and that browsers can
-  play and seek.
-- `encodeSpeechWebm`: 16 kHz mono samples (from `decodeOpusWebm` or
-  `decodeMp3`) through `encodeOpusWebm` at 24 kbps, the speech-quality copy
-  of a site's audio that the blob store keeps (~11 MB per hour). A 90-minute
-  meeting takes about a minute. Re-encoding YouTube's Opus this way matches
-  the original to a correlation of ~0.997 on speech, at the same length.
+- `encodeOpusWebm`: 16 kHz mono samples (from `decodeOpusWebm` or
+  `decodeMp3`), as an async iterable of chunks, to a WebM/Opus file that
+  decodes to exactly those samples and that browsers can play and seek. Its
+  default 24 kbps is the speech-quality copy of a site's audio that the blob
+  store keeps (~11 MB per hour). A 90-minute meeting takes about a minute.
+  Re-encoding YouTube's Opus this way matches the original to a correlation
+  of ~0.997 on speech, at the same length.
 - `decodeMp3`: akleg.gov's MP3 recordings as 16 kHz mono samples, an async
   iterable of batches, from a buffer or a stream (so a multi-hour recording
   decodes as it downloads, in constant memory). MP3 can't be decoded straight

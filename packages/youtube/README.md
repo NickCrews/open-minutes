@@ -26,7 +26,7 @@ The workflow below writes metadata as `metadataToJson` in
    workflow runs `youtube()` itself (through the CLI below), so it gives the
    same files.
 
-Either way, the audio is re-encoded for speech (`encodeSpeechWebm` in
+Either way, the audio is re-encoded for speech (`encodeOpusWebm` in
 [`@open-minutes/codecs`](../codecs/README.md): 16 kHz mono Opus in WebM at
 24 kbps, ~11 MB per hour), with no ffmpeg.
 

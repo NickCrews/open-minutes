@@ -101,8 +101,11 @@ async function* decodeOpusTrack(
 
 /** Encoder settings for {@link encodeOpusWebm}. */
 export interface OpusEncodeOptions {
-  /** Bits per second; libopus varies it around this (VBR). */
-  bitrate: number;
+  /**
+   * Bits per second; libopus varies it around this (VBR). 24 kbps if omitted,
+   * ~11 MB per hour, plenty for speech.
+   */
+  bitrate?: number;
 }
 
 /** 20 ms, libopus's default and best-tuned frame size. */
@@ -116,8 +119,12 @@ const OPUS_GET_LOOKAHEAD = 4027;
  * Encodes 16 kHz mono samples, in chunks of any size, to a WebM/Opus file:
  *
  * ```ts
- * const smaller = await encodeOpusWebm(decodeOpusWebm(webm), { bitrate: 24_000 });
+ * const speech = await encodeOpusWebm(decodeMp3(mp3));
  * ```
+ *
+ * At the default 24 kbps, re-encoding YouTube's Opus decodes to the same
+ * length as the original on speech, at zero lag, with correlation ~0.997. A
+ * 90-minute meeting takes about a minute.
  *
  * Encoding is libopus compiled to WebAssembly (@evan/opus's WebAssembly
  * build, not its native one), at its highest complexity, so the same samples
@@ -126,7 +133,7 @@ const OPUS_GET_LOOKAHEAD = 4027;
  */
 export async function encodeOpusWebm(
   samples: AsyncIterable<Float32Array>,
-  { bitrate }: OpusEncodeOptions,
+  { bitrate = 24_000 }: OpusEncodeOptions = {},
 ): Promise<Uint8Array<ArrayBuffer>> {
   const encoder = new Encoder({
     channels: 1,
@@ -188,23 +195,6 @@ export async function encodeOpusWebm(
       codecDelayNs: ns(lookahead),
     },
   );
-}
-
-/**
- * 16 kHz mono samples, in chunks of any size, encoded for speech: Opus in
- * WebM at 24 kbps, ~11 MB per hour, plenty for the models, which take 16 kHz
- * mono. Re-encoding YouTube's Opus this way decodes to the same length as the
- * original on speech, at zero lag, with correlation ~0.997. A 90-minute
- * meeting takes about a minute.
- *
- * ```ts
- * const speech = await encodeSpeechWebm(decodeMp3(mp3));
- * ```
- */
-export async function encodeSpeechWebm(
-  samples: AsyncIterable<Float32Array>,
-): Promise<Uint8Array<ArrayBuffer>> {
-  return encodeOpusWebm(samples, { bitrate: 24_000 });
 }
 
 function readAscii(buf: Uint8Array, start: number, end: number): string {
