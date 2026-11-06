@@ -21,11 +21,11 @@ export interface SiteAdapter {
   /** The recording's title, publisher and so on. */
   getMetadata(recordingIdOrUrl: string): Promise<RecordingMetadata>;
   /**
-   * Downloads the recording's audio to `path` encoded for speech, whatever
-   * format the site serves: 16 kHz mono Opus in WebM at 24 kbps (see
-   * `encodeOpusWebm` in @open-minutes/codecs). Replaces any file there. An
-   * interrupted download never leaves a partial file. Caching is the caller's
-   * job.
+   * Downloads the recording's audio to `path` as 16 kHz mono Opus in WebM
+   * at 24 kbps (see `encodeOpusWebm` in @open-minutes/codecs), the one
+   * format every adapter saves. Converting from the format the site serves is
+   * the adapter's job. Replaces any file there. An interrupted download never
+   * leaves a partial file. Caching is the caller's job.
    */
   downloadAudio(
     recordingIdOrUrl: string,
