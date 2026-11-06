@@ -54,15 +54,15 @@ export const TRANSCRIPTION_MODEL_SPEC = {
 // (catchable, non-fatal) broadcast error — verified empirically, it does NOT
 // crash or OOM. Rather than slicing on fixed time boundaries — which cut words
 // mid-utterance — we use Silero VAD to split the audio at silences. VAD picks the
-// cut points (never mid-word); we then merge consecutive runs back into windows of
+// cut points (never mid-word); we then merge consecutive voice activity spans into windows of
 // up to MERGE_WINDOW_SEC (see below) so each decode gets real context, keeping
 // every pass well under the ~400s cap.
 
 /**
  * The VAD settings transcribeAudio cuts the audio with. `MAX_WORD_SEC` in core
  * must stay below `minSilenceSecs`, so a derived word end can't reach across a
- * pause into the next speaker's turn. `maxSpeechSecs` force-splits any run
- * longer than 5 min (preferring the last silence), so no run alone exceeds
+ * pause into the next speaker's turn. `maxSpeechSecs` force-splits any span
+ * longer than 5 min (preferring the last silence), so no span alone exceeds
  * Parakeet's ~400 s cap.
  */
 export const TRANSCRIBE_VAD_OPTIONS = {
@@ -71,13 +71,13 @@ export const TRANSCRIBE_VAD_OPTIONS = {
   maxSpeechSecs: 300,
 } as const satisfies DetectSpeechOptions;
 
-// VAD splits at every silence, so a meeting yields ~1000 runs, many under 0.5s.
-// Decoding each run alone starves Parakeet of context (hurting accuracy) and pays
-// the per-decode overhead ~1000×. So we coalesce consecutive runs into windows of
+// VAD splits at every silence, so a meeting yields ~1000 spans, many under 0.5s.
+// Decoding each span alone starves Parakeet of context (hurting accuracy) and pays
+// the per-decode overhead ~1000×. So we coalesce consecutive spans into windows of
 // up to this many seconds and decode each in one pass — comfortably under the
 // ~400s cap, but large enough to give the model real surrounding context. The
-// window is a contiguous slice (inter-run silences included, so timestamps stay
-// linear); a single run longer than this still becomes its own window
+// window is a contiguous slice (inter-span silences included, so timestamps stay
+// linear); a single span longer than this still becomes its own window
 // (≤ TRANSCRIBE_VAD_OPTIONS.maxSpeechSecs).
 export const MERGE_WINDOW_SEC = 120;
 
@@ -111,10 +111,10 @@ export interface TranscribeOptions {
 
 /**
  * Transcribe audio into speech runs. Silero VAD splits the audio at silences
- * (never mid-word); consecutive runs are merged into windows of up to
+ * (never mid-word); consecutive voice activity spans are merged into windows of up to
  * MERGE_WINDOW_SEC that are each decoded in one pass (so the model gets context),
- * then each window's words are redistributed back to the VAD runs they fall in.
- * The result is one {@link SpeechRun} per VAD run, with absolute word
+ * then each window's words are redistributed back to the spans they fall in.
+ * The result is one {@link SpeechRun} per voice activity span, with absolute word
  * timestamps, in time order. Returns [] for silence. Input must be 16 kHz mono.
  */
 export async function transcribeAudio(
@@ -129,13 +129,13 @@ export async function transcribeAudio(
 
   // detectSpeech gives seconds; windows are sliced from the waveform by
   // sample index.
-  const speechRuns = (await detectSpeech(wave, TRANSCRIBE_VAD_OPTIONS)).map(
+  const voiceSpans = (await detectSpeech(wave, TRANSCRIBE_VAD_OPTIONS)).map(
     (span) => toSampleSpan(span, wave.sampleRate),
   );
-  const windows = mergeRuns(speechRuns, wave.sampleRate);
+  const windows = mergeSpans(voiceSpans, wave.sampleRate);
   // Progress goes to stderr so callers' stdout stays machine-readable.
   console.error(
-    `Transcribing ${typeof audio === "string" ? audio : "<waveform>"} (${duration.toFixed(1)}s) in ${windows.length} window(s) merged from ${speechRuns.length} VAD run(s)...`,
+    `Transcribing ${typeof audio === "string" ? audio : "<waveform>"} (${duration.toFixed(1)}s) in ${windows.length} window(s) merged from ${voiceSpans.length} voice activity span(s)...`,
   );
 
   const windowSegments = await mapWithConcurrency(
@@ -168,7 +168,7 @@ export async function transcribeAudio(
         result.tokens ?? [],
         result.timestamps ?? [],
       ).map((w) => ({ ...w, start: w.start + start }));
-      return splitWordsIntoRuns(win.runs, words, wave.sampleRate);
+      return splitWordsIntoRuns(win.spans, words, wave.sampleRate);
     },
   );
 
@@ -216,7 +216,7 @@ export async function transcribeRange(
     .filter((w) => w.start >= start && w.start < end);
 }
 
-/** A speech run as half-open sample-index bounds into the source waveform. */
+/** A span as half-open sample-index bounds into the source waveform. */
 interface SampleSpan {
   startSample: number;
   endSample: number;
@@ -230,35 +230,35 @@ function toSampleSpan(span: Span, sampleRate: number): SampleSpan {
   };
 }
 
-/** A merged decode window: a contiguous span covering one or more VAD runs. */
+/** A merged decode window: a contiguous span covering one or more voice activity spans. */
 interface SpeechWindow {
   startSample: number;
   endSample: number;
-  runs: SampleSpan[];
+  spans: SampleSpan[];
 }
 
 /**
- * Coalesce consecutive VAD runs into windows of up to MERGE_WINDOW_SEC. A run is
- * appended to the current window while the window's total span stays within the
- * cap; otherwise it opens a new window. A single run longer than the cap (up to
+ * Coalesce consecutive voice activity spans into windows of up to
+ * MERGE_WINDOW_SEC. A span is appended to the current window while the window
+ * stays within the cap; otherwise it opens a new window. A single span longer than the cap (up to
  * TRANSCRIBE_VAD_OPTIONS.maxSpeechSecs) becomes its own window — still under Parakeet's ~400s limit.
  */
-function mergeRuns(
-  runs: readonly SampleSpan[],
+function mergeSpans(
+  spans: readonly SampleSpan[],
   sampleRate: number,
 ): SpeechWindow[] {
   const maxSamples = MERGE_WINDOW_SEC * sampleRate;
   const windows: SpeechWindow[] = [];
-  for (const run of runs) {
+  for (const span of spans) {
     const last = windows.at(-1);
-    if (last && run.endSample - last.startSample <= maxSamples) {
-      last.endSample = run.endSample;
-      last.runs.push(run);
+    if (last && span.endSample - last.startSample <= maxSamples) {
+      last.endSample = span.endSample;
+      last.spans.push(span);
     } else {
       windows.push({
-        startSample: run.startSample,
-        endSample: run.endSample,
-        runs: [run],
+        startSample: span.startSample,
+        endSample: span.endSample,
+        spans: [span],
       });
     }
   }
@@ -267,19 +267,20 @@ function mergeRuns(
 
 /**
  * Distribute a window's recognized words (absolute timestamps, in time order)
- * back to the VAD runs they fall in, yielding one SpeechRun per run so the
- * output still marks exactly where VAD cut. Each word is assigned to the latest
- * run whose start it has reached; a word landing in an inter-run silence attaches
- * to the preceding run. Runs with no words yield an empty segment.
+ * back to the voice activity spans they fall in, yielding one SpeechRun per span
+ * so the output still marks exactly where VAD cut. Each word is assigned to the
+ * latest span whose start it has reached; a word landing in an inter-span
+ * silence attaches to the preceding span. Spans with no words yield an empty
+ * SpeechRun.
  */
 function splitWordsIntoRuns(
-  runs: readonly SampleSpan[],
+  spans: readonly SampleSpan[],
   words: readonly Word[],
   sampleRate: number,
 ): SpeechRun[] {
-  const segments: SpeechRun[] = runs.map((r) => ({
-    start: r.startSample / sampleRate,
-    end: r.endSample / sampleRate,
+  const segments: SpeechRun[] = spans.map((span) => ({
+    start: span.startSample / sampleRate,
+    end: span.endSample / sampleRate,
     words: [],
   }));
   let ri = 0;
