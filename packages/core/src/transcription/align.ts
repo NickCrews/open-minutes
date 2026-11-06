@@ -1,9 +1,9 @@
 import { LAST_WORD_DURATION_SEC, type Segment, type Word } from "../transcript";
-import { type DiarizationTurn, type SpeechRun } from "./types";
+import { type DiarizationTurn, type SpeechSpan } from "./types";
 
 /**
  * A word with its derived end time. Stored words carry only their onset; ends
- * exist only in memory here, derived from the run structure by
+ * exist only in memory here, derived from the speech span structure by
  * {@link deriveTimedWords}.
  */
 interface TimedWord {
@@ -35,26 +35,26 @@ export const MAX_WORD_SEC = 0.32;
  * Derive each word's end from its onset: a word sounds for at most
  * MAX_WORD_SEC, truncated at the next word's onset so words never overlap.
  *
- * The run structure is what makes the ceiling *sufficient*, not what supplies
- * the end. Deriving a run-final word's end from `run.end` instead is unsafe in
+ * The speech span structure is what makes the ceiling *sufficient*, not what supplies
+ * the end. Deriving a span-final word's end from `span.end` instead is unsafe in
  * both directions, and both were measured on the real meetings: VAD's endpoint
  * can trail its last word by seconds (up to 6.3s), stretching that word across
  * the silence and onto the next speaker; or it can land *before* the last
- * word's onset (74% of runs, since splitWordsIntoRuns parks a word that fell in
- * an inter-run silence on the preceding run), collapsing the word to zero width
+ * word's onset (74% of spans, since splitWordsIntoSpans parks a word that fell in
+ * an inter-span silence on the preceding span), collapsing the word to zero width
  * so it loses every overlap comparison in assignSpeaker.
  *
- * The truncation spans the flattened stream rather than each run separately.
- * The recognizer's onsets run continuously across run boundaries — a decode
- * window covers several runs and reports window-relative times — so consecutive
+ * The truncation spans the flattened stream rather than each speech span separately.
+ * The recognizer's onsets run continuously across span boundaries — a decode
+ * window covers several spans and reports window-relative times — so consecutive
  * words can sit 0.08s apart while straddling a boundary. Clamping only within a
- * run lets such a word overlap the next run's first word (170 of 919 boundaries
+ * span lets such a word overlap the next span's first word (170 of 919 boundaries
  * on gbos-2026-05-18).
  */
-function deriveTimedWords(speech: readonly SpeechRun[]): TimedWord[] {
-  // Runs are in time order and each holds a contiguous slice of the ordered
+function deriveTimedWords(speech: readonly SpeechSpan[]): TimedWord[] {
+  // Spans are in time order and each holds a contiguous slice of the ordered
   // word stream, so flattening recovers that stream.
-  const words = speech.flatMap((run) => run.words);
+  const words = speech.flatMap((span) => span.words);
   return words.map((word, i) => ({
     word,
     end: Math.min(word.start + MAX_WORD_SEC, words[i + 1]?.start ?? Infinity),
@@ -74,7 +74,7 @@ function deriveTimedWords(speech: readonly SpeechRun[]): TimedWord[] {
  * happen due to clustering wobble in the diarization output.
  */
 export function alignSpeakers(
-  speech: readonly SpeechRun[],
+  speech: readonly SpeechSpan[],
   turns: readonly DiarizationTurn[],
 ): Segment[] {
   const words = deriveTimedWords(speech);
@@ -131,16 +131,16 @@ export function segmentsToTurns(
 }
 
 /**
- * Wrap already-grouped segments as pseudo speech runs so they can be re-aligned
+ * Wrap already-grouped segments as pseudo speech spans so they can be re-aligned
  * — used when refreshing a golden's diarization layer, where the original VAD
- * run structure is gone. Each segment becomes one run ending shortly after its
- * last word's onset. Coarser than real runs: pauses *inside* a segment are
+ * span structure is gone. Each segment becomes one span ending shortly after its
+ * last word's onset. Coarser than real spans: pauses *inside* a segment are
  * invisible (a derived word end spans them), so sliver absorption is slightly
  * more eager here than in the live pipeline.
  */
-export function segmentsToSpeechRuns(
+export function segmentsToSpeechSpans(
   segments: readonly { words: readonly Word[] }[],
-): SpeechRun[] {
+): SpeechSpan[] {
   return segments
     .filter((s) => s.words.length > 0)
     .map((s) => ({
@@ -158,8 +158,8 @@ const MAX_SLIVER_SEC = 2.0;
  * Longest silence allowed anywhere across the sliver and its two boundaries.
  * Matches audio-ml's TRANSCRIBE_VAD_OPTIONS.minSilenceSecs: a gap that long is a pause the
  * VAD would have called a break in speech, and speech resuming after a pause is
- * someone taking a turn. Since derived word ends absorb intra-run gaps, a gap
- * this long can only appear at a run boundary — exactly where VAD saw a pause.
+ * someone taking a turn. Since derived word ends absorb intra-span gaps, a gap
+ * this long can only appear at a span boundary — exactly where VAD saw a pause.
  */
 const MAX_WORD_GAP_SEC = 0.5;
 /** How far either side of a boundary a full stop still disqualifies the merge. */

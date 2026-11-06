@@ -9,7 +9,7 @@
 // readability, but deleting a word someone actually meant changes the record.
 
 import type { Segment, Word } from "../transcript";
-import type { SpeechRun } from "../transcription";
+import type { SpeechSpan } from "../transcription";
 import type { RuleMeeting, RuleSpec, Violation } from "./common";
 import * as falseStart from "./false-start";
 import * as fillerWord from "./filler-word";
@@ -29,7 +29,7 @@ const MAX_PASSES = 10;
 
 /**
  * Apply the cleaning rules' fixes to each group's words (a speaker's segment,
- * a VAD run) until they change nothing. A fix never reaches across groups,
+ * a speech span) until they change nothing. A fix never reaches across groups,
  * since the next may be another speaker ("Yes." / "Yes." on a roll call is
  * not a stutter). Groups keep their other properties, and kept words their
  * onsets and other properties; a group may be left with no words.
@@ -57,10 +57,10 @@ export function cleanWords<W extends Word>(words: readonly W[]): W[] {
   ])[0]!.words as W[];
 }
 
-/** The pipeline's clean stage: {@link cleanGroups} over transcribeAudio's VAD runs. */
-export function cleanSpeechRuns(runs: readonly SpeechRun[]): SpeechRun[] {
+/** The pipeline's clean stage: {@link cleanGroups} over transcribeAudio's speech spans. */
+export function cleanSpeechSpans(spans: readonly SpeechSpan[]): SpeechSpan[] {
   const cleaned = cleanGroups(
-    runs.map((s) => ({ speakerNumber: null, person: null, words: s.words })),
+    spans.map((s) => ({ speakerNumber: null, person: null, words: s.words })),
   );
-  return runs.map((s, i) => ({ ...s, words: [...cleaned[i]!.words] }));
+  return spans.map((s, i) => ({ ...s, words: [...cleaned[i]!.words] }));
 }

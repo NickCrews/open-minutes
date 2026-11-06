@@ -4,10 +4,10 @@ import {
   parseTimestamp,
   parsePsv,
   serializePsv,
-  serializeVadRunsPsv,
+  serializeVadSpansPsv,
 } from "./psv";
 import type { Segment } from "@open-minutes/core/transcript";
-import type { SpeechRun } from "@open-minutes/core/transcription";
+import type { SpeechSpan } from "@open-minutes/core/transcription";
 
 describe("psv timestamps", () => {
   it("round-trips through parse/format", () => {
@@ -93,8 +93,8 @@ describe("psv parse/serialize", () => {
     expect(() => parsePsv("0:00:01.00|text|orphan")).toThrow(/begin_speaker/);
   });
 
-  it("emits vad span markers interleaved with each run's words", () => {
-    const runs: SpeechRun[] = [
+  it("emits vad span markers interleaved with each span's words", () => {
+    const spans: SpeechSpan[] = [
       {
         start: 0.08,
         end: 1.0,
@@ -106,7 +106,7 @@ describe("psv parse/serialize", () => {
         words: [{ text: "there", start: 1.1 }],
       },
     ];
-    const content = serializeVadRunsPsv(runs);
+    const content = serializeVadSpansPsv(spans);
     const lines = content.trim().split("\n");
     expect(lines).toEqual([
       "start_sec|event_type|event_data",
@@ -119,7 +119,7 @@ describe("psv parse/serialize", () => {
   });
 
   it("skips vad markers when parsing, recovering the flat word list", () => {
-    const runs: SpeechRun[] = [
+    const spans: SpeechSpan[] = [
       {
         start: 0.08,
         end: 1.0,
@@ -131,7 +131,7 @@ describe("psv parse/serialize", () => {
         words: [{ text: "there", start: 1.1 }],
       },
     ];
-    expect(parsePsv(serializeVadRunsPsv(runs))).toEqual<Segment<string>[]>([
+    expect(parsePsv(serializeVadSpansPsv(spans))).toEqual<Segment<string>[]>([
       {
         speakerNumber: null,
         person: null,

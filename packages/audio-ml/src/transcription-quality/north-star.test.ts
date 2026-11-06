@@ -3,10 +3,10 @@ import { existsSync, mkdirSync, readdirSync, symlinkSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { transcribeAudio } from "@open-minutes/audio-ml/transcribe";
-import { serializeVadRunsPsv } from "@open-minutes/datasets/psv";
+import { serializeVadSpansPsv } from "@open-minutes/datasets/psv";
 import { getMeetingData } from "@open-minutes/datasets/datums";
 import { getMeetingAudio } from "@open-minutes/datasets/audio";
-import { cleanSpeechRuns } from "@open-minutes/core/rules";
+import { cleanSpeechSpans } from "@open-minutes/core/rules";
 import { compareTranscripts } from "@open-minutes/core/transcription";
 
 // THE NORTH STAR for transcription (see README.md in this directory).
@@ -52,20 +52,20 @@ describe("transcribe", () => {
         // against transcribe → clean output.
         const audio = await getMeetingAudio(meeting);
         const wallStart = Date.now();
-        const speechRuns = cleanSpeechRuns(await transcribeAudio(audio.path));
+        const speechSpans = cleanSpeechSpans(await transcribeAudio(audio.path));
         const rtf =
           (Date.now() - wallStart) / 1000 / audio.manifest.duration_sec;
-        const transcribedWords = speechRuns.flatMap((s) => s.words);
-        // Debug artifact: interleave VAD run markers so a diff shows where the audio
-        // was chunked (each run's span + duration) and fed to the recognizer.
-        serializeVadRunsPsv(speechRuns, {
+        const transcribedWords = speechSpans.flatMap((s) => s.words);
+        // Debug artifact: interleave voice activity span markers so a diff shows where the audio
+        // was chunked (each span's start + duration) and fed to the recognizer.
+        serializeVadSpansPsv(speechSpans, {
           path: join(runDir, "transcribed.gen.psv"),
         });
         const refWords = meeting.segments.flatMap((s) => s.words);
         const cmp = compareTranscripts(refWords, transcribedWords);
         console.log(
           `[${slug}] WER=${cmp.wer.toFixed(4)} (sub=${cmp.substitutions} del=${cmp.deletions} ins=${cmp.insertions} of ${cmp.refWordCount}); ` +
-            `p95 start=${cmp.p95StartError.toFixed(3)}s; RTF=${rtf.toFixed(3)}; ${speechRuns.length} segments`,
+            `p95 start=${cmp.p95StartError.toFixed(3)}s; RTF=${rtf.toFixed(3)}; ${speechSpans.length} segments`,
         );
         // First: confirm the check actually has teeth. With strict thresholds the
         // current transcribe output should never pass, so the assertion below MUST

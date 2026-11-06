@@ -3,7 +3,7 @@
 
 /**
  * A recognized word and the onset of its first token. The recognizer reports no
- * durations, so a word is taken to last until the next word in its speech run
+ * durations, so a word is taken to last until the next word in its speech span
  * starts, and a segment to end {@link LAST_WORD_DURATION_SEC} after its last
  * word's onset.
  */

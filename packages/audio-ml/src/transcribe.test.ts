@@ -31,7 +31,7 @@ async function sample16kHz(): Promise<WaveForm> {
 
 // Parakeet reports one timestamp per token — the token's onset — and no
 // durations. A word keeps only its first token's onset; ends are derived from
-// the run structure later (see align.ts in @open-minutes/core).
+// the speech span structure later (see align.ts in @open-minutes/core).
 describe("tokensToWords", () => {
   it("joins space-prefixed tokens into words and attaches punctuation", () => {
     const words = tokensToWords(
@@ -120,11 +120,11 @@ describe("transcribe", () => {
     }
   });
 
-  it("processes speech runs in parallel", async () => {
-    // Build audio with several speech runs separated by long silence. The gap must
-    // exceed MERGE_WINDOW_SEC so each run lands in its own decode window (otherwise
+  it("processes speech spans in parallel", async () => {
+    // Build audio with several speech spans separated by long silence. The gap must
+    // exceed MERGE_WINDOW_SEC so each span lands in its own decode window (otherwise
     // they'd merge into one window and decode serially); the silence itself is never
-    // decoded — each window slices only its own run — so this stays cheap.
+    // decoded — each window slices only its own span — so this stays cheap.
     const sr = sample.sampleRate;
     const silence = new Float32Array(Math.round((MERGE_WINDOW_SEC + 1) * sr));
     const parts = [

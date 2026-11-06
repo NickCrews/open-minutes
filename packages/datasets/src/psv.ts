@@ -15,8 +15,8 @@
 //       * event_type "meta": a marker. event_data is JSON.
 //         {"begin_speaker": "<label>"} opens a new segment for that speaker.
 //       * event_type "vad": a debug marker (written only to *.gen.psv) at the
-//         start of a VAD speech run — the chunk of audio fed to the recognizer.
-//         event_data is JSON ({"index","dur"}, dur being the run's length in
+//         start of a voice activity span — the chunk of audio fed to the recognizer.
+//         event_data is JSON ({"index","dur"}, dur being the span's length in
 //         seconds). Purely informational: parsePsv skips these, so they never
 //         affect parsed output.
 //   - Speaker labels name who is speaking, in one of three forms, each parsed
@@ -39,7 +39,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 
 import { formatClock } from "@open-minutes/core/clock";
 import type { Segment } from "@open-minutes/core/transcript";
-import type { SpeechRun } from "@open-minutes/core/transcription";
+import type { SpeechSpan } from "@open-minutes/core/transcription";
 
 // Internal line-level representation. Not part of the public API.
 type PsvEvent =
@@ -239,28 +239,28 @@ export function serializePsv(
 }
 
 /**
- * Serialize VAD speech runs for the debug `transcribed.gen.psv` artifact: one
+ * Serialize speech spans for the debug `transcribed.gen.psv` artifact: one
  * unlabeled speaker segment whose words are interleaved with `vad` marker lines
- * showing where each run was cut and fed to the recognizer. Each marker sits at
- * the run's start and carries its `index` and `dur` in seconds — so a diff makes
+ * showing where each span was cut and fed to the recognizer. Each marker sits at
+ * the span's start and carries its `index` and `dur` in seconds — so a diff makes
  * a changed chunk boundary visible. Round-trips through parsePsv, which skips
  * the markers and recovers the flat word list.
  */
-export function serializeVadRunsPsv(
-  runs: readonly SpeechRun[],
+export function serializeVadSpansPsv(
+  spans: readonly SpeechSpan[],
   options?: { path?: string },
 ): string {
   const rows: string[] = [];
   rows.push(
-    `${formatClock(runs[0]?.start ?? 0)}|meta|${JSON.stringify({ begin_speaker: "unlabeled" })}`,
+    `${formatClock(spans[0]?.start ?? 0)}|meta|${JSON.stringify({ begin_speaker: "unlabeled" })}`,
   );
-  runs.forEach((run, i) => {
+  spans.forEach((span, i) => {
     const data = {
       index: i,
-      dur: Math.round((run.end - run.start) * 100) / 100,
+      dur: Math.round((span.end - span.start) * 100) / 100,
     };
-    rows.push(`${formatClock(run.start)}|vad|${JSON.stringify(data)}`);
-    for (const w of run.words) {
+    rows.push(`${formatClock(span.start)}|vad|${JSON.stringify(data)}`);
+    for (const w of span.words) {
       rows.push(`${formatClock(w.start)}|text|${w.text}`);
     }
   });

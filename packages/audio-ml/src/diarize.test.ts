@@ -9,7 +9,7 @@ import { computeSpeakerEmbeddings } from "@open-minutes/audio-ml/embed";
 import { diarizeAudio } from "@open-minutes/audio-ml/diarize";
 import {
   alignSpeakers,
-  segmentsToSpeechRuns,
+  segmentsToSpeechSpans,
 } from "@open-minutes/core/transcription";
 import { parsePsv, serializePsv } from "@open-minutes/datasets/psv";
 import { getMeetingData } from "@open-minutes/datasets/datums";
@@ -34,11 +34,11 @@ describe("diarize", () => {
       const turns = await diarizeAudio(wave);
 
       // Keep the transcription slice from the existing golden; relabel speakers.
-      // The golden has no VAD run structure, so each of its segments stands in
-      // as a pseudo speech run.
+      // The golden has no speech span structure, so each of its segments stands in
+      // as a pseudo speech span.
       const words = meeting.segments.flatMap((s) => s.words);
       const aligned = alignSpeakers(
-        segmentsToSpeechRuns(meeting.segments),
+        segmentsToSpeechSpans(meeting.segments),
         turns,
       );
       // Diarization only knows speaker numbers, written as segmented:spk-N. A

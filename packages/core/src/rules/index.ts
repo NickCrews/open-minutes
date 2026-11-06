@@ -45,7 +45,7 @@ export type { RuleMeeting, Severity } from "./common";
 export {
   CLEANING_RULE_SPECS,
   cleanGroups,
-  cleanSpeechRuns,
+  cleanSpeechSpans,
   cleanWords,
 } from "./clean";
 

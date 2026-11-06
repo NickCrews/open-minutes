@@ -1,8 +1,8 @@
-export type { DiarizationTurn, SpeechRun } from "./types";
+export type { DiarizationTurn, SpeechSpan } from "./types";
 export {
   alignSpeakers,
   MAX_WORD_SEC,
-  segmentsToSpeechRuns,
+  segmentsToSpeechSpans,
   segmentsToTurns,
 } from "./align";
 export {

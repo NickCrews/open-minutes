@@ -106,13 +106,13 @@ declare module "sherpa-onnx-node" {
     model: string;
     /** Speech-probability threshold above which a frame counts as speech (default ~0.5). */
     threshold?: number;
-    /** Seconds of sub-threshold audio that ends a speech run (the cut points). */
+    /** Seconds of sub-threshold audio that ends a voice activity span (the cut points). */
     minSilenceDuration?: number;
-    /** Speech runs shorter than this (seconds) are discarded. */
+    /** Voice activity spans shorter than this (seconds) are discarded. */
     minSpeechDuration?: number;
     /** Samples per VAD window (512 for 16 kHz Silero). */
     windowSize?: number;
-    /** A speech run longer than this (seconds) is force-split, preferring the last silence. */
+    /** A voice activity span longer than this (seconds) is force-split, preferring the last silence. */
     maxSpeechDuration?: number;
   }
 
@@ -125,8 +125,8 @@ declare module "sherpa-onnx-node" {
   }
 
   /**
-   * A detected speech run. `start` is the sample index (at the VAD's sampleRate)
-   * where the run begins; `samples` are that run's audio. The run's end sample
+   * A detected voice activity span. `start` is the sample index (at the VAD's sampleRate)
+   * where the span begins; `samples` are that span's audio. The span's end sample
    * index is `start + samples.length`.
    */
   export interface VadSpeechSegment {

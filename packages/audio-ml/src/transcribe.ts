@@ -16,7 +16,7 @@ import sherpa_onnx, {
   type OfflineRecognizerResult,
 } from "sherpa-onnx-node";
 import type { Word } from "@open-minutes/core/transcript";
-import type { SpeechRun } from "@open-minutes/core/transcription";
+import type { SpeechSpan } from "@open-minutes/core/transcription";
 
 export const TRANSCRIPTION_MODEL_SPEC = {
   // I chose this model based on how it is the highest accuracy with still a >3000x real-time facto
@@ -80,8 +80,8 @@ export const TRANSCRIBE_VAD_OPTIONS = {
 // (≤ TRANSCRIBE_VAD_OPTIONS.maxSpeechSecs).
 export const MERGE_WINDOW_SEC = 120;
 
-// Transcribe speech runs in parallel, but bounded: a long meeting produces ~1000
-// runs and each concurrent decode holds a chunk of native onnxruntime memory, so
+// Transcribe speech spans in parallel, but bounded: a long meeting produces ~1000
+// spans and each concurrent decode holds a chunk of native onnxruntime memory, so
 // an unbounded pool blows up RAM. Cap concurrency to keep peak memory in check
 // while still using multiple cores. (Even sequential is RTF ~0.04 here, so a
 // small cap costs little.)
@@ -109,17 +109,17 @@ export interface TranscribeOptions {
 }
 
 /**
- * Transcribe audio into speech runs. Silero VAD splits the audio at silences
+ * Transcribe audio into speech spans. Silero VAD splits the audio at silences
  * (never mid-word); consecutive voice activity spans are merged into windows of up to
  * MERGE_WINDOW_SEC that are each decoded in one pass (so the model gets context),
  * then each window's words are redistributed back to the spans they fall in.
- * The result is one {@link SpeechRun} per voice activity span, with absolute word
+ * The result is one {@link SpeechSpan} per voice activity span, with absolute word
  * timestamps, in time order. Returns [] for silence. Input must be 16 kHz mono.
  */
 export async function transcribeAudio(
   audio: AudioInput,
   options: TranscribeOptions = {},
-): Promise<SpeechRun[]> {
+): Promise<SpeechSpan[]> {
   const wallStart = Date.now();
   const wave = await ensureWaveForm(audio);
   assertSampleRate(wave.sampleRate);
@@ -143,7 +143,7 @@ export async function transcribeAudio(
   const windowSegments = await mapWithConcurrency(
     windows,
     TRANSCRIBE_CONCURRENCY,
-    async (win, i): Promise<SpeechRun[]> => {
+    async (win, i): Promise<SpeechSpan[]> => {
       const start = win.startSample / wave.sampleRate;
       const end = win.endSample / wave.sampleRate;
       // Zero-copy view into the original waveform — never copy the window's samples
@@ -170,7 +170,7 @@ export async function transcribeAudio(
         result.tokens ?? [],
         result.timestamps ?? [],
       ).map((w) => ({ ...w, start: w.start + start }));
-      return splitWordsIntoRuns(win.spans, words, wave.sampleRate);
+      return splitWordsIntoSpans(win.spans, words, wave.sampleRate);
     },
   );
 
@@ -263,18 +263,18 @@ function packWindows(
 
 /**
  * Distribute a window's recognized words (absolute timestamps, in time order)
- * back to the voice activity spans they fall in, yielding one SpeechRun per span
+ * back to the voice activity spans they fall in, yielding one SpeechSpan per span
  * so the output still marks exactly where VAD cut. Each word is assigned to the
  * latest span whose start it has reached; a word landing in an inter-span
  * silence attaches to the preceding span. Spans with no words yield an empty
- * SpeechRun.
+ * SpeechSpan.
  */
-function splitWordsIntoRuns(
+function splitWordsIntoSpans(
   spans: readonly SampleSpan[],
   words: readonly Word[],
   sampleRate: number,
-): SpeechRun[] {
-  const segments: SpeechRun[] = spans.map((span) => ({
+): SpeechSpan[] {
+  const segments: SpeechSpan[] = spans.map((span) => ({
     start: span.startSample / sampleRate,
     end: span.endSample / sampleRate,
     words: [],
@@ -369,7 +369,7 @@ export function ensureModelFiles() {
 //
 // Only the word's onset (its first token's timestamp) is kept: Parakeet reports
 // no durations, so any per-word end would be an estimate. Word ends are instead
-// derived from the run structure where needed — see Word in
+// derived from the speech span structure where needed — see Word in
 // @open-minutes/core and deriveTimedWords in its transcription/align.ts.
 export function tokensToWords(tokens: string[], timestamps: number[]): Word[] {
   const words: Word[] = [];

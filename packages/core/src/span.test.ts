@@ -50,12 +50,12 @@ describe("clip", () => {
 
 describe("gaps", () => {
   it("finds the gaps between spans, including at the range edges", () => {
-    const runs = [
+    const spans = [
       { start: 1, end: 3 },
       { start: 3.2, end: 5 },
       { start: 7, end: 8 },
     ];
-    expect(gaps(runs, 0, 10, 0.5)).toEqual([
+    expect(gaps(spans, 0, 10, 0.5)).toEqual([
       { start: 0, end: 1 },
       { start: 5, end: 7 },
       { start: 8, end: 10 },
@@ -63,11 +63,11 @@ describe("gaps", () => {
   });
 
   it("keeps a gap exactly minSecs long", () => {
-    const runs = [
+    const spans = [
       { start: 0, end: 1 },
       { start: 1.5, end: 2 },
     ];
-    expect(gaps(runs, 0, 2, 0.5)).toEqual([{ start: 1, end: 1.5 }]);
+    expect(gaps(spans, 0, 2, 0.5)).toEqual([{ start: 1, end: 1.5 }]);
   });
 
   it("is the whole range when no span is in it", () => {
@@ -77,21 +77,21 @@ describe("gaps", () => {
   });
 
   it("is empty when spans cover the whole range", () => {
-    const runs = [
+    const spans = [
       { start: 0, end: 4 },
       { start: 4, end: 12 },
     ];
-    expect(gaps(runs, 2, 10, 0.1)).toEqual([]);
+    expect(gaps(spans, 2, 10, 0.1)).toEqual([]);
   });
 
   it("measures from the furthest end so far, not the last span's", () => {
     // [2, 3] sits inside [1, 6], so the gap starts at 6, not 3.
-    const runs = [
+    const spans = [
       { start: 1, end: 6 },
       { start: 2, end: 3 },
       { start: 7, end: 8 },
     ];
-    expect(gaps(runs, 1, 8, 0.5)).toEqual([{ start: 6, end: 7 }]);
+    expect(gaps(spans, 1, 8, 0.5)).toEqual([{ start: 6, end: 7 }]);
   });
 });
 

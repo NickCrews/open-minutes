@@ -26,7 +26,7 @@ export function clip(spans: readonly Span[], from: number, to: number): Span[] {
 
 /**
  * The stretches of [from, to) that no span in `spans` covers, at least
- * `minSecs` long: between speech runs, the pauses. `spans` must be sorted;
+ * `minSecs` long: between speech spans, the pauses. `spans` must be sorted;
  * they may overlap. The result is sorted and disjoint.
  */
 export function gaps(
