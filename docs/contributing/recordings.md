@@ -153,8 +153,8 @@ Then it stores audio for each recording with `is_meeting` not false, no
 `audio_stored_at` and fewer than 3 entries in `audio_error_history`, newest
 `published_at` first (unknown last), up to `--max-audio <n>` per run
 (default 20). It downloads each through `storedSite` into a temporary file,
-which stores the audio in the blob store in its site's format (speech Opus in
-WebM for YouTube, akleg.gov's MP3), and sets `audio_stored_at`. A failure
+which stores the audio in the blob store as speech Opus in WebM, the one
+format every `SiteAdapter` saves, and sets `audio_stored_at`. A failure
 appends its error to `audio_error_history`, and the recording is retried on a
 later run until its third failure. Emptying `audio_error_history` retries it
 again.
