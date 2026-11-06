@@ -19,11 +19,11 @@ export const VAD_MODEL_SPEC = {
 export interface DetectSpeechOptions {
   /** Speech-probability threshold. */
   threshold?: number;
-  /** Shortest pause that ends a run. */
+  /** Shortest pause that ends a span. */
   minSilenceSecs?: number;
-  /** Drop runs shorter than this. */
+  /** Drop spans shorter than this. */
   minSpeechSecs?: number;
-  /** Force-split runs longer than this. */
+  /** Force-split spans longer than this. */
   maxSpeechSecs?: number;
 }
 
@@ -36,7 +36,7 @@ export function loadVadModel(): void {
 const WINDOW_SIZE = 512;
 
 /**
- * Speech runs found by Silero VAD, in time order. Runs force-split at
+ * Voice activity spans found by Silero VAD, in time order. Spans force-split at
  * `maxSpeechSecs` that touch end to end are joined back together.
  */
 export async function detectSpeech(
@@ -65,20 +65,20 @@ export async function detectSpeech(
       provider: "cpu",
       debug: 0,
     },
-    // The circular buffer must hold the longest run.
+    // The circular buffer must hold the longest span.
     maxSpeechSecs + 5,
   );
-  const runs: Span[] = [];
-  // Keep only each run's bounds: vad.front() copies the run's samples, and
+  const spans: Span[] = [];
+  // Keep only each span's bounds: vad.front() copies the span's samples, and
   // holding on to them would duplicate the audio.
   const drain = () => {
     while (!vad.isEmpty()) {
       const seg = vad.front();
       const start = seg.start / wave.sampleRate;
       const end = (seg.start + seg.samples.length) / wave.sampleRate;
-      const last = runs.at(-1);
+      const last = spans.at(-1);
       if (last && start - last.end <= 0.01) last.end = end;
-      else runs.push({ start, end });
+      else spans.push({ start, end });
       vad.pop();
     }
   };
@@ -89,5 +89,5 @@ export async function detectSpeech(
   }
   vad.flush();
   drain();
-  return runs;
+  return spans;
 }
