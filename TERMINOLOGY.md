@@ -170,9 +170,13 @@ Relies on the larger context of the database, eg when identifying a speaker in a
 it should be able to look up the voiceprints of the speakers already in the database.
 _Avoid_: ASR, speech-to-text, captioning
 
+**Voice activity span**:
+A span in which voice activity detection (VAD) hears a voice. Knows nothing about the words or the speakers.
+_Avoid_: speech run, VAD segment, segment, chunk
+
 **Speech run**:
-A span in which voice activity detection (VAD) hears speech. Knows nothing about speakers.
-_Avoid_: VAD segment, segment, chunk
+A voice activity span together with the words transcribed in it, as transcribeAudio returns it. Knows nothing about speakers.
+_Avoid_: segment, chunk
 
 **Diarization**:
 The stage that splits audio into diarization turns and groups them into clusters by voice, knowing nothing about who anyone is.
