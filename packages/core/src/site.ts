@@ -23,7 +23,7 @@ export interface SiteAdapter {
   /**
    * Downloads the recording's audio to `path` encoded for speech, whatever
    * format the site serves: 16 kHz mono Opus in WebM at 24 kbps (see
-   * `encodeSpeechWebm` in @open-minutes/codecs). Replaces any file there. An
+   * `encodeOpusWebm` in @open-minutes/codecs). Replaces any file there. An
    * interrupted download never leaves a partial file. Caching is the caller's
    * job.
    */

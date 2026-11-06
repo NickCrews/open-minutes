@@ -1,7 +1,7 @@
 import { mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { z } from "zod";
-import { decodeMp3, encodeSpeechWebm } from "@open-minutes/codecs";
+import { decodeMp3, encodeOpusWebm } from "@open-minutes/codecs";
 import type {
   RecordingLister,
   RecordingMetadata,
@@ -392,7 +392,7 @@ export function akleg(config: AkLegConfig = {}): AkLeg {
       );
       const res = await get(audio.url, { signal });
       if (!res.body) throw new Error(`GET ${audio.url}: no body`);
-      const speech = await encodeSpeechWebm(decodeMp3(chunksOf(res.body)));
+      const speech = await encodeOpusWebm(decodeMp3(chunksOf(res.body)));
       // Written beside `path` and moved into place, so an interrupted write
       // never leaves a partial file at `path`.
       const part = `${path}.part`;

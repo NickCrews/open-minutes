@@ -11,7 +11,7 @@ import {
   ensureYtDlpInstalled,
   runWithEgress,
 } from "@open-minutes/ytdlp";
-import { decodeOpusWebm, encodeSpeechWebm } from "@open-minutes/codecs";
+import { decodeOpusWebm, encodeOpusWebm } from "@open-minutes/codecs";
 import {
   type YtDlpInfo,
   metadataFromYtDlpInfo,
@@ -69,7 +69,7 @@ async function getMetadata(
 
 /**
  * Downloads a video's audio with yt-dlp and writes it to `path` re-encoded for
- * speech (see `encodeSpeechWebm` in `@open-minutes/codecs`). A single format
+ * speech (see `encodeOpusWebm` in `@open-minutes/codecs`). A single format
  * needs no ffmpeg to download.
  */
 async function downloadAudio(
@@ -100,7 +100,7 @@ async function downloadAudio(
     console.error(`Re-encoding the audio for speech...`);
     await writeAtomically(
       path,
-      await encodeSpeechWebm(decodeOpusWebm(await readFile(webm))),
+      await encodeOpusWebm(decodeOpusWebm(await readFile(webm))),
     );
   } finally {
     await removeWebm();
@@ -133,7 +133,7 @@ export type YouTube = SiteAdapter & { readonly site: "youtube" };
  *    set. It runs this same code on a GitHub runner.
  *
  * Either way, the audio is YouTube's re-encoded for speech: 16 kHz mono Opus
- * in WebM at 24 kbps (see `encodeSpeechWebm` in `@open-minutes/codecs`).
+ * in WebM at 24 kbps (see `encodeOpusWebm` in `@open-minutes/codecs`).
  *
  * Any other error, such as a private or removed video, is thrown at once.
  * Does no I/O until a method is called.

@@ -7,12 +7,7 @@ import { readAllSamples, type WaveForm } from "./waveform";
 
 export { decodeMp3 } from "./mp3";
 export { resample, Resampler } from "./resample";
-export {
-  decodeOpusWebm,
-  encodeOpusWebm,
-  encodeSpeechWebm,
-  type OpusEncodeOptions,
-} from "./opus";
+export { decodeOpusWebm, encodeOpusWebm, type OpusEncodeOptions } from "./opus";
 export { readWav, SAMPLE_RATE, writeWav } from "./wav";
 export { readAllSamples, type WaveForm } from "./waveform";
 
