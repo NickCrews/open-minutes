@@ -106,8 +106,32 @@ One migration creates `recordings` and `recording_bodies`, backfills them from
 4. Drop `meetings.site_kind`, `site_id` and `url`, and their unique constraint
    and check.
 
-The seed (`packages/seed`) inserts a `recordings` row for each fixture meeting
-before the meeting, the same way.
+Everything else that reads `meetings.site_kind`, `site_id` or `url` reads the
+meeting's recording's `site`, `external_id` or `permalink` instead.
+
+### Golden fixtures and the seed
+
+A fixture meeting's `meeting.json` names its recording with `site` and
+`external_id`, replacing `youtube_id`, so akleg.gov fixtures fit too. The seed
+(`packages/seed`) inserts a `recordings` row for each fixture before its
+meeting:
+
+- `site`, `external_id`: the fixture's.
+- `permalink`: the recording's page, built from `site` and `external_id`.
+- `title`, `description`: the fixture's.
+- `duration_secs`: what the seed computes from the last word.
+- `is_meeting`: true. `audio_stored_at`: when the seed runs, since fixture
+  audio is in the blob store already.
+
+It also adds a `recording_bodies` row for each of the fixture's `body_slugs`.
+
+### DuckDB export
+
+`.github/scripts/export-duckdb.sh` exports every recording, including those
+that aren't meetings, and `recording_bodies`. It leaves out the columns about
+storing audio, `audio_stored_at` and `audio_error_history`.
+`features/agents/llms-txt.ts` describes both tables and how `meetings` joins
+`recordings`.
 
 ## Scouting
 
