@@ -64,9 +64,9 @@ export interface RecordingFiles {
    */
   metadataJson: BlobFile;
   /**
-   * The audio its site's `SiteAdapter.downloadAudio` saves: the site's audio
-   * encoded for speech, 16 kHz mono Opus in WebM at 24 kbps (~11 MB per
-   * hour), plenty for the models, which take 16 kHz mono.
+   * The audio its site's `SiteAdapter.downloadAudio` saves: 16 kHz mono
+   * Opus in WebM at 24 kbps (~11 MB per hour), plenty for the models, which
+   * take 16 kHz mono.
    */
   audio: BlobFile;
 }
