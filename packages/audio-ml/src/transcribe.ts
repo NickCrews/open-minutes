@@ -17,6 +17,7 @@ import sherpa_onnx, {
 } from "sherpa-onnx-node";
 import type { Word } from "@open-minutes/core/transcript";
 import type { SpeechRun } from "@open-minutes/core/transcription";
+import type { Span } from "@open-minutes/core/span";
 
 export const TRANSCRIPTION_MODEL_SPEC = {
   // I chose this model based on how it is the highest accuracy with still a >3000x real-time facto
@@ -115,10 +116,11 @@ export async function transcribeAudio(
   const duration = wave.samples.length / wave.sampleRate;
   const { tracing } = options;
 
-  const speechRuns = (await detectSpeech(wave, TRANSCRIBE_VAD)).map((r) => ({
-    startSample: Math.round(r.start * wave.sampleRate),
-    endSample: Math.round(r.end * wave.sampleRate),
-  }));
+  // detectSpeech gives seconds; windows are sliced from the waveform by
+  // sample index.
+  const speechRuns = (await detectSpeech(wave, TRANSCRIBE_VAD)).map((span) =>
+    toSampleSpan(span, wave.sampleRate),
+  );
   const windows = mergeRuns(speechRuns, wave.sampleRate);
   // Progress goes to stderr so callers' stdout stays machine-readable.
   console.error(
@@ -207,6 +209,14 @@ export async function transcribeRange(
 interface SampleSpan {
   startSample: number;
   endSample: number;
+}
+
+/** `span`, in seconds, as sample indices into a waveform at `sampleRate`. */
+function toSampleSpan(span: Span, sampleRate: number): SampleSpan {
+  return {
+    startSample: Math.round(span.start * sampleRate),
+    endSample: Math.round(span.end * sampleRate),
+  };
 }
 
 /** A merged decode window: a contiguous span covering one or more VAD runs. */
