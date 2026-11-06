@@ -21,10 +21,8 @@ import {
 } from "drizzle-orm/pg-core";
 import { N_DIMENSIONS as VOICE_N_DIMENSIONS } from "@open-minutes/core/voice_embeddings";
 import { Word } from "@open-minutes/core/transcript";
-import type {
-  MeetingSource,
-  SiteKind,
-} from "@open-minutes/core/meeting-source";
+import type { MeetingSource } from "@open-minutes/core/meeting-source";
+import { SITES, type Site } from "@open-minutes/core/site";
 
 const secondsInterval = () => interval({ fields: "second", precision: 3 });
 
@@ -34,6 +32,10 @@ export const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 /** A check that a slug column matches {@link SLUG_PATTERN}. */
 const kebabCase = (column: AnyPgColumn) =>
   sql`${column} ~ '${sql.raw(SLUG_PATTERN.source)}'`;
+
+/** A check that `column` holds one of `values`. */
+const oneOf = (column: AnyPgColumn, values: readonly string[]) =>
+  sql`${column} IN (${sql.raw(values.map((v) => `'${v}'`).join(", "))})`;
 
 /**
  * A government: the Municipality of Anchorage, the City & Borough of Juneau.
@@ -121,7 +123,7 @@ export const meetingsTable = pgTable(
     // video ID, or an akleg.gov meeting ID ("HRES 2018-09-10 14:00:00"). The
     // audio we transcribed came from there, so transcript times are seconds
     // into its recording.
-    site_kind: varchar().$type<SiteKind>().notNull(),
+    site_kind: varchar().$type<Site>().notNull(),
     site_id: varchar().notNull(),
     // The meeting's page on its site.
     url: varchar()
@@ -165,10 +167,7 @@ export const meetingsTable = pgTable(
     ),
     check("meetings_slug_valid", kebabCase(table.slug)),
     check("meetings_slug_not_numeric", sql`${table.slug} !~ '^[0-9]+$'`),
-    check(
-      "meetings_site_kind_known",
-      sql`${table.site_kind} IN ('youtube', 'akleg')`,
-    ),
+    check("meetings_site_kind_known", oneOf(table.site_kind, SITES)),
     unique("meetings_site_kind_site_id_unique").on(
       table.site_kind,
       table.site_id,
