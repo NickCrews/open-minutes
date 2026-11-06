@@ -17,11 +17,47 @@ and decode paths with [`@open-minutes/codecs`](../codecs/README.md)'s
 The ONNX models (~650MB) are downloaded into `src/models/` (gitignored) the
 first time each is used, or all at once with `pnpm models`.
 
-`@open-minutes/audio-ml/vad` finds where someone is talking (Silero VAD,
-with pauses down to 0.2 s), as a list of `Span`s from
+## Audio functions
+
+The audio functions are small building blocks that all take the same input:
+`fn(audio: AudioInput, opts?: BaseOptions & {...}): Promise<T[]>`, with the
+types in `@open-minutes/audio-ml/input`.
+
+- `audio` is a path or a `WaveForm` of 16 kHz mono samples.
+- `opts.span` says where results are needed: one `{ start, end }`, or a list
+  of them. Times are seconds or clock strings such as `"1:02:03.40"`; a
+  missing or null `start` or `end` is that end of the file. Omitted, the
+  whole file.
+- `opts.signal` is an `AbortSignal`.
+
+`prepareInput` in `input.ts` is the wrapper every function goes through: it
+reads the audio, checks it is 16 kHz, parses the times, sorts the spans,
+joins those that overlap or touch, clamps them to the file, and checks the
+signal.
+
+Every function follows these rules:
+
+1. **One function, one ONNX model.** A call runs its model over the audio it
+   is given, and no other model. The same audio and options give the same
+   result. Whatever a function needs from another model, such as voice
+   activity spans, is computed upstream and passed in.
+2. **`span` is a lower bound.** Results are complete inside the span(s).
+   Outside them, a function may skip the work, or may compute and return
+   results anyway.
+3. **A list of spans is a mask, not a batch.** Spans are sorted, overlaps
+   joined, and nearby spans may be processed together, so a result inside
+   one span may depend on the rest of the mask.
+4. **Results are flat lists of time-stamped items**, with times in seconds
+   from the start of the file.
+5. **Every function is async.**
+6. **Results aren't cached.** Callers cache them, keyed on the options.
+   Loaded models stay cached.
+
+`detectSpeech` in `@open-minutes/audio-ml/vad` finds where someone is
+talking (Silero VAD, with pauses down to 0.2 s), as a list of `Span`s from
 `@open-minutes/core/span`, which also clips, merges, subtracts and totals
-them and finds the gaps between them (the pauses). It caches nothing:
-callers that reuse speech runs keep them themselves.
+them and finds the gaps between them (the pauses). A voice activity span
+that crosses the edge of the mask is returned whole.
 
 A checked-in minute of real meeting audio from
 `@open-minutes/datasets/clips` tests what VAD and `transcribeRange` hear

@@ -4,6 +4,7 @@ import { ensureWaveForm, type WaveForm } from "@open-minutes/codecs";
 
 import { EMBEDDING_MODEL_SPEC } from "./embed-model.js";
 import { ensureDownloaded } from "./model.js";
+import { assertSampleRate } from "./input.js";
 import type { DiarizationTurn } from "@open-minutes/core/transcription";
 
 // Speaker-embedding toolkit (Tier B): one CAM++ voiceprint per speaker, for
@@ -17,8 +18,6 @@ export { EMBEDDING_MODEL_SPEC };
 const LONGEST_SEGMENTS = 3; // how many turns per speaker feed the centroid
 const MIN_SEGMENT_SECONDS = 1.5; // turns shorter than this don't embed reliably
 const MAX_EMBEDDING_SECONDS = 8; // cap audio fed to the embedder (use the tail)
-
-export const EXPECTED_SAMPLE_RATE = 16000;
 
 // ONNX intra-op threads. The 166-min meeting is CPU-bound in sherpa's process();
 // 4 roughly halves wall time vs 2 while leaving headroom on typical machines.
@@ -35,7 +34,7 @@ export async function computeSpeakerEmbeddings(
 ): Promise<Map<number, Float32Array>> {
   const wave = await ensureWaveForm(audio);
   const extractor = getEmbeddingExtractor();
-  assertSampleRate(wave.sampleRate, EXPECTED_SAMPLE_RATE);
+  assertSampleRate(wave.sampleRate);
 
   const centroids = new Map<number, Float32Array>();
   for (const [speaker, speakerTurns] of groupBySpeaker(turns)) {
@@ -118,15 +117,6 @@ export function groupBySpeaker(
     bySpeaker.set(turn.speakerNumber, list);
   }
   return bySpeaker;
-}
-
-export function assertSampleRate(actual: number, expected: number): void {
-  if (actual !== expected) {
-    throw new Error(
-      `Speaker analysis expects ${expected} Hz mono audio, got ${actual} Hz. ` +
-        `Resample first (e.g. ffmpeg -ar 16000 -ac 1).`,
-    );
-  }
 }
 
 let _extractor: SpeakerEmbeddingExtractor | null = null;

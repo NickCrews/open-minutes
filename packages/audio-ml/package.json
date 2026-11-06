@@ -8,6 +8,7 @@
     "./diarize": "./src/diarize.ts",
     "./embed": "./src/embed.ts",
     "./embed-model": "./src/embed-model.ts",
+    "./input": "./src/input.ts",
     "./models": "./src/all-models.ts",
     "./vad": "./src/vad.ts"
   },
