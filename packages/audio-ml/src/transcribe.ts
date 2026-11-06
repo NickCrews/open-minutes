@@ -225,7 +225,7 @@ interface SampleSpan {
 }
 
 /** A merged decode window: a contiguous span covering one or more voice activity spans. */
-interface SpeechWindow {
+interface DecodeWindow {
   startSample: number;
   endSample: number;
   spans: SampleSpan[];
@@ -242,9 +242,9 @@ interface SpeechWindow {
 function packWindows(
   spans: readonly SampleSpan[],
   sampleRate: number,
-): SpeechWindow[] {
+): DecodeWindow[] {
   const maxSamples = MERGE_WINDOW_SEC * sampleRate;
-  const windows: SpeechWindow[] = [];
+  const windows: DecodeWindow[] = [];
   for (const span of spans) {
     const last = windows.at(-1);
     if (last && span.endSample - last.startSample <= maxSamples) {
