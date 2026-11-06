@@ -22,9 +22,8 @@ import { youtube } from "@open-minutes/youtube";
  * `blobStore()`) doesn't have, `adapter` gets, and with `writer`, it's
  * stored, so the next miss is a hit.
  *
- * The audio is what `adapter` gives: for YouTube, its audio re-encoded for
- * speech (Opus in WebM); for akleg.gov, the meeting's MP3. Golden fixtures'
- * sha256 are of the stored audio's WAV.
+ * The audio is what `adapter` gives, the site's audio encoded for speech
+ * (Opus in WebM). Golden fixtures' sha256 are of the stored audio's WAV.
  */
 export function storedSite(
   adapter: SiteAdapter,
@@ -39,7 +38,6 @@ export function storedSite(
   };
   return {
     site: adapter.site,
-    audioExtension: adapter.audioExtension,
     recordingId: (recordingIdOrUrl) => adapter.recordingId(recordingIdOrUrl),
     async getMetadata(recordingIdOrUrl) {
       const { id, files } = filesOf(recordingIdOrUrl);

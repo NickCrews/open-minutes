@@ -8,8 +8,8 @@ Gets a meeting's audio. Two parts:
   recording's metadata and audio from the blob store first. That makes
   YouTube work where it blocks yt-dlp (CI, servers). On a miss it gets them
   from the site; given the blob store's keys, it stores both there. The audio
-  is what the site's adapter gives: YouTube's re-encoded for speech, or
-  akleg.gov's MP3. Where the store keeps a recording's files is
+  is what the site's adapter gives: the site's audio encoded for speech
+  (16 kHz mono Opus in WebM). Where the store keeps a recording's files is
   `blobStore().recording()` in [`@open-minutes/blobstore`](../blobstore/README.md).
 - `getCachedAudio`: a recording's audio decoded to 16 kHz mono WAV (by
   [`@open-minutes/codecs`](../codecs/README.md)) in the per-machine cache,

@@ -24,10 +24,10 @@ what it is rather than by building its key:
 - `recording(site, id)`: a recording's `metadataJson` (its
   `RecordingMetadata`) and `audio`, which `storedSite` in
   [`@open-minutes/meeting-audio`](../meeting-audio/README.md) makes and
-  stores. A YouTube video's are under `youtube/<video ID>/`, its audio
-  `speech.webm`; an akleg.gov meeting's under
-  `akleg/<meeting ID without spaces or colons>/` (`HRES_2018-09-10_140000`),
-  its audio `audio.mp3`.
+  stores. The audio is `speech.webm`, the site's audio encoded for speech
+  (16 kHz mono Opus). A YouTube video's are under `youtube/<video ID>/`; an
+  akleg.gov meeting's under `akleg/<meeting ID without spaces or colons>/`
+  (`HRES_2018-09-10_140000`).
 - `duckdbExport`: production's public data as one DuckDB file, which the
   [`export-duckdb`](../../.github/workflows/export-duckdb.yml) workflow
   writes nightly.

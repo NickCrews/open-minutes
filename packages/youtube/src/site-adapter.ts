@@ -11,7 +11,7 @@ import {
   ensureYtDlpInstalled,
   runWithEgress,
 } from "@open-minutes/ytdlp";
-import { encodeSpeechWebm } from "@open-minutes/codecs";
+import { decodeOpusWebm, encodeSpeechWebm } from "@open-minutes/codecs";
 import {
   type YtDlpInfo,
   metadataFromYtDlpInfo,
@@ -98,7 +98,10 @@ async function downloadAudio(
       { beforeAttempt: removeWebm, signal },
     );
     console.error(`Re-encoding the audio for speech...`);
-    await writeAtomically(path, await encodeSpeechWebm(await readFile(webm)));
+    await writeAtomically(
+      path,
+      await encodeSpeechWebm(decodeOpusWebm(await readFile(webm))),
+    );
   } finally {
     await removeWebm();
   }
@@ -119,10 +122,7 @@ async function writeAtomically(path: string, bytes: Uint8Array) {
  * and pass it around; tests pass a fake instead (see the pipeline's
  * `om/testing.ts`).
  */
-export type YouTube = SiteAdapter & {
-  readonly site: "youtube";
-  readonly audioExtension: "webm";
-};
+export type YouTube = SiteAdapter & { readonly site: "youtube" };
 
 /**
  * A {@link YouTube} that gets each video the first way that works:
@@ -174,7 +174,6 @@ export function youtube(options: YouTubeOptions = {}): YouTube {
   }
   return {
     site: "youtube",
-    audioExtension: "webm",
     recordingId: videoId,
     getMetadata: (videoIdOrUrl) =>
       orViaWorkflow(

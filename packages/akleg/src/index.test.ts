@@ -1,5 +1,13 @@
 import { describe, expect, it, vi } from "vite-plus/test";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import {
+  audioFormatOf,
+  decodeMp3,
+  ensureWaveForm,
+  readAllSamples,
+} from "@open-minutes/codecs";
 import {
   akleg,
   aklegSource,
@@ -255,6 +263,31 @@ describe("mainAudio", () => {
       meeting.audio[0],
     );
     expect(mainAudio({ ...meeting, audio: [] })).toBeUndefined();
+  });
+});
+
+describe("downloadAudio", () => {
+  it("saves the meeting's MP3 encoded for speech", async () => {
+    const mp3 = readFileSync(
+      new URL("../../codecs/src/fixtures/tones.mp3", import.meta.url),
+    );
+    const requests: string[] = [];
+    const source = akleg({
+      fetch: (async (url: string) => {
+        requests.push(url);
+        return new Response(url.endsWith(".mp3") ? mp3 : MEETINGS_ON_DATE);
+      }) as typeof fetch,
+    });
+    const path = join(mkdtempSync(join(tmpdir(), "akleg-")), "speech.webm");
+    await source.downloadAudio("HRES 2018-09-10 14:00:00", path);
+    expect(requests.at(-1)).toBe(
+      "https://www.akleg.gov/ftr/2018/20180910/sres/sres_1400.mp3",
+    );
+    expect(await audioFormatOf(path)).toBe("webm");
+    const speech = await ensureWaveForm(path);
+    expect(speech.samples.length).toBe(
+      (await readAllSamples(decodeMp3(mp3))).length,
+    );
   });
 });
 

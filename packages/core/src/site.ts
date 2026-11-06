@@ -20,12 +20,12 @@ export interface SiteAdapter {
   recordingId(recordingIdOrUrl: string): string;
   /** The recording's title, publisher and so on. */
   getMetadata(recordingIdOrUrl: string): Promise<RecordingMetadata>;
-  /** The extension of the files {@link downloadAudio} saves, for naming them. */
-  readonly audioExtension: "mp3" | "webm";
   /**
-   * Downloads the recording's audio to `path`, undecoded, in the site's format
-   * (WebM/Opus for YouTube, MP3 for akleg.gov), replacing any file there. An
-   * interrupted download never leaves a partial file. Caching is the caller's job.
+   * Downloads the recording's audio to `path` encoded for speech, whatever
+   * format the site serves: 16 kHz mono Opus in WebM at 24 kbps (see
+   * `encodeSpeechWebm` in @open-minutes/codecs). Replaces any file there. An
+   * interrupted download never leaves a partial file. Caching is the caller's
+   * job.
    */
   downloadAudio(
     recordingIdOrUrl: string,

@@ -4,7 +4,7 @@ Where Open Minutes gets meetings published by the Alaska Legislature on
 [akleg.gov](https://www.akleg.gov), a peer of
 [`@open-minutes/youtube`](../youtube). It lists a committee's recorded
 meetings, and implements `@open-minutes/core`'s `SiteAdapter` for a
-meeting: its metadata, and its MP3 audio. `aklegSource({ committee:
+meeting: its metadata, and its audio. `aklegSource({ committee:
 "HRES" })` is a committee as a body's meeting source
 (`{"type":"akleg_committee","committee":"HRES"}`): core's `RecordingLister`.
 
@@ -31,9 +31,10 @@ returning wrong data.
 
 ## Audio
 
-The MP3 "FTR" recording is saved as akleg.gov serves it, streamed to disk.
-[`@open-minutes/codecs`](../codecs/README.md) decodes it to 16 kHz WAV, with
-no ffmpeg.
+`downloadAudio` streams the MP3 "FTR" recording from akleg.gov, decoding it as
+it downloads, and saves it encoded for speech (16 kHz mono Opus in WebM, the
+same as YouTube's), with [`@open-minutes/codecs`](../codecs/README.md) and no
+ffmpeg.
 
 ## Tests
 
@@ -41,6 +42,6 @@ no ffmpeg.
   (`src/fixtures/`).
 - `live.test.ts` runs against akleg.gov itself (~10 s), with every
   `pnpm test` and in CI. It checks known past meetings field by field, lists
-  the current Legislature, and downloads and decodes a 7.5-minute meeting. A
+  the current Legislature, and downloads and encodes a 7.5-minute meeting. A
   change to the API's format fails it with a zod error naming the field; so
   does akleg.gov being down.
