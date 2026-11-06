@@ -21,7 +21,7 @@ describe("detectSpeech on the GBOS roll call", () => {
   it("finds voice activity spans in order, inside the clip", () => {
     expect(spans.length).toBeGreaterThan(10);
     for (const [i, span] of spans.entries()) {
-      expect(span.end).toBeGreaterThan(r.start);
+      expect(span.end).toBeGreaterThan(span.start);
       expect(span.start).toBeGreaterThanOrEqual(0);
       expect(span.end).toBeLessThanOrEqual(60);
       if (i > 0) expect(span.start).toBeGreaterThan(spans[i - 1]!.end);
