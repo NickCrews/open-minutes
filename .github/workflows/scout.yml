@@ -1,0 +1,107 @@
+# Hourly, runs `pnpm scout run` on production: scans every body's meeting
+# source for new recordings, stores their metadata in the blob store and the
+# database, then stores audio for up to 20 recordings. See
+# docs/contributing/recordings.md.
+#
+# Trigger it by hand with `gh workflow run scout.yml`, optionally with
+# `-f body=<slug>`, `-f max_audio=<n>` or `-f dry_run=true`.
+#
+# Configuration (repo settings), shared with export-duckdb.yml:
+#   variables  OBJECT_STORE_PUBLIC_URL, OBJECT_STORE_ENDPOINT,
+#              OBJECT_STORE_BUCKET, OBJECT_STORE_REGION (optional)
+#   object-store-writer environment secrets:
+#              OBJECT_STORE_ACCESS_KEY_ID, OBJECT_STORE_SECRET_ACCESS_KEY
+#   NEON_PROJECT_ID and NEON_API_KEY (see production.yml)
+name: scout
+
+on:
+  schedule:
+    - cron: "41 * * * *"
+  workflow_dispatch:
+    inputs:
+      body:
+        description: Scan only this body's meeting source, by slug
+        required: false
+      max_audio:
+        description: Store at most this many recordings' audio
+        required: false
+        default: "20"
+      dry_run:
+        description: List what the run would do, and write nothing
+        type: boolean
+        default: false
+
+# A run that starts while another is going waits for it.
+concurrency:
+  group: scout
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  scout:
+    if: vars.NEON_PROJECT_ID != ''
+    runs-on: ubuntu-latest
+    environment: object-store-writer
+    timeout-minutes: 60
+    env:
+      BLOB_STORE_PUBLIC_URL: ${{ vars.OBJECT_STORE_PUBLIC_URL }}
+      BLOB_STORE_ENDPOINT: ${{ vars.OBJECT_STORE_ENDPOINT }}
+      BLOB_STORE_BUCKET: ${{ vars.OBJECT_STORE_BUCKET }}
+      BLOB_STORE_REGION: ${{ vars.OBJECT_STORE_REGION }}
+      BLOB_STORE_ACCESS_KEY_ID: ${{ secrets.OBJECT_STORE_ACCESS_KEY_ID }}
+      BLOB_STORE_SECRET_ACCESS_KEY: ${{ secrets.OBJECT_STORE_SECRET_ACCESS_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+
+      # WARP's and Tor's .deb files, as in fetch-youtube-audio.yml.
+      - name: Name the .deb cache
+        id: debs
+        run: echo "key=youtube-egress-debs-v2-${{ runner.os }}-${{ runner.arch }}-$(date +%Y-%m)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache/restore@v4
+        id: debs-cache
+        with:
+          path: ${{ runner.temp }}/debs
+          key: ${{ steps.debs.outputs.key }}
+
+      # Production is the Neon project's default branch, which neonctl uses
+      # when given no branch.
+      - name: Connect to production
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+        run: |
+          # From outside the checkout: npx refuses to run in a directory whose
+          # package.json requires pnpm (devEngines).
+          DB=$(cd "$RUNNER_TEMP" && npx --yes neonctl@2 connection-string \
+            --project-id "$NEON_PROJECT_ID" --no-analytics)
+          echo "::add-mask::$DB"
+          if [[ "$DB" != postgres* ]]; then
+            echo "::error::neonctl didn't return a connection string for production."
+            exit 1
+          fi
+          echo "DB=$DB" >> "$GITHUB_ENV"
+
+      # YouTube refuses a runner's own IP for metadata and audio, so yt-dlp
+      # installs WARP and Tor and goes through them when a direct request is
+      # refused. YOUTUBE_AUDIO_DISPATCH_TOKEN isn't set: this already runs on
+      # a runner.
+      - name: Scout
+        env:
+          YOUTUBE_EGRESS_STATE: ${{ runner.temp }}/youtube-egress
+          BODY: ${{ inputs.body }}
+          MAX_AUDIO: ${{ inputs.max_audio || '20' }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          args=(--debs "$RUNNER_TEMP/debs" --max-audio "$MAX_AUDIO")
+          if [[ -n "$BODY" ]]; then args+=(--body "$BODY"); fi
+          if [[ "$DRY_RUN" == "true" ]]; then args+=(--dry-run); fi
+          pnpm scout run "${args[@]}"
+      # Saved even when the run failed, so the next run has the .debs.
+      - uses: actions/cache/save@v4
+        if: "!cancelled() && steps.debs-cache.outputs.cache-hit != 'true'"
+        with:
+          path: ${{ runner.temp }}/debs
+          key: ${{ steps.debs.outputs.key }}

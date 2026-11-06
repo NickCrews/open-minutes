@@ -1,0 +1,28 @@
+{
+  "name": "@open-minutes/scout",
+  "version": "0.1.0",
+  "description": "Open Minutes scouting: find recordings in every body's meeting source, and store their metadata and audio",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "scout": "vpx src/cli.ts",
+    "test": "vp test run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@open-minutes/akleg": "workspace:*",
+    "@open-minutes/blobstore": "workspace:*",
+    "@open-minutes/core": "workspace:*",
+    "@open-minutes/db": "workspace:*",
+    "@open-minutes/meeting-audio": "workspace:*",
+    "@open-minutes/youtube": "workspace:*",
+    "citty": "^0.1.6",
+    "drizzle-orm": "1.0.0-beta.21"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "vite-plus": "catalog:"
+  }
+}

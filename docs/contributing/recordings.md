@@ -46,7 +46,10 @@ export const recordingsTable = pgTable(
     audio_stored_at: timestamp(),
     // The error from each failed attempt to store its audio, oldest first.
     // Scouting stops trying after 3; emptying it retries.
-    audio_error_history: varchar().array().notNull().default([]),
+    audio_error_history: varchar()
+      .array()
+      .notNull()
+      .default(sql`'{}'::varchar[]`),
   },
   (table) => [
     unique("recordings_site_external_id_unique").on(
@@ -72,7 +75,7 @@ export const recordingBodiesTable = pgTable(
   (table) => [primaryKey({ columns: [table.recording_id, table.body_id] })],
 );
 
-// On meetings, replacing site_kind, site_id and url:
+// On meetings:
 recording_id: integer()
   .notNull()
   .unique()
@@ -82,42 +85,19 @@ recording_id: integer()
 A recording is **available** when `is_meeting` is not false, `audio_stored_at`
 is set, and no meeting points at it.
 
-### Migration
-
-One migration creates `recordings` and `recording_bodies`, backfills them from
-`meetings`, and replaces `meetings.site_kind`, `site_id` and `url` with
-`recording_id`. In order:
-
-1. Insert one `recordings` row per meeting:
-   - `site`, `external_id`, `permalink`: the meeting's `site_kind`, `site_id`
-     and `url`.
-   - `title`, `description`: the meeting's.
-   - `duration_secs`: the meeting's, else the end of its last segment, else 0.
-   - `published_at`: null. Meetings don't record it.
-   - `found_at`: the meeting's `created_at`.
-   - `is_meeting`: true. `notes`: "".
-   - `audio_stored_at`: null, so the next scouting run stores its audio. For
-     most it is already in the blob store, and `storedSite` returns it from
-     there without reaching the site.
-   - `audio_error_history`: empty.
-2. Copy `meeting_bodies` into `recording_bodies`.
-3. Add `meetings.recording_id`, set it from the matching `recordings` row, then
-   make it not null and unique.
-4. Drop `meetings.site_kind`, `site_id` and `url`, and their unique constraint
-   and check.
-
-Everything else that reads `meetings.site_kind`, `site_id` or `url` reads the
-meeting's recording's `site`, `external_id` or `permalink` instead.
+Everything that reads where a meeting was published reads its recording's
+`site`, `external_id` or `permalink`.
 
 ### Golden fixtures and the seed
 
 A fixture meeting's `meeting.json` names its recording with `site` and
-`external_id`, replacing `youtube_id`, so akleg.gov fixtures fit too. The seed
+`external_id`, so akleg.gov fixtures fit too. The seed
 (`packages/seed`) inserts a `recordings` row for each fixture before its
 meeting:
 
 - `site`, `external_id`: the fixture's.
-- `permalink`: the recording's page, built from `site` and `external_id`.
+- `permalink`: the recording's page, `permalinkOf(site, external_id)` from
+  `@open-minutes/core/site`.
 - `title`, `description`: the fixture's.
 - `duration_secs`: what the seed computes from the last word.
 - `is_meeting`: true. `audio_stored_at`: when the seed runs, since fixture
@@ -135,7 +115,7 @@ storing audio, `audio_stored_at` and `audio_error_history`.
 
 ## Scouting
 
-`pnpm scout run [--body <slug>] [--dry-run]`, in a new `packages/scout`, scans
+`pnpm scout run [--body <slug>] [--dry-run]`, in `packages/scout`, scans
 the meeting source of every body that has one, or only the named body's:
 
 1. List the source's recordings with its site's `RecordingLister`.
@@ -159,6 +139,11 @@ appends its error to `audio_error_history`, and the recording is retried on a
 later run until its third failure. Emptying `audio_error_history` retries it
 again.
 
+A run needs the blob store's keys (`BLOB_STORE_ENDPOINT`, `BLOB_STORE_BUCKET`,
+`BLOB_STORE_ACCESS_KEY_ID`, `BLOB_STORE_SECRET_ACCESS_KEY`) so it can store
+what it fetches; without them, only `--dry-run` works. `--db` picks the
+database as `pnpm db` does.
+
 `--dry-run` lists what the run would do: the new recordings, the bodies added
 to `recording_bodies`, and the recordings whose audio it would store. It
 fetches new recordings' metadata from their sites, but writes nothing to the
@@ -178,8 +163,9 @@ going waits for it.
 - **Database**: production, connected as `export-duckdb.yml` does, through
   `neonctl` with `NEON_PROJECT_ID` and `NEON_API_KEY`.
 - **Blob store**: `BLOB_STORE_ENDPOINT`, `BLOB_STORE_BUCKET`,
-  `BLOB_STORE_ACCESS_KEY_ID` and `BLOB_STORE_SECRET_ACCESS_KEY` from secrets,
-  so `storedSite` stores what it fetches.
+  `BLOB_STORE_ACCESS_KEY_ID` and `BLOB_STORE_SECRET_ACCESS_KEY`, set from the
+  `OBJECT_STORE_*` variables and the `object-store-writer` environment's
+  secrets, as in `export-duckdb.yml`, so `storedSite` stores what it fetches.
 - **YouTube**: listing a channel or playlist works from a runner's IP, but
   yt-dlp's metadata and audio requests are refused. The workflow restores the
   WARP and Tor .deb cache as `fetch-youtube-audio.yml` does, and `pnpm scout
@@ -207,5 +193,7 @@ never reaches a recording's site.
   recordings skipped and found on a later run, audio stored, the per-run cap,
   a failed download retried until its third failure, `--dry-run` writing
   nothing, and the exit code.
-- The migration's backfill is tested: a meeting's `recordings` and
-  `recording_bodies` rows, `recording_id`, and the `duration_secs` fallbacks.
+- The migration that created `recordings` is tested in
+  `packages/db/src/migration-tests/recordings.test.ts`: each existing
+  meeting's `recordings` and `recording_bodies` rows, `recording_id`, and the
+  `duration_secs` fallbacks.

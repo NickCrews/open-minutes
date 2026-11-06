@@ -10,6 +10,7 @@ export default defineConfig({
       "./packages/datasets/vitest.config.ts",
       "./packages/db/vitest.config.ts",
       "./packages/seed/vitest.config.ts",
+      "./packages/scout/vitest.config.ts",
       "./packages/meeting-audio/vitest.config.ts",
       "./packages/youtube/vitest.config.ts",
       "./packages/ytdlp/vitest.config.ts",

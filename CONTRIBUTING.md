@@ -23,6 +23,8 @@ The code is a pnpm workspace, roughly in layers from bottom to top:
 - **Storage** (`db`): the Postgres schema, migrations and database tooling.
 - **Sources** (`youtube`, `akleg`, with `ytdlp` underneath): adapters for how
   to get metadata, recordings, etc from an upstream site.
+- **Scouting** (`scout`): finds new recordings in every body's meeting source
+  and stores their metadata and audio, hourly in CI.
 - **Audio** (`blobstore`, `meeting-audio`, `codecs`, `audio`): store, cache and
   decode meeting audio, then transcribe and diarize it with local models.
 - **Datums and datasets** (`datasets`, `seed`, `glossary`): hand-verified real
