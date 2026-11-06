@@ -9,7 +9,7 @@ import {
   ensureWaveForm,
   type WaveForm,
 } from "@open-minutes/codecs";
-import { detectSpeech, TRANSCRIBE_VAD, VAD_MODEL_SPEC } from "./vad.js";
+import { detectSpeech, type DetectSpeechOptions, loadVadModel } from "./vad.js";
 
 import sherpa_onnx, {
   type OfflineRecognizer,
@@ -56,9 +56,20 @@ export const TRANSCRIPTION_MODEL_SPEC = {
 // mid-utterance — we use Silero VAD to split the audio at silences. VAD picks the
 // cut points (never mid-word); we then merge consecutive runs back into windows of
 // up to MERGE_WINDOW_SEC (see below) so each decode gets real context, keeping
-// every pass well under the ~400s cap. TRANSCRIBE_VAD.maxSpeechSecs force-splits
-// any single run longer than 5 min (preferring the last silence) so no run alone
-// exceeds it.
+// every pass well under the ~400s cap.
+
+/**
+ * The VAD settings transcribeAudio cuts the audio with. `MAX_WORD_SEC` in core
+ * must stay below `minSilenceSecs`, so a derived word end can't reach across a
+ * pause into the next speaker's turn. `maxSpeechSecs` force-splits any run
+ * longer than 5 min (preferring the last silence), so no run alone exceeds
+ * Parakeet's ~400 s cap.
+ */
+export const TRANSCRIBE_VAD_OPTIONS = {
+  minSilenceSecs: 0.5,
+  minSpeechSecs: 0.25,
+  maxSpeechSecs: 300,
+} as const satisfies DetectSpeechOptions;
 
 // VAD splits at every silence, so a meeting yields ~1000 runs, many under 0.5s.
 // Decoding each run alone starves Parakeet of context (hurting accuracy) and pays
@@ -67,7 +78,7 @@ export const TRANSCRIPTION_MODEL_SPEC = {
 // ~400s cap, but large enough to give the model real surrounding context. The
 // window is a contiguous slice (inter-run silences included, so timestamps stay
 // linear); a single run longer than this still becomes its own window
-// (≤ TRANSCRIBE_VAD.maxSpeechSecs).
+// (≤ TRANSCRIBE_VAD_OPTIONS.maxSpeechSecs).
 export const MERGE_WINDOW_SEC = 120;
 
 // Transcribe speech runs in parallel, but bounded: a long meeting produces ~1000
@@ -118,8 +129,8 @@ export async function transcribeAudio(
 
   // detectSpeech gives seconds; windows are sliced from the waveform by
   // sample index.
-  const speechRuns = (await detectSpeech(wave, TRANSCRIBE_VAD)).map((span) =>
-    toSampleSpan(span, wave.sampleRate),
+  const speechRuns = (await detectSpeech(wave, TRANSCRIBE_VAD_OPTIONS)).map(
+    (span) => toSampleSpan(span, wave.sampleRate),
   );
   const windows = mergeRuns(speechRuns, wave.sampleRate);
   // Progress goes to stderr so callers' stdout stays machine-readable.
@@ -230,7 +241,7 @@ interface SpeechWindow {
  * Coalesce consecutive VAD runs into windows of up to MERGE_WINDOW_SEC. A run is
  * appended to the current window while the window's total span stays within the
  * cap; otherwise it opens a new window. A single run longer than the cap (up to
- * TRANSCRIBE_VAD.maxSpeechSecs) becomes its own window — still under Parakeet's ~400s limit.
+ * TRANSCRIBE_VAD_OPTIONS.maxSpeechSecs) becomes its own window — still under Parakeet's ~400s limit.
  */
 function mergeRuns(
   runs: readonly SampleSpan[],
@@ -347,7 +358,7 @@ function getRecognizer() {
  */
 export function loadTranscriptionModels(): void {
   getRecognizer();
-  ensureDownloaded(VAD_MODEL_SPEC);
+  loadVadModel();
 }
 
 export function ensureModelFiles() {

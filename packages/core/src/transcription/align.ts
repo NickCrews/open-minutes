@@ -25,7 +25,7 @@ interface TimedSegment {
  * (4 frames) is a generous ceiling on that.
  *
  * The upper bound matters more than the exact value: it is deliberately below
- * audio-ml's TRANSCRIBE_VAD.minSilenceSecs, so a derived word end can never span a
+ * audio-ml's TRANSCRIBE_VAD_OPTIONS.minSilenceSecs, so a derived word end can never span a
  * pause long enough for VAD to have cut at it. That is what stops a word from
  * reaching across a silence into the next speaker's diarization turn.
  */
@@ -156,7 +156,7 @@ const MAX_SLIVER_WORDS = 5;
 const MAX_SLIVER_SEC = 2.0;
 /**
  * Longest silence allowed anywhere across the sliver and its two boundaries.
- * Matches audio-ml's TRANSCRIBE_VAD.minSilenceSecs: a gap that long is a pause the
+ * Matches audio-ml's TRANSCRIBE_VAD_OPTIONS.minSilenceSecs: a gap that long is a pause the
  * VAD would have called a break in speech, and speech resuming after a pause is
  * someone taking a turn. Since derived word ends absorb intra-run gaps, a gap
  * this long can only appear at a run boundary — exactly where VAD saw a pause.

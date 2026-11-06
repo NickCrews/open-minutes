@@ -279,7 +279,7 @@ describe("alignSpeakers", () => {
   // and 6.3s past it.
   //
   // That gap is what the old MAX_TOKEN_SEC ceiling in transcribe.ts existed to
-  // cap — it was set below TRANSCRIBE_VAD.minSilenceSecs precisely so an estimated word
+  // cap — it was set below TRANSCRIBE_VAD_OPTIONS.minSilenceSecs precisely so an estimated word
   // could never span a pause VAD would have cut at. Deriving the end from
   // run.end instead removes the ceiling, so the run's last word is free to
   // stretch across the silence and into the next speaker's turn.
