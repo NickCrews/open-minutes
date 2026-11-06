@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import postgres from "postgres";
-import { getDb, type DB } from "../index";
+import { getDb, recordingsTable, type DB } from "../index";
 import { resolveDatabaseUrl } from "../resolve";
 import {
   assertSafeName,
@@ -229,3 +229,23 @@ function liveSchemaFingerprints(): Set<string> {
 
 export { ensurePostgresRunning } from "../cluster";
 export type { DataState } from "../ensure";
+
+/**
+ * Inserts a YouTube recording with ID `externalId` and returns its id, for
+ * tests that need a meeting, which needs a recording.
+ */
+export async function insertRecording(
+  db: DB,
+  externalId: string,
+): Promise<number> {
+  const [recording] = await db
+    .insert(recordingsTable)
+    .values({
+      site: "youtube",
+      external_id: externalId,
+      permalink: `https://www.youtube.com/watch?v=${externalId}`,
+      duration_secs: "0",
+    })
+    .returning({ id: recordingsTable.id });
+  return recording!.id;
+}

@@ -93,6 +93,6 @@ Cite every claim with a link to the moment it was said: \`${origin}/meetings/<id
 
 - [About Open Minutes](${origin}/about): what it is, and its limits, for people.
 - [All meetings](${origin}/meetings)
-- [DuckDB export](${blobStore().duckdbExport.url}): all of the data in one file, rebuilt nightly, for agents that can run SQL. Its tables and example queries: https://github.com/nickcrews/open-minutes/blob/main/skills/open-minutes-data/SKILL.md
+- [DuckDB export](${blobStore().duckdbExport.url}): all of the data in one file, rebuilt nightly, for agents that can run SQL. Each meeting's \`recording_id\` points to its row in \`recordings\`, which says where it was published (\`site\`, \`external_id\`, \`permalink\`); \`recordings\` also holds recordings that aren't meetings, and \`recording_bodies\` the bodies whose sources list each one. Its tables and example queries: https://github.com/nickcrews/open-minutes/blob/main/skills/open-minutes-data/SKILL.md
 `;
 }

@@ -8,6 +8,7 @@ import {
   peopleTable,
   segmentsTable,
 } from "@open-minutes/db";
+import { insertRecording } from "@open-minutes/db/testing";
 import { dbTest } from "@open-minutes/db/testing/vitest";
 import { loadAllDatums } from "@open-minutes/datasets/datums";
 import { datasetState } from "./index";
@@ -18,10 +19,17 @@ const test = dbTest({ data: datasetState("all") });
 
 describe('the "all" dataset', () => {
   test("seeds every golden meeting, with transcripts", async ({ db }) => {
-    const meetings = await db.select().from(meetingsTable);
-    expect(meetings.map((m) => m.site_id).sort()).toEqual(
-      snapshot.meetings.map((m) => m.youtube_id).sort(),
+    const meetings = await db.query.meetingsTable.findMany({
+      with: { recording: true },
+    });
+    expect(
+      meetings.map((m) => `${m.recording.site}:${m.recording.external_id}`),
+    ).toEqual(
+      expect.arrayContaining(
+        snapshot.meetings.map((m) => `${m.site}:${m.external_id}`),
+      ),
     );
+    expect(meetings).toHaveLength(snapshot.meetings.length);
     expect(meetings.map((m) => m.slug).sort()).toEqual(
       snapshot.meetings.map((m) => m.slug).sort(),
     );
@@ -46,18 +54,44 @@ describe('the "all" dataset', () => {
     expect(attributed).toHaveLength(1);
   });
 
+  test("gives each meeting a recording, with its bodies", async ({ db }) => {
+    const recordings = await db.query.recordingsTable.findMany({
+      with: { bodies: { columns: { slug: true } }, meeting: true },
+      orderBy: { id: "asc" },
+    });
+    expect(recordings).toHaveLength(snapshot.meetings.length);
+    for (const r of recordings) {
+      const golden = snapshot.meetings.find((m) => m.slug === r.meeting?.slug)!;
+      expect(r).toMatchObject({
+        site: golden.site,
+        external_id: golden.external_id,
+        is_meeting: true,
+        audio_stored_at: expect.any(Date),
+      });
+      expect(r.permalink).toContain(golden.external_id);
+      expect(r.bodies.map((b) => b.slug).sort()).toEqual(
+        [...golden.body_slugs].sort(),
+      );
+    }
+  });
+
   test("leaves sequences past the seeded ids, so the app can insert", async ({
     db,
   }) => {
     const [row] = await db
       .insert(meetingsTable)
       .values({
-        site_kind: "youtube",
-        site_id: "new-one",
+        recording_id: await insertRecording(db, "new-one"),
         timezone: "America/Anchorage",
       })
-      .returning({ id: meetingsTable.id });
-    expect(row!.id).toBe(snapshot.meetings.length + 1);
+      .returning({
+        id: meetingsTable.id,
+        recording_id: meetingsTable.recording_id,
+      });
+    expect(row).toEqual({
+      id: snapshot.meetings.length + 1,
+      recording_id: snapshot.meetings.length + 1,
+    });
   });
 });
 

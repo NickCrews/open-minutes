@@ -4,6 +4,7 @@ import type { Chapter } from "@open-minutes/core/chapters";
 import type { Segment } from "@open-minutes/core/transcript";
 import { parsePsv, parseTimestamp } from "./psv";
 import type { MeetingSource } from "@open-minutes/core/meeting-source";
+import { SITES, type Site } from "@open-minutes/core/site";
 import { ianaTimezoneError } from "@open-minutes/core/timezone";
 import {
   type MeetingWhen,
@@ -60,8 +61,10 @@ export interface GoldenMeeting {
   body_slugs: string[];
   /** IANA zone `date` and `time` read in (eg "America/Anchorage"). */
   timezone: string;
-  /** Every fixture meeting is a YouTube video: `meetings.site_id`. */
-  youtube_id: string;
+  /** The site its recording is on, as in `recordings.site`. */
+  site: Site;
+  /** Its recording's ID on `site`, as in `recordings.external_id`. */
+  external_id: string;
   title: string;
   /**
    * "YYYY-MM-DD" in `timezone`, or null if unknown. Optional in
@@ -214,6 +217,10 @@ export function getMeetingData(
   const meeting = parseJson<GoldenMeeting>(meetingPath);
   const when = parseGoldenWhen(meeting, meetingPath);
   const body_slugs = parseGoldenBodies(meeting, meetingPath);
+  if (!(SITES as readonly unknown[]).includes(meeting.site))
+    throw new Error(`${meetingPath}: site must be one of ${SITES.join(", ")}`);
+  if (typeof meeting.external_id !== "string" || !meeting.external_id)
+    throw new Error(`${meetingPath}: external_id must be a non-empty string`);
   const timezoneError =
     typeof meeting.timezone === "string"
       ? ianaTimezoneError(meeting.timezone)

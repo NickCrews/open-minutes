@@ -1,3 +1,5 @@
+import type { Site } from "./site";
+
 /**
  * Where a body's meetings are published: `bodies.meeting_source`. A body has
  * at most one. A body that shares a YouTube channel with its siblings (the
@@ -26,17 +28,8 @@ export type MeetingSource =
       committee: string;
     };
 
-/**
- * Which site a meeting is published on: `meetings.site_kind`. A meeting's ID
- * on its site (`meetings.site_id`) is a YouTube video ID, or an akleg.gov
- * meeting ID ("HRES 2018-09-10 14:00:00").
- */
-export type SiteKind = "youtube" | "akleg";
-
-export const SITE_KINDS: readonly SiteKind[] = ["youtube", "akleg"];
-
-/** The kind of site a source's meetings are on. */
-export function siteKindOf(source: MeetingSource): SiteKind {
+/** The site a source's recordings are on. */
+export function siteOf(source: MeetingSource): Site {
   switch (source.type) {
     case "youtube_channel":
     case "youtube_playlist":
@@ -80,12 +73,12 @@ export function meetingSourceLabel(source: MeetingSource): string {
 }
 
 /**
- * The meeting's YouTube video ID, or null when it isn't on YouTube. For
+ * The recording's YouTube video ID, or null when it isn't on YouTube. For
  * what only works with YouTube: its player and thumbnails.
  */
-export function youtubeIdOf(meeting: {
-  site_kind: string;
-  site_id: string;
+export function youtubeIdOf(recording: {
+  site: string;
+  external_id: string;
 }): string | null {
-  return meeting.site_kind === "youtube" ? meeting.site_id : null;
+  return recording.site === "youtube" ? recording.external_id : null;
 }

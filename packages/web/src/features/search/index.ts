@@ -7,6 +7,10 @@ import {
 } from "@open-minutes/db";
 import { and, desc, eq, exists, ilike, isNotNull, or, sql } from "drizzle-orm";
 import { meetingBodiesColumns } from "../meetings/bodies";
+import {
+  type MeetingRecording,
+  meetingRecordingColumns,
+} from "../meetings/recording";
 import { matchStrength, rankMatches, type Ranked } from "./entity-match";
 import { suggestCompletions } from "./suggest";
 
@@ -22,10 +26,9 @@ export function searchSegments(db: DB, query: string) {
           title: true,
           date: true,
           time: true,
-          site_kind: true,
-          site_id: true,
           timezone: true,
         },
+        with: { recording: meetingRecordingColumns },
       },
       person: { columns: { id: true, name: true } },
     },
@@ -65,8 +68,7 @@ export type EntityMatch =
       title: string;
       date: string | null;
       time: string | null;
-      site_kind: string;
-      site_id: string;
+      recording: MeetingRecording;
       bodies: { id: number; name: string; name_short: string }[];
     }
   | {
@@ -154,10 +156,11 @@ export async function searchEntities(
           title: true,
           date: true,
           time: true,
-          site_kind: true,
-          site_id: true,
         },
-        with: { bodies: meetingBodiesColumns },
+        with: {
+          bodies: meetingBodiesColumns,
+          recording: meetingRecordingColumns,
+        },
       })
     : [];
   const meetingOrder = new Map(meetingIds.map((m, i) => [m.id, i]));
