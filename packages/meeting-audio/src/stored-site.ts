@@ -22,8 +22,8 @@ import { youtube } from "@open-minutes/youtube";
  * `blobStore()`) doesn't have, `adapter` gets, and with `writer`, it's
  * stored, so the next miss is a hit.
  *
- * The audio is what `adapter` gives, the site's audio encoded for speech
- * (Opus in WebM). Golden fixtures' sha256 are of the stored audio's WAV.
+ * The audio is 16 kHz mono Opus in WebM, as every `SiteAdapter.downloadAudio`
+ * saves it, stored as is. Golden fixtures' sha256 are of its decoded WAV.
  */
 export function storedSite(
   adapter: SiteAdapter,
