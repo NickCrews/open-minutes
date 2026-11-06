@@ -13,7 +13,9 @@ describe("detectSpeech on the GBOS roll call", () => {
   // Downloading the VAD model on a cold cache takes longer than a test's
   // default timeout.
   beforeAll(async () => {
-    runs = detectSpeech(await readWav(halfUntranscribedRollCall().wavPath));
+    runs = await detectSpeech(
+      await readWav(halfUntranscribedRollCall().wavPath),
+    );
   }, 10 * 60_000);
 
   it("finds speech runs in order, inside the clip", () => {

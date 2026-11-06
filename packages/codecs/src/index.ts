@@ -3,7 +3,7 @@ import { open, readFile } from "node:fs/promises";
 import { decodeMp3 } from "./mp3";
 import { decodeOpusWebm } from "./opus";
 import { readWav, SAMPLE_RATE, writeWav } from "./wav";
-import { readAllSamples, type WaveForm } from "./waveform";
+import { type AudioInput, readAllSamples, type WaveForm } from "./waveform";
 
 export { decodeMp3 } from "./mp3";
 export { resample, Resampler } from "./resample";
@@ -14,7 +14,7 @@ export {
   type OpusEncodeOptions,
 } from "./opus";
 export { readWav, SAMPLE_RATE, writeWav } from "./wav";
-export { readAllSamples, type WaveForm } from "./waveform";
+export { type AudioInput, readAllSamples, type WaveForm } from "./waveform";
 
 /** The audio formats this package reads. */
 export type AudioFormat = "wav" | "webm" | "mp3";
@@ -52,9 +52,7 @@ export async function audioFormatOf(path: string): Promise<AudioFormat> {
  * `audio` as mono samples: a waveform as it is, a WAV file as it is (see
  * {@link readWav}), or a WebM/Opus or MP3 file decoded to 16 kHz.
  */
-export async function ensureWaveForm(
-  audio: string | WaveForm,
-): Promise<WaveForm> {
+export async function ensureWaveForm(audio: AudioInput): Promise<WaveForm> {
   if (typeof audio !== "string") return audio;
   const format = await audioFormatOf(audio);
   if (format === "wav") return readWav(audio);
