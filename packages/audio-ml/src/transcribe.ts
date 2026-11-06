@@ -134,7 +134,7 @@ export async function transcribeAudio(
     startSample: Math.round(span.start * wave.sampleRate),
     endSample: Math.round(span.end * wave.sampleRate),
   }));
-  const windows = mergeSpans(voiceSpans, wave.sampleRate);
+  const windows = packWindows(voiceSpans, wave.sampleRate);
   // Progress goes to stderr so callers' stdout stays machine-readable.
   console.error(
     `Transcribing ${typeof audio === "string" ? audio : "<waveform>"} (${duration.toFixed(1)}s) in ${windows.length} window(s) merged from ${voiceSpans.length} voice activity span(s)...`,
@@ -232,12 +232,14 @@ interface SpeechWindow {
 }
 
 /**
- * Coalesce consecutive voice activity spans into windows of up to
+ * Pack consecutive voice activity spans into decode windows of up to
  * MERGE_WINDOW_SEC. A span is appended to the current window while the window
- * stays within the cap; otherwise it opens a new window. A single span longer than the cap (up to
+ * stays within the cap; otherwise it opens a new window. Unlike core's
+ * mergeSpans, which joins spans by the gap between them, this caps each
+ * window's length and keeps the spans inside it. A single span longer than the cap (up to
  * TRANSCRIBE_VAD_OPTIONS.maxSpeechSecs) becomes its own window — still under Parakeet's ~400s limit.
  */
-function mergeSpans(
+function packWindows(
   spans: readonly SampleSpan[],
   sampleRate: number,
 ): SpeechWindow[] {
