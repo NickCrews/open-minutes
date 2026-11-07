@@ -6,8 +6,8 @@ import sherpa_onnx, { type OfflineSpeakerDiarization } from "sherpa-onnx-node";
 import { ensureWaveForm, type WaveForm } from "@open-minutes/codecs";
 
 import { ensureDownloaded, type ModelSpec } from "./model.js";
+import { assertSampleRate } from "./input.js";
 import {
-  assertSampleRate,
   computeSpeakerEmbeddings,
   cosineSimilarity,
   EMBEDDING_MODEL_SPEC,

@@ -3,13 +3,17 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { availableParallelism } from "node:os";
 import { ensureDownloaded, ModelSpec } from "./model.js";
-import { EXPECTED_SAMPLE_RATE } from "./embed.js";
+import { assertSampleRate, EXPECTED_SAMPLE_RATE } from "./input.js";
 import {
   type AudioInput,
   ensureWaveForm,
   type WaveForm,
 } from "@open-minutes/codecs";
-import { detectSpeech, type DetectSpeechOptions, loadVadModel } from "./vad.js";
+import {
+  detectVoiceActivity,
+  type VoiceActivityOptions,
+  loadVadModel,
+} from "./vad.js";
 
 import sherpa_onnx, {
   type OfflineRecognizer,
@@ -68,7 +72,7 @@ export const TRANSCRIBE_VAD_OPTIONS = {
   minSilenceSecs: 0.5,
   minSpeechSecs: 0.25,
   maxSpeechSecs: 300,
-} as const satisfies DetectSpeechOptions;
+} as const satisfies VoiceActivityOptions;
 
 // VAD splits at every silence, so a meeting yields ~1000 spans, many under 0.5s.
 // Decoding each span alone starves Parakeet of context (hurting accuracy) and pays
@@ -126,10 +130,10 @@ export async function transcribeAudio(
   const duration = wave.samples.length / wave.sampleRate;
   const { tracing } = options;
 
-  // detectSpeech gives seconds; windows are sliced from the waveform by
+  // detectVoiceActivity gives seconds; windows are sliced from the waveform by
   // sample index.
   const voiceSpans: SampleSpan[] = (
-    await detectSpeech(wave, TRANSCRIBE_VAD_OPTIONS)
+    await detectVoiceActivity(wave, TRANSCRIBE_VAD_OPTIONS)
   ).map((span) => ({
     startSample: Math.round(span.start * wave.sampleRate),
     endSample: Math.round(span.end * wave.sampleRate),
@@ -305,15 +309,6 @@ async function mapWithConcurrency<T, R>(
     Array.from({ length: Math.min(limit, items.length) }, worker),
   );
   return results;
-}
-
-function assertSampleRate(actual: number): void {
-  if (actual !== EXPECTED_SAMPLE_RATE) {
-    throw new Error(
-      `Transcription expects ${EXPECTED_SAMPLE_RATE} Hz mono audio, got ${actual} Hz. ` +
-        `Resample first (e.g. ffmpeg -ar 16000 -ac 1).`,
-    );
-  }
 }
 
 async function transcribeSamples(
