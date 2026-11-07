@@ -9,7 +9,7 @@ import {
   ensureWaveForm,
   type WaveForm,
 } from "@open-minutes/codecs";
-import { detectSpeech, loadVadModel, type VadSettings } from "./vad.js";
+import { detectSpeech, type DetectSpeechOptions, loadVadModel } from "./vad.js";
 
 import sherpa_onnx, {
   type OfflineRecognizer,
@@ -68,7 +68,7 @@ export const TRANSCRIBE_VAD_OPTIONS = {
   minSilenceSecs: 0.5,
   minSpeechSecs: 0.25,
   maxSpeechSecs: 300,
-} as const satisfies VadSettings;
+} as const satisfies DetectSpeechOptions;
 
 // VAD splits at every silence, so a meeting yields ~1000 spans, many under 0.5s.
 // Decoding each span alone starves Parakeet of context (hurting accuracy) and pays
