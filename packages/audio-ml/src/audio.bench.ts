@@ -1,6 +1,6 @@
 import { test } from "vite-plus/test";
 import { halfUntranscribedRollCall } from "@open-minutes/datasets/clips";
-import { detectSpeech } from "./vad.js";
+import { detectVoiceActivity } from "./vad.js";
 import {
   loadTranscriptionModels,
   transcribeAudio,
@@ -27,7 +27,7 @@ const opts = {
 test("per minute of audio", async ({ bench }) => {
   await bench.compare(
     bench("voice activity spans (Silero VAD, 0.2 s pauses)", async () => {
-      await detectSpeech(wave);
+      await detectVoiceActivity(wave);
     }),
     bench("transcribeRange, one pass", async () => {
       await transcribeRange(wave, 0, 60);

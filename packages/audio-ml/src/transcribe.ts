@@ -9,7 +9,11 @@ import {
   ensureWaveForm,
   type WaveForm,
 } from "@open-minutes/codecs";
-import { detectSpeech, type DetectSpeechOptions, loadVadModel } from "./vad.js";
+import {
+  detectVoiceActivity,
+  type VoiceActivityOptions,
+  loadVadModel,
+} from "./vad.js";
 
 import sherpa_onnx, {
   type OfflineRecognizer,
@@ -68,7 +72,7 @@ export const TRANSCRIBE_VAD_OPTIONS = {
   minSilenceSecs: 0.5,
   minSpeechSecs: 0.25,
   maxSpeechSecs: 300,
-} as const satisfies DetectSpeechOptions;
+} as const satisfies VoiceActivityOptions;
 
 // VAD splits at every silence, so a meeting yields ~1000 spans, many under 0.5s.
 // Decoding each span alone starves Parakeet of context (hurting accuracy) and pays
@@ -126,10 +130,10 @@ export async function transcribeAudio(
   const duration = wave.samples.length / wave.sampleRate;
   const { tracing } = options;
 
-  // detectSpeech gives seconds; windows are sliced from the waveform by
+  // detectVoiceActivity gives seconds; windows are sliced from the waveform by
   // sample index.
   const voiceSpans: SampleSpan[] = (
-    await detectSpeech(wave, TRANSCRIBE_VAD_OPTIONS)
+    await detectVoiceActivity(wave, TRANSCRIBE_VAD_OPTIONS)
   ).map((span) => ({
     startSample: Math.round(span.start * wave.sampleRate),
     endSample: Math.round(span.end * wave.sampleRate),

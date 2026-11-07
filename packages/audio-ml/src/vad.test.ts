@@ -1,13 +1,13 @@
 import { beforeAll, describe, expect, it } from "vite-plus/test";
 import { halfUntranscribedRollCall } from "@open-minutes/datasets/clips";
 import { clip, gaps, type Span, totalSecs } from "@open-minutes/core/span";
-import { detectSpeech } from "./vad";
+import { detectVoiceActivity } from "./vad";
 import { readWav, type WaveForm } from "@open-minutes/codecs";
 
 // Silero VAD on a checked-in minute of a real meeting: what it hears, not
 // just that it spans.
 
-describe("detectSpeech on the GBOS roll call", () => {
+describe("detectVoiceActivity on the GBOS roll call", () => {
   let wave: WaveForm;
   let spans: Span[];
 
@@ -15,7 +15,7 @@ describe("detectSpeech on the GBOS roll call", () => {
   // default timeout.
   beforeAll(async () => {
     wave = await readWav(halfUntranscribedRollCall().wavPath);
-    spans = await detectSpeech(wave);
+    spans = await detectVoiceActivity(wave);
   }, 10 * 60_000);
 
   it("finds voice activity spans in order, inside the clip", () => {
@@ -50,13 +50,13 @@ describe("detectSpeech on the GBOS roll call", () => {
   });
 });
 
-describe("detectSpeech with a mask", () => {
+describe("detectVoiceActivity with a mask", () => {
   let wave: WaveForm;
   let all: Span[];
 
   beforeAll(async () => {
     wave = await readWav(halfUntranscribedRollCall().wavPath);
-    all = await detectSpeech(wave);
+    all = await detectVoiceActivity(wave);
   }, 10 * 60_000);
 
   /** The span of `spans` that contains `t`. */
@@ -64,7 +64,7 @@ describe("detectSpeech with a mask", () => {
     spans.find((s) => s.start <= t && t < s.end);
 
   it("is complete inside the mask, read from clock strings", async () => {
-    const masked = await detectSpeech(wave, {
+    const masked = await detectVoiceActivity(wave, {
       span: { start: "0:15", end: "0:21" },
     });
     // Each span the whole-file pass finds there, the masked pass covers.
@@ -82,7 +82,9 @@ describe("detectSpeech with a mask", () => {
     // Someone talks from 0:28.7 to 0:32.9; the mask is half a second of it.
     const whole = at(all, 30.5)!;
     expect(whole.end - whole.start).toBeGreaterThan(3);
-    const masked = await detectSpeech(wave, { span: { start: 30.5, end: 31 } });
+    const masked = await detectVoiceActivity(wave, {
+      span: { start: 30.5, end: 31 },
+    });
     expect(masked).toHaveLength(1);
     expect(masked[0]!.start).toBeCloseTo(whole.start, 1);
     expect(masked[0]!.end).toBeCloseTo(whole.end, 1);
@@ -91,14 +93,16 @@ describe("detectSpeech with a mask", () => {
   it("returns a span that starts before a pass's padding whole", async () => {
     // Talk from 0:00.2 to 0:06.4, so the first pass, from 0:03, starts in it.
     const whole = at(all, 5)!;
-    const masked = await detectSpeech(wave, { span: { start: 5, end: 6 } });
+    const masked = await detectVoiceActivity(wave, {
+      span: { start: 5, end: 6 },
+    });
     expect(masked).toHaveLength(1);
     expect(masked[0]!.start).toBeCloseTo(whole.start, 1);
     expect(masked[0]!.end).toBeCloseTo(whole.end, 1);
   });
 
   it("covers every span of a mask", async () => {
-    const masked = await detectSpeech(wave, {
+    const masked = await detectVoiceActivity(wave, {
       span: [
         { start: 40, end: 42 },
         { start: 5, end: 6 },
@@ -112,14 +116,14 @@ describe("detectSpeech with a mask", () => {
   });
 
   it("finds nothing in an empty mask", async () => {
-    expect(await detectSpeech(wave, { span: [] })).toEqual([]);
+    expect(await detectVoiceActivity(wave, { span: [] })).toEqual([]);
   });
 
   it("stops when the signal is aborted", async () => {
     const controller = new AbortController();
     controller.abort();
     await expect(
-      detectSpeech(wave, { signal: controller.signal }),
+      detectVoiceActivity(wave, { signal: controller.signal }),
     ).rejects.toThrow(/abort/i);
   });
 });
