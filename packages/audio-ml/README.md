@@ -53,7 +53,7 @@ Every function follows these rules:
 6. **Results aren't cached.** Callers cache them, keyed on the options.
    Loaded models stay cached.
 
-`detectSpeech` in `@open-minutes/audio-ml/vad` finds where someone is
+`detectVoiceActivity` in `@open-minutes/audio-ml/vad` finds where someone is
 talking (Silero VAD, with pauses down to 0.2 s), as a list of `Span`s from
 `@open-minutes/core/span`, which also clips, merges, subtracts and totals
 them and finds the gaps between them (the pauses). A voice activity span

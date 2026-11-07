@@ -20,7 +20,7 @@ export const VAD_MODEL_SPEC = {
   },
 } as const satisfies ModelSpec;
 
-export interface DetectSpeechOptions extends BaseOptions {
+export interface VoiceActivityOptions extends BaseOptions {
   /** Speech-probability threshold. */
   threshold?: number;
   /** Shortest pause that ends a span. */
@@ -55,9 +55,9 @@ const INITIAL_PADDING_SECS = 2;
  * voice activity span inside the mask reaches the edge of the decoded audio,
  * the padding on that side doubles and the pass is run again.
  */
-export async function detectSpeech(
+export async function detectVoiceActivity(
   audio: AudioInput,
-  opts: DetectSpeechOptions = {},
+  opts: VoiceActivityOptions = {},
 ): Promise<Span[]> {
   const {
     threshold = 0.5,
@@ -108,7 +108,7 @@ function vadPass(
   samples: Float32Array,
   from: number,
   to: number,
-  settings: Required<Omit<DetectSpeechOptions, keyof BaseOptions>>,
+  settings: Required<Omit<VoiceActivityOptions, keyof BaseOptions>>,
 ): Span[] {
   const rate = EXPECTED_SAMPLE_RATE;
   const vad = new sherpa.Vad(
