@@ -20,7 +20,7 @@ first time each is used, or all at once with `pnpm models`.
 ## Audio functions
 
 The audio functions are small building blocks that all take the same input:
-`fn(audio: AudioInput, opts?: BaseOptions & {...}): Promise<T[]>`, with the
+`fn(audio: AudioInput, opts?: BaseOptions & {...}): Promise<T>`, with the
 types in `@open-minutes/audio-ml/input`.
 
 - `audio` is a path or a `WaveForm` of 16 kHz mono samples.
@@ -47,8 +47,8 @@ Every function follows these rules:
 3. **A list of spans is a mask, not a batch.** Spans are sorted, overlaps
    joined, and nearby spans may be processed together, so a result inside
    one span may depend on the rest of the mask.
-4. **Results are flat lists of time-stamped items**, with times in seconds
-   from the start of the file.
+4. **Times are in seconds from the start of the file**, in results as in
+   `span`.
 5. **Every function is async.**
 6. **Results aren't cached.** Callers cache them, keyed on the options.
    Loaded models stay cached.
