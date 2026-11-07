@@ -20,7 +20,7 @@ export const VAD_MODEL_SPEC = {
   },
 } as const satisfies ModelSpec;
 
-export interface VadSettings {
+export interface DetectSpeechOptions extends BaseOptions {
   /** Speech-probability threshold. */
   threshold?: number;
   /** Shortest pause that ends a span. */
@@ -30,8 +30,6 @@ export interface VadSettings {
   /** Force-split spans longer than this. */
   maxSpeechSecs?: number;
 }
-
-export interface DetectSpeechOptions extends BaseOptions, VadSettings {}
 
 /** Downloads the VAD model if it is missing. */
 export function loadVadModel(): void {
@@ -110,7 +108,7 @@ function vadPass(
   samples: Float32Array,
   from: number,
   to: number,
-  settings: Required<VadSettings>,
+  settings: Required<Omit<DetectSpeechOptions, keyof BaseOptions>>,
 ): Span[] {
   const rate = EXPECTED_SAMPLE_RATE;
   const vad = new sherpa.Vad(
