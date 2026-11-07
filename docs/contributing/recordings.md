@@ -112,7 +112,7 @@ meeting's recording's `site`, `external_id` or `permalink` instead.
 ### Golden fixtures and the seed
 
 A fixture meeting's `meeting.json` names its recording with `site` and
-`external_id`, replacing `youtube_id`, so akleg.gov fixtures fit too. The seed
+`external_id`. The seed
 (`packages/seed`) inserts a `recordings` row for each fixture before its
 meeting:
 
