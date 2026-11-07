@@ -73,12 +73,12 @@ export function meetingSourceLabel(source: MeetingSource): string {
 }
 
 /**
- * The meeting's YouTube video ID, or null when it isn't on YouTube. For
+ * The recording's YouTube video ID, or null when it isn't on YouTube. For
  * what only works with YouTube: its player and thumbnails.
  */
-export function youtubeIdOf(meeting: {
-  site_kind: string;
-  site_id: string;
+export function youtubeIdOf(recording: {
+  site: string;
+  external_id: string;
 }): string | null {
-  return meeting.site_kind === "youtube" ? meeting.site_id : null;
+  return recording.site === "youtube" ? recording.external_id : null;
 }

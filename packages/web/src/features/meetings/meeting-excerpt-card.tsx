@@ -26,6 +26,7 @@ import { db } from "~/server/db";
 import { ChevronDownIcon } from "~/components/icons";
 import { cx } from "~/lib/cva";
 import { youtubeIdOf } from "@open-minutes/core/meeting-source";
+import type { MeetingRecording } from "./recording";
 import { z } from "zod";
 import { getMeetingSegments } from ".";
 import { previewText } from "./excerpt";
@@ -45,8 +46,7 @@ const fetchMeetingSegments = createServerFn({ method: "GET" })
 export type ExcerptMeeting = MeetingWhen & {
   id: number;
   title: string | null;
-  site_kind: string;
-  site_id: string;
+  recording: MeetingRecording;
 };
 
 /**
@@ -199,7 +199,7 @@ export function MeetingExcerptCard(props: {
               {(segments) => (
                 <TranscriptExcerpt
                   meetingId={props.meeting.id}
-                  youtubeId={youtubeIdOf(props.meeting) ?? ""}
+                  youtubeId={youtubeIdOf(props.meeting.recording) ?? ""}
                   segments={segments()}
                   pinned={pinned(segments())}
                   query={props.query}

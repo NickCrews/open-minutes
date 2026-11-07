@@ -9,11 +9,11 @@ import {
 } from "~/features/thumbnails/thumbnail";
 import { YouTubeThumbnail } from "~/features/thumbnails/youtube-thumbnail";
 import { youtubeIdOf } from "@open-minutes/core/meeting-source";
+import type { MeetingRecording } from "./recording";
 
 export type ThumbnailMeeting = {
   id: number;
-  site_kind: string;
-  site_id: string;
+  recording: MeetingRecording;
   /** Alphabetical, as `meetingBodiesColumns` gives them. */
   bodies: ThumbnailBody[];
 };
@@ -41,7 +41,7 @@ export function MeetingThumbnail(props: {
   return (
     <ThumbnailFrame class={props.class}>
       <YouTubeThumbnail
-        videoId={youtubeIdOf(props.meeting)}
+        videoId={youtubeIdOf(props.meeting.recording)}
         fallback={<GeneratedArtwork seeds={meetingSeeds(props.meeting)} />}
       />
     </ThumbnailFrame>
