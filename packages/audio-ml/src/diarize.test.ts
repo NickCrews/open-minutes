@@ -7,10 +7,7 @@ import { readWav } from "@open-minutes/codecs";
 
 import { computeSpeakerEmbeddings } from "@open-minutes/audio-ml/embed";
 import { diarizeAudio } from "@open-minutes/audio-ml/diarize";
-import {
-  alignSpeakers,
-  segmentsToSpeechRuns,
-} from "@open-minutes/core/transcription";
+import { alignSpeakers } from "@open-minutes/core/transcription";
 import { parsePsv, serializePsv } from "@open-minutes/datasets/psv";
 import { getMeetingData } from "@open-minutes/datasets/datums";
 import { N_DIMENSIONS } from "@open-minutes/core/voice_embeddings";
@@ -34,13 +31,8 @@ describe("diarize", () => {
       const turns = await diarizeAudio(wave);
 
       // Keep the transcription slice from the existing golden; relabel speakers.
-      // The golden has no VAD run structure, so each of its segments stands in
-      // as a pseudo speech run.
       const words = meeting.segments.flatMap((s) => s.words);
-      const aligned = alignSpeakers(
-        segmentsToSpeechRuns(meeting.segments),
-        turns,
-      );
+      const aligned = alignSpeakers(words, turns);
       // Diarization only knows speaker numbers, written as segmented:spk-N. A
       // human relabels the recurring ones to identified:<slug>.
       serializePsv(aligned, { path: join(runDir, "diarized.gen.psv") });
