@@ -1,0 +1,194 @@
+# Daily, backs up the production database to an encrypted pg_dump attached to
+# a GitHub release, after proving it restores. How to restore one, and the
+# one-time setup: docs/contributing/db.md#backups.
+#
+# Trigger it by hand with `gh workflow run backup-db.yml`.
+#
+# Each run:
+#   1. Dumps production (.github/scripts/backup-db.sh), and counts every
+#      table's rows in the same snapshot.
+#   2. Encrypts the dump with age, to DB_BACKUP_AGE_RECIPIENT. The repo is
+#      public, and so are its releases.
+#   3. Decrypts that file, restores it into an empty Postgres, and checks every
+#      table has the same row count as production had.
+#   4. Publishes it as release db-backup-<UTC time>, e.g.
+#      db-backup-20261108T112300Z.
+#   5. Deletes the backups .github/scripts/db-backup-retention.mjs says to: it
+#      keeps every backup for 14 days, the first of each week for 6 months,
+#      and the first of each month forever.
+#
+# Configuration (repo settings):
+#   variables  DB_BACKUP_AGE_RECIPIENT  age public key (age1...) to encrypt to
+#   db-backup environment secret, so only runs from main can decrypt:
+#              DB_BACKUP_AGE_IDENTITY   its private key (AGE-SECRET-KEY-1...)
+#   NEON_PROJECT_ID and NEON_API_KEY (see production.yml). Production is only
+#   read, in one read-only transaction.
+name: backup-db
+
+on:
+  schedule:
+    - cron: "23 11 * * *" # ~3am in Alaska
+  workflow_dispatch:
+
+concurrency:
+  group: backup-db
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  backup:
+    if: vars.NEON_PROJECT_ID != ''
+    runs-on: ubuntu-latest
+    environment: db-backup
+    timeout-minutes: 60
+    permissions:
+      contents: write # create and delete releases
+    services:
+      # The restore target. Same image as docker-compose.yml, so it has the
+      # extensions production uses.
+      postgres:
+        image: pgvector/pgvector:pg18
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      RESTORE_URL: postgres://postgres:postgres@localhost:5432
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Name this backup
+        id: name
+        run: |
+          stamp=$(date -u +%Y%m%dT%H%M%SZ)
+          echo "tag=db-backup-$stamp" >> "$GITHUB_OUTPUT"
+          echo "file=open-minutes-$stamp.dump.age" >> "$GITHUB_OUTPUT"
+
+      # pg_dump must be at least production's version (18).
+      - name: Install the Postgres 18 client and age
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -yq postgresql-common age
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -yq postgresql-client-18
+          echo /usr/lib/postgresql/18/bin >> "$GITHUB_PATH"
+
+      # Production is the Neon project's default branch, which neonctl uses
+      # when given no branch. Unpooled (the default), which pg_dump --snapshot
+      # needs.
+      - name: Dump production
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+        run: |
+          # From outside the checkout: npx refuses to run in a directory whose
+          # package.json requires pnpm (devEngines).
+          DATABASE_URL=$(cd "$RUNNER_TEMP" && npx --yes neonctl@2 connection-string \
+            --project-id "$NEON_PROJECT_ID" --no-analytics)
+          echo "::add-mask::$DATABASE_URL"
+          if [[ "$DATABASE_URL" != postgres* ]]; then
+            echo "::error::neonctl didn't return a connection string for production."
+            exit 1
+          fi
+          export DATABASE_URL
+          pg_dump --version
+          .github/scripts/backup-db.sh "$RUNNER_TEMP/backup.dump" "$RUNNER_TEMP/counts.txt"
+          cat "$RUNNER_TEMP/counts.txt"
+
+      - name: Encrypt
+        env:
+          RECIPIENT: ${{ vars.DB_BACKUP_AGE_RECIPIENT }}
+          FILE: ${{ steps.name.outputs.file }}
+        run: |
+          if [[ "$RECIPIENT" != age1* ]]; then
+            echo "::error::The DB_BACKUP_AGE_RECIPIENT variable isn't an age public key."
+            exit 1
+          fi
+          age --encrypt --recipient "$RECIPIENT" --output "$RUNNER_TEMP/$FILE" "$RUNNER_TEMP/backup.dump"
+          rm "$RUNNER_TEMP/backup.dump"
+          ls -l "$RUNNER_TEMP/$FILE"
+          # GitHub's limit for a release asset.
+          if [[ $(stat -c %s "$RUNNER_TEMP/$FILE") -ge 2147483648 ]]; then
+            echo "::error::The backup is 2 GiB or more, too big for a release asset."
+            exit 1
+          fi
+
+      # Restores the encrypted file, exactly as published. --no-owner and
+      # --no-privileges because production's roles don't exist here.
+      - name: Check it restores
+        env:
+          IDENTITY: ${{ secrets.DB_BACKUP_AGE_IDENTITY }}
+          FILE: ${{ steps.name.outputs.file }}
+        run: |
+          if [[ -z "$IDENTITY" ]]; then
+            echo "::error::The db-backup environment has no DB_BACKUP_AGE_IDENTITY secret."
+            exit 1
+          fi
+          (umask 077 && printf '%s\n' "$IDENTITY" > "$RUNNER_TEMP/identity.txt")
+          age --decrypt --identity "$RUNNER_TEMP/identity.txt" \
+            --output "$RUNNER_TEMP/restore.dump" "$RUNNER_TEMP/$FILE"
+          rm "$RUNNER_TEMP/identity.txt"
+
+          psql -X -v ON_ERROR_STOP=1 "$RESTORE_URL/postgres" -c "CREATE DATABASE restored"
+          pg_restore --exit-on-error --no-owner --no-privileges \
+            --dbname "$RESTORE_URL/restored" "$RUNNER_TEMP/restore.dump"
+
+          psql -X -At -v ON_ERROR_STOP=1 "$RESTORE_URL/restored" \
+            -f .github/scripts/db-row-counts.sql > "$RUNNER_TEMP/restored-counts.txt"
+          if ! diff "$RUNNER_TEMP/counts.txt" "$RUNNER_TEMP/restored-counts.txt"; then
+            echo "::error::The restored database's row counts differ from production's (< production, > restored)."
+            exit 1
+          fi
+          meetings=$(psql -X -At "$RESTORE_URL/restored" -c "SELECT count(*) FROM public.meetings")
+          if [[ "$meetings" -lt 1 ]]; then
+            echo "::error::The backup has no meetings."
+            exit 1
+          fi
+          echo "Restored $(wc -l < "$RUNNER_TEMP/counts.txt") tables, row counts identical to production's."
+
+      - name: Publish
+        env:
+          TAG: ${{ steps.name.outputs.tag }}
+          FILE: ${{ steps.name.outputs.file }}
+        run: |
+          migration=$(psql -X -At "$RESTORE_URL/restored" \
+            -c "SELECT name FROM drizzle.__drizzle_migrations ORDER BY id DESC LIMIT 1")
+          {
+            echo "Backup of the production database, encrypted with age."
+            echo "To restore it, see [docs/contributing/db.md](https://github.com/$GH_REPO/blob/main/docs/contributing/db.md#backups)."
+            echo
+            echo "- Latest migration: \`$migration\`"
+            echo "- SHA-256 of \`$FILE\`: \`$(sha256sum "$RUNNER_TEMP/$FILE" | cut -d' ' -f1)\`"
+            echo "- Restore checked by [run $GITHUB_RUN_ID]($GITHUB_SERVER_URL/$GH_REPO/actions/runs/$GITHUB_RUN_ID)."
+            echo
+            echo "| Table | Rows |"
+            echo "| --- | ---: |"
+            sed 's/^\(.*\)|\([0-9]*\)$/| `\1` | \2 |/' "$RUNNER_TEMP/counts.txt"
+          } > "$RUNNER_TEMP/notes.md"
+          gh release create "$TAG" "$RUNNER_TEMP/$FILE" \
+            --target "$GITHUB_SHA" --title "$TAG" --notes-file "$RUNNER_TEMP/notes.md" \
+            --latest=false
+
+      - name: Delete expired backups
+        env:
+          TAG: ${{ steps.name.outputs.tag }}
+        run: |
+          node --test .github/scripts/db-backup-retention.test.mjs
+          gh release list --limit 10000 --json tagName --jq '.[].tagName' > "$RUNNER_TEMP/tags.txt"
+          if ! grep -qxF "$TAG" "$RUNNER_TEMP/tags.txt"; then
+            echo "::error::The release list doesn't include the backup just published."
+            exit 1
+          fi
+          node .github/scripts/db-backup-retention.mjs < "$RUNNER_TEMP/tags.txt" > "$RUNNER_TEMP/expired.txt"
+          while read -r tag; do
+            echo "Deleting $tag"
+            gh release delete "$tag" --cleanup-tag --yes
+          done < "$RUNNER_TEMP/expired.txt"

@@ -150,6 +150,44 @@ which may break the site for a few seconds. That's accepted, so migrations
 needn't be backward-compatible: change the schema and the code that uses it
 in one step. See [deploy.md](deploy.md).
 
+## Backups
+
+[`.github/workflows/backup-db.yml`](../../.github/workflows/backup-db.yml)
+backs up production daily to a GitHub release, `db-backup-<UTC time>`,
+holding one file: a `pg_dump --format=custom` dump encrypted with
+[age](https://age-encryption.org). Before publishing, it restores the
+encrypted file into an empty Postgres and checks every table has the row count
+production had when dumped. It keeps every backup for 14 days, the first of
+each week for 6 months, and the first of each month forever.
+
+To restore one, with the private key in `key.txt`:
+
+```sh
+gh release download db-backup-20261108T112300Z --pattern '*.dump.age'
+age --decrypt --identity key.txt --output backup.dump open-minutes-*.dump.age
+createdb restored
+pg_restore --exit-on-error --no-owner --no-privileges --dbname restored backup.dump
+```
+
+`pg_restore` must be Postgres 18 or newer. Restoring over an existing database
+needs `--clean --if-exists`, and replacing production's data is not something
+this tooling does for you: restore into a new database or Neon branch first.
+
+### One-time setup
+
+Create a `db-backup` environment (repo **Settings → Environments**) whose
+deployment branches are limited to `main`, then:
+
+```sh
+age-keygen -o key.txt   # prints the public key, age1...
+gh variable set DB_BACKUP_AGE_RECIPIENT --body age1...
+gh secret set DB_BACKUP_AGE_IDENTITY --env db-backup < key.txt
+```
+
+Keep a copy of `key.txt` outside GitHub, e.g. in a password manager: without it the
+backups can't be decrypted. The workflow also uses the `NEON_API_KEY` secret
+and `NEON_PROJECT_ID` variable that deploys use.
+
 ## Neon branches
 
 A workspace that needs production data (e.g. a remote agent session) can use
