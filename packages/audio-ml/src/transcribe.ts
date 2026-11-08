@@ -364,8 +364,8 @@ export function ensureModelFiles() {
 //
 // Only the word's onset (its first token's timestamp) is kept: Parakeet reports
 // no durations, so any per-word end would be an estimate. Word ends are instead
-// derived from the run structure where needed — see Word in
-// @open-minutes/core and deriveTimedWords in its transcription/align.ts.
+// derived where needed — see Word in @open-minutes/core and deriveTimedWords in
+// its transcription/align.ts.
 export function tokensToWords(tokens: string[], timestamps: number[]): Word[] {
   const words: Word[] = [];
   let currentText = "";
