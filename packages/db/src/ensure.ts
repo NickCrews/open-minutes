@@ -433,7 +433,7 @@ function isAlreadyExists(error: unknown): boolean {
  */
 async function wipeSchema(sql: postgres.Sql): Promise<void> {
   await sql.unsafe(
-    `DROP SCHEMA IF EXISTS public, "${JOURNAL_SCHEMA}" CASCADE; CREATE SCHEMA public`,
+    `DROP SCHEMA IF EXISTS public, om, "${JOURNAL_SCHEMA}" CASCADE; CREATE SCHEMA public`,
   );
 }
 
