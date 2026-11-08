@@ -15,7 +15,9 @@ The workflow below writes metadata as `metadataToJson` in
    [`@open-minutes/ytdlp`](../ytdlp/README.md): direct, then WARP, then Tor
    (or the `routes` option, else the routes in `YOUTUBE_EGRESS`). Direct
    works from a home connection. With the `installEgress` option, WARP and
-   Tor are installed first if a route needs them.
+   Tor are installed first if a route needs them. With the `egress` option
+   (a manager from `egress()`), every request shares its routes and
+   daemons, so a process that gets many videos starts WARP and Tor once.
    The audio is YouTube's smallest Opus format (249, ~50 kbps, ~22 MB per
    hour).
 2. `fetchVideoViaWorkflow`, when YouTube refuses every route and

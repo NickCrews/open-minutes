@@ -6,6 +6,7 @@ import {
   metadataFromJson,
 } from "@open-minutes/core/site";
 import {
+  type Egress,
   EgressError,
   type EgressOptions,
   ensureYtDlpInstalled,
@@ -32,6 +33,13 @@ export interface YouTubeOptions {
    * machine can (see `install` in `@open-minutes/ytdlp`'s `EgressOptions`).
    */
   installEgress?: EgressOptions["install"];
+  /**
+   * A manager whose routes and daemons every yt-dlp run shares, for a
+   * process that gets many videos. The caller closes it. When set, `routes`
+   * and `installEgress` are the manager's to set and are ignored here.
+   * Without it, each run starts and stops its own daemons.
+   */
+  egress?: Egress;
 }
 
 /**
@@ -47,6 +55,9 @@ async function ytDlp(
   }: { beforeAttempt?: () => Promise<void>; signal?: AbortSignal } = {},
 ) {
   await ensureYtDlpInstalled();
+  if (options.egress) {
+    return options.egress.run(args, { beforeAttempt, signal });
+  }
   return runWithEgress(args, {
     routes: options.routes,
     install: options.installEgress,
