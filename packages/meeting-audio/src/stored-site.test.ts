@@ -19,6 +19,7 @@ function unreachable(site: "youtube" | "akleg"): SiteAdapter {
   return {
     site,
     recordingId: site === "youtube" ? videoId : meetingId,
+    permalink: (id) => `https://example.com/${id}`,
     getMetadata: async () => {
       throw new Error("unexpected getMetadata call");
     },

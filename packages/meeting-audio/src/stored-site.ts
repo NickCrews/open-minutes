@@ -39,6 +39,7 @@ export function storedSite(
   return {
     site: adapter.site,
     recordingId: (recordingIdOrUrl) => adapter.recordingId(recordingIdOrUrl),
+    permalink: (recordingIdOrUrl) => adapter.permalink(recordingIdOrUrl),
     async getMetadata(recordingIdOrUrl) {
       const { id, files } = filesOf(recordingIdOrUrl);
       const stored = await files.metadataJson.get();
@@ -86,13 +87,16 @@ export function storedSiteFromEnv(
   site: Site,
   env: Record<string, string | undefined> = process.env,
 ): SiteAdapter {
-  return storedSite(adapterFor(site), {
+  return storedSite(siteAdapter(site), {
     writer: blobStoreWriterFromEnv(env),
   });
 }
 
-/** The adapter that reaches `site` itself. */
-function adapterFor(site: Site): SiteAdapter {
+/**
+ * The adapter that reaches `site` itself, configured from the environment
+ * (see {@link storedSiteFromEnv}). Does no I/O until a method is called.
+ */
+export function siteAdapter(site: Site): SiteAdapter {
   switch (site) {
     case "youtube":
       return youtube();

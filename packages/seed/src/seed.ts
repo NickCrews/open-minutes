@@ -8,8 +8,11 @@ import {
   meetingBodiesTable,
   meetingsTable,
   peopleTable,
+  recordingBodiesTable,
+  recordingsTable,
   segmentsTable,
 } from "@open-minutes/db";
+import { siteAdapter } from "@open-minutes/meeting-audio";
 import { LAST_WORD_DURATION_SEC } from "@open-minutes/core/transcript";
 import { transcriptFingerprint } from "./transcript-fingerprint";
 import {
@@ -27,18 +30,20 @@ import { placeholderVoiceprints } from "./voiceprints";
  * Bump when seedDataset's behavior changes in a way the datasets and datums
  * don't capture. Every dataset's fingerprint includes it.
  */
-export const SEED_VERSION = 1;
+export const SEED_VERSION = 2;
 
 /** Per-table count of rows inserted by a seed. */
 export type SeedSummary = Record<string, number>;
 
-// Every table a dataset owns, truncated together. Not meeting_bodies, which
-// has no id sequence for advanceIdSequences, and goes with its meetings.
+// Every table a dataset owns, truncated together. Not meeting_bodies or
+// recording_bodies, which have no id sequence for advanceIdSequences, and go
+// with their meetings and recordings.
 const SEEDED_TABLES = [
   chaptersTable,
   chapterGenerationsTable,
   segmentsTable,
   meetingsTable,
+  recordingsTable,
   peopleTable,
   bodiesTable,
   jurisdictionsTable,
@@ -107,22 +112,40 @@ export async function seedDataset(
     })),
   );
 
-  const meetingRows = meetings.map((m, i) => {
+  // Each fixture's recording has the same id as its meeting. Its audio is in
+  // the blob store already.
+  const storedAt = new Date();
+  const durations = meetings.map((m) => {
     const lastWord = m.segments.flatMap((s) => s.words).at(-1);
-    return {
-      id: i + 1,
-      slug: m.slug,
-      timezone: m.timezone,
-      site_kind: m.site,
-      site_id: m.external_id,
-      title: m.title,
-      date: m.date,
-      time: m.time,
-      duration_secs: lastWord
-        ? sql`make_interval(secs => ${lastWord.start + LAST_WORD_DURATION_SEC})`
-        : null,
-    };
+    return lastWord
+      ? sql`make_interval(secs => ${lastWord.start + LAST_WORD_DURATION_SEC})`
+      : null;
   });
+  const recordingRows = meetings.map((m, i) => ({
+    id: i + 1,
+    site: m.site,
+    external_id: m.external_id,
+    permalink: siteAdapter(m.site).permalink(m.external_id),
+    title: m.title,
+    duration_secs: durations[i] ?? "0",
+    is_meeting: true,
+    audio_stored_at: storedAt,
+  }));
+  const recordingBodies = meetingBodies.map(({ meeting_id, body_id }) => ({
+    recording_id: meeting_id,
+    body_id,
+  }));
+
+  const meetingRows = meetings.map((m, i) => ({
+    id: i + 1,
+    slug: m.slug,
+    recording_id: i + 1,
+    timezone: m.timezone,
+    title: m.title,
+    date: m.date,
+    time: m.time,
+    duration_secs: durations[i],
+  }));
 
   const segments = meetings.flatMap((m, i) =>
     m.segments
@@ -172,6 +195,10 @@ export async function seedDataset(
     await tx.insert(jurisdictionsTable).values(jurisdictions);
     await tx.insert(bodiesTable).values(bodies);
     if (personRows.length) await tx.insert(peopleTable).values(personRows);
+    if (recordingRows.length) {
+      await tx.insert(recordingsTable).values(recordingRows);
+      await tx.insert(recordingBodiesTable).values(recordingBodies);
+    }
     if (meetingRows.length) await tx.insert(meetingsTable).values(meetingRows);
     if (meetingBodies.length)
       await tx.insert(meetingBodiesTable).values(meetingBodies);
@@ -189,6 +216,8 @@ export async function seedDataset(
       jurisdictions: jurisdictions.length,
       bodies: bodies.length,
       people: personRows.length,
+      recordings: recordingRows.length,
+      recording_bodies: recordingBodies.length,
       meetings: meetingRows.length,
       meeting_bodies: meetingBodies.length,
       segments: segments.length,

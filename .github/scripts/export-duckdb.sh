@@ -25,6 +25,13 @@ ATTACH '${DATABASE_URL//\'/\'\'}' AS pg (TYPE postgres, READ_ONLY);
 -- keeps each column's min and max per row group), even read over HTTP.
 CREATE TABLE jurisdictions AS FROM pg.public.jurisdictions ORDER BY id;
 CREATE TABLE bodies AS FROM pg.public.bodies ORDER BY id;
+-- Every recording, including those that aren't meetings, without the columns
+-- about storing its audio.
+CREATE TABLE recordings AS
+  SELECT * EXCLUDE (audio_stored_at, audio_error_history)
+  FROM pg.public.recordings ORDER BY id;
+CREATE TABLE recording_bodies AS
+  FROM pg.public.recording_bodies ORDER BY recording_id, body_id;
 CREATE TABLE meetings AS FROM pg.public.meetings ORDER BY id;
 CREATE TABLE meeting_bodies AS
   FROM pg.public.meeting_bodies ORDER BY meeting_id, body_id;

@@ -54,7 +54,9 @@ If a download is blocked, tell the person which website needs to be allowed:
 | ------------------ | --------------------------------------------------------------- | ----------------------------------------------------------------------------- |
 | `jurisdictions`    | government, e.g. the Municipality of Anchorage                  | `slug`, `name`, `state`                                                       |
 | `bodies`           | group that holds meetings, e.g. the Anchorage Assembly          | `slug`, `jurisdiction_id`, `name`, `name_short`, `timezone`                   |
-| `meetings`         | recorded meeting                                                | `title`, `date`, `time`, `timezone`, `url`, `duration_secs`                   |
+| `recordings`       | recording found on a site, whether or not it's a meeting        | `site`, `external_id`, `permalink`, `title`, `published_at`, `is_meeting`     |
+| `recording_bodies` | body whose YouTube playlist or akleg.gov committee lists it     | `recording_id`, `body_id`                                                     |
+| `meetings`         | recorded meeting                                                | `recording_id`, `title`, `date`, `time`, `timezone`, `duration_secs`          |
 | `meeting_bodies`   | body holding a meeting (several for a joint meeting)            | `meeting_id`, `body_id`                                                       |
 | `segments`         | stretch of one person talking                                   | `meeting_id`, `person_id`, `speaker_number`, `text`, `start_secs`, `end_secs` |
 | `people`           | person who speaks in meetings                                   | `name`, `bio`, `voice_embedding`                                              |
@@ -62,7 +64,9 @@ If a download is blocked, tell the person which website needs to be allowed:
 | `chapter_speakers` | person who spoke in a chapter                                   | `chapter_id`, `person_id`, `speaking_secs`                                    |
 | `export_info`      | (one row) when the file was made                                | `exported_at`                                                                 |
 
-Joins: `meeting_bodies.meeting_id → meetings.id`,
+Joins: `meetings.recording_id → recordings.id`,
+`recording_bodies.recording_id → recordings.id`,
+`meeting_bodies.meeting_id → meetings.id`,
 `meeting_bodies.body_id → bodies.id`, `bodies.jurisdiction_id →
 jurisdictions.id`, and
 `segments.meeting_id`/`chapters.meeting_id → meetings.id`,
@@ -83,10 +87,15 @@ Things to know:
 - **Dates** are local to where the meeting was held, in its `timezone`. `time` is null when the
   start time isn't known, and `date` can be null too. Fall back on the
   meeting's `title`, which usually has the date in it.
-- **Where a meeting was published**: `site_kind` is `youtube` or `akleg` (the
-  Alaska Legislature's akleg.gov), `site_id` is its ID there (a YouTube video
-  ID, or an akleg.gov meeting ID like `HRES 2018-09-10 14:00:00`), and `url`
-  is its page there.
+- **Where a meeting was published** is in its recording: `site` is `youtube`
+  or `akleg` (the Alaska Legislature's akleg.gov), `external_id` is its ID
+  there (a YouTube video ID, or an akleg.gov meeting ID like
+  `HRES 2018-09-10 14:00:00`), and `permalink` is its page there.
+- **Recordings** include ones that aren't meetings, eg an unrelated video on
+  a body's channel (`is_meeting` false), and ones not yet made into meetings
+  (no meeting has their `id` as its `recording_id`). `recording_bodies` only
+  says which bodies' sources list a recording; a meeting's bodies are in
+  `meeting_bodies`.
 - **Times within a meeting** (`start_secs`, `end_secs`, `duration_secs`) are
   `INTERVAL`s from the start of its recording. `epoch(start_secs)` gives
   seconds as a number.
@@ -109,7 +118,7 @@ Always give the person a way to check what you tell them:
 
 - On Open Minutes, at that moment:
   `https://open-minutes.nickcrews.workers.dev/meetings/<meeting id>?t=<seconds>`
-- Where it was published: the meeting's `url`. For a YouTube meeting, add
+- Where it was published: its recording's `permalink`. For a YouTube meeting, add
   `&t=<seconds>s` to it to start at that moment.
 - A person's page, with everything they said:
   `https://open-minutes.nickcrews.workers.dev/people/<person id>`
@@ -138,9 +147,10 @@ SELECT m.id AS meeting_id, m.date,
         FROM meeting_bodies mb JOIN bodies b ON b.id = mb.body_id
         WHERE mb.meeting_id = m.id) AS bodies,
        coalesce(p.name, 'unidentified speaker') AS speaker,
-       epoch(s.start_secs)::int AS t, m.url, left(s.text, 300) AS text
+       epoch(s.start_secs)::int AS t, r.permalink, left(s.text, 300) AS text
 FROM segments s
 JOIN meetings m ON m.id = s.meeting_id
+JOIN recordings r ON r.id = m.recording_id
 LEFT JOIN people p ON p.id = s.person_id
 WHERE s.text ILIKE '%snow removal%' OR s.text ILIKE '%snow plow%' OR s.text ILIKE '%plowing%'
 ORDER BY m.date DESC NULLS LAST, s.start_secs

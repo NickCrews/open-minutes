@@ -8,7 +8,7 @@ meeting: its metadata, and its audio. `aklegSource({ committee:
 "HRES" })` is a committee as a body's meeting source
 (`{"type":"akleg_committee","committee":"HRES"}`): core's `RecordingLister`.
 
-Meetings from a committee are stored with `site_kind` `akleg`. The site's player
+Recordings from a committee are stored with `site` `akleg`. The site's player
 can't play them yet. See [docs/research/akleg.md](../../docs/research/akleg.md)
 for how akleg.gov publishes meetings, how to play them on our site, and
 what's left to do.

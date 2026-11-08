@@ -18,6 +18,11 @@ export interface SiteAdapter {
    * either form; this gives the one to key stored files by.
    */
   recordingId(recordingIdOrUrl: string): string;
+  /**
+   * The recording's page on the site, for people: the page
+   * `RecordingMetadata.permalink` names. Needs no I/O.
+   */
+  permalink(recordingIdOrUrl: string): string;
   /** The recording's title, publisher and so on. */
   getMetadata(recordingIdOrUrl: string): Promise<RecordingMetadata>;
   /**

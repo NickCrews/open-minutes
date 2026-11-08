@@ -1,4 +1,4 @@
-export { storedSite, storedSiteFromEnv } from "./stored-site";
+export { siteAdapter, storedSite, storedSiteFromEnv } from "./stored-site";
 export {
   type CachedAudio,
   type RecordingRef,

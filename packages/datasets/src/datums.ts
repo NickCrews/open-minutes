@@ -61,9 +61,9 @@ export interface GoldenMeeting {
   body_slugs: string[];
   /** IANA zone `date` and `time` read in (eg "America/Anchorage"). */
   timezone: string;
-  /** The site its recording is on: `meetings.site_kind`. */
+  /** The site its recording is on, as in `recordings.site`. */
   site: Site;
-  /** Its recording's ID on `site`: `meetings.site_id`. */
+  /** Its recording's ID on `site`, as in `recordings.external_id`. */
   external_id: string;
   title: string;
   /**

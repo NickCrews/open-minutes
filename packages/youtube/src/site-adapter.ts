@@ -175,6 +175,7 @@ export function youtube(options: YouTubeOptions = {}): YouTube {
   return {
     site: "youtube",
     recordingId: videoId,
+    permalink: (videoIdOrUrl) => videoUrl(videoId(videoIdOrUrl)),
     getMetadata: (videoIdOrUrl) =>
       orViaWorkflow(
         videoIdOrUrl,
