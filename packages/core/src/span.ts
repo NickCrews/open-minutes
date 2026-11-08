@@ -93,3 +93,42 @@ export function mergeSpans(spans: readonly Span[], maxGap: number): Span[] {
   }
   return out;
 }
+
+/**
+ * Windows of `windowSecs` every `hopSecs` inside each span, in `spans`' order.
+ * Windows stay inside their span: the last one in a span is aligned to its
+ * end, so it may start less than `hopSecs` after the one before. A span no
+ * longer than `windowSecs` gets one window covering all of it.
+ */
+export function slidingWindows(
+  spans: readonly Span[],
+  {
+    windowSecs = 1.5,
+    hopSecs = 0.75,
+  }: { windowSecs?: number; hopSecs?: number } = {},
+): Span[] {
+  if (!(windowSecs > 0) || !(hopSecs > 0)) {
+    throw new RangeError(
+      `windowSecs (${windowSecs}) and hopSecs (${hopSecs}) must be positive.`,
+    );
+  }
+  // Absorbs rounding in start + i * hop, so a window that ends at the span's
+  // end isn't followed by an end-aligned copy of itself.
+  const eps = 1e-9;
+  const out: Span[] = [];
+  for (const span of spans) {
+    if (span.end - span.start <= windowSecs + eps) {
+      out.push({ start: span.start, end: span.end });
+      continue;
+    }
+    for (let i = 0; ; i++) {
+      const start = span.start + i * hopSecs;
+      if (start + windowSecs >= span.end - eps) {
+        out.push({ start: span.end - windowSecs, end: span.end });
+        break;
+      }
+      out.push({ start, end: start + windowSecs });
+    }
+  }
+  return out;
+}

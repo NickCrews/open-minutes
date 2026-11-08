@@ -4,8 +4,10 @@ import { ensureWaveForm, type WaveForm } from "@open-minutes/codecs";
 
 import { EMBEDDING_MODEL_SPEC } from "./embed-model.js";
 import { ensureDownloaded } from "./model.js";
-import { assertSampleRate } from "./input.js";
+import { type AudioInput, assertSampleRate, prepareInput } from "./input.js";
+import type { Span } from "@open-minutes/core/span";
 import type { DiarizationTurn } from "@open-minutes/core/transcription";
+import type { SpanWithEmbedding } from "@open-minutes/core/voice_embeddings";
 
 // Speaker-embedding toolkit (Tier B): one CAM++ voiceprint per speaker, for
 // matching against known people downstream. diarize.ts also depends on these
@@ -22,6 +24,42 @@ const MAX_EMBEDDING_SECONDS = 8; // cap audio fed to the embedder (use the tail)
 // ONNX intra-op threads. The 166-min meeting is CPU-bound in sherpa's process();
 // 4 roughly halves wall time vs 2 while leaving headroom on typical machines.
 export const NUM_THREADS = 4;
+
+/**
+ * One CAM++ embedding per span of `spans`, of the audio in it, in the same
+ * order. Spans are embedded as given, however long or short: under about
+ * 1.5 s, the vector is unreliable. Pass `slidingWindows` from
+ * `@open-minutes/core/span` for embeddings along the audio, and `centroid`
+ * from `@open-minutes/core/voice_embeddings` for the mean of those inside a
+ * span.
+ *
+ * Throws a RangeError on a span that is empty or not inside the file, and the
+ * signal's reason if it is aborted.
+ */
+export async function embedSpans(
+  audio: AudioInput,
+  spans: readonly Span[],
+  { signal }: { signal?: AbortSignal } = {},
+): Promise<SpanWithEmbedding[]> {
+  const { wave, duration } = await prepareInput(audio, { signal, span: [] });
+  // Times that land a hair past the end of the file, as float sums can.
+  const eps = 1e-6;
+  for (const { start, end } of spans) {
+    if (!(start >= 0 && end <= duration + eps && end > start)) {
+      throw new RangeError(
+        `Span ${start}–${end} s is empty or not inside the audio (0–${duration} s).`,
+      );
+    }
+  }
+  const extractor = getEmbeddingExtractor();
+  const out: SpanWithEmbedding[] = [];
+  for (const { start, end } of spans) {
+    signal?.throwIfAborted();
+    const vector = embed(extractor, wave, start, end);
+    out.push({ start, end, vector });
+  }
+  return out;
+}
 
 /**
  * Build one voiceprint per speaker: for each speaker take their longest turns
@@ -71,7 +109,17 @@ function extractEmbedding(
   // Cap to the last MAX_EMBEDDING_SECONDS of the turn (long turns gain nothing
   // from more audio and cost more to embed).
   const clampedStart = Math.max(startSec, endSec - MAX_EMBEDDING_SECONDS);
-  const startIdx = Math.floor(clampedStart * wave.sampleRate);
+  return embed(extractor, wave, clampedStart, endSec);
+}
+
+/** The embedding of samples [startSec, endSec) of `wave`. */
+function embed(
+  extractor: SpeakerEmbeddingExtractor,
+  wave: WaveForm,
+  startSec: number,
+  endSec: number,
+): Float32Array {
+  const startIdx = Math.floor(startSec * wave.sampleRate);
   const endIdx = Math.floor(endSec * wave.sampleRate);
   const samples = wave.samples.subarray(startIdx, endIdx);
 
