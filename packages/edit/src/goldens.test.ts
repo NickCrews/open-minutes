@@ -126,7 +126,9 @@ describe("goldens", () => {
       voiceprints: placeholders,
       dryRun: true,
     });
-    expect(notes).toContainEqual(expect.stringMatching(/^meeting \d+: added$/));
+    expect(notes).toContainEqual(
+      expect.stringMatching(/^meeting \d+: added, with recording \d+$/),
+    );
     await expect(findMeetingId(db, "pzc-2026-06-08")).rejects.toThrow(
       /No meeting/,
     );

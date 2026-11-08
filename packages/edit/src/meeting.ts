@@ -10,9 +10,11 @@ import {
   meetingBodiesTable,
   meetingsTable,
   peopleTable,
+  recordingsTable,
   segmentsTable,
 } from "@open-minutes/db";
 import type { Chapter } from "@open-minutes/core/chapters";
+import type { Site } from "@open-minutes/core/site";
 import type { Segment, Word } from "@open-minutes/core/transcript";
 
 /** A database, or a transaction on one. */
@@ -38,8 +40,9 @@ export interface DbChapterGeneration {
 export interface DbMeeting {
   id: number;
   slug: string | null;
-  site_kind: string;
-  site_id: string;
+  /** Its recording's site and ID there. */
+  site: Site;
+  external_id: string;
   title: string;
   description: string;
   timezone: string;
@@ -92,8 +95,8 @@ export async function loadMeeting(
     .select({
       id: meetingsTable.id,
       slug: meetingsTable.slug,
-      site_kind: meetingsTable.site_kind,
-      site_id: meetingsTable.site_id,
+      site: recordingsTable.site,
+      external_id: recordingsTable.external_id,
       title: meetingsTable.title,
       description: meetingsTable.description,
       timezone: meetingsTable.timezone,
@@ -102,6 +105,10 @@ export async function loadMeeting(
       durationSecs: secs(meetingsTable.duration_secs),
     })
     .from(meetingsTable)
+    .innerJoin(
+      recordingsTable,
+      eq(recordingsTable.id, meetingsTable.recording_id),
+    )
     .where(eq(meetingsTable.id, id));
   if (!meeting) throw new Error(`No meeting with id ${id}`);
 
