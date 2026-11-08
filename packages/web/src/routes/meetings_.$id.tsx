@@ -15,8 +15,8 @@ import {
 import { MeetingBodies } from "~/features/meetings/meeting-bodies";
 import { MeetingDateTime } from "~/features/meetings/meeting-date-time";
 import { Transcript } from "~/features/meetings/transcript";
+import { youtubeIdOf } from "~/features/meetings/recording";
 import { intervalToSecs } from "~/lib/format";
-import { youtubeIdOf } from "@open-minutes/core/meeting-source";
 import { type YouTubeController } from "~/lib/youtube";
 import { db } from "~/server/db";
 import { z } from "zod";

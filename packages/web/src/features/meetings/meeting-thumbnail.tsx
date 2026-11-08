@@ -8,8 +8,7 @@ import {
   ThumbnailFrame,
 } from "~/features/thumbnails/thumbnail";
 import { YouTubeThumbnail } from "~/features/thumbnails/youtube-thumbnail";
-import { youtubeIdOf } from "@open-minutes/core/meeting-source";
-import type { MeetingRecording } from "./recording";
+import { type MeetingRecording, youtubeIdOf } from "./recording";
 
 export type ThumbnailMeeting = {
   id: number;

@@ -71,14 +71,3 @@ export function meetingSourceLabel(source: MeetingSource): string {
       return "akleg.gov committee";
   }
 }
-
-/**
- * The recording's YouTube video ID, or null when it isn't on YouTube. For
- * what only works with YouTube: its player and thumbnails.
- */
-export function youtubeIdOf(recording: {
-  site: string;
-  external_id: string;
-}): string | null {
-  return recording.site === "youtube" ? recording.external_id : null;
-}

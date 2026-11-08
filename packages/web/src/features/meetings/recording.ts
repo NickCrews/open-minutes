@@ -8,3 +8,11 @@ export const meetingRecordingColumns = {
 
 /** What a page needs of a meeting's recording to show its video. */
 export type MeetingRecording = { site: string; external_id: string };
+
+/**
+ * The recording's YouTube video ID, or null when it isn't on YouTube. For
+ * what only works with YouTube: its player and thumbnails.
+ */
+export function youtubeIdOf(recording: MeetingRecording): string | null {
+  return recording.site === "youtube" ? recording.external_id : null;
+}
