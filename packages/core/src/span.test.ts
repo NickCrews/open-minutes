@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vite-plus/test";
-import { clip, gaps, mergeSpans, subtract, totalSecs } from "./span";
+import {
+  clip,
+  gaps,
+  mergeSpans,
+  slidingWindows,
+  type Span,
+  subtract,
+  totalSecs,
+} from "./span";
 
 describe("clip", () => {
   it("trims spans that cross the range's edges", () => {
@@ -239,5 +247,94 @@ describe("mergeSpans", () => {
 
   it("is empty for no spans", () => {
     expect(mergeSpans([], 1)).toEqual([]);
+  });
+});
+
+describe("slidingWindows", () => {
+  /** `spans` with times rounded to the hundredth, to compare float sums. */
+  const rounded = (spans: Span[]) =>
+    spans.map((s) => ({
+      start: Math.round(s.start * 100) / 100,
+      end: Math.round(s.end * 100) / 100,
+    }));
+
+  it("aligns the last window in each span to its end", () => {
+    const spans = [
+      { start: 0.4, end: 2.6 },
+      { start: 3.4, end: 5.1 },
+    ];
+    expect(
+      rounded(slidingWindows(spans, { windowSecs: 1.5, hopSecs: 0.75 })),
+    ).toEqual([
+      { start: 0.4, end: 1.9 },
+      { start: 1.1, end: 2.6 },
+      { start: 3.4, end: 4.9 },
+      { start: 3.6, end: 5.1 },
+    ]);
+  });
+
+  it("defaults to 1.5 s windows every 0.75 s", () => {
+    expect(rounded(slidingWindows([{ start: 10, end: 13 }]))).toEqual([
+      { start: 10, end: 11.5 },
+      { start: 10.75, end: 12.25 },
+      { start: 11.5, end: 13 },
+    ]);
+  });
+
+  it("doesn't repeat a window that already ends at the span's end", () => {
+    // 0.1 is inexact in binary, so 0.1 * 3 + 0.3 isn't exactly 0.6.
+    const windows = slidingWindows([{ start: 0, end: 0.6 }], {
+      windowSecs: 0.3,
+      hopSecs: 0.1,
+    });
+    expect(rounded(windows)).toEqual([
+      { start: 0, end: 0.3 },
+      { start: 0.1, end: 0.4 },
+      { start: 0.2, end: 0.5 },
+      { start: 0.3, end: 0.6 },
+    ]);
+  });
+
+  it("gives a span no longer than a window one window covering it", () => {
+    expect(
+      slidingWindows([
+        { start: 1, end: 1.2 },
+        { start: 2, end: 3.5 },
+      ]),
+    ).toEqual([
+      { start: 1, end: 1.2 },
+      { start: 2, end: 3.5 },
+    ]);
+  });
+
+  it("keeps windows inside their span, in the spans' order", () => {
+    const spans = [
+      { start: 20, end: 27.3 },
+      { start: 0, end: 4.1 },
+    ];
+    const windows = slidingWindows(spans, { windowSecs: 2, hopSecs: 0.5 });
+    const first = windows.findIndex((w) => w.start < 20);
+    expect(first).toBeGreaterThan(0);
+    for (const [i, w] of windows.entries()) {
+      const span = i < first ? spans[0]! : spans[1]!;
+      expect(w.start).toBeGreaterThanOrEqual(span.start);
+      expect(w.end).toBeLessThanOrEqual(span.end);
+      expect(w.end - w.start).toBeCloseTo(2);
+    }
+    expect(windows.at(first - 1)!.end).toBe(27.3);
+    expect(windows.at(-1)!.end).toBe(4.1);
+  });
+
+  it("returns no windows for no spans", () => {
+    expect(slidingWindows([])).toEqual([]);
+  });
+
+  it("rejects a hop or window that isn't positive", () => {
+    expect(() =>
+      slidingWindows([{ start: 0, end: 5 }], { hopSecs: 0 }),
+    ).toThrow(RangeError);
+    expect(() =>
+      slidingWindows([{ start: 0, end: 5 }], { windowSecs: -1 }),
+    ).toThrow(RangeError);
   });
 });

@@ -59,9 +59,17 @@ talking (Silero VAD, with pauses down to 0.2 s), as a list of `Span`s from
 them and finds the gaps between them (the pauses). A voice activity span
 that crosses the edge of the mask is returned whole.
 
+`embedSpans` in `@open-minutes/audio-ml/embed` computes one CAM++ voice
+embedding per span it is given, in the same order. `slidingWindows` in
+`@open-minutes/core/span` cuts spans, such as voice activity spans, into
+overlapping windows (1.5 s every 0.75 s by default) to embed, and
+`centroid` in `@open-minutes/core/voice_embeddings` averages the windows
+inside a span, such as a diarization turn, into its voiceprint.
+
 A checked-in minute of real meeting audio from
 `@open-minutes/datasets/clips` tests what VAD and `transcribeRange` hear
-(`vad.test.ts`, `transcribe.test.ts`), and
+(`vad.test.ts`, `transcribe.test.ts`) and that the embeddings tell speakers
+apart (`embed.test.ts`), and
 `src/audio.bench.ts` times the models on it. Because the clip is one minute
 long, `pnpm bench` reports each model's time per minute of audio, so a model
 swap shows what it costs.
