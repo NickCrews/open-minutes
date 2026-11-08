@@ -6,7 +6,15 @@ description: Conventions for a person's slug, name and bio in Open Minutes. Use 
 # People records
 
 A person has a `slug`, a `name` and a `bio`, in the database's `people`
-table.
+table. Set them in a changeset (the `transcript-cleanup` skill), asserting
+first that the row is the person you mean:
+
+```sql
+SELECT om.assert((SELECT slug FROM people WHERE id = 57) IS NULL, 'person 57 has no slug yet');
+UPDATE people SET slug = 'kyle-kelley', name = 'Kyle Kelley',
+  bio = 'Girdwood Board of Supervisors member as of March 2026.'
+WHERE id = 57;
+```
 
 ## Rules
 

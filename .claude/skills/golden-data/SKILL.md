@@ -34,14 +34,17 @@ are the exception, and are edited by hand.
 
 Export refuses a meeting it can't write, and lists why:
 
-- The meeting needs a slug, `<body>-<date>` (eg `gbos-2026-03-23`).
+- The meeting needs a slug, `<body>-<date>` (eg `gbos-2026-03-23`), set in
+  a changeset: `UPDATE meetings SET slug = 'gbos-2026-03-23' WHERE id = 412;`.
 - Everyone it names needs a slug and a name. A person with no slug yet
-  (`person:<id>`) needs one, or their segments relabelled with a speaker
+  (`person:<id>`) needs one, set in a changeset following the
+  `people-records` skill, or their segments relabelled with a speaker
   number.
 
 ## Adding a golden meeting
 
-Pick a meeting in production, give it a slug, clean it up, and export it. A
+Pick a meeting in production, give it a slug in a changeset, clean it up,
+and export it. A
 new golden's audio is downloaded once to record its hash in `meeting.json`.
 Goldens must be clean: every rule error fails the fixture tests.
 
