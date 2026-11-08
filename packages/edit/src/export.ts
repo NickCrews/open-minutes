@@ -13,6 +13,7 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import type { Site } from "@open-minutes/core/site";
 import type { Segment } from "@open-minutes/core/transcript";
 import { sameSpeaker } from "@open-minutes/core/transcript-edit";
 import {
@@ -30,7 +31,8 @@ const REPO_ROOT = fileURLToPath(new URL("../../../", import.meta.url));
 export interface MeetingJson {
   body_slugs: string[];
   timezone: string;
-  youtube_id: string;
+  site: Site;
+  external_id: string;
   title: string;
   date?: string;
   time?: string;
@@ -49,7 +51,7 @@ export interface Golden {
 
 /**
  * A database meeting as a golden meeting. Throws, listing every problem, if
- * it can't be one: it needs a slug, a YouTube recording and a duration, and
+ * it can't be one: it needs a slug and a duration, and
  * everyone it names needs a slug and a name.
  */
 export function toGolden(m: DbMeeting): Golden {
@@ -58,8 +60,6 @@ export function toGolden(m: DbMeeting): Golden {
     problems.push(
       'the meeting has no slug: set one with a {"op":"meeting","slug":...} op',
     );
-  if (m.site_kind !== "youtube")
-    problems.push(`its recording is on ${m.site_kind}; goldens are on YouTube`);
   if (m.durationSecs === null) problems.push("it has no duration");
   if (!m.bodySlugs.length) problems.push("it has no bodies");
 
@@ -106,7 +106,8 @@ export function toGolden(m: DbMeeting): Golden {
     meeting: {
       body_slugs: m.bodySlugs,
       timezone: m.timezone,
-      youtube_id: m.site_id,
+      site: m.site,
+      external_id: m.external_id,
       title: m.title,
       ...(m.date ? { date: m.date } : {}),
       ...(m.time ? { time: m.time.replace(/^(\d\d:\d\d):00$/, "$1") } : {}),
@@ -137,9 +138,12 @@ export function toGolden(m: DbMeeting): Golden {
  * The sha256 of a recording's audio, to check later that the audio is the one
  * its transcript was timed against. Downloads it if it isn't cached.
  */
-export async function audioSha256(youtubeId: string): Promise<string> {
+export async function audioSha256(
+  site: Site,
+  externalId: string,
+): Promise<string> {
   const { getCachedAudio } = await import("@open-minutes/meeting-audio");
-  const audio = await getCachedAudio({ site: "youtube", id: youtubeId });
+  const audio = await getCachedAudio({ site, id: externalId });
   return audio.manifest.sha256;
 }
 
@@ -154,7 +158,10 @@ export async function writeGolden(
   {
     root = DATUMS_ROOT,
     sha256 = audioSha256,
-  }: { root?: string; sha256?: (youtubeId: string) => Promise<string> } = {},
+  }: {
+    root?: string;
+    sha256?: (site: Site, externalId: string) => Promise<string>;
+  } = {},
 ): Promise<string[]> {
   const dir = join(root, "meetings", golden.slug);
   mkdirSync(dir, { recursive: true });
@@ -165,9 +172,11 @@ export async function writeGolden(
   const meeting: MeetingJson = {
     ...golden.meeting,
     _audio_sha256:
-      old.youtube_id === golden.meeting.youtube_id && old._audio_sha256
+      old.site === golden.meeting.site &&
+      old.external_id === golden.meeting.external_id &&
+      old._audio_sha256
         ? old._audio_sha256
-        : await sha256(golden.meeting.youtube_id),
+        : await sha256(golden.meeting.site, golden.meeting.external_id),
   };
   const written = [meetingPath];
   writeFileSync(meetingPath, JSON.stringify(meeting, null, 2) + "\n");

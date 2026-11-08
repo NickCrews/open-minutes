@@ -55,14 +55,15 @@ pnpm goldens publish gbos-2026-03-23 --db prod
 
 `export` writes meetings as golden meetings: each one's directory under
 `datums/meetings/` (`meeting.json`, `golden.psv`, `chapters.json`), and a line
-in `people.jsonl` for everyone it names. A golden needs a slug, a YouTube
-recording and a duration, and everyone it names needs a slug and a name;
+in `people.jsonl` for everyone it names. A golden needs a slug and a
+duration, and everyone it names needs a slug and a name;
 `export` lists what's missing. It keeps the audio hash from the existing
 `meeting.json`, and for a new golden downloads the audio to compute it.
 
 `publish` goes the other way, for a golden whose files are ahead of the
 database. It changes only that meeting and the people it names: the meeting
-row (found by slug, else by its recording), its bodies, segments and chapters,
+row (found by slug, else by its recording, which it adds if the database
+doesn't have it), its bodies, segments and chapters,
 and the name and bio of each person. It finds a person by slug, or else as
 the one person with the same name and no slug, and gives them the slug.
 Anyone else is added, with a voiceprint from the meeting's audio. It reports

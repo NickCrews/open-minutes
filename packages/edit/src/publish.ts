@@ -3,7 +3,7 @@
 // the database. Unlike seeding, it changes only that meeting and the people
 // it names, and keeps every other row.
 
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, isNull, or, sql } from "drizzle-orm";
 import {
   bodiesTable,
   chapterGenerationsTable,
@@ -12,6 +12,8 @@ import {
   meetingBodiesTable,
   meetingsTable,
   peopleTable,
+  recordingBodiesTable,
+  recordingsTable,
   segmentsTable,
 } from "@open-minutes/db";
 import {
@@ -20,6 +22,7 @@ import {
   getMeetingData,
   loadPeople as loadGoldenPeople,
 } from "@open-minutes/datasets/datums";
+import { siteAdapter } from "@open-minutes/meeting-audio";
 import { transcriptFingerprint } from "@open-minutes/seed/transcript-fingerprint";
 import type { Conn } from "./meeting";
 
@@ -111,16 +114,14 @@ export async function publishGolden(
         }
       }
 
-      const meetingId = await upsertMeeting(tx, golden, notes);
+      const bodies = await bodyIds(tx, golden.body_slugs);
+      const meetingId = await upsertMeeting(tx, golden, bodies, notes);
       await tx
         .delete(meetingBodiesTable)
         .where(eq(meetingBodiesTable.meeting_id, meetingId));
-      await tx.insert(meetingBodiesTable).values(
-        (await bodyIds(tx, golden.body_slugs)).map((body_id) => ({
-          meeting_id: meetingId,
-          body_id,
-        })),
-      );
+      await tx
+        .insert(meetingBodiesTable)
+        .values(bodies.map((body_id) => ({ meeting_id: meetingId, body_id })));
 
       const deleted = await tx
         .delete(segmentsTable)
@@ -209,28 +210,62 @@ async function planPeople(
   return plans;
 }
 
-/** The meeting's row, found by slug or recording and updated, or added. */
+/**
+ * The meeting's row, found by slug or by its recording and updated, or added,
+ * with its recording.
+ */
 async function upsertMeeting(
   db: Conn,
   golden: GoldenMeeting,
+  bodyIds: readonly number[],
   notes: string[],
 ): Promise<number> {
+  const duration_secs = sql`make_interval(secs => ${golden.duration_secs})`;
+  const [recording] = await db
+    .insert(recordingsTable)
+    .values({
+      site: golden.site,
+      external_id: golden.external_id,
+      permalink: siteAdapter(golden.site).permalink(golden.external_id),
+      title: golden.title,
+      duration_secs,
+      is_meeting: true,
+    })
+    .onConflictDoUpdate({
+      target: [recordingsTable.site, recordingsTable.external_id],
+      set: { is_meeting: true },
+    })
+    .returning({ id: recordingsTable.id });
+  if (bodyIds.length)
+    await db
+      .insert(recordingBodiesTable)
+      .values(
+        bodyIds.map((body_id) => ({ recording_id: recording!.id, body_id })),
+      )
+      .onConflictDoNothing();
   const fields = {
     slug: golden.slug,
-    site_kind: "youtube" as const,
-    site_id: golden.youtube_id,
+    recording_id: recording!.id,
     title: golden.title,
     timezone: golden.timezone,
     date: golden.date,
     time: golden.time,
-    duration_secs: sql`make_interval(secs => ${golden.duration_secs})`,
+    duration_secs,
   };
-  const [existing] = await db
+  const found = await db
     .select({ id: meetingsTable.id })
     .from(meetingsTable)
     .where(
-      sql`${meetingsTable.slug} = ${golden.slug} OR (${meetingsTable.site_kind} = 'youtube' AND ${meetingsTable.site_id} = ${golden.youtube_id})`,
+      or(
+        eq(meetingsTable.slug, golden.slug),
+        eq(meetingsTable.recording_id, recording!.id),
+      ),
     );
+  if (found.length > 1)
+    throw new Error(
+      `Meetings ${found.map((m) => m.id).join(" and ")} are both ${golden.slug}: one by slug, one by recording`,
+    );
+  const existing = found[0];
   if (existing) {
     await db
       .update(meetingsTable)
@@ -243,7 +278,7 @@ async function upsertMeeting(
     .insert(meetingsTable)
     .values(fields)
     .returning({ id: meetingsTable.id });
-  notes.push(`meeting ${row!.id}: added`);
+  notes.push(`meeting ${row!.id}: added, with recording ${recording!.id}`);
   return row!.id;
 }
 
