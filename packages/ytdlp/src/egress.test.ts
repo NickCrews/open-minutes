@@ -171,6 +171,26 @@ describe("runWithEgress", () => {
     ]);
   });
 
+  it("logs each refused attempt with what it tries next", async () => {
+    vi.stubEnv("YOUTUBE_EGRESS", "direct,warp,tor");
+    fakeDaemons({ unavailable: { tor: "no tor" } });
+    fakeYtDlp(() => ytDlpError(BOT_CHECK));
+    const lines: string[] = [];
+    await expect(
+      runWithEgress(ARGS, { log: (line) => lines.push(line) }),
+    ).rejects.toThrow(EgressError);
+    const reason =
+      "[youtube] QUF1uLgzL-s: Sign in to confirm you’re not a bot. Use --cookies-from-browser or --cookies for the authentication.";
+    expect(lines).toEqual([
+      `yt-dlp: direct was refused; trying warp next: ${reason}`,
+      "yt-dlp: starting warp",
+      `yt-dlp: warp exit 1 of 3 was refused; trying a new warp exit: ${reason}`,
+      `yt-dlp: warp exit 2 of 3 was refused; trying a new warp exit: ${reason}`,
+      `yt-dlp: warp exit 3 of 3 was refused; trying tor next: ${reason}`,
+      "yt-dlp: tor can't run here; no routes left, so this request fails: no tor",
+    ]);
+  });
+
   it("moves on when a route's proxy can't be reached", async () => {
     vi.stubEnv("YOUTUBE_EGRESS", "socks5://a,socks5://b");
     const calls = fakeYtDlp((proxy) =>
