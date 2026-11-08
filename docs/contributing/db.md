@@ -191,8 +191,8 @@ workers.dev subdomain. A Worker per PR was chosen over preview versions of the
 production Worker: versions inherit production's secrets, can't be deleted,
 and would need the database URL as a plaintext var.
 
-Previews are public URLs serving a copy of production data. That's fine for
-public meeting records; put Cloudflare Access in front if that changes. A
+Previews are public URLs serving a copy of production data, which is all
+public (see [All data is public](../../CONTRIBUTING.md#all-data-is-public)). A
 Worker whose cleanup fails leaks: unlike Neon branches, Workers have no TTL.
 
 ## Changing the schema

@@ -40,6 +40,16 @@ production. Jurisdictions contain bodies; bodies hold meetings; a meeting's
 transcript is a sequence of segments, each spoken by a person, who carries a
 voiceprint so they can be recognized in later meetings.
 
+### All data is public
+
+Open Minutes takes in only public data: recordings of public meetings that
+their government already publishes. Everything derived from them is public
+too, including audio, transcripts, people's names and bios, and voiceprints.
+The whole database is published nightly as a DuckDB file, and the audio sits
+in a publicly readable bucket. Don't add access controls, redaction, or
+separate handling for any of it, voiceprints included. The secrets to protect
+are credentials, such as database URLs and API keys.
+
 ## Getting started
 
 You need [Vite+](https://viteplus.dev) and Docker with Compose. Vite+ provides

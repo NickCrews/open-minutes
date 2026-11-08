@@ -7,8 +7,10 @@
 # Needs the duckdb CLI (`uvx --from duckdb-cli duckdb`, or pipx) on PATH. Only
 # reads the source: it's attached READ_ONLY.
 #
-# The file is published to a public bucket, so tables are copied by name: a new
-# table stays out until someone adds it here.
+# Everything in the database is public data (CONTRIBUTING.md, "All data is
+# public"). Tables are copied by name, so a new table stays out until someone
+# adds it here; columns about running the pipeline are left out because they
+# aren't useful to readers.
 set -euo pipefail
 out="$1"
 : "${DATABASE_URL:?DATABASE_URL must be set}"
