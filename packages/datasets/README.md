@@ -11,9 +11,8 @@ Each golden meeting is a directory of its metadata, its transcript
 The golden meetings and `people.jsonl` are exported from production with
 `pnpm goldens export`: to correct one, edit the meeting in production with
 `pnpm transcript` and export it again (see
-[`@open-minutes/edit`](../edit/README.md)). The `transcript-cleanup` and
-`people-records` skills in [`.claude/skills/`](../../.claude/skills/)
-describe how.
+[`@open-minutes/edit`](../edit/README.md)). The `golden-data` skill in
+[`.claude/skills/`](../../.claude/skills/) describes how.
 
 `@open-minutes/datasets/audio` gets a golden meeting's audio and checks that
 it's the audio its transcript was timed to.

@@ -1,14 +1,12 @@
 ---
 name: people-records
-description: Conventions for a person's slug, name and bio in Open Minutes. Use when naming a person or writing their bio, in the database or for packages/datasets/datums/people.jsonl.
+description: Conventions for a person's slug, name and bio in Open Minutes. Use when naming a person or writing their bio.
 ---
 
 # People records
 
 A person has a `slug`, a `name` and a `bio`. Set them in the database with a
 `person` op (`pnpm transcript apply`; see the `transcript-cleanup` skill).
-`pnpm goldens export` writes the people a golden meeting names to
-`packages/datasets/datums/people.jsonl`, one JSON object per line.
 
 ## Rules
 
@@ -17,13 +15,11 @@ A person has a `slug`, a `name` and a `bio`. Set them in the database with a
    the person's own spelling and accents ("Mélisa Babb"), even where speech
    recognition hears it differently.
 2. **The slug is the name in kebab-case**, ASCII only (`melisa-babb`). It
-   is the person's stable ID across databases and fixtures: row ids differ
-   between prod, dev and test databases, so golden fixtures
-   (`people.jsonl`, `identified:<slug>` speaker labels) and tests refer to
-   people by slug, and seeding matches existing rows by slug. Use the same
-   slug in the database and the fixtures. It doesn't change when the
-   person's role does; if it must change (a misspelled name), change it
-   everywhere it's used.
+   is the person's stable ID across databases: row ids differ between
+   prod, dev and test databases, so code, data and tests outside one
+   database refer to people by slug. It doesn't change when the person's
+   role does; if it must change (a misspelled name), change it everywhere
+   it's used.
 3. **Every known person has a bio.** If all you know is that they spoke at a
    meeting, say that much: "Girdwood Board of Supervisors staff who took the
    roll call in March 2026."
@@ -45,7 +41,6 @@ A person has a `slug`, a `name` and a `bio`. Set them in the database with a
    someone talks about. When a role changes, update the dates; don't delete
    the earlier role.
 7. **Dashes are plain hyphens** ("2019-2022"), never en or em dashes.
-   A fixture test checks people.jsonl.
 
 ## Examples
 
