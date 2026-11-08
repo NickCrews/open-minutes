@@ -255,6 +255,9 @@ importers:
       '@open-minutes/db':
         specifier: workspace:*
         version: link:../db
+      '@open-minutes/meeting-audio':
+        specifier: workspace:*
+        version: link:../meeting-audio
       drizzle-orm:
         specifier: 1.0.0-beta.21
         version: 1.0.0-beta.21(@neondatabase/serverless@1.2.0)(@types/mssql@9.1.11)(mssql@11.0.2)(postgres@3.4.9)(zod@4.6.7)

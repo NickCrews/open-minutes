@@ -96,8 +96,8 @@ A fixture meeting's `meeting.json` names its recording with `site` and
 meeting:
 
 - `site`, `external_id`: the fixture's.
-- `permalink`: the recording's page, `permalinkOf(site, external_id)` from
-  `@open-minutes/core/site`.
+- `permalink`: the recording's page, from its site's
+  `SiteAdapter.permalink`.
 - `title`, `description`: the fixture's.
 - `duration_secs`: what the seed computes from the last word.
 - `is_meeting`: true. `audio_stored_at`: when the seed runs, since fixture

@@ -10,6 +10,14 @@ const tags = ["ytdlp"];
 const yt = youtube();
 
 describe("youtube", () => {
+  it("gives a video's watch page from its ID or any URL to it", () => {
+    for (const ref of ["9HoIM5INxpI", "https://youtu.be/9HoIM5INxpI"]) {
+      expect(yt.permalink(ref)).toBe(
+        "https://www.youtube.com/watch?v=9HoIM5INxpI",
+      );
+    }
+  });
+
   it("gets a video's metadata", { tags }, async () => {
     expect(await yt.getMetadata("9HoIM5INxpI")).toEqual({
       id: "9HoIM5INxpI",

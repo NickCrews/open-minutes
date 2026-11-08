@@ -254,6 +254,18 @@ describe("getMetadata", () => {
   });
 });
 
+describe("permalink", () => {
+  it("is the page getMetadata's permalink names, without fetching", () => {
+    expect(
+      akleg({ fetch: vi.fn() }).permalink(
+        "https://www.akleg.gov/basis/Meeting/Detail?Meeting=HRES%202018-09-10%2014:00:00",
+      ),
+    ).toBe(
+      "https://www.akleg.gov/basis/Meeting/Detail?Meeting=HRES%202018-09-10%2014:00:00",
+    );
+  });
+});
+
 describe("mainAudio", () => {
   it("picks the longest recording", async () => {
     const { source } = fake(MEETINGS_ON_DATE);

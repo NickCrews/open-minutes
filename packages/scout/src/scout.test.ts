@@ -33,6 +33,7 @@ function world(db: DB) {
   const youtube: SiteAdapter = {
     site: "youtube",
     recordingId: (id) => id,
+    permalink: (id) => `https://www.youtube.com/watch?v=${id}`,
     async getMetadata(id) {
       calls.metadata.push(id);
       const video = videos.get(id);
@@ -58,6 +59,7 @@ function world(db: DB) {
   const akleg: SiteAdapter = {
     site: "akleg",
     recordingId: (id) => id,
+    permalink: (id) => `https://www.akleg.gov/${id}`,
     getMetadata: async () => {
       throw new Error("unexpected akleg.gov call");
     },

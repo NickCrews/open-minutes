@@ -12,7 +12,7 @@ import {
   recordingsTable,
   segmentsTable,
 } from "@open-minutes/db";
-import { permalinkOf } from "@open-minutes/core/site";
+import { siteAdapter } from "@open-minutes/meeting-audio";
 import { LAST_WORD_DURATION_SEC } from "@open-minutes/core/transcript";
 import { transcriptFingerprint } from "./transcript-fingerprint";
 import {
@@ -125,7 +125,7 @@ export async function seedDataset(
     id: i + 1,
     site: m.site,
     external_id: m.external_id,
-    permalink: permalinkOf(m.site, m.external_id),
+    permalink: siteAdapter(m.site).permalink(m.external_id),
     title: m.title,
     duration_secs: durations[i] ?? "0",
     is_meeting: true,

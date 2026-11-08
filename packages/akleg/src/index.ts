@@ -354,6 +354,7 @@ export function akleg(config: AkLegConfig = {}): AkLeg {
   return {
     site: "akleg",
     recordingId: meetingId,
+    permalink: meetingUrl,
     async meetingsOfCommittee(committee, legislature) {
       const chamber = committee.slice(0, 1);
       const code = committee.slice(1);

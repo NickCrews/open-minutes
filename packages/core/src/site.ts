@@ -6,19 +6,6 @@ export const SITES = ["youtube", "akleg"] as const;
 export type Site = (typeof SITES)[number];
 
 /**
- * A recording's page on its site, for people, from its ID there. The same
- * page its `RecordingMetadata.permalink` names.
- */
-export function permalinkOf(site: Site, externalId: string): string {
-  switch (site) {
-    case "youtube":
-      return `https://www.youtube.com/watch?v=${externalId}`;
-    case "akleg":
-      return `https://www.akleg.gov/basis/Meeting/Detail?Meeting=${encodeURIComponent(externalId).replaceAll("%3A", ":")}`;
-  }
-}
-
-/**
  * A recording's metadata and audio, by its ID on a site. @open-minutes/youtube
  * and @open-minutes/akleg each implement it. Listing a meeting source's
  * recordings is `RecordingLister`'s job.
@@ -31,6 +18,11 @@ export interface SiteAdapter {
    * either form; this gives the one to key stored files by.
    */
   recordingId(recordingIdOrUrl: string): string;
+  /**
+   * The recording's page on the site, for people: the page
+   * `RecordingMetadata.permalink` names. Needs no I/O.
+   */
+  permalink(recordingIdOrUrl: string): string;
   /** The recording's title, publisher and so on. */
   getMetadata(recordingIdOrUrl: string): Promise<RecordingMetadata>;
   /**
