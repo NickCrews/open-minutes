@@ -1,20 +1,17 @@
-// Editing a meeting in a database: apply an ops file, or the meeting rules'
-// fixes, in one transaction that holds the meeting's row lock, checked by
-// the meeting rules before anything is saved.
+// Editing a meeting in a database: apply the meeting rules' fixes, in one
+// transaction that holds the meeting's row lock, checked by the meeting rules
+// before anything is saved.
 
 import { eq } from "drizzle-orm";
 import { chaptersTable, type DB, meetingsTable } from "@open-minutes/db";
 import { fixMeeting, type MeetingIssue } from "@open-minutes/core/rules";
-import { applyEdits } from "@open-minutes/core/transcript-edit";
 import type { Segment } from "@open-minutes/core/transcript";
 import {
   type DbMeeting,
   loadMeeting,
-  loadPeople,
   type Saved,
   saveSegments,
 } from "./meeting";
-import { applyRowOps, type RawOp, resolveEditOps } from "./ops";
 import { meetingIssues, newIssues, ruleMeeting, ruleSpecs } from "./view";
 
 export interface EditOptions {
@@ -25,7 +22,7 @@ export interface EditOptions {
 }
 
 export interface EditResult {
-  /** What the ops or fixes said they did. */
+  /** What the fixes did. */
   notes: string[];
   /** The meeting as edited. */
   meeting: DbMeeting;
@@ -38,32 +35,6 @@ export interface EditResult {
 }
 
 class Rollback extends Error {}
-
-/** Apply an ops file's ops to a meeting. Throws on an op that doesn't apply. */
-export function applyOps(
-  db: DB,
-  meetingId: number,
-  ops: readonly RawOp[],
-  options: EditOptions = {},
-): Promise<EditResult> {
-  return editMeeting(db, meetingId, options, async (tx, before) => {
-    const notes = await applyRowOps(tx, meetingId, ops);
-    const edits = await resolveEditOps(tx, ops);
-    const reloaded = await loadMeeting(tx, meetingId);
-    const edited = applyEdits(stripIds(before.segments), edits);
-    return {
-      notes: [...notes, ...edited.notes],
-      meeting: {
-        ...reloaded,
-        segments: edited.segments.map((s) => ({ ...s, id: 0 })),
-        people: await loadPeople(
-          tx,
-          edited.segments.flatMap((s) => (s.person === null ? [] : [s.person])),
-        ),
-      },
-    };
-  });
-}
 
 /**
  * Apply the fixes of every rule the meeting follows, to its title, transcript

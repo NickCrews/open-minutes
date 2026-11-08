@@ -9,8 +9,8 @@ Each golden meeting is a directory of its metadata, its transcript
 (`golden.psv`) and its chapters.
 
 The golden meetings and `people.jsonl` are exported from production with
-`pnpm goldens export`: to correct one, edit the meeting in production with
-`pnpm transcript` and export it again (see
+`pnpm goldens export`: to correct one, correct the meeting in production and
+export it again (see
 [`@open-minutes/edit`](../edit/README.md)). The `golden-data` skill in
 [`.claude/skills/`](../../.claude/skills/) describes how.
 

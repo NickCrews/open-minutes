@@ -15,7 +15,6 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Site } from "@open-minutes/core/site";
 import type { Segment } from "@open-minutes/core/transcript";
-import { sameSpeaker } from "@open-minutes/core/transcript-edit";
 import {
   DATUMS_ROOT,
   type GoldenChapters,
@@ -56,10 +55,7 @@ export interface Golden {
  */
 export function toGolden(m: DbMeeting): Golden {
   const problems: string[] = [];
-  if (!m.slug)
-    problems.push(
-      'the meeting has no slug: set one with a {"op":"meeting","slug":...} op',
-    );
+  if (!m.slug) problems.push("the meeting has no slug");
   if (m.durationSecs === null) problems.push("it has no duration");
   if (!m.bodySlugs.length) problems.push("it has no bodies");
 
@@ -73,10 +69,9 @@ export function toGolden(m: DbMeeting): Golden {
     const who = `person ${id}${p?.name ? ` (${p.name})` : ""}, in ${count} segment(s),`;
     if (!p?.slug)
       problems.push(
-        `${who} has no slug: give them one with a "person" op, or label their segments segmented:spk-<n>`,
+        `${who} has no slug: give them one, or label their segments with a speaker number`,
       );
-    else if (!p.name)
-      problems.push(`${who} has no name: set one with a "person" op`);
+    else if (!p.name) problems.push(`${who} has no name`);
     else
       people.push({
         slug: p.slug,
@@ -97,7 +92,12 @@ export function toGolden(m: DbMeeting): Golden {
       words: s.words.map((w) => ({ text: w.text, start: w.start })),
     };
     const last = segments.at(-1);
-    if (last && sameSpeaker(last, seg)) last.words.push(...seg.words);
+    if (
+      last &&
+      last.person === seg.person &&
+      last.speakerNumber === seg.speakerNumber
+    )
+      last.words.push(...seg.words);
     else segments.push(seg);
   }
 
