@@ -1,14 +1,14 @@
 # @open-minutes/edit
 
-Edits a meeting's transcript, people and chapters in a database, and moves
-golden meetings between a database and the
+Reads a meeting in a database and applies the meeting rules' fixes to it, and
+moves golden meetings between a database and the
 [datums](../datasets/README.md).
 
 A meeting lives in a database. The golden meetings in
 `packages/datasets/datums/` are exported from production: to correct one, edit
 it in production and export it again. Don't edit the golden files by hand.
 
-## Reading and editing a meeting
+## Reading and fixing a meeting
 
 `pnpm transcript <command> <meeting>` takes a meeting by slug or id, and
 `--db` to choose the database (default `$DB`, else your branch's local one;
@@ -20,7 +20,6 @@ pnpm transcript words gbos-2026-03-23 0:10:41 0:10:45 --db prod
 pnpm transcript stats gbos-2026-03-23 --db prod
 pnpm transcript check gbos-2026-03-23 --db prod
 pnpm transcript fix gbos-2026-03-23 --db prod
-pnpm transcript apply gbos-2026-03-23 ops.jsonl --dry-run --db prod
 ```
 
 - `render` shows the transcript a segment at a time, with the onset of every
@@ -29,22 +28,12 @@ pnpm transcript apply gbos-2026-03-23 ops.jsonl --dry-run --db prod
 - `check` reports what the [meeting rules](../core/README.md#rules) find.
 - `fix` applies the rules' fixes: it drops fillers and stutters, writes
   numbers the house way, and so on.
-- `apply` applies an ops file: `split`, `label`, `replace`, `insert` and
-  `replace_all` change the transcript, `person` sets a person's slug, name or
-  bio, and `meeting` sets the meeting's slug or title. `pnpm transcript apply
-  --help` describes each op. Keep the ops files, or the script that writes
-  them, so a batch can be fixed and re-run.
+  `fix` runs in one transaction holding the meeting's row lock, then checks
+  the result against the rules. A fix that adds a rule error isn't saved unless
+  you pass `--allow-errors`; `--dry-run` saves nothing.
 
-`fix` and `apply` run in one transaction holding the meeting's row lock, then
-check the result against the rules. An edit that adds a rule error isn't
-saved unless you pass `--allow-errors`; `--dry-run` saves nothing.
-
-Speakers are written as labels: `unlabeled`, `segmented:spk-<n>`,
-`identified:<slug>`, or `person:<id>` for a person with no slug yet. A
-segment can only name a person who has a row in `people`, and every person has
-a voiceprint, which needs audio. So a voice nobody has a row for stays a
-speaker number. To make an anonymous person a known person, give them a slug
-with a `person` op.
+Speakers are shown as labels: `unlabeled`, `segmented:spk-<n>`,
+`identified:<slug>`, or `person:<id>` for a person with no slug yet.
 
 ## Golden meetings
 

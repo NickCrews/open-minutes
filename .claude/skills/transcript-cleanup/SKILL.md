@@ -7,39 +7,35 @@ description: Fix who-said-what, misheard words and people in an Open Minutes mee
 
 ## Tools
 
-Meetings are edited in the database with `pnpm transcript`. `--db` names the
-database: `prod` for production.
+`pnpm transcript` reads a meeting in the database and applies the rules'
+fixes to it. `--db` names the database: `prod` for production.
 
 ```sh
 pnpm transcript render <meeting> --from H:MM:SS --to H:MM:SS --db prod
 pnpm transcript words <meeting> <from> <to> --db prod
 pnpm transcript stats <meeting> --db prod
 pnpm transcript check <meeting> --db prod
-pnpm transcript apply <meeting> ops.jsonl --dry-run --db prod
-pnpm transcript apply <meeting> ops.jsonl --db prod
+pnpm transcript fix <meeting> --dry-run --db prod
 pnpm transcript fix <meeting> --db prod
 ```
 
 `<meeting>` is a slug or an id. `render` shows the transcript a segment at a
 time with the onset of every sentence, `words` lists each word's onset, and
-`stats` lists who speaks how much, with each person's id and name. `apply`
-takes a file of `split`, `label`, `replace`, `insert` (for words the
-transcript is missing), `replace_all`, `person` and `meeting` ops; `pnpm
-transcript apply --help` describes them. Keep the ops files, or the script
-that generates them, so a batch can be fixed and re-run. Try each batch with
-`--dry-run` first.
+`stats` lists who speaks how much, with each person's id and name.
 
-`apply` and `fix` check the result against the rules in
-`packages/core/src/rules/` and don't save an edit that adds an error. Read
-every warning it reports and fix it unless the data is right as it is.
-Transcripts carry no fillers ("um", "uh") or stutters ("the the"): `pnpm
-transcript fix` removes them, so never type one back in. `pnpm transcript
-check` lists everything the rules find in a meeting.
+`pnpm transcript check` lists everything the rules in
+`packages/core/src/rules/` find in a meeting. Read every warning and decide
+whether the data is right as it is. Transcripts carry no fillers ("um",
+"uh") or stutters ("the the"): `pnpm transcript fix` removes them, along
+with whatever else the rules can fix on their own, and doesn't save a fix
+that adds an error.
+
+These tools don't relabel speakers, split segments or change words. Work out
+those changes by the rules below, and give them in your report.
 
 A speaker label is `identified:<slug>` for a known person, `person:<id>` for
 a person with no slug yet, `segmented:spk-<n>` or `unlabeled`. A label can
-only name someone with a row in the database. To make an anonymous person
-known, give them a slug, name and bio with a `person` op, following the
+only name someone with a row in the database. Name people following the
 `people-records` skill.
 
 ## Rules
@@ -92,7 +88,7 @@ known, give them a slug, name and bio with a `person` op, following the
 6. **Choose the right kind of label.** A known person is
    `identified:<slug>`, their stable ID across meetings. A person nobody has
    given a slug yet is `person:<id>`; once you have evidence of who they
-   are, give them a slug with a `person` op. A speaker number
+   are, give them a slug, name and bio. A speaker number
    (`segmented:spk-<n>`) is a voice within one meeting only. `unlabeled`
    means unknown. Leave a one-off speaker on a speaker number. A
    split-out voice with no name gets a speaker number not yet used in that

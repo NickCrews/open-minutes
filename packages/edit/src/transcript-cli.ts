@@ -1,18 +1,21 @@
 #!/usr/bin/env vpx
 // Read and edit a meeting's transcript in a database, behind the root
 // `pnpm transcript` script. See this package's README.
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import process from "node:process";
 import { defineCommand, runMain } from "citty";
+import { parseClock } from "@open-minutes/core/clock";
 import { getDb } from "@open-minutes/db";
-import { type EditResult, applyOps, fixRules } from "./edit";
+import { type EditResult, fixRules } from "./edit";
 import { findMeetingId, loadMeeting } from "./meeting";
-import { OPS_HELP, parseOps, parseTime } from "./ops";
 import { formatIssue, meetingIssues, render, stats, wordList } from "./view";
 
-// pnpm runs this from the package directory; paths are the caller's.
-const CWD = process.env.INIT_CWD ?? process.cwd();
+/** "H:MM:SS.ss" as seconds; throws if malformed. */
+function parseTime(text: string): number {
+  const secs = parseClock(text);
+  if (secs === null)
+    throw new Error(`bad time ${JSON.stringify(text)} (want H:MM:SS.ss)`);
+  return secs;
+}
 
 const common = {
   meeting: {
@@ -162,33 +165,6 @@ const fixCmd = defineCommand({
     }),
 });
 
-const applyCmd = defineCommand({
-  meta: {
-    name: "apply",
-    description: `Apply an ops file, then the rules check it; one that adds errors isn't saved.\n\n${OPS_HELP}`,
-  },
-  args: {
-    ...common,
-    ops: {
-      type: "positional",
-      required: true,
-      description: "The ops file (JSONL)",
-    },
-    ...editArgs,
-  },
-  run: ({ args }) =>
-    withDb(args.db, async (db) => {
-      const id = await findMeetingId(db, args.meeting);
-      const ops = parseOps(readFileSync(resolve(CWD, args.ops), "utf8"));
-      report(
-        await applyOps(db, id, ops, {
-          dryRun: args["dry-run"],
-          allowErrors: args["allow-errors"],
-        }),
-      );
-    }),
-});
-
 const main = defineCommand({
   meta: {
     name: "transcript",
@@ -200,7 +176,6 @@ const main = defineCommand({
     stats: statsCmd,
     check: checkCmd,
     fix: fixCmd,
-    apply: applyCmd,
   },
 });
 

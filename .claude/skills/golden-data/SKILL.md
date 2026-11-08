@@ -34,11 +34,10 @@ are the exception, and are edited by hand.
 
 Export refuses a meeting it can't write, and lists why:
 
-- The meeting needs a slug, `<body>-<date>` (eg `gbos-2026-03-23`). Set it
-  with a `{"op":"meeting","slug":"..."}` op.
+- The meeting needs a slug, `<body>-<date>` (eg `gbos-2026-03-23`).
 - Everyone it names needs a slug and a name. A person with no slug yet
-  (`person:<id>`) needs one from a `person` op, or their segments relabelled
-  with a speaker number.
+  (`person:<id>`) needs one, or their segments relabelled with a speaker
+  number.
 
 ## Adding a golden meeting
 
