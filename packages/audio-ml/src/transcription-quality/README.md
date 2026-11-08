@@ -33,4 +33,4 @@ and `RTF=` lines before and after a change.
 The goldens are the reference, so a word the goldens are missing counts
 against a transcriber that hears it. When the north star shows a stretch the
 transcriber hears and the golden doesn't have, fix the golden (see the
-`transcript-cleanup` skill) before reading the WER.
+`golden-data` skill) before reading the WER.

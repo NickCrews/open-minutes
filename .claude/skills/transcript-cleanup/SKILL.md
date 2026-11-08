@@ -1,24 +1,23 @@
 ---
 name: transcript-cleanup
-description: Fix who-said-what, people, and chapters in an Open Minutes meeting, in the database, and export golden fixtures from it. Use when correcting speaker labels, splitting or merging segments, fixing misheard words, naming people, or changing a golden meeting in packages/datasets/datums/.
+description: Fix who-said-what, misheard words and people in an Open Minutes meeting's transcript, in the database. Use when correcting speaker labels, splitting or merging segments, fixing misheard words or numbers, or naming the people who speak.
 ---
 
 # Transcript cleanup
 
 ## Tools
 
-Meetings are edited in the database, and the golden fixtures
-(`packages/datasets/datums/`) are exported from production. Don't edit a
-golden file by hand: edit the meeting in production, then export it.
+Meetings are edited in the database with `pnpm transcript`. `--db` names the
+database: `prod` for production.
 
 ```sh
 pnpm transcript render <meeting> --from H:MM:SS --to H:MM:SS --db prod
 pnpm transcript words <meeting> <from> <to> --db prod
 pnpm transcript stats <meeting> --db prod
+pnpm transcript check <meeting> --db prod
 pnpm transcript apply <meeting> ops.jsonl --dry-run --db prod
 pnpm transcript apply <meeting> ops.jsonl --db prod
 pnpm transcript fix <meeting> --db prod
-pnpm goldens export <meeting> --db prod
 ```
 
 `<meeting>` is a slug or an id. `render` shows the transcript a segment at a
@@ -41,7 +40,7 @@ A speaker label is `identified:<slug>` for a known person, `person:<id>` for
 a person with no slug yet, `segmented:spk-<n>` or `unlabeled`. A label can
 only name someone with a row in the database. To make an anonymous person
 known, give them a slug, name and bio with a `person` op, following the
-`people-records` skill; export writes them to `people.jsonl`.
+`people-records` skill.
 
 ## Rules
 
@@ -91,38 +90,36 @@ known, give them a slug, name and bio with a `person` op, following the
    chief, or a member, a staffer and a presenter. Music before a meeting or
    during a break can also get its own cluster; leave it alone.
 6. **Choose the right kind of label.** A known person is
-   `identified:<slug>`, their stable ID across meetings and fixtures. A
-   speaker number (`segmented:spk-<n>`) is a voice within one meeting only.
-   A person with no slug (`person:<id>`) can't be exported to a golden:
-   give them a slug, or relabel their segments with a speaker number.
-   `unlabeled` means unknown. Leave a one-off speaker on a speaker number. A
+   `identified:<slug>`, their stable ID across meetings. A person nobody has
+   given a slug yet is `person:<id>`; once you have evidence of who they
+   are, give them a slug with a `person` op. A speaker number
+   (`segmented:spk-<n>`) is a voice within one meeting only. `unlabeled`
+   means unknown. Leave a one-off speaker on a speaker number. A
    split-out voice with no name gets a speaker number not yet used in that
    meeting.
 7. **Don't untangle what needs the audio.** If one label seems to cover two
    voices and the text doesn't show which is which, fix only the segments with
    evidence and report the rest.
 8. **Fix misheard words when the intended word is clear:** place names,
-   bodies and acronyms, people's names (in the `people.jsonl` spelling), and
+   bodies and acronyms, people's names (spelled as their person's name is), and
    plain mishearings ("low cloud" → "roll call"). Keep the fix local ("good
    wood" → "Girdwood" is one word), don't rewrite grammar, and leave a number
    or a name alone when you aren't sure. `packages/glossary/src/glossaries.ts`
    lists the local words of each region and how speech recognition mishears
    them.
-9. **Write numbers the house way.** Goldens write numbers, times, money and
-   dates as `packages/core/src/rules/numbers.ts` describes:
+9. **Write numbers the house way.** Transcripts write numbers, times, money
+   and dates as `packages/core/src/rules/numbers.ts` describes:
    "7:30 p.m.", "$36,000", "3.79%", "March 19", "passes 5-0", and numerals
-   from 10 up. A body opts into body-specific rules for its own identifiers
-   with `_rules` in `bodies.jsonl`; Anchorage's bodies write "AO
+   from 10 up. Some bodies follow rules of their own for their identifiers,
+   which `pnpm transcript check` applies; Anchorage's bodies write "AO
    2026-23", "AO 2025-144(S)", "AM 142-2026", "AMC 21.05.040G.2", "item
    10.B.1" and "R-4". Collapse a spoken number into one word with one
    `replace` op per number ("twenty twenty six dash twenty" → "2026-20"),
    and write only what was said: a number you can't make out stays as heard.
    The rules report the rest.
 10. **Keep chapter text in step with labels.** After relabelling, check that
-    chapter titles and summaries name the right people. Chapters follow
-    `docs/chapters.md`, and export writes them to the meeting's
-    `chapters.json`, with `"reviewed_by_human": false` unless a human checked
-    them.
+    the meeting's chapter titles and summaries name the right people, and
+    report any that don't. Chapters follow `docs/chapters.md`.
 
 ## Report
 
