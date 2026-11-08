@@ -45,8 +45,8 @@ after review.
 
 ### Checking
 
-The harness computes after in a transaction on main that it always rolls
-back:
+The harness computes after in a transaction that it always rolls back, on a
+branch of main made for the check (see [Branches](#branches)):
 
 1. `BEGIN`
 2. Run `migration.sql`.
@@ -58,11 +58,12 @@ back:
 `om.run(sql)`, a plpgsql function that `EXECUTE`s it, where `COMMIT` and
 `ROLLBACK` raise instead of ending the transaction.
 
-This needs nothing but Postgres, so it works on any provider, locally and in
-tests. A check holds locks on the rows it touches until it rolls back;
-changesets are scoped to one meeting and checks take seconds, so that is
-acceptable on production. Only the harness holds a writing connection; the
-agent's own access to the database is read-only.
+The branch is made from main at the start of the check, so its before is
+main's current state, and nothing the check does reaches main: not its locks,
+not its CPU, not the sequence values it draws. Locally and in tests, where
+copying a database is cheap only while nothing is connected to it, the
+transaction can run on main itself, since a rolled-back transaction leaves no
+data behind.
 
 ### Row diff
 
@@ -100,53 +101,52 @@ the harness canonicalizes each:
 
 Two row diffs match when their canonical forms are equal.
 
+### Branches
+
+A branch is a copy of a whole database, made from main or from another branch,
+that can be reset to how it was made and thrown away. On Neon, main's host, a
+branch is copy-on-write: it takes about a second however large main is, and
+costs storage only for what changes on it. Locally and in tests, a branch is a
+`CREATE DATABASE ... TEMPLATE` copy, as test databases and per-git-branch
+databases are today. One package covers both (see
+[Implementation plan](#implementation-plan)).
+
+The harness uses branches three ways:
+
+- **Playgrounds**, for the agent to explore and try edits in.
+- **Check branches**, made from main for each check and reset before the
+  next.
+- **PR previews**, as the preview workflow already does.
+
 ### Playgrounds
 
-A playground is a throwaway database the agent owns outright. The agent has
-total freedom in its playgrounds and makes as many as it likes. It starts in
-one, `proposal`, holding the meetings its task is about. These are its
-primitives:
+A playground is a branch the agent has total freedom in. It holds the whole
+database, so the agent can ask questions across meetings, such as where else
+someone named Bob Jones appears. The agent starts with one, `proposal`, made
+from main when the session starts. These are its primitives:
 
-- **SQL.** `psql` on any playground, running any statement as the
-  playground's owner. Main is read-only.
+- **SQL.** `sql [--db <playground>] '<query>'` runs any statement on a
+  playground, as its owner. `sql --db main` is read-only.
 - **Rules.** `om check [--db <playground>] [--meeting <slug>]...` checks
-  meetings against the rules and prints the violations. Without `--db` it
-  checks main.
+  meetings against the rules and prints the violations.
 - **Playgrounds.**
-  - `om playground new <name> [--meeting <slug>]... [--from <playground>]
-    [--full]` makes one. By default it holds the named meetings with their
-    recordings, segments and chapters, plus all of `people`, `bodies` and
-    `jurisdictions`, copied from main with `COPY` over a read-only
-    connection, in foreign key order. Ids are kept, and the sequences
-    continue from main's. `--from` branches another playground with
-    `CREATE DATABASE ... TEMPLATE`. `--full` copies all of main.
-  - `om playground reset <name>` puts it back as it was made, from a
-    template saved at creation.
-  - `om playground diff <name>` shows its row diff since creation. The
-    capture triggers come with the schema, and a database setting on each
-    playground makes them record every session's changes, not only
-    `changeset`'s.
-  - `om playground list` and `om playground rm <name>`. Playgrounds unused
-    for a day are dropped, and `pnpm db prune` lists the rest.
-- **Changesets.** `om changeset check [--db <playground>]` runs
-  `migration.sql` in a rolled-back transaction (see [Checking](#checking)),
-  against main by default, and prints the first failed assertion if any, else
-  a summary of the row diff and the change in rule violations (fixed and
-  introduced). `om changeset query '<sql>'` runs a query on the after state,
+  - `playground new <name> [--from <playground>]` makes a branch of main, or
+    of another playground.
+  - `playground reset <name>` puts it back as it was made.
+  - `playground diff <name>` shows its row diff since it was made. The
+    capture triggers come with the schema, and a setting on each playground
+    makes them record every session's changes, not only `changeset`'s.
+  - `playground list` and `playground rm <name>`.
+- **Changesets.** `changeset check` runs `migration.sql` on a check branch
+  (see [Checking](#checking)) and prints the first failed assertion if any,
+  else a summary of the row diff and the change in rule violations (fixed and
+  introduced). `changeset query '<sql>'` runs a query on the after state,
   inside the same rolled-back transaction.
+- **Web.** `web_search` and `web_fetch`, for context the database doesn't
+  have: who a person is, what a bill number refers to.
 
 A playground never feeds main: the product is `migration.sql`, checked
 against main.
-
-Playgrounds are databases on the same Postgres server as main, so they need
-no infrastructure beyond the server main already runs on. The harness's role
-needs `CREATEDB` there, and each playground is owned by its own role. A copy
-scoped to a meeting is small, takes well under a second whatever main's size,
-and needs only a read connection to main, so it works on any provider and
-while main is busy. `CREATE DATABASE ... TEMPLATE` can't copy main directly,
-because the source must have no other connections; `--full` copies from a
-snapshot of main that is refreshed when stale, or uses a Neon branch where
-main is on Neon.
 
 ### Agent UX
 
@@ -156,17 +156,18 @@ primitives above. Its product is `migration.sql`, and optionally
 
 What we expect an agent to do with them:
 
-1. Read the meeting in `proposal` and check it against the rules.
+1. Read the meeting in `proposal`, check it against the rules, and look up
+   people and bills it mentions, in the database and on the web.
 2. Try edits there with SQL, checking the rules as it goes. Reset `proposal`
    when an approach fails, or branch it with `--from` to try two side by
    side.
 3. Write the edits that worked into `migration.sql`, using `om playground
    diff` to see what they changed.
-4. Run `om changeset check` against main until its assertions pass and it
-   introduces no violations, then propose it.
+4. Run `changeset check` until its assertions pass and it introduces no
+   violations, then propose it.
 
-The after state of `om changeset check` is always rebuilt from the file, so
-the file and the result can't drift apart.
+The after state of `changeset check` is always rebuilt from the file, so the
+file and the result can't drift apart.
 
 A changeset covers one meeting or one task, so review stays manageable and
 conflicts stay rare.
@@ -178,8 +179,8 @@ transcript with relabelled segments highlighted) rather than as SQL, alongside
 the change in rule violations and the rationale. Approving applies the changeset
 at once, against the row diff the reviewer saw.
 
-A reviewer agent has the same read-only access as the author: main, and
-`om changeset query` on after. It doesn't see the author's session, so it
+A reviewer agent has the same primitives as the author, with its own
+playgrounds. It doesn't see the author's session, so it
 judges the edits rather than the argument for them, and text in the meeting
 that steered the author doesn't reach it through the author's reasoning. It
 uses a different model or prompt from the author, so the two share fewer
@@ -247,15 +248,23 @@ The agent writes ordinary SQL and never handles ids. A new row is referred to
 however is natural: a CTE over `INSERT ... RETURNING`, a lookup by slug, or
 `currval`.
 
-Every check and every apply runs on main, so every new row's id comes from
-main's sequences, and the references within one run are consistent. Across
-runs a new row gets a different id, which the row diff comparison factors out
-(see [Row diff](#row-diff)).
+Every run draws new rows' ids from the sequences of the database it runs on,
+so the references within one run are consistent. Across runs a new row gets a
+different id, which the row diff comparison factors out (see
+[Row diff](#row-diff)).
 
-Sequences are not transactional: an id drawn in a rolled-back check is used
-up and never belongs to a committed row. So if an agent copies a new row's id
-out of a check's output into `migration.sql`, the next check fails on the
-foreign key. Every column that holds another row's id has a foreign key.
+Before each check, the harness advances every sequence on the check branch by
+a random amount. So if an agent copies a new row's id out of a check's output
+into `migration.sql`, the next check gives that row a different id and fails
+on the foreign key. Every column that holds another row's id has a foreign
+key. (Where a check runs on main itself, sequences need no help: an id drawn
+in a rolled-back transaction is used up and never belongs to a committed
+row.)
+
+A check also confirms that the run drew exactly one sequence value per
+inserted row. Without that, a changeset could hide
+`SELECT nextval(...) FROM generate_series(...)`, which a row diff doesn't
+show, and use up main's ids when applied.
 
 [Row identity research](#row-identity-research) covers how other systems
 handle this, and a prototype that tests it.
@@ -291,6 +300,66 @@ draft → proposed → applied. A proposed changeset goes back to draft when the
 reviewer asks for changes or it conflicts on apply. It can instead end
 rejected or superseded.
 
+### Harness
+
+The agent runs in [pi](https://github.com/earendil-works/pi)
+(`@earendil-works/pi-coding-agent`), embedded with `createAgentSession` in a
+host process. The host holds every credential: the Neon API key, the model's
+API key, and the connection strings for main and the session's branches.
+
+- **Sandbox.** pi's `bash`, `read`, `write` and `edit` tools run against
+  [just-bash](https://github.com/vercel-labs/just-bash), a bash interpreter
+  written in TypeScript with its own in-memory filesystem, wired in through
+  pi's pluggable tool operations (`BashOperations`, `ReadOperations` and so
+  on). The agent's commands start no processes and can't touch the host's
+  files. Its workspace (`migration.sql`, `rationale.md`, notes) lives in that
+  filesystem, and the host saves it when the session ends. just-bash brings
+  the text tools: `grep`, `sed`, `awk`, `jq` and more.
+- **Primitives as commands.** `sql`, `om check`, `playground` and `changeset`
+  are just-bash custom commands (`defineCommand`), which run in the host. They
+  hold the branch connections, so the agent uses databases without ever
+  seeing a credential.
+- **Web as pi tools.** `web_search` and `web_fetch`, registered with
+  `pi.registerTool`, also run in the host.
+- **Propose.** `propose` saves the workspace, runs a last check, stores the
+  changeset, and ends the session.
+- **Limits.** A `tool_call` hook enforces budgets (turns, tokens, checks,
+  playgrounds, wall-clock time) and logs every call.
+- **Teardown.** The host deletes the session's branches when it ends. Neon
+  can't branch from a branch that has an expiry time, so playgrounds don't
+  get one; instead a cleanup job deletes any `agent/*` branch older than a
+  day, for sessions that crash.
+- **Branch budget.** A session uses `proposal`, a check branch, and at most
+  two more playgrounds. Neon's free plan allows 10 branches per project,
+  shared with main and PR previews, so one or two sessions can run at a
+  time.
+- **Transcript.** pi's session file is kept with the changeset for audit. The
+  reviewer doesn't see it.
+
+The reviewer is a second session on the same harness, with comment, approve
+and request-changes tools in place of `propose`.
+
+### Threat model
+
+Everything in the database is public: the transcripts, and the voices, come
+from public recordings. So reading and exfiltration aren't risks. The risk is
+bogus writes reaching main, from an agent steered by text in a meeting or on
+a web page, or one that is simply wrong.
+
+- Only an apply writes main. It applies only reviewed changesets, as the
+  `changeset` role, with lock and statement timeouts.
+- Checks, playgrounds and the agent's own SQL run on branches, so nothing
+  short of an apply can lock main, load it, or use up its ids.
+- The agent holds no credentials. Neon gives a child branch its parent's
+  roles and passwords unless the parent is protected (a paid feature), so a
+  branch's owner password also opens main. The host keeps it.
+- The realistic worst case is a false or defamatory change, such as a wrong
+  name or bio, that the reviewer agent misses. Changes to people's names and
+  bios, and large deletes, need a person's approval.
+- Backups restore main after a bogus write that gets through.
+- Not done for now: protecting main's Neon branch (a paid plan), and an IP
+  allowlist on the project.
+
 ### Alternatives considered
 
 - **Commit each edit as the agent makes it.** No review, no unit of work, no
@@ -300,9 +369,16 @@ rejected or superseded.
   (LIKE ...)` copies neither foreign keys nor triggers, so the harness would
   recreate them per schema, and playground rows would land in production's
   backups.
-- **Check on a branch instead of main.** A branch drifts from main as soon
-  as it's made, so a check there doesn't say what applying would do. Branches
-  are for exploring (see [Playgrounds](#playgrounds)); checks run on main.
+- **Check in the agent's playground.** The playground drifts from main as
+  the agent works in it, so a check there doesn't say what applying would do.
+  A check branch is made from main for each check.
+- **Playgrounds holding only the task's meetings**, copied into PGlite or a
+  database on main's server. Cheaper per playground, but the agent can't ask
+  questions across meetings.
+- **A container for the agent's tools.** Isolates real processes, but the
+  agent needs no binaries beyond SQL, the rules and text tools, which an
+  in-process sandbox provides (see [Harness](#harness)) with nothing to
+  provision.
 - **An approved state between proposed and applied.** Applying takes as long
   as a check, so there is nothing to wait for between approving and applying.
 - **UUID keys.** They help when ids are minted in several disconnected
@@ -325,6 +401,59 @@ rejected or superseded.
 - **Postgres functions for edit operations** (`SELECT om.split_segment(...)`).
   Replays well and reads clearly, but duplicates domain logic in plpgsql. Worth
   revisiting if replay conflicts turn out to be common.
+
+## Implementation plan
+
+Each step can merge on its own and is useful before the next one exists.
+
+1. **Branches package.** Move branching out of `packages/db` into
+   `packages/dbranch` (the name its CLI and `dbranch.config.ts` already use),
+   behind one interface: make a branch from main or from another branch,
+   get its connection URL, reset it, delete it, list branches by prefix. Two
+   backends: local (`CREATE DATABASE ... TEMPLATE` on the docker-compose
+   server, as `ensure.ts` and `testing/` do today) and Neon (its API, with a
+   project-scoped key). Move test databases and per-git-branch databases onto
+   the local backend, and the PR preview workflow onto the Neon backend
+   through the CLI instead of inline `neonctl`. Nothing changes for users;
+   done when CI and previews behave as before.
+2. **Changeset schema.** A migration adding the `om` schema: `capture_log`
+   and its trigger on every data table, `om.run`, `om.assert` with its own
+   SQLSTATE, the `changesets` table, and the `changeset` group role with its
+   column grants. The login role that applies changesets is created outside
+   migrations, since its password can't live in one. Tests: every data table
+   has the trigger, every column holding an id has a foreign key, and the
+   role can't write ids, generated columns or default-filled columns, or get
+   around its limits (ported from the prototype's `mistakes.py`). Inert on
+   main: nothing is logged unless a changeset session writes.
+3. **Changeset library.** `packages/changesets`: check a `migration.sql` on a
+   branch (random sequence offsets, sequence draws counted, row diff read),
+   canonicalize and match row diffs, and apply to main. The prototype's
+   scenarios become its test suite, on test databases.
+4. **Rules on a database.** Load a meeting from the database into the shape
+   `packages/core/src/rules/` checks, `om check [--db]` to print violations,
+   and a function that compares violations between two databases. Useful
+   alone, to check ingested meetings and not only golden files.
+5. **Changesets for people.** `pnpm changeset check <file>` and
+   `pnpm changeset apply <file>`, which prints the row diff and asks for
+   confirmation. A person can write and apply a data fix through the same
+   path agents will use, before any agent exists. Decide here where proposed
+   changesets live: a table in main, or files reviewed in GitHub pull
+   requests.
+6. **Agent harness.** `packages/agent`: the pi session, the just-bash
+   sandbox, the custom commands, the web tools, budgets, teardown and
+   `propose`. Runs against the local backend first, as
+   `pnpm agent run --meeting <slug>`. Rewrites the transcript-cleanup and
+   people-records skills for the database.
+7. **Reviewer.** The second session, the review loop with its round limit,
+   splitting disputed changes into their own changeset, and the human gate
+   for names, bios and large deletes.
+8. **Production.** A workflow that runs sessions against Neon within the
+   branch budget, manually dispatched at first; the cleanup job for `agent/*`
+   branches; applying on approval with the apply role's credentials; and a
+   tested restore from backup before the first apply.
+
+Steps 1 and 2 don't depend on each other, and step 4 depends on neither. Step
+3 needs 1 and 2; steps 5 and 6 need 3 and 4.
 
 ## Row identity research
 
