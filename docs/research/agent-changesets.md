@@ -115,7 +115,7 @@ primitives:
 - **Playgrounds.**
   - `om playground new <name> [--meeting <slug>]... [--from <playground>]
     [--full]` makes one. By default it holds the named meetings with their
-    segments and chapters, plus all of `people`, `bodies` and
+    recordings, segments and chapters, plus all of `people`, `bodies` and
     `jurisdictions`, copied from main with `COPY` over a read-only
     connection, in foreign key order. Ids are kept, and the sequences
     continue from main's. `--from` branches another playground with
