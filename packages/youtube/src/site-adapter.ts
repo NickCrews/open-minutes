@@ -6,10 +6,11 @@ import {
   metadataFromJson,
 } from "@open-minutes/core/site";
 import {
+  type Egress,
   EgressError,
   type EgressOptions,
+  egress,
   ensureYtDlpInstalled,
-  runWithEgress,
 } from "@open-minutes/ytdlp";
 import { decodeOpusWebm, encodeOpusWebm } from "@open-minutes/codecs";
 import {
@@ -23,15 +24,16 @@ import { type FetchedVideo, fetchVideoViaWorkflow } from "./workflow-fetch";
 /** How {@link youtube} reaches YouTube through yt-dlp. */
 export interface YouTubeOptions {
   /**
-   * The routes yt-dlp tries (see `runWithEgress` in `@open-minutes/ytdlp`).
-   * Default: `YOUTUBE_EGRESS`, else direct, then WARP, then Tor.
+   * The routes yt-dlp tries and how they're set up (see `@open-minutes/ytdlp`):
+   * - `EgressOptions`, such as `{ routes, install }`: each yt-dlp run starts
+   *   and stops its own daemons.
+   * - An `Egress` manager from `egress()`: every run shares its routes and
+   *   daemons, for a process that gets many videos. The caller closes it.
+   *
+   * Default: `{}`, so `YOUTUBE_EGRESS`, else direct, then WARP, then Tor, and
+   * nothing installed.
    */
-  routes?: EgressOptions["routes"];
-  /**
-   * When set, WARP and Tor are installed if a route needs them and this
-   * machine can (see `install` in `@open-minutes/ytdlp`'s `EgressOptions`).
-   */
-  installEgress?: EgressOptions["install"];
+  egress?: Egress | EgressOptions;
 }
 
 /**
@@ -47,12 +49,12 @@ async function ytDlp(
   }: { beforeAttempt?: () => Promise<void>; signal?: AbortSignal } = {},
 ) {
   await ensureYtDlpInstalled();
-  return runWithEgress(args, {
-    routes: options.routes,
-    install: options.installEgress,
-    beforeAttempt,
-    signal,
-  });
+  const manager = egress(options.egress);
+  try {
+    return await manager.run(args, { beforeAttempt, signal });
+  } finally {
+    await manager.close();
+  }
 }
 
 async function getMetadata(
@@ -126,7 +128,7 @@ export type YouTube = SiteAdapter & { readonly site: "youtube" };
 
 /**
  * A {@link YouTube} that gets each video the first way that works:
- * 1. yt-dlp through the egress routes (`options.routes`, else
+ * 1. yt-dlp through the egress routes (`options.egress`, else
  *    `YOUTUBE_EGRESS`, else direct, then WARP, then Tor).
  * 2. The fetch-youtube-audio workflow (see {@link fetchVideoViaWorkflow}),
  *    when YouTube refuses every route, if `YOUTUBE_AUDIO_DISPATCH_TOKEN` is
@@ -136,9 +138,11 @@ export type YouTube = SiteAdapter & { readonly site: "youtube" };
  * in WebM at 24 kbps (see `encodeOpusWebm` in `@open-minutes/codecs`).
  *
  * Any other error, such as a private or removed video, is thrown at once.
- * Does no I/O until a method is called.
+ * Does no I/O until a method is called. Given a {@link YouTube} instead of
+ * options, returns it, so code handed either can call `youtube()`.
  */
-export function youtube(options: YouTubeOptions = {}): YouTube {
+export function youtube(options: YouTube | YouTubeOptions = {}): YouTube {
+  if ("site" in options) return options;
   // One workflow run per video, however many of its files are asked for.
   const fetched = new Map<string, Promise<FetchedVideo>>();
   const fetchViaWorkflow = (id: string, blocked: EgressError) => {

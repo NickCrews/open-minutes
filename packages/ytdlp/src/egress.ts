@@ -102,8 +102,10 @@ export interface EgressResult {
 export interface Egress {
   /**
    * Runs yt-dlp with `args` through each route in turn, as
-   * {@link runWithEgress} does. Daemons stay up between runs, and a route
-   * found blocked or unavailable is skipped until {@link Egress.close}.
+   * {@link runWithEgress} does. Daemons stay up between runs. A `direct` or
+   * proxy URL route found blocked, and a route that can't run here, are
+   * skipped until {@link Egress.close}. A WARP or Tor route found blocked is
+   * tried again by later runs, starting on a new exit.
    */
   run(args: readonly string[], options?: RunOptions): Promise<EgressResult>;
   /** Stops the daemons this started and releases the machine's lock. */
@@ -139,8 +141,23 @@ function refusal(error: YtDlpError): string {
  * egress state directory, held until {@link Egress.close}, so only one
  * manager on a machine starts or rotates WARP and Tor: rotating an exit
  * changes it for everyone using it.
+ *
+ * Given a manager instead of options, returns one that runs through it and
+ * whose `close()` leaves it open: whoever created a manager closes it. So
+ * code handed either can call `egress()` and always close what it gets.
  */
-export function egress({
+export function egress(options: Egress | EgressOptions = {}): Egress {
+  if (isManager(options)) {
+    return { run: (args, o) => options.run(args, o), close: async () => {} };
+  }
+  return newManager(options);
+}
+
+function isManager(egress: Egress | EgressOptions): egress is Egress {
+  return typeof (egress as Partial<Egress>).run === "function";
+}
+
+function newManager({
   routes = routesFromEnv(),
   lockTimeoutMs = 30 * 60_000,
   log = (line) => console.error(line),
@@ -149,6 +166,8 @@ export function egress({
   const paths: EgressPaths = egressPaths();
   /** Routes that didn't work, skipped until close(). */
   const skipped = new Map<Route, RouteOutcome>();
+  /** Daemons whose current exit was refused, so their next run rotates first. */
+  const refusedExit = new Set<Service>();
   /** The proxy URL of each daemon that's up. */
   const proxies = new Map<Service, string>();
   /** Whether up.sh ran, so down.sh has something to stop. */
@@ -273,7 +292,7 @@ export function egress({
         let proxy = started;
         let last: YtDlpError | undefined;
         for (let n = 1; n <= DAEMON_ATTEMPTS; n++) {
-          if (n > 1) {
+          if (n > 1 || refusedExit.has(route)) {
             const next = await newExit(route);
             if (!next) {
               log(`yt-dlp: got no new ${route} exit; ${then}`);
@@ -282,7 +301,11 @@ export function egress({
             proxy = next;
           }
           const result = await attempt(proxy);
-          if (!(result instanceof YtDlpError)) return { ...result, route };
+          if (!(result instanceof YtDlpError)) {
+            refusedExit.delete(route);
+            return { ...result, route };
+          }
+          refusedExit.add(route);
           last = result;
           const retry =
             n < DAEMON_ATTEMPTS ? `trying a new ${route} exit` : then;
@@ -290,8 +313,9 @@ export function egress({
             `yt-dlp: ${route} exit ${n} of ${DAEMON_ATTEMPTS} was refused; ${retry}: ${refusal(result)}`,
           );
         }
-        // The first attempt always runs, so `last` is set.
-        return blocked(last!);
+        if (last) return blocked(last);
+        // Rotating failed before any attempt; newExit logged why.
+        return { route, outcome: "blocked", error: `got no new ${route} exit` };
       }
 
       const outcomes: RouteOutcome[] = [];
@@ -303,7 +327,9 @@ export function egress({
           : "no routes left, so this request fails";
         const outcome = skipped.get(route) ?? (await tryRoute(route, then));
         if ("stdout" in outcome) return outcome;
-        skipped.set(route, outcome);
+        if (!(isService(route) && outcome.outcome === "blocked")) {
+          skipped.set(route, outcome);
+        }
         outcomes.push(outcome);
       }
       throw new EgressError(outcomes);

@@ -39,7 +39,11 @@ attempts: its first exit, then up to two new ones (a new WARP registration,
 which often keeps the same exit IP, or a new Tor circuit). Proxied attempts
 pass `--retries 2 --fragment-retries 2`, since a new exit is the better retry.
 `runWithEgress` stops what it started before returning; an `egress()`
-manager keeps them up, and skips a route found blocked, until `close()`.
+manager keeps them up until `close()`. `egress()` also takes a manager, and
+returns one that runs through it and whose `close()` leaves it open, so code
+handed either options or a manager can call `egress()` and close the result. A manager skips `direct` or a proxy URL
+once it's found blocked, until `close()`. It tries a blocked `warp` or `tor`
+again on later runs, starting on a new exit.
 
 A route that can't run here is skipped: WARP needs Linux, root (or
 passwordless sudo) and UDP; Tor needs to be unpacked by `installWarpAndTor`

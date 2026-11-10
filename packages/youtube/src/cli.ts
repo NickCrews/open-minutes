@@ -5,7 +5,11 @@ import { copyFile, mkdir, readdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import process from "node:process";
 import { defineCommand, runMain } from "citty";
-import { egressPaths, parseRoutes } from "@open-minutes/ytdlp";
+import {
+  type EgressOptions,
+  egressPaths,
+  parseRoutes,
+} from "@open-minutes/ytdlp";
 import { metadataToJson } from "@open-minutes/core/site";
 import { type YouTubeOptions, youtube } from "./site-adapter";
 
@@ -64,9 +68,10 @@ const fetch = defineCommand({
     },
   },
   async run({ args }) {
-    const options: YouTubeOptions = {};
-    if (args.routes) options.routes = parseRoutes(args.routes);
-    if (args.install) options.installEgress = { debDir: args.debs };
+    const egress: EgressOptions = {};
+    if (args.routes) egress.routes = parseRoutes(args.routes);
+    if (args.install) egress.install = { debDir: args.debs };
+    const options: YouTubeOptions = { egress };
     let error: string | undefined;
     try {
       await mkdir(args.dir, { recursive: true });
