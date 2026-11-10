@@ -223,8 +223,7 @@ tests.
    diarization) alongside the recording, so reprocessing can
    restart from any stage?
 6. **Retention and takedowns.** Are there recordings we'd be asked to remove,
-   and what happens to transcripts if so? The recordings are public record,
-   and the store is publicly readable.
+   and what happens to transcripts if so?
 7. **Backups.** Is one provider enough for R12, or do we want a second copy?
 
 ## Prior work

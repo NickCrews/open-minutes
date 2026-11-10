@@ -1,16 +1,11 @@
 #!/usr/bin/env bash
-# Copies a Postgres database's public data into a new DuckDB file, for
+# Copies a Postgres database's data into a new DuckDB file, for
 # querying without Postgres; see skills/open-minutes-data/SKILL.md. The
 # export-duckdb workflow runs it nightly on production and publishes the file.
 # Usage: DATABASE_URL=postgres://... export-duckdb.sh <output .duckdb>
 #
 # Needs the duckdb CLI (`uvx --from duckdb-cli duckdb`, or pipx) on PATH. Only
 # reads the source: it's attached READ_ONLY.
-#
-# Everything in the database is public data (CONTRIBUTING.md, "All data is
-# public"). Tables are copied by name, so a new table stays out until someone
-# adds it here; columns about running the pipeline are left out because they
-# aren't useful to readers.
 set -euo pipefail
 out="$1"
 : "${DATABASE_URL:?DATABASE_URL must be set}"
