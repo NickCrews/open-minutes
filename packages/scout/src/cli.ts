@@ -79,7 +79,7 @@ const run = defineCommand({
     try {
       const report = await scout({
         db,
-        sites: siteAdapters({ egress: youtubeEgress }),
+        sites: siteAdapters({ youtube: { egress: youtubeEgress } }),
         listerFor,
         store: blobStore(),
         writer: blobStoreWriterFromEnv(process.env),

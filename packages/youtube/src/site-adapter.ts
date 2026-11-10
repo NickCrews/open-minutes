@@ -138,9 +138,11 @@ export type YouTube = SiteAdapter & { readonly site: "youtube" };
  * in WebM at 24 kbps (see `encodeOpusWebm` in `@open-minutes/codecs`).
  *
  * Any other error, such as a private or removed video, is thrown at once.
- * Does no I/O until a method is called.
+ * Does no I/O until a method is called. Given a {@link YouTube} instead of
+ * options, returns it, so code handed either can call `youtube()`.
  */
-export function youtube(options: YouTubeOptions = {}): YouTube {
+export function youtube(options: YouTube | YouTubeOptions = {}): YouTube {
+  if ("site" in options) return options;
   // One workflow run per video, however many of its files are asked for.
   const fetched = new Map<string, Promise<FetchedVideo>>();
   const fetchViaWorkflow = (id: string, blocked: EgressError) => {
