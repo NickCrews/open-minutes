@@ -6,7 +6,7 @@ import type {
 } from "@open-minutes/core/site";
 import { akleg, aklegSource } from "@open-minutes/akleg";
 import { youtube, youtubeSource } from "@open-minutes/youtube";
-import type { Egress } from "@open-minutes/ytdlp";
+import type { Egress, EgressOptions } from "@open-minutes/ytdlp";
 
 /** The `RecordingLister` for a body's meeting source. */
 export function listerFor(source: MeetingSource): RecordingLister {
@@ -21,13 +21,13 @@ export function listerFor(source: MeetingSource): RecordingLister {
 }
 
 /**
- * The adapter that reaches each site itself. With `egress`, every YouTube
- * request shares its routes and daemons; the caller closes it.
+ * The adapter that reaches each site itself. `egress` is YouTube's (see
+ * `YouTubeOptions`): options for routes set up per request, or a manager
+ * every request shares, which the caller closes.
  */
-export function siteAdapters({ egress }: { egress?: Egress } = {}): Record<
-  Site,
-  SiteAdapter
-> {
+export function siteAdapters({
+  egress,
+}: { egress?: Egress | EgressOptions } = {}): Record<Site, SiteAdapter> {
   return {
     youtube: youtube({ egress }),
     akleg: akleg(),
