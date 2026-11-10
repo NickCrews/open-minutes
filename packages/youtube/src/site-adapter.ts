@@ -24,22 +24,20 @@ import { type FetchedVideo, fetchVideoViaWorkflow } from "./workflow-fetch";
 /** How {@link youtube} reaches YouTube through yt-dlp. */
 export interface YouTubeOptions {
   /**
-   * The routes yt-dlp tries (see `runWithEgress` in `@open-minutes/ytdlp`).
-   * Default: `YOUTUBE_EGRESS`, else direct, then WARP, then Tor.
+   * The routes yt-dlp tries and how they're set up (see `@open-minutes/ytdlp`):
+   * - `EgressOptions`, such as `{ routes, install }`: each yt-dlp run starts
+   *   and stops its own daemons, as `runWithEgress` does.
+   * - An `Egress` manager from `egress()`: every run shares its routes and
+   *   daemons, for a process that gets many videos. The caller closes it.
+   *
+   * Default: `{}`, so `YOUTUBE_EGRESS`, else direct, then WARP, then Tor, and
+   * nothing installed.
    */
-  routes?: EgressOptions["routes"];
-  /**
-   * When set, WARP and Tor are installed if a route needs them and this
-   * machine can (see `install` in `@open-minutes/ytdlp`'s `EgressOptions`).
-   */
-  installEgress?: EgressOptions["install"];
-  /**
-   * A manager whose routes and daemons every yt-dlp run shares, for a
-   * process that gets many videos. The caller closes it. When set, `routes`
-   * and `installEgress` are the manager's to set and are ignored here.
-   * Without it, each run starts and stops its own daemons.
-   */
-  egress?: Egress;
+  egress?: Egress | EgressOptions;
+}
+
+function isManager(egress: Egress | EgressOptions): egress is Egress {
+  return typeof (egress as Partial<Egress>).run === "function";
 }
 
 /**
@@ -55,15 +53,9 @@ async function ytDlp(
   }: { beforeAttempt?: () => Promise<void>; signal?: AbortSignal } = {},
 ) {
   await ensureYtDlpInstalled();
-  if (options.egress) {
-    return options.egress.run(args, { beforeAttempt, signal });
-  }
-  return runWithEgress(args, {
-    routes: options.routes,
-    install: options.installEgress,
-    beforeAttempt,
-    signal,
-  });
+  const { egress = {} } = options;
+  if (isManager(egress)) return egress.run(args, { beforeAttempt, signal });
+  return runWithEgress(args, { ...egress, beforeAttempt, signal });
 }
 
 async function getMetadata(
@@ -137,7 +129,7 @@ export type YouTube = SiteAdapter & { readonly site: "youtube" };
 
 /**
  * A {@link YouTube} that gets each video the first way that works:
- * 1. yt-dlp through the egress routes (`options.routes`, else
+ * 1. yt-dlp through the egress routes (`options.egress`, else
  *    `YOUTUBE_EGRESS`, else direct, then WARP, then Tor).
  * 2. The fetch-youtube-audio workflow (see {@link fetchVideoViaWorkflow}),
  *    when YouTube refuses every route, if `YOUTUBE_AUDIO_DISPATCH_TOKEN` is
