@@ -27,7 +27,7 @@ what it is rather than by building its key:
   stores. The audio is `speech.webm`, 16 kHz mono Opus at 24 kbps. A YouTube video's are under `youtube/<video ID>/`; an
   akleg.gov meeting's under `akleg/<meeting ID without spaces or colons>/`
   (`HRES_2018-09-10_140000`).
-- `duckdbExport`: production's public data as one DuckDB file, which the
+- `duckdbExport`: production's data as one DuckDB file, which the
   [`export-duckdb`](../../.github/workflows/export-duckdb.yml) workflow
   writes nightly.
 

@@ -79,7 +79,7 @@ export interface BlobStore {
    */
   recording(site: Site, id: string): RecordingFiles;
   /**
-   * Production's public data as one DuckDB file, rebuilt nightly by the
+   * Production's data as one DuckDB file, rebuilt nightly by the
    * export-duckdb workflow (.github/workflows/export-duckdb.yml).
    */
   duckdbExport: BlobFile;
