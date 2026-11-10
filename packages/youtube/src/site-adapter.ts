@@ -9,8 +9,8 @@ import {
   type Egress,
   EgressError,
   type EgressOptions,
+  egress,
   ensureYtDlpInstalled,
-  runWithEgress,
 } from "@open-minutes/ytdlp";
 import { decodeOpusWebm, encodeOpusWebm } from "@open-minutes/codecs";
 import {
@@ -26,7 +26,7 @@ export interface YouTubeOptions {
   /**
    * The routes yt-dlp tries and how they're set up (see `@open-minutes/ytdlp`):
    * - `EgressOptions`, such as `{ routes, install }`: each yt-dlp run starts
-   *   and stops its own daemons, as `runWithEgress` does.
+   *   and stops its own daemons.
    * - An `Egress` manager from `egress()`: every run shares its routes and
    *   daemons, for a process that gets many videos. The caller closes it.
    *
@@ -34,10 +34,6 @@ export interface YouTubeOptions {
    * nothing installed.
    */
   egress?: Egress | EgressOptions;
-}
-
-function isManager(egress: Egress | EgressOptions): egress is Egress {
-  return typeof (egress as Partial<Egress>).run === "function";
 }
 
 /**
@@ -53,9 +49,12 @@ async function ytDlp(
   }: { beforeAttempt?: () => Promise<void>; signal?: AbortSignal } = {},
 ) {
   await ensureYtDlpInstalled();
-  const { egress = {} } = options;
-  if (isManager(egress)) return egress.run(args, { beforeAttempt, signal });
-  return runWithEgress(args, { ...egress, beforeAttempt, signal });
+  const manager = egress(options.egress);
+  try {
+    return await manager.run(args, { beforeAttempt, signal });
+  } finally {
+    await manager.close();
+  }
 }
 
 async function getMetadata(

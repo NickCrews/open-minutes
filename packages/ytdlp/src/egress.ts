@@ -141,8 +141,23 @@ function refusal(error: YtDlpError): string {
  * egress state directory, held until {@link Egress.close}, so only one
  * manager on a machine starts or rotates WARP and Tor: rotating an exit
  * changes it for everyone using it.
+ *
+ * Given a manager instead of options, returns one that runs through it and
+ * whose `close()` leaves it open: whoever created a manager closes it. So
+ * code handed either can call `egress()` and always close what it gets.
  */
-export function egress({
+export function egress(options: Egress | EgressOptions = {}): Egress {
+  if (isManager(options)) {
+    return { run: (args, o) => options.run(args, o), close: async () => {} };
+  }
+  return newManager(options);
+}
+
+function isManager(egress: Egress | EgressOptions): egress is Egress {
+  return typeof (egress as Partial<Egress>).run === "function";
+}
+
+function newManager({
   routes = routesFromEnv(),
   lockTimeoutMs = 30 * 60_000,
   log = (line) => console.error(line),

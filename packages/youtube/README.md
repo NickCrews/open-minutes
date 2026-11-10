@@ -11,13 +11,14 @@ The workflow below writes metadata as `metadataToJson` in
 
 `youtube()` gets each video the first way that works:
 
-1. yt-dlp through `runWithEgress` in
+1. yt-dlp through `egress()` in
    [`@open-minutes/ytdlp`](../ytdlp/README.md): direct, then WARP, then Tor
    (or the routes in `YOUTUBE_EGRESS`). Direct works from a home
-   connection. The `egress` option takes `runWithEgress`'s options, such as
-   `{ routes, install }` (with `install`, WARP and Tor are installed first if
-   a route needs them), or a manager from `egress()`, which every request
-   shares, so a process that gets many videos starts WARP and Tor once.
+   connection. The `egress` option is passed to `egress()`: its options,
+   such as `{ routes, install }` (with `install`, WARP and Tor are installed
+   first if a route needs them), for routes set up per request, or a manager
+   that every request shares, so a process that gets many videos starts WARP
+   and Tor once.
    The audio is YouTube's smallest Opus format (249, ~50 kbps, ~22 MB per
    hour).
 2. `fetchVideoViaWorkflow`, when YouTube refuses every route and

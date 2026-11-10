@@ -443,6 +443,24 @@ describe("egress", () => {
     }
   });
 
+  it("given a manager, runs through it and leaves it open on close", async () => {
+    const calls = fakeYtDlp((proxy) =>
+      proxy === "direct" ? ytDlpError(BOT_CHECK) : "{}",
+    );
+    const owner = egress(quiet);
+    try {
+      const borrowed = egress(owner);
+      expect((await borrowed.run(ARGS)).route).toBe("warp");
+      await borrowed.close();
+      expect(down).not.toHaveBeenCalled();
+      expect((await owner.run(ARGS)).route).toBe("warp");
+      expect(calls).toEqual(["direct", "socks5://warp1", "socks5://warp1"]);
+    } finally {
+      await owner.close();
+    }
+    expect(down).toHaveBeenCalledTimes(1);
+  });
+
   it("waits for another manager on this machine before starting a daemon", async () => {
     const calls = fakeYtDlp((proxy) =>
       proxy === "direct" ? ytDlpError(BOT_CHECK) : "{}",
