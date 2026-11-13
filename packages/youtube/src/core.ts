@@ -34,11 +34,19 @@ export interface YtDlpInfo {
    * `is_upcoming`, `is_live` or `post_live` while a stream or premiere has no
    * complete recording yet; `was_live` or `not_live` once it has.
    */
-  live_status?: string | null;
+  live_status?: LiveStatus | null;
 }
 
+/** yt-dlp's `live_status`: whether, and how, a video is or was a stream. */
+export type LiveStatus =
+  | "is_upcoming"
+  | "is_live"
+  | "post_live"
+  | "was_live"
+  | "not_live";
+
 /** Live statuses whose video doesn't yet hold its whole recording. */
-const UNFINISHED_LIVE_STATUSES = new Set([
+const UNFINISHED_LIVE_STATUSES = new Set<LiveStatus>([
   "is_upcoming",
   "is_live",
   "post_live",
@@ -66,9 +74,10 @@ export function metadataFromYtDlpInfo(raw: YtDlpInfo): RecordingMetadata {
     channelId: raw.channel_id ?? "",
     title: raw.title ?? "",
     description: raw.description ?? "",
-    durationSecs: UNFINISHED_LIVE_STATUSES.has(raw.live_status ?? "")
-      ? null
-      : (raw.duration ?? null),
+    durationSecs:
+      raw.live_status != null && UNFINISHED_LIVE_STATUSES.has(raw.live_status)
+        ? null
+        : (raw.duration ?? null),
     publishedAt: publishedSecs == null ? null : new Date(publishedSecs * 1000),
   };
 }

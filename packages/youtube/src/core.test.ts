@@ -24,7 +24,11 @@ describe("metadataFromYtDlpInfo", () => {
   });
 
   it("gives no duration for a stream that hasn't finished", () => {
-    for (const live_status of ["is_upcoming", "is_live", "post_live"]) {
+    for (const live_status of [
+      "is_upcoming",
+      "is_live",
+      "post_live",
+    ] as const) {
       const meta = metadataFromYtDlpInfo({
         id: "QUF1uLgzL-s",
         duration: 0,
