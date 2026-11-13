@@ -1,7 +1,7 @@
 // What the `pnpm transcript` and `pnpm changeset` CLIs share.
 import process from "node:process";
 import { getDb } from "@open-minutes/db";
-import type { EditResult, RowCounts } from "./edit";
+import type { FixResult, RowCounts } from "./edit";
 import { formatIssue } from "./view";
 
 export const dbArg = {
@@ -38,7 +38,7 @@ export function formatRows(rows: RowCounts): string {
 }
 
 /** What `pnpm transcript fix` did. Sets the exit code when it saved nothing because of errors. */
-export function reportFix(result: EditResult): void {
+export function reportFix(result: FixResult): void {
   for (const note of result.notes) console.log(note);
   for (const issue of result.added)
     console.log(`added ${formatIssue(issue, result.meeting)}`);

@@ -10,17 +10,16 @@ import {
   type Changeset,
   ChangesetError,
   checkChangeset,
-  type EditResult,
+  type MeetingRef,
 } from "./edit";
-import { findMeetingId } from "./meeting";
 import { formatIssue } from "./view";
 
-const HELP = `A changeset is a SQL file of changes and assertions to one meeting. It runs in
-one transaction holding the meeting's lock, as the changeset role, and fails,
-saving nothing, if a statement or assertion fails, or if it changes another
-meeting. "check" runs it, reports what it would change and the meeting rule
-violations it would resolve and introduce, and rolls it back. "apply" runs it
-and saves it, without running the rules.
+const HELP = `A changeset is a SQL file of changes and assertions. It runs in one
+transaction, as the changeset role, and fails, saving nothing, if a statement
+or assertion fails. "check" runs it, reports the rows it would change and, in
+each meeting it would change, the meeting rule violations it would resolve and
+introduce, and rolls it back. "apply" runs it and saves it, without running
+the rules.
 
 The role reads every table, inserts, updates and deletes segments, and updates
 people (slug, name, bio) and meetings (slug, title). M is the meeting's slug or
@@ -58,11 +57,6 @@ const args = {
     required: true,
     description: "The changeset's SQL file",
   },
-  meeting: {
-    type: "string",
-    required: true,
-    description: "The meeting it changes: its slug, or its id",
-  },
   ...dbArg,
 } as const;
 
@@ -70,19 +64,14 @@ const args = {
  * Run `run` on the changeset the arguments name, and report what it did, or
  * why it failed.
  */
-function runCommand(
-  { file, meeting, db: target }: { file: string; meeting: string; db?: string },
-  run: (changeset: Changeset) => Promise<EditResult>,
-  report: (result: EditResult) => void,
+function runCommand<T>(
+  { file, db: target }: { file: string; db?: string },
+  run: (changeset: Changeset) => Promise<T>,
+  report: (result: T) => void,
 ): Promise<void> {
   return withDb(target, async (db) => {
-    const changeset = {
-      db,
-      meetingId: await findMeetingId(db, meeting),
-      sql: readFileSync(file, "utf8"),
-    };
     try {
-      report(await run(changeset));
+      report(await run({ db, sql: readFileSync(file, "utf8") }));
     } catch (err) {
       if (!(err instanceof ChangesetError)) throw err;
       console.log(`failed, nothing saved: ${err.message}`);
@@ -91,21 +80,32 @@ function runCommand(
   });
 }
 
+const ref = (m: MeetingRef) => m.slug ?? String(m.id);
+
 const checkCmd = defineCommand({
   meta: {
     name: "check",
     description:
-      "Run a changeset and roll it back: report the rows it would change and the meeting rule violations it would resolve and introduce",
+      "Run a changeset and roll it back: report the rows it would change and, in each meeting it would change, the rule violations it would resolve and introduce",
   },
   args,
   run: ({ args }) =>
-    runCommand(args, checkChangeset, (result) => {
-      for (const issue of result.resolved)
-        console.log(`resolves ${formatIssue(issue, result.before)}`);
-      for (const issue of result.added)
-        console.log(`introduces ${formatIssue(issue, result.meeting)}`);
+    runCommand(args, checkChangeset, ({ rows, meetings }) => {
+      let resolved = 0;
+      let added = 0;
+      for (const m of meetings) {
+        console.log(
+          `${ref(m.after)}:${m.resolved.length || m.added.length ? "" : " no change in violations"}`,
+        );
+        for (const issue of m.resolved)
+          console.log(`  resolves ${formatIssue(issue, m.before)}`);
+        for (const issue of m.added)
+          console.log(`  introduces ${formatIssue(issue, m.after)}`);
+        resolved += m.resolved.length;
+        added += m.added.length;
+      }
       console.log(
-        `would change ${formatRows(result.rows)}; resolves ${result.resolved.length} violation(s), introduces ${result.added.length}`,
+        `would change ${formatRows(rows)}; in ${meetings.length} meeting(s), resolves ${resolved} violation(s) and introduces ${added}`,
       );
     }),
 });
@@ -118,9 +118,9 @@ const applyCmd = defineCommand({
   },
   args,
   run: ({ args }) =>
-    runCommand(args, applyChangeset, (result) => {
+    runCommand(args, applyChangeset, ({ rows, meetings }) => {
       console.log(
-        `saved: ${formatRows(result.rows)}; the meeting has ${result.meeting.segments.length} segments`,
+        `saved: ${formatRows(rows)}${meetings.length ? `; meetings changed: ${meetings.map(ref).join(", ")}` : ""}`,
       );
     }),
 });

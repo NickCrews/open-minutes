@@ -18,8 +18,8 @@ pnpm transcript stats <meeting> --db prod
 pnpm transcript check <meeting> --db prod
 pnpm transcript fix <meeting> --dry-run --db prod
 pnpm transcript fix <meeting> --db prod
-pnpm changeset check changeset.sql --meeting <meeting> --db prod
-pnpm changeset apply changeset.sql --meeting <meeting> --db prod
+pnpm changeset check changeset.sql --db prod
+pnpm changeset apply changeset.sql --db prod
 ```
 
 `<meeting>` is a slug or an id. `render` shows the transcript a segment at a
@@ -40,9 +40,10 @@ only name someone with a row in the database. Name people following the
 
 ## Changesets
 
-Make every other change in a changeset: one SQL file for the meeting.
+Make every other change in a changeset: one SQL file.
 `pnpm changeset check` runs it and rolls it back, reporting the rows it would
-change and the rule violations it would resolve and introduce. `pnpm
+change and, in each meeting it changes, the rule violations it would resolve
+and introduce. `pnpm
 changeset apply` runs it and saves it if every statement succeeds, without
 checking the rules. `pnpm changeset --help` and `packages/edit/README.md`
 describe the functions in full.

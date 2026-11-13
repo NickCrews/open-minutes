@@ -1,10 +1,11 @@
-// Editing a meeting in a database, in one transaction that holds the
-// meeting's row lock: apply the meeting rules' fixes, or check or apply a
-// changeset. Fixes are checked by the meeting rules before they are saved.
-// Checking a changeset reports the violations it fixes and introduces, and
-// saves nothing; applying one doesn't run the rules.
+// Editing a database: apply the meeting rules' fixes to a meeting, or check
+// or apply a changeset. Every edit that saves takes the edit lock
+// (lockEdits), so two can't interleave. Fixes are checked by the meeting
+// rules before they are saved. Checking a changeset reports the violations it
+// resolves and introduces in each meeting it changes, and saves nothing;
+// applying one doesn't run the rules.
 
-import { eq, sql } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import { chaptersTable, type DB, meetingsTable } from "@open-minutes/db";
 import { fixMeeting, type MeetingIssue } from "@open-minutes/core/rules";
 import type { Segment } from "@open-minutes/core/transcript";
@@ -12,43 +13,77 @@ import {
   type Conn,
   type DbMeeting,
   loadMeeting,
+  lockEdits,
   type Saved,
   saveSegments,
 } from "./meeting";
 import { meetingIssues, newIssues, ruleMeeting, ruleSpecs } from "./view";
 
-export interface FixOptions {
+/** Rows an edit changed, by table. Tables it didn't change are left out. */
+export type RowCounts = Record<string, Saved>;
+
+export interface Fix {
+  db: DB;
+  meetingId: number;
   /** Report what would change, and save nothing. */
   dryRun?: boolean;
   /** Save even if the fixes add rule errors. */
   allowErrors?: boolean;
 }
 
-/** A changeset's SQL, for one meeting in a database. */
-export interface Changeset {
-  db: DB;
-  meetingId: number;
-  sql: string;
-}
-
-/** Rows an edit changed, by table. Tables it didn't change are left out. */
-export type RowCounts = Record<string, Saved>;
-
-export interface EditResult {
-  /** What the edit did. */
+export interface FixResult {
+  /** The fixes it made. */
   notes: string[];
   /** The meeting as it was, which `resolved` indexes into. */
   before: DbMeeting;
-  /** The meeting as edited, which `added` indexes into. */
+  /** The meeting as fixed, which `added` indexes into. */
   meeting: DbMeeting;
-  /** Violations the edit introduced; empty when the rules didn't run. */
+  /** Violations the fixes introduced. */
   added: MeetingIssue[];
-  /** Violations the edit resolved; empty when the rules didn't run. */
+  /** Violations the fixes resolved. */
   resolved: MeetingIssue[];
   /** Whether it was saved: not on a dry run, or when fixes added errors. */
   saved: boolean;
-  /** Rows the edit changed, whether or not it was saved. */
+  /** Rows the fixes changed, whether or not they were saved. */
   rows: RowCounts;
+}
+
+/** A changeset's SQL, and the database it runs in. */
+export interface Changeset {
+  db: DB;
+  sql: string;
+}
+
+/** A meeting by id, and its slug if it has one. */
+export interface MeetingRef {
+  id: number;
+  slug: string | null;
+}
+
+export interface AppliedChangeset {
+  /** Rows the changeset changed. */
+  rows: RowCounts;
+  /** The meetings whose row, segments or chapters it changed, by id. */
+  meetings: MeetingRef[];
+}
+
+/** How a changeset changed one meeting, by the meeting rules. */
+export interface MeetingCheck {
+  /** The meeting as it was, which `resolved` indexes into. */
+  before: DbMeeting;
+  /** The meeting as changed, which `added` indexes into. */
+  after: DbMeeting;
+  /** Violations the changeset introduced. */
+  added: MeetingIssue[];
+  /** Violations the changeset resolved. */
+  resolved: MeetingIssue[];
+}
+
+export interface CheckedChangeset {
+  /** Rows the changeset would change. */
+  rows: RowCounts;
+  /** Each meeting whose row, segments or chapters it would change, by id. */
+  meetings: MeetingCheck[];
 }
 
 /**
@@ -71,20 +106,19 @@ class Rollback extends Error {}
 
 /**
  * Apply the fixes of every rule the meeting follows, to its title, transcript
- * and chapters.
+ * and chapters, unless they add a rule error (and not `allowErrors`).
  */
-export function fixRules(
-  db: DB,
-  meetingId: number,
-  { dryRun = false, allowErrors = false }: FixOptions = {},
-): Promise<EditResult> {
-  return editMeeting({
-    db,
-    meetingId,
-    dryRun,
-    rules: "block",
-    allowErrors,
-    edit: async (tx, before) => {
+export async function fixRules({
+  db,
+  meetingId,
+  dryRun = false,
+  allowErrors = false,
+}: Fix): Promise<FixResult> {
+  let result: FixResult | undefined;
+  try {
+    await db.transaction(async (tx) => {
+      await lockEdits(tx);
+      const before = await loadMeeting(tx, meetingId);
       const { meeting: fixed, fixed: issues } = await fixMeeting(
         { ...ruleMeeting(before), segments: stripIds(before.segments) },
         ruleSpecs(before),
@@ -129,130 +163,18 @@ export function fixRules(
       );
       if (segments.updated || segments.inserted || segments.deleted)
         rows.segments = segments;
-      return {
-        notes: issues.map((i) => `fixed ${i.code}: ${i.message}`),
-        rows,
-      };
-    },
-  });
-}
 
-/**
- * Run a changeset and roll it back, reporting the rows it would change and
- * the rule violations it would resolve and introduce. Throws a
- * {@link ChangesetError} where {@link applyChangeset} would.
- */
-export function checkChangeset(changeset: Changeset): Promise<EditResult> {
-  return runChangeset(changeset, { dryRun: true, rules: "report" });
-}
-
-/**
- * Run a changeset and save it. It doesn't run the meeting rules. Throws a
- * {@link ChangesetError}, saving nothing, if the SQL fails, creates or alters
- * a database object, or changes another meeting's segments, chapters or row.
- */
-export function applyChangeset(changeset: Changeset): Promise<EditResult> {
-  return runChangeset(changeset, { dryRun: false });
-}
-
-/** Run a changeset's SQL as the `changeset` role, inside om.run. */
-function runChangeset(
-  { db, meetingId, sql: changesetSql }: Changeset,
-  { dryRun, rules }: Pick<EditMeeting, "dryRun" | "rules">,
-): Promise<EditResult> {
-  return editMeeting({
-    db,
-    meetingId,
-    dryRun,
-    rules,
-    edit: async (tx) => {
-      const objects = await changesetObjects(tx);
-      await tx.execute(sql`SET LOCAL ROLE changeset`);
-      try {
-        await tx.execute(sql`SELECT om.run(${changesetSql})`);
-      } catch (err) {
-        const pg = postgresError(err);
-        if (!pg) throw err;
-        throw new ChangesetError(
-          pg.code === ASSERTION_FAILED
-            ? `assertion failed: ${pg.message}`
-            : `the changeset failed: ${pg.message}`,
-          pg.code === ASSERTION_FAILED,
-        );
-      }
-      await tx.execute(sql`RESET ROLE`);
-      if ((await changesetObjects(tx)) !== objects)
-        throw new ChangesetError(
-          "the changeset created or altered a database object; it may only change rows",
-        );
-      const rows = await loggedChanges(tx);
-      const others = await tx.execute<{ ref: string }>(sql`
-      SELECT coalesce(m.slug, x.id::text) AS ref
-      FROM (SELECT DISTINCT unnest(meeting_ids) AS id FROM om.changes
-            WHERE xact = pg_current_xact_id()) x
-      LEFT JOIN meetings m ON m.id = x.id
-      WHERE x.id <> ${meetingId}
-      ORDER BY x.id`);
-      await tx.execute(
-        sql`DELETE FROM om.changes WHERE xact = pg_current_xact_id()`,
-      );
-      if (others.length)
-        throw new ChangesetError(
-          `the changeset changed other meetings: ${others.map((r) => r.ref).join(", ")}`,
-        );
-      return { notes: [], rows };
-    },
-  });
-}
-
-interface EditMeeting {
-  db: DB;
-  meetingId: number;
-  /** Roll back after reporting. */
-  dryRun: boolean;
-  /**
-   * Whether to run the meeting rules on the meeting before and after: to
-   * report what the edit resolved and introduced, or also to roll back if it
-   * introduced an error (unless `allowErrors`). Left out, they don't run.
-   */
-  rules?: "report" | "block";
-  allowErrors?: boolean;
-  /** The edit, given the meeting as it was. */
-  edit: (
-    tx: Conn,
-    before: DbMeeting,
-  ) => Promise<{ notes: string[]; rows: RowCounts }>;
-}
-
-/** Run an edit on a meeting in a transaction holding its lock. */
-async function editMeeting({
-  db,
-  meetingId,
-  dryRun,
-  rules,
-  allowErrors = false,
-  edit,
-}: EditMeeting): Promise<EditResult> {
-  let result: EditResult | undefined;
-  try {
-    await db.transaction(async (tx) => {
-      const before = await loadMeeting(tx, meetingId, { lock: true });
-      const { notes, rows } = await edit(tx, before);
       const meeting = await loadMeeting(tx, meetingId);
-      const issuesBefore = rules ? await meetingIssues(before) : [];
-      const issuesAfter = rules ? await meetingIssues(meeting) : [];
+      const issuesBefore = await meetingIssues(before);
+      const issuesAfter = await meetingIssues(meeting);
       const added = newIssues(issuesBefore, issuesAfter);
-      const resolved = newIssues(issuesAfter, issuesBefore);
-      const blocked =
-        rules === "block" &&
-        !allowErrors &&
-        added.some((i) => i.severity === "error");
+      const blocked = !allowErrors && added.some((i) => i.severity === "error");
       result = {
-        notes,
+        notes: issues.map((i) => `fixed ${i.code}: ${i.message}`),
         before,
         meeting,
         added,
-        resolved,
+        resolved: newIssues(issuesAfter, issuesBefore),
         saved: !dryRun && !blocked,
         rows,
       };
@@ -262,6 +184,112 @@ async function editMeeting({
     if (!(err instanceof Rollback)) throw err;
   }
   return result!;
+}
+
+/**
+ * Run a changeset and roll it back, reporting the rows it would change and,
+ * for each meeting it would change, the rule violations it would resolve and
+ * introduce. Throws a {@link ChangesetError} where {@link applyChangeset}
+ * would.
+ */
+export async function checkChangeset({
+  db,
+  sql: changesetSql,
+}: Changeset): Promise<CheckedChangeset> {
+  let result: CheckedChangeset | undefined;
+  try {
+    // One snapshot throughout, so each meeting's before is what the
+    // changeset ran on.
+    await db.transaction(
+      async (tx) => {
+        await tx.execute(sql`SAVEPOINT changeset`);
+        const { rows, meetingIds } = await runAsChangeset(tx, changesetSql);
+        const after: DbMeeting[] = [];
+        for (const id of meetingIds) after.push(await loadMeeting(tx, id));
+        await tx.execute(sql`ROLLBACK TO SAVEPOINT changeset`);
+        const meetings: MeetingCheck[] = [];
+        for (const a of after) {
+          const before = await loadMeeting(tx, a.id);
+          const issuesBefore = await meetingIssues(before);
+          const issuesAfter = await meetingIssues(a);
+          meetings.push({
+            before,
+            after: a,
+            added: newIssues(issuesBefore, issuesAfter),
+            resolved: newIssues(issuesAfter, issuesBefore),
+          });
+        }
+        result = { rows, meetings };
+        throw new Rollback();
+      },
+      { isolationLevel: "repeatable read" },
+    );
+  } catch (err) {
+    if (!(err instanceof Rollback)) throw err;
+  }
+  return result!;
+}
+
+/**
+ * Run a changeset and save it, holding the edit lock. It doesn't run the
+ * meeting rules. Throws a {@link ChangesetError}, saving nothing, if the SQL
+ * fails or creates or alters a database object.
+ */
+export function applyChangeset({
+  db,
+  sql: changesetSql,
+}: Changeset): Promise<AppliedChangeset> {
+  return db.transaction(async (tx) => {
+    await lockEdits(tx);
+    const { rows, meetingIds } = await runAsChangeset(tx, changesetSql);
+    const meetings = meetingIds.length
+      ? await tx
+          .select({ id: meetingsTable.id, slug: meetingsTable.slug })
+          .from(meetingsTable)
+          .where(inArray(meetingsTable.id, meetingIds))
+          .orderBy(meetingsTable.id)
+      : [];
+    return { rows, meetings };
+  });
+}
+
+/**
+ * Run a changeset's SQL as the `changeset` role, inside om.run, and read the
+ * rows it changed and the meetings they belong to from om.changes.
+ */
+async function runAsChangeset(
+  tx: Conn,
+  changesetSql: string,
+): Promise<{ rows: RowCounts; meetingIds: number[] }> {
+  const objects = await changesetObjects(tx);
+  await tx.execute(sql`SET LOCAL ROLE changeset`);
+  try {
+    await tx.execute(sql`SELECT om.run(${changesetSql})`);
+  } catch (err) {
+    const pg = postgresError(err);
+    if (!pg) throw err;
+    throw new ChangesetError(
+      pg.code === ASSERTION_FAILED
+        ? `assertion failed: ${pg.message}`
+        : `the changeset failed: ${pg.message}`,
+      pg.code === ASSERTION_FAILED,
+    );
+  }
+  await tx.execute(sql`RESET ROLE`);
+  if ((await changesetObjects(tx)) !== objects)
+    throw new ChangesetError(
+      "the changeset created or altered a database object; it may only change rows",
+    );
+  const rows = await loggedChanges(tx);
+  const meetingIds = (
+    await tx.execute<{ id: number }>(sql`
+      SELECT DISTINCT unnest(meeting_ids) AS id FROM om.changes
+      WHERE xact = pg_current_xact_id() ORDER BY id`)
+  ).map((r) => r.id);
+  await tx.execute(
+    sql`DELETE FROM om.changes WHERE xact = pg_current_xact_id()`,
+  );
+  return { rows, meetingIds };
 }
 
 /**

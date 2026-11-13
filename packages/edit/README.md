@@ -29,8 +29,8 @@ pnpm transcript fix gbos-2026-03-23 --db prod
 - `check` reports what the [meeting rules](../core/README.md#rules) find.
 - `fix` applies the rules' fixes: it drops fillers and stutters, writes
   numbers the house way, and so on.
-  `fix` runs in one transaction holding the meeting's row lock, then checks
-  the result against the rules. A fix that adds a rule error isn't saved unless
+  `fix` runs in one transaction holding the edit lock, then checks the result
+  against the rules. A fix that adds a rule error isn't saved unless
   you pass `--allow-errors`; `--dry-run` saves nothing.
 
 Speakers are shown as labels: `unlabeled`, `segmented:spk-<n>`,
@@ -38,13 +38,13 @@ Speakers are shown as labels: `unlabeled`, `segmented:spk-<n>`,
 
 ## Changesets
 
-A changeset is a SQL file of changes and assertions for one meeting: who said
-what, misheard words, people's slugs, names and bios, and the meeting's slug
-and title.
+A changeset is a SQL file of changes and assertions: who said what, misheard
+words, people's slugs, names and bios, and meetings' slugs and titles. It may
+change any number of meetings.
 
 ```sh
-pnpm changeset check changeset.sql --meeting gbos-2026-03-23 --db prod
-pnpm changeset apply changeset.sql --meeting gbos-2026-03-23 --db prod
+pnpm changeset check changeset.sql --db prod
+pnpm changeset apply changeset.sql --db prod
 ```
 
 ```sql
@@ -63,17 +63,22 @@ SELECT om.assert(
 );
 ```
 
-Both run the file in one transaction that holds the meeting's row lock, and
-fail, saving nothing, if a statement or assertion fails, or if the changeset
-changes another meeting's segments, chapters or row.
+Both run the file in one transaction, and fail, saving nothing, if a
+statement or assertion fails.
 
-- `check` reports how many rows the changeset would change in each table, and
-  the meeting rule violations it would resolve and introduce, then rolls it
-  back.
-- `apply` saves it and reports the rows it changed. It doesn't run the
-  meeting rules, since a meeting partway through a cleanup breaks them in
-  passing; `check`, or `pnpm transcript check` on the meeting, runs them when
-  you want to know.
+- `check` reports how many rows the changeset would change in each table,
+  and, for each meeting whose row, segments or chapters it would change, the
+  meeting rule violations it would resolve and introduce. Then it rolls the
+  changeset back. It reads one snapshot of the database throughout and takes
+  no lock.
+- `apply` saves it and reports the rows and meetings it changed. It doesn't
+  run the meeting rules, since a meeting partway through a cleanup breaks them
+  in passing; `check`, or `pnpm transcript check` on the meeting, runs them
+  when you want to know.
+
+Every edit that saves (`changeset apply`, `transcript fix` and `goldens
+publish`) first takes the edit lock, a Postgres advisory lock held until it
+commits, so edits run one at a time whichever meetings they touch.
 
 The SQL runs as the `changeset` role, inside `om.run`, so it can't change its
 role, and its `BEGIN`, `COMMIT` and `ROLLBACK` fail. The role reads every
