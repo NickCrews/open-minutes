@@ -23,7 +23,7 @@ describe("golden transcripts", () => {
     ["gbos-2026-05-18", null],
     // "We will call the June 8th, 2026 planning and zoning commission meeting
     // to order." (no time spoken)
-    ["pzc-2026-06-08", { date: "2026-06-08", time: null }],
+    ["anc-p-z-2026-06-08", { date: "2026-06-08", time: null }],
     // "Good evening, and welcome to the February seventeenth, 2026 regular
     // meeting of the Anchorage Assembly. It is now 503 PM." But that is 19
     // minutes in, after pre-meeting music, so it falls outside the opening.
@@ -32,7 +32,7 @@ describe("golden transcripts", () => {
     ["assembly-2026-03-03", null],
     // "We'll call this meeting of the community and economic development
     // committee of the Anchorage Assembly to order Thursday, March 5th, 9 a.m."
-    ["ced-2026-03-05", { date: "2026-03-05", time: "09:00" }],
+    ["anc-econ-cmtee-2026-03-05", { date: "2026-03-05", time: "09:00" }],
   ] as const)("%s", (slug, expected) => {
     const meeting = getMeetingData(slug);
     const parsed = parseDateTimeFromTranscript(openingText(meeting.segments), {
@@ -57,7 +57,7 @@ describe("golden transcripts", () => {
     ],
     // MOA titles carry the scheduled start, eg "... - 2026-06-08 18:30:00".
     [
-      "pzc-2026-06-08",
+      "anc-p-z-2026-06-08",
       {
         date: "2026-06-08",
         time: "18:30",
@@ -86,7 +86,7 @@ describe("golden transcripts", () => {
     // The title has no date, and the chair's "Thursday, March 5th, 9 a.m."
     // has no year; the upload on March 9, 2026 places it.
     [
-      "ced-2026-03-05",
+      "anc-econ-cmtee-2026-03-05",
       {
         date: "2026-03-05",
         time: "09:00",

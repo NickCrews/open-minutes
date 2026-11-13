@@ -104,7 +104,7 @@ describe("goldens", () => {
   );
 
   bodies("publish again replaces, and finds people by name", async ({ db }) => {
-    const slug = "pzc-2026-06-08";
+    const slug = "anc-p-z-2026-06-08";
     await publishGolden(db, slug, { voiceprints: placeholders });
     const [someone] = await db
       .update(peopleTable)
@@ -122,14 +122,14 @@ describe("goldens", () => {
   });
 
   bodies("a dry run saves nothing", async ({ db }) => {
-    const notes = await publishGolden(db, "pzc-2026-06-08", {
+    const notes = await publishGolden(db, "anc-p-z-2026-06-08", {
       voiceprints: placeholders,
       dryRun: true,
     });
     expect(notes).toContainEqual(
       expect.stringMatching(/^meeting \d+: added, with recording \d+$/),
     );
-    await expect(findMeetingId(db, "pzc-2026-06-08")).rejects.toThrow(
+    await expect(findMeetingId(db, "anc-p-z-2026-06-08")).rejects.toThrow(
       /No meeting/,
     );
   });

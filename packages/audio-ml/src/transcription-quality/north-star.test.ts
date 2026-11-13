@@ -34,11 +34,11 @@ describe("transcribe", () => {
   const meetingSlugs = [
     "assembly-2026-02-17",
     "assembly-2026-03-03",
-    "ced-2026-03-05",
+    "anc-econ-cmtee-2026-03-05",
     "gbos-2026-03-23",
     "gbos-2026-05-18",
     "gbos-2026-06-15",
-    "pzc-2026-06-08",
+    "anc-p-z-2026-06-08",
   ];
   for (const slug of meetingSlugs) {
     it(

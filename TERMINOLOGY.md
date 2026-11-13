@@ -18,7 +18,7 @@ A deliberative group that holds meetings, such as the Girdwood Board of Supervis
 _Avoid_: muni, board, council, committee, organization, group
 
 **Slug**:
-A stable, unique handle in lowercase kebab-case that names a row the same way in every database, unlike its id, and doesn't change when it's renamed. Code, static data, the fixtures, the command line and file paths refer to a row by it. Every jurisdiction (`moa`) and body (`gbos`) has one; so does every known person (`margaret-tyler`), the key for their identity across meetings, and every golden fixture meeting (`gbos-2026-03-23`, its fixture directory's name). Other meetings and people have none and go by their id.
+A stable, unique handle in lowercase kebab-case that names a row the same way in every database, unlike its id, and doesn't change when it's renamed. Someone chooses it when the row is made; it is never generated from the row's name, and follows no pattern beyond being kebab-case and unique (the Anchorage Community and Economic Development Committee is `anc-econ-cmtee`). Code, static data, the fixtures, the command line and file paths refer to a row by it. Every jurisdiction (`moa`) and body (`gbos`) has one; so does every known person (`margaret-tyler`), the key for their identity across meetings, and every golden fixture meeting (`gbos-2026-03-23`, its fixture directory's name). Other meetings and people have none and go by their id.
 _Avoid_: name, short name, handle, key, muni slug, body id, fixture name, meeting key
 
 **Glossary**:
