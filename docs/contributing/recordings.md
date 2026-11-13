@@ -169,8 +169,10 @@ going waits for it.
 - **YouTube**: listing a channel or playlist works from a runner's IP, but
   yt-dlp's metadata and audio requests are refused. The workflow restores the
   WARP and Tor .deb cache as `fetch-youtube-audio.yml` does, and `pnpm scout
-  run --debs <dir>` builds its YouTube adapter with `installEgress`, so yt-dlp
-  installs and goes through WARP or Tor when a direct request is refused.
+  run --debs <dir>` gives its YouTube adapter one `egress` manager for the
+  whole run, so yt-dlp installs and goes through WARP or Tor when a direct
+  request is refused. Once direct is refused it isn't tried again, and WARP
+  and Tor start once per run.
   `YOUTUBE_AUDIO_DISPATCH_TOKEN` isn't set: the run is already on a runner, so
   dispatching `fetch-youtube-audio.yml` gains nothing.
 - **akleg.gov**: no setup.

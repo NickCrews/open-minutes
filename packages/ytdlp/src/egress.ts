@@ -31,6 +31,8 @@ export type RouteOutcome =
       reason: string;
     };
 
+type Unavailable = Extract<RouteOutcome, { outcome: "unavailable" }>;
+
 /** No route got yt-dlp through. `routes` says what happened on each. */
 export class EgressError extends Error {
   constructor(readonly routes: readonly RouteOutcome[]) {
@@ -100,8 +102,10 @@ export interface EgressResult {
 export interface Egress {
   /**
    * Runs yt-dlp with `args` through each route in turn, as
-   * {@link runWithEgress} does. Daemons stay up between runs, and a route
-   * found blocked or unavailable is skipped until {@link Egress.close}.
+   * {@link runWithEgress} does. Daemons stay up between runs. A `direct` or
+   * proxy URL route found blocked, and a route that can't run here, are
+   * skipped until {@link Egress.close}. A WARP or Tor route found blocked is
+   * tried again by later runs, starting on a new exit.
    */
   run(args: readonly string[], options?: RunOptions): Promise<EgressResult>;
   /** Stops the daemons this started and releases the machine's lock. */
@@ -123,14 +127,37 @@ function isService(route: Route): route is Service {
 }
 
 /**
+ * yt-dlp's error without its `ERROR:` prefix, for a log line about an attempt
+ * that will be retried, so it doesn't read as a failure of the whole run.
+ */
+function refusal(error: YtDlpError): string {
+  return error.message.replace(/^ERROR:\s*/, "");
+}
+
+/**
  * A manager for a process that runs yt-dlp many times, like a scout. Does no
  * I/O until {@link Egress.run} is called. `direct` and proxy URL routes need
  * nothing started. Before starting a daemon it takes a lock file in the
  * egress state directory, held until {@link Egress.close}, so only one
  * manager on a machine starts or rotates WARP and Tor: rotating an exit
  * changes it for everyone using it.
+ *
+ * Given a manager instead of options, returns one that runs through it and
+ * whose `close()` leaves it open: whoever created a manager closes it. So
+ * code handed either can call `egress()` and always close what it gets.
  */
-export function egress({
+export function egress(options: Egress | EgressOptions = {}): Egress {
+  if (isManager(options)) {
+    return { run: (args, o) => options.run(args, o), close: async () => {} };
+  }
+  return newManager(options);
+}
+
+function isManager(egress: Egress | EgressOptions): egress is Egress {
+  return typeof (egress as Partial<Egress>).run === "function";
+}
+
+function newManager({
   routes = routesFromEnv(),
   lockTimeoutMs = 30 * 60_000,
   log = (line) => console.error(line),
@@ -139,6 +166,8 @@ export function egress({
   const paths: EgressPaths = egressPaths();
   /** Routes that didn't work, skipped until close(). */
   const skipped = new Map<Route, RouteOutcome>();
+  /** Daemons whose current exit was refused, so their next run rotates first. */
+  const refusedExit = new Set<Service>();
   /** The proxy URL of each daemon that's up. */
   const proxies = new Map<Service, string>();
   /** Whether up.sh ran, so down.sh has something to stop. */
@@ -166,11 +195,11 @@ export function egress({
   }
 
   /** The service's proxy URL, starting it if needed, or why it can't run. */
-  function start(service: Service): Promise<string | RouteOutcome> {
+  function start(service: Service): Promise<string | Unavailable> {
     return serially(async () => {
       const running = proxies.get(service);
       if (running) return running;
-      const unavailable = (reason: string): RouteOutcome => ({
+      const unavailable = (reason: string): Unavailable => ({
         route: service,
         outcome: "unavailable",
         reason,
@@ -224,7 +253,7 @@ export function egress({
       if (closed) throw new Error("This yt-dlp egress manager is closed");
 
       /** One attempt; the error if the route was blocked. */
-      async function attempt(route: Route, proxy?: string) {
+      async function attempt(proxy?: string) {
         signal?.throwIfAborted();
         await beforeAttempt?.();
         try {
@@ -232,16 +261,17 @@ export function egress({
             proxy ? ["--proxy", proxy, ...PROXIED_ARGS, ...args] : args,
             { signal },
           );
-          return { ...out, route };
+          return out;
         } catch (error) {
           if (!(error instanceof YtDlpError) || !isBlocked(error)) throw error;
-          log(`yt-dlp: blocked via ${route}: ${error.message}`);
           return error;
         }
       }
 
+      /** Tries `route`. `then` says what's tried if it doesn't work. */
       async function tryRoute(
         route: Route,
+        then: string,
       ): Promise<EgressResult | RouteOutcome> {
         const blocked = (error: YtDlpError): RouteOutcome => ({
           route,
@@ -249,36 +279,57 @@ export function egress({
           error: error.message,
         });
         if (!isService(route)) {
-          const result = await attempt(
-            route,
-            route === "direct" ? undefined : route,
-          );
-          return result instanceof YtDlpError ? blocked(result) : result;
+          const result = await attempt(route === "direct" ? undefined : route);
+          if (!(result instanceof YtDlpError)) return { ...result, route };
+          log(`yt-dlp: ${route} was refused; ${then}: ${refusal(result)}`);
+          return blocked(result);
         }
         const started = await start(route);
-        if (typeof started !== "string") return started;
+        if (typeof started !== "string") {
+          log(`yt-dlp: ${route} can't run here; ${then}: ${started.reason}`);
+          return started;
+        }
         let proxy = started;
         let last: YtDlpError | undefined;
-        for (let n = 0; n < DAEMON_ATTEMPTS; n++) {
-          if (n > 0) {
+        for (let n = 1; n <= DAEMON_ATTEMPTS; n++) {
+          if (n > 1 || refusedExit.has(route)) {
             const next = await newExit(route);
-            if (!next) break;
+            if (!next) {
+              log(`yt-dlp: got no new ${route} exit; ${then}`);
+              break;
+            }
             proxy = next;
           }
-          const result = await attempt(route, proxy);
-          if (!(result instanceof YtDlpError)) return result;
+          const result = await attempt(proxy);
+          if (!(result instanceof YtDlpError)) {
+            refusedExit.delete(route);
+            return { ...result, route };
+          }
+          refusedExit.add(route);
           last = result;
+          const retry =
+            n < DAEMON_ATTEMPTS ? `trying a new ${route} exit` : then;
+          log(
+            `yt-dlp: ${route} exit ${n} of ${DAEMON_ATTEMPTS} was refused; ${retry}: ${refusal(result)}`,
+          );
         }
-        // The first attempt always runs, so `last` is set.
-        return blocked(last!);
+        if (last) return blocked(last);
+        // Rotating failed before any attempt; newExit logged why.
+        return { route, outcome: "blocked", error: `got no new ${route} exit` };
       }
 
       const outcomes: RouteOutcome[] = [];
-      for (const route of routes) {
+      for (const [i, route] of routes.entries()) {
         signal?.throwIfAborted();
-        const outcome = skipped.get(route) ?? (await tryRoute(route));
+        const next = routes.slice(i + 1).find((r) => !skipped.has(r));
+        const then = next
+          ? `trying ${next} next`
+          : "no routes left, so this request fails";
+        const outcome = skipped.get(route) ?? (await tryRoute(route, then));
         if ("stdout" in outcome) return outcome;
-        skipped.set(route, outcome);
+        if (!(isService(route) && outcome.outcome === "blocked")) {
+          skipped.set(route, outcome);
+        }
         outcomes.push(outcome);
       }
       throw new EgressError(outcomes);

@@ -171,6 +171,26 @@ describe("runWithEgress", () => {
     ]);
   });
 
+  it("logs each refused attempt with what it tries next", async () => {
+    vi.stubEnv("YOUTUBE_EGRESS", "direct,warp,tor");
+    fakeDaemons({ unavailable: { tor: "no tor" } });
+    fakeYtDlp(() => ytDlpError(BOT_CHECK));
+    const lines: string[] = [];
+    await expect(
+      runWithEgress(ARGS, { log: (line) => lines.push(line) }),
+    ).rejects.toThrow(EgressError);
+    const reason =
+      "[youtube] QUF1uLgzL-s: Sign in to confirm you’re not a bot. Use --cookies-from-browser or --cookies for the authentication.";
+    expect(lines).toEqual([
+      `yt-dlp: direct was refused; trying warp next: ${reason}`,
+      "yt-dlp: starting warp",
+      `yt-dlp: warp exit 1 of 3 was refused; trying a new warp exit: ${reason}`,
+      `yt-dlp: warp exit 2 of 3 was refused; trying a new warp exit: ${reason}`,
+      `yt-dlp: warp exit 3 of 3 was refused; trying tor next: ${reason}`,
+      "yt-dlp: tor can't run here; no routes left, so this request fails: no tor",
+    ]);
+  });
+
   it("moves on when a route's proxy can't be reached", async () => {
     vi.stubEnv("YOUTUBE_EGRESS", "socks5://a,socks5://b");
     const calls = fakeYtDlp((proxy) =>
@@ -395,6 +415,50 @@ describe("egress", () => {
     expect(down).toHaveBeenCalledTimes(1);
     expect(existsSync(join(state, "manager.lock"))).toBe(false);
     await expect(manager.run(ARGS)).rejects.toThrow(/closed/);
+  });
+
+  it("tries a blocked daemon route again on a new exit", async () => {
+    vi.stubEnv("YOUTUBE_EGRESS", "direct,warp");
+    let warpBlocked = true;
+    const calls = fakeYtDlp((proxy) =>
+      proxy === "direct" || (proxy.includes("warp") && warpBlocked)
+        ? ytDlpError(BOT_CHECK)
+        : "{}",
+    );
+    const manager = egress(quiet);
+    try {
+      await expect(manager.run(ARGS)).rejects.toThrow(EgressError);
+      warpBlocked = false;
+      expect((await manager.run(ARGS)).route).toBe("warp");
+      expect(calls).toEqual([
+        "direct",
+        "socks5://warp1",
+        "socks5://warp2",
+        "socks5://warp3",
+        "socks5://warp4",
+      ]);
+      expect(up).toHaveBeenCalledTimes(1);
+    } finally {
+      await manager.close();
+    }
+  });
+
+  it("given a manager, runs through it and leaves it open on close", async () => {
+    const calls = fakeYtDlp((proxy) =>
+      proxy === "direct" ? ytDlpError(BOT_CHECK) : "{}",
+    );
+    const owner = egress(quiet);
+    try {
+      const borrowed = egress(owner);
+      expect((await borrowed.run(ARGS)).route).toBe("warp");
+      await borrowed.close();
+      expect(down).not.toHaveBeenCalled();
+      expect((await owner.run(ARGS)).route).toBe("warp");
+      expect(calls).toEqual(["direct", "socks5://warp1", "socks5://warp1"]);
+    } finally {
+      await owner.close();
+    }
+    expect(down).toHaveBeenCalledTimes(1);
   });
 
   it("waits for another manager on this machine before starting a daemon", async () => {

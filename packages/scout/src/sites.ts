@@ -5,7 +5,12 @@ import type {
   SiteAdapter,
 } from "@open-minutes/core/site";
 import { akleg, aklegSource } from "@open-minutes/akleg";
-import { youtube, youtubeSource } from "@open-minutes/youtube";
+import {
+  type YouTube,
+  type YouTubeOptions,
+  youtube,
+  youtubeSource,
+} from "@open-minutes/youtube";
 
 /** The `RecordingLister` for a body's meeting source. */
 export function listerFor(source: MeetingSource): RecordingLister {
@@ -20,16 +25,14 @@ export function listerFor(source: MeetingSource): RecordingLister {
 }
 
 /**
- * The adapter that reaches each site itself. With `debs`, YouTube's installs
- * WARP and Tor (keeping their .deb files there) when YouTube refuses a direct
- * request.
+ * The adapter that reaches each site itself. `youtube` is passed to
+ * `youtube()`: an adapter, or its options.
  */
-export function siteAdapters({ debs }: { debs?: string } = {}): Record<
-  Site,
-  SiteAdapter
-> {
+export function siteAdapters({
+  youtube: yt,
+}: { youtube?: YouTube | YouTubeOptions } = {}): Record<Site, SiteAdapter> {
   return {
-    youtube: youtube(debs ? { installEgress: { debDir: debs } } : {}),
+    youtube: youtube(yt),
     akleg: akleg(),
   };
 }

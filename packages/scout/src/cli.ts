@@ -6,6 +6,7 @@ import { format } from "node:util";
 import { defineCommand, runMain } from "citty";
 import { getDb } from "@open-minutes/db";
 import { blobStore, blobStoreWriterFromEnv } from "@open-minutes/blobstore";
+import { egress } from "@open-minutes/ytdlp";
 import { type ScoutLog, scout } from "./scout";
 import { listerFor, siteAdapters } from "./sites";
 
@@ -70,10 +71,15 @@ const run = defineCommand({
       );
     }
     const { db, client } = getDb(args.db);
+    // One set of YouTube routes for the whole run: a route YouTube refused
+    // isn't tried again, and WARP and Tor start once.
+    const youtubeEgress = egress({
+      install: args.debs ? { debDir: args.debs } : undefined,
+    });
     try {
       const report = await scout({
         db,
-        sites: siteAdapters({ debs: args.debs }),
+        sites: siteAdapters({ youtube: { egress: youtubeEgress } }),
         listerFor,
         store: blobStore(),
         writer: blobStoreWriterFromEnv(process.env),
@@ -92,6 +98,7 @@ const run = defineCommand({
       );
       process.exitCode = report.exitCode;
     } finally {
+      await youtubeEgress.close();
       await client.end();
     }
   },

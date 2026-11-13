@@ -1,4 +1,4 @@
-# Nightly, copies production's public data into a DuckDB file and stores it in
+# Nightly, copies production's data into a DuckDB file and stores it in
 # the blob store, publicly readable at
 #   $BLOB_STORE_PUBLIC_URL/exports/open-minutes.duckdb
 # (blobStore().duckdbExport in packages/blobstore, so keep the two in step)
