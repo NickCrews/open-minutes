@@ -48,7 +48,8 @@ export const jurisdictionsTable = pgTable(
     id: serial().primaryKey(),
     // Stable handle (eg "moa") that means the same jurisdiction in every
     // database, for code and static data to refer to it by. Unlike `name`, it
-    // doesn't change when the jurisdiction is renamed. Lowercase kebab-case.
+    // doesn't change when the jurisdiction is renamed. Lowercase kebab-case,
+    // chosen by hand, never generated from the name.
     slug: varchar().notNull().unique(),
     name: varchar().notNull().default(""),
     state: varchar().notNull().default(""),
@@ -75,7 +76,8 @@ export const bodiesTable = pgTable(
     // what `--body` CLI filters, per-meeting work-directory names and the
     // fixtures name a body by. Unlike `name` and
     // `name_short`, it doesn't change when the body is renamed. Lowercase
-    // kebab-case.
+    // kebab-case, chosen by hand (eg "anc-econ-cmtee"), never generated from
+    // the name.
     slug: varchar().notNull().unique(),
     name: varchar().notNull().default(""),
     name_short: varchar().notNull().default(""),

@@ -24,7 +24,7 @@ describe("datasets/", () => {
 describe("parseDataset", () => {
   const voiced = {
     description: "d",
-    meetings: ["pzc-2026-06-08"],
+    meetings: ["anc-p-z-2026-06-08"],
     people: "speakers",
     voiceprints: "audio",
   };
@@ -40,7 +40,7 @@ describe("parseDataset", () => {
     [{ ...voiced, description: "" }, /description/],
     [{ ...voiced, meetings: ["nope-2026-01-01"] }, /no golden meeting/],
     [
-      { ...voiced, meetings: ["pzc-2026-06-08", "pzc-2026-06-08"] },
+      { ...voiced, meetings: ["anc-p-z-2026-06-08", "anc-p-z-2026-06-08"] },
       /duplicate/,
     ],
     [{ ...voiced, people: "some" }, /people must be/],
