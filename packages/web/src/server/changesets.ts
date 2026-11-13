@@ -16,7 +16,8 @@ import {
 /**
  * A changeset issue's review page: its versions, and for one of them, CI's
  * check, the diff CI published, and its reviews. It reads the issue from
- * GitHub's API, with the GITHUB_READ_TOKEN secret if set, and writes nothing.
+ * GitHub's API with the ISSUES_READ_TOKEN secret, which GitHub requires to
+ * read an issue's artifacts, and writes nothing.
  * See packages/changeset-review/README.md.
  */
 export interface ChangesetReview {
@@ -69,17 +70,21 @@ export const fetchChangesetReview = createServerFn({ method: "GET" })
         : thread.versions.find((v) => v.version === data.version);
     let page: ReviewPage | null = null;
     if (version) {
-      try {
-        page = reviewPage(
-          thread,
-          version,
-          await diffArtifact(base, version.version),
-        );
-      } catch (err) {
-        page = {
-          ...reviewPage(thread, version, undefined),
-          diff: { missing: `the issue's artifacts can't be read: ${err}` },
-        };
+      page = reviewPage(thread, version, undefined);
+      // Only a checked version has a diff to show.
+      if (page.check) {
+        try {
+          page = reviewPage(
+            thread,
+            version,
+            await diffArtifact(base, version.version),
+          );
+        } catch (err) {
+          page = {
+            ...page,
+            diff: { missing: `the issue's artifacts can't be read: ${err}` },
+          };
+        }
       }
     }
     return {
@@ -144,7 +149,7 @@ async function request<T>(
   path: string,
   apiVersion: string,
 ): Promise<{ data: T; next: string | null }> {
-  const token = process.env.GITHUB_READ_TOKEN;
+  const token = process.env.ISSUES_READ_TOKEN;
   const res = await fetch(
     /^https?:\/\//.test(path)
       ? path

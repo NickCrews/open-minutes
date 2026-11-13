@@ -173,8 +173,9 @@ it, its reviews, marked stale where they saw another effect, and the review
 page for the diff CI published (`src/published.ts`). It shows the diff only
 if `github-actions[bot]` last wrote the artifact, and the diff is of the
 version's SQL, with the effect of CI's latest check of it. It reads the issue
-through GitHub's API, with the `GITHUB_READ_TOKEN` secret if set, and writes
-nothing: a reviewer copies the review comment and posts it on the issue
+through GitHub's API with the `ISSUES_READ_TOKEN` Worker secret, a read-only
+token for the repository's issues (GitHub reads an issue's artifacts only
+with a token), and writes nothing: a reviewer copies the review comment and posts it on the issue
 themselves. GitHub's issue-artifact viewer runs no scripts, so the review
 page isn't an artifact itself.
 
