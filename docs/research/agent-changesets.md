@@ -355,13 +355,16 @@ In review ([#224](https://github.com/NickCrews/open-minutes/pull/224)):
 
 - `chapters`: insert, update and delete, but not `meeting_id`.
 - `chapter_generations`: insert, but not `reviewed_by_human`, which stays
-  false until a person sets it.
+  false until a person sets it, nor `transcript_fingerprint`, which a
+  trigger sets from the meeting's transcript as it is when the changeset
+  runs.
 - `meetings`: update `date` and `time` too.
 - `meeting_bodies`: insert and delete.
 - `people`: delete, to merge two people; segments' foreign key refuses
   deleting anyone whose segments are left.
 - `om.transcript_fingerprint(meeting)`, the fingerprint `transcriptFingerprint`
-  computes, for a changeset that adds a chapter generation.
+  computes, for a changeset that asserts which transcript it was written
+  against.
 
 A changeset can insert a chapter generation with any `model`, `'human'`
 included; the `changesets` table records who wrote each changeset.
