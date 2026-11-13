@@ -42,8 +42,8 @@ what, misheard words, people's slugs, names and bios, and the meeting's slug
 and title.
 
 ```sh
-pnpm transcript run gbos-2026-03-23 changeset.sql --dry-run --db prod
-pnpm transcript run gbos-2026-03-23 changeset.sql --db prod
+pnpm transcript apply gbos-2026-03-23 changeset.sql --dry-run --db prod
+pnpm transcript apply gbos-2026-03-23 changeset.sql --db prod
 ```
 
 ```sql
@@ -62,7 +62,7 @@ SELECT om.assert(
 );
 ```
 
-`run` runs the file in one transaction that holds the meeting's row lock, and
+`apply` runs the file in one transaction that holds the meeting's row lock, and
 reports how many rows it changed in each table; `--dry-run` saves nothing. It
 saves nothing if a statement fails, or if the changeset changes another
 meeting's segments, chapters or row. It doesn't run the meeting rules, since a
@@ -73,9 +73,9 @@ The SQL runs as the `changeset` role, inside `om.run`, so it can't change its
 role, and its `BEGIN`, `COMMIT` and `ROLLBACK` fail. The role reads every
 table, inserts, updates and deletes segments, updates people's `slug`, `name`
 and `bio` and meetings' `slug` and `title`, and calls the `om` functions. It
-can't create or alter tables or other objects, and `run` saves nothing that
+can't create or alter tables or other objects, and `apply` saves nothing that
 creates a temporary one. Whoever runs the migrations is a member of the role;
-`run` needs to connect as a member.
+`apply` needs to connect as a member.
 
 The `om` functions edit a meeting's segments. Each takes the meeting by slug
 or id, a word by its onset as `render` and `words` print it (`H:MM:SS.ss`,
@@ -91,7 +91,7 @@ the reverse.
 | `om.replace_words(meeting, at, old, new)`      | Replaces the words starting at `at`, which must read `old`, with `new`, which may have more or fewer words; `''` deletes. A new word takes the onset of the old word in its place, or of the last old word.             |
 | `om.insert_words(meeting, words, speaker)`     | Adds words the transcript is missing, an array of `'H:MM:SS.ss word'`. With `speaker`, they are their own segment and the words after them go back to whoever was speaking; without, they join the segment they follow. |
 | `om.replace_all_words(meeting, old, new)`      | Replaces every occurrence of `old`, ignoring case and trailing punctuation and keeping the last old word's, and returns the count.                                                                                      |
-| `om.assert(condition, message)`                | Raises `message`, with SQLSTATE `OM001`, unless `condition` is true. `run` reports it as a failed assertion.                                                                                                            |
+| `om.assert(condition, message)`                | Raises `message`, with SQLSTATE `OM001`, unless `condition` is true. `apply` reports it as a failed assertion.                                                                                                          |
 
 An onset that matches no word raises an error that lists the words near it.
 Plain SQL works too: an `UPDATE` of `segments.words` or `person_id`, say. The

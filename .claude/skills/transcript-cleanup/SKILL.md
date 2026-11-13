@@ -18,8 +18,8 @@ pnpm transcript stats <meeting> --db prod
 pnpm transcript check <meeting> --db prod
 pnpm transcript fix <meeting> --dry-run --db prod
 pnpm transcript fix <meeting> --db prod
-pnpm transcript run <meeting> changeset.sql --dry-run --db prod
-pnpm transcript run <meeting> changeset.sql --db prod
+pnpm transcript apply <meeting> changeset.sql --dry-run --db prod
+pnpm transcript apply <meeting> changeset.sql --db prod
 ```
 
 `<meeting>` is a slug or an id. `render` shows the transcript a segment at a
@@ -41,7 +41,7 @@ only name someone with a row in the database. Name people following the
 ## Changesets
 
 Make every other change in a changeset: one SQL file for the meeting, which
-`pnpm transcript run` runs in one transaction and saves only if every
+`pnpm transcript apply` runs in one transaction and saves only if every
 statement succeeds. It doesn't check the rules: run `pnpm transcript check`
 when you want to see where the meeting stands. `pnpm transcript --help` and
 `packages/edit/README.md` describe the functions in full.
@@ -72,8 +72,9 @@ when you want to see where the meeting stands. `pnpm transcript --help` and
 Each edit takes the meeting `M` by slug or id, onsets as `render` and
 `words` print them, and speaker labels `L`, and merges neighbouring segments
 left with the same speaker. Put a `--` comment above each change with its
-evidence. Run the changeset with `--dry-run` until it reports the rows you
-expect and no violations you didn't intend, then run it without.
+evidence. Apply the changeset with `--dry-run` until it reports the rows you
+expect, then apply it without, and check the meeting with
+`pnpm transcript check`.
 
 ## Rules
 
@@ -157,6 +158,6 @@ expect and no violations you didn't intend, then run it without.
 
 ## Report
 
-Give the changeset and what `pnpm transcript run` reported. For each change,
+Give the changeset and what `pnpm transcript apply` reported. For each change,
 give the segment or person, the old label, the new label, and the evidence
 (quote the words). Then list what you left unresolved, and why.

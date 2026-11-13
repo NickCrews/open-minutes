@@ -1,11 +1,11 @@
 export {
   ChangesetError,
   type FixOptions,
-  type RunOptions,
+  type ApplyOptions,
   type EditResult,
   fixRules,
   type RowCounts,
-  runChangeset,
+  applyChangeset,
 } from "./edit";
 export { type Golden, toGolden, writeGolden } from "./export";
 export {

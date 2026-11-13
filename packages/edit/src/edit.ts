@@ -16,12 +16,12 @@ import {
 } from "./meeting";
 import { meetingIssues, newIssues, ruleMeeting, ruleSpecs } from "./view";
 
-export interface RunOptions {
+export interface ApplyOptions {
   /** Report what would change, and save nothing. */
   dryRun?: boolean;
 }
 
-export interface FixOptions extends RunOptions {
+export interface FixOptions extends ApplyOptions {
   /** Save even if the fixes add rule errors. */
   allowErrors?: boolean;
 }
@@ -133,11 +133,11 @@ export function fixRules(
  * creates or alters a database object, or changes another meeting's
  * segments, chapters or row.
  */
-export function runChangeset(
+export function applyChangeset(
   db: DB,
   meetingId: number,
   changesetSql: string,
-  { dryRun = false }: RunOptions = {},
+  { dryRun = false }: ApplyOptions = {},
 ): Promise<EditResult> {
   return editMeeting({
     db,

@@ -11,7 +11,7 @@ import {
   type EditResult,
   fixRules,
   type RowCounts,
-  runChangeset,
+  applyChangeset,
 } from "./edit";
 import { findMeetingId, loadMeeting } from "./meeting";
 import { formatIssue, meetingIssues, render, stats, wordList } from "./view";
@@ -187,7 +187,7 @@ const fixCmd = defineCommand({
     }),
 });
 
-const CHANGESET_HELP = `"run" runs a changeset: a SQL file of changes and assertions, in one
+const CHANGESET_HELP = `"apply" applies a changeset: a SQL file of changes and assertions, in one
 transaction holding the meeting's lock, as the changeset role. It saves it only
 if every statement succeeds and it changes no other meeting. It doesn't run the
 meeting rules: check the result with "pnpm transcript check" when you want to.
@@ -221,11 +221,11 @@ Labels: unlabeled, segmented:spk-<n>, identified:<slug>, person:<id>. A label
 sets the speaker to exactly that: a person and no speaker number, or the
 reverse.`;
 
-const runCmd = defineCommand({
+const applyCmd = defineCommand({
   meta: {
-    name: "run",
+    name: "apply",
     description:
-      "Run a changeset, a SQL file of changes and assertions. It doesn't run the meeting rules; `check` does. `pnpm transcript --help` lists the om functions.",
+      "Apply a changeset, a SQL file of changes and assertions. It doesn't run the meeting rules; `check` does. `pnpm transcript --help` lists the om functions.",
   },
   args: {
     ...common,
@@ -241,7 +241,7 @@ const runCmd = defineCommand({
       const id = await findMeetingId(db, args.meeting);
       try {
         report(
-          await runChangeset(db, id, readFileSync(args.file, "utf8"), {
+          await applyChangeset(db, id, readFileSync(args.file, "utf8"), {
             dryRun: args["dry-run"],
           }),
         );
@@ -264,7 +264,7 @@ const main = defineCommand({
     stats: statsCmd,
     check: checkCmd,
     fix: fixCmd,
-    run: runCmd,
+    apply: applyCmd,
   },
 });
 
