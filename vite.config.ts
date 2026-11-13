@@ -10,6 +10,7 @@ export default defineConfig({
       "./packages/datasets/vitest.config.ts",
       "./packages/db/vitest.config.ts",
       "./packages/edit/vitest.config.ts",
+      "./packages/changeset-review/vitest.config.ts",
       "./packages/seed/vitest.config.ts",
       "./packages/scout/vitest.config.ts",
       "./packages/meeting-audio/vitest.config.ts",
@@ -152,6 +153,11 @@ export default defineConfig({
         // them typecheck without having to include it themselves.
         files: ["packages/audio-ml/src/**"],
         rules: { "typescript/triple-slash-reference": "off" },
+      },
+      {
+        // A plain script that runs in the browser.
+        files: ["packages/changeset-review/src/client.js"],
+        env: { browser: true },
       },
       {
         // Solid assigns `let el!: HTMLElement` through `ref={el}`, which the

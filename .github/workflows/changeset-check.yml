@@ -1,0 +1,90 @@
+# Checks each version of a changeset proposed in an issue, and comments with
+# the result and a review page. See packages/changeset-review/README.md.
+#
+# A version is a comment starting `<!-- changeset:version N -->`, posted by
+# `pnpm changeset propose` or `revise`, on an issue labelled `changeset`, by
+# someone with write access: their SQL runs against production, as the
+# changeset role, in a transaction that is always rolled back. The run checks
+# the issue's latest version, unless CI already checked it as it stands, and:
+#   - uploads the review page as an artifact (one HTML file, not zipped), and
+#   - comments `<!-- changeset:check vN sha256=... ok|fails -->` with whether
+#     it would apply, what it would change, and a link to the page.
+#
+# issue_comment runs this file from the default branch, so an issue can't
+# change what it does. Needs NEON_API_KEY and NEON_PROJECT_ID (see
+# production.yml).
+name: changeset-check
+
+on:
+  issue_comment:
+    types: [created, edited]
+
+concurrency:
+  group: changeset-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  check:
+    if: >-
+      vars.NEON_PROJECT_ID != ''
+      && !github.event.issue.pull_request
+      && contains(github.event.issue.labels.*.name, 'changeset')
+      && startsWith(github.event.comment.body, '<!-- changeset:version')
+      && contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    env:
+      ISSUE: ${{ github.event.issue.number }}
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup
+
+      # Production is the Neon project's default branch, which neonctl uses
+      # when given no branch.
+      - name: Check the latest version
+        id: check
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          db=$(pnpm --silent dlx neonctl@2 connection-string \
+            --project-id "$NEON_PROJECT_ID" --no-analytics)
+          if [[ "$db" != postgres* ]]; then
+            echo "::error::neonctl didn't return a connection string for production."
+            exit 1
+          fi
+          echo "::add-mask::$db"
+          mkdir -p "$RUNNER_TEMP/changeset"
+          pnpm changeset ci check "$ISSUE" --db "$db" \
+            --out-dir "$RUNNER_TEMP/changeset" --run-url "$RUN_URL"
+
+      - name: Upload the review page
+        id: upload
+        if: steps.check.outputs.page != ''
+        uses: actions/upload-artifact@v7
+        with:
+          path: ${{ steps.check.outputs.page }}
+          archive: false
+          retention-days: 90
+          if-no-files-found: error
+
+      - name: Comment with the result
+        if: steps.check.outputs.comment != ''
+        env:
+          COMMENT: ${{ steps.check.outputs.comment }}
+          PAGE_URL: ${{ steps.upload.outputs.artifact-url }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          body=$(cat "$COMMENT")
+          body=${body//'{{review_url}}'/$PAGE_URL}
+          printf '%s\n' "$body" > "$COMMENT"
+          gh issue comment "$ISSUE" --repo "$GITHUB_REPOSITORY" --body-file "$COMMENT"

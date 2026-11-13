@@ -44,8 +44,14 @@ change any number of meetings.
 
 ```sh
 pnpm changeset check changeset.sql --db prod
-pnpm changeset apply changeset.sql --db prod
+pnpm changeset apply changeset.sql --db local
 ```
+
+A changeset reaches production through a GitHub issue: proposed, checked by
+CI, reviewed, revised, approved, and applied by CI. See
+[@open-minutes/changeset-review](../changeset-review/README.md), which holds
+the `pnpm changeset` script, for that and for `pnpm changeset view`, a page
+showing what each statement does.
 
 ```sql
 SELECT om.assert(
@@ -75,6 +81,9 @@ statement or assertion fails.
   run the meeting rules, since a meeting partway through a cleanup breaks them
   in passing; `check`, or `pnpm transcript check` on the meeting, runs them
   when you want to know.
+- `checkChangeset` also takes the statements as a `trace`: it runs them one
+  at a time and reports, after each, the rows it changed and each meeting
+  and person it changed, before and after it.
 
 Every edit that saves (`changeset apply`, `transcript fix` and `goldens
 publish`) first takes the edit lock, a Postgres advisory lock held until it

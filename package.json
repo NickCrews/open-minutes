@@ -22,10 +22,11 @@
     "datasets:fix": "pnpm --silent --filter @open-minutes/datasets run fix",
     "transcript": "pnpm --silent --filter @open-minutes/edit run transcript",
     "goldens": "pnpm --silent --filter @open-minutes/edit run goldens",
-    "changeset": "pnpm --silent --filter @open-minutes/edit run changeset",
+    "changeset": "pnpm --silent --filter @open-minutes/changeset-review run changeset",
     "deploy:prod": "gh workflow run production.yml"
   },
   "devDependencies": {
+    "@open-minutes/changeset-review": "workspace:*",
     "@open-minutes/datasets": "workspace:*",
     "@open-minutes/db": "workspace:*",
     "@open-minutes/edit": "workspace:*",

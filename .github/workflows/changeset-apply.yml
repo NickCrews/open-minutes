@@ -1,0 +1,61 @@
+# Applies a changeset to production when an admin or maintainer approves its
+# issue by labelling it `changeset:approved`. See
+# packages/changeset-review/README.md.
+#
+# `pnpm changeset ci apply` decides what the approval covers: the issue's
+# latest version, as it stood when the label was added, which CI checked as it
+# stands and found would apply. It refuses an approval from anyone else, a
+# version posted or edited after the approval, or one CI hasn't checked or
+# found fails. Then it applies it in one transaction, comments
+# `<!-- changeset:applied vN sha256=... -->`, labels the issue
+# `changeset:applied` and closes it. On any refusal or failure it comments why
+# and removes `changeset:approved`, saving nothing.
+#
+# issues runs this file from the default branch. Needs NEON_API_KEY and
+# NEON_PROJECT_ID (see production.yml).
+name: changeset-apply
+
+on:
+  issues:
+    types: [labeled]
+
+concurrency:
+  # One at a time, across issues; the edit lock serializes them anyway.
+  group: changeset-apply
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  apply:
+    if: >-
+      vars.NEON_PROJECT_ID != ''
+      && github.event.label.name == 'changeset:approved'
+      && contains(github.event.issue.labels.*.name, 'changeset')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    env:
+      ISSUE: ${{ github.event.issue.number }}
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup
+
+      - name: Apply the approved version
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+        run: |
+          db=$(pnpm --silent dlx neonctl@2 connection-string \
+            --project-id "$NEON_PROJECT_ID" --no-analytics)
+          if [[ "$db" != postgres* ]]; then
+            echo "::error::neonctl didn't return a connection string for production."
+            exit 1
+          fi
+          echo "::add-mask::$db"
+          pnpm changeset ci apply "$ISSUE" --db "$db"

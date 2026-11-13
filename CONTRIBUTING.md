@@ -30,10 +30,12 @@ The code is a pnpm workspace, roughly in layers from bottom to top:
 - **Datums and datasets** (`datasets`, `seed`, `glossary`): hand-verified real
   meetings, people and bodies that seed local and test databases and score the
   speech models.
-- **Editing** (`edit`): `pnpm transcript`, for reading a meeting in a
-  database and applying the meeting rules' fixes to it; `pnpm changeset`, for
-  checking and applying changesets to it; and `pnpm goldens`, for exporting
-  golden meetings from production into the datums.
+- **Editing** (`edit`, `changeset-review`): `pnpm transcript`, for reading a
+  meeting in a database and applying the meeting rules' fixes to it;
+  `pnpm changeset`, for checking and applying changesets, and proposing,
+  reviewing and approving them in GitHub issues, from which CI applies them
+  to production; and `pnpm goldens`, for exporting golden meetings from
+  production into the datums.
 - **Website** (`web`): the public transcript browser.
 
 Postgres runs in Docker locally and on [Neon](https://neon.tech) in

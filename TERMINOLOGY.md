@@ -275,3 +275,19 @@ _Avoid_: commit, merge, run, execute
 **Check a changeset**:
 To run a changeset in a transaction that always rolls back, and report the rows it would change and the violations it would resolve and introduce in each meeting it changes.
 _Avoid_: dry run, preview, test
+
+**Changeset issue**:
+A GitHub issue labelled `changeset` that proposes a changeset for production. Its comments hold the changeset's versions, CI's check of each, reviews, and the result of applying it (see [packages/changeset-review](packages/changeset-review/README.md)).
+_Avoid_: changeset PR, proposal ticket
+
+**Version** (of a changeset):
+One of the SQL files posted to a changeset issue, numbered from v1, and cited by its number and the SHA-256 of its SQL. Approving the issue applies its latest version.
+_Avoid_: revision, draft, iteration
+
+**Review page**:
+The page `pnpm changeset view` writes, and CI links to from its check of each version: what each statement of a changeset does, with a form for a verdict and note on each.
+_Avoid_: diff viewer, preview
+
+**Approve**:
+To add the label `changeset:approved` to a changeset issue, which only an admin or maintainer may do. CI then applies its latest version, if CI checked it and found it would apply.
+_Avoid_: merge, accept (a reviewer accepts a statement)
