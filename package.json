@@ -23,7 +23,7 @@
     "transcript": "pnpm --silent --filter @open-minutes/edit run transcript",
     "goldens": "pnpm --silent --filter @open-minutes/edit run goldens",
     "changeset": "pnpm --silent --filter @open-minutes/edit run changeset",
-    "deploy:prod": "pnpm --filter @open-minutes/web run deploy"
+    "deploy:prod": "gh workflow run production.yml"
   },
   "devDependencies": {
     "@open-minutes/datasets": "workspace:*",

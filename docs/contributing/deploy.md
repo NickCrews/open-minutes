@@ -2,8 +2,9 @@
 
 Production is whatever commit the `production` branch points at.
 [`.github/workflows/production.yml`](../../.github/workflows/production.yml)
-deploys it: on every push to that branch, it builds the web app, migrates the
-production database, and switches the Worker to the new version.
+builds a commit, migrates the production database, switches the Worker to the
+new version, and only then fast-forwards `production` to that commit. A failed
+run leaves `production` where it was.
 
 ## Deploying a commit
 
@@ -11,37 +12,41 @@ Only the repo owner can use these:
 
 - **Comment `/deploy` on a merged PR.** Deploys that PR's merge commit. The
   bot reacts 👀, then replies when the deploy succeeds or fails.
-- **Run the `production` workflow** from the Actions tab, with a branch, tag or
-  SHA (default `main`).
+- **Run the `production` workflow**, from the Actions tab or with
+  `pnpm deploy:prod` (`gh workflow run production.yml`; add `-f ref=<ref>` for
+  something other than `main`), with a branch, tag or SHA.
 
-Both fast-forward `production` to the commit and deploy it in the same run. A
-push made by a workflow doesn't trigger other workflows, so moving the branch
-and deploying it can't be separate workflows.
-
-If a deploy fails, **re-run failed jobs** on the run to retry it.
+If a deploy fails, **re-run** the run to retry it. Migrating again is a no-op.
 
 `production` only moves forward along `main`:
 
 - The commit must be on `main`.
 - A commit production already has (say, an older PR's after a newer one was
-  promoted) is a no-op, never a rollback.
+  deployed) is a no-op, never a rollback.
+
+Don't push `production` by hand: nothing deploys on a push, so the branch
+would stop matching what is live.
 
 We don't roll back; we only roll forward. If a deploy breaks something, fix it
 (or revert the bad PR) on `main` and deploy that. Don't use Cloudflare's
 **Rollbacks** either: older code may not match the migrated schema, and the
 older code's deploy refuses a database with migrations it doesn't know.
 
+The workflow runs in the `production` environment, so the repo's
+**Deployments** tab shows the live commit.
+
 ## What a deploy does
 
 The workflow builds the app first. Nothing live changes, so a failed build is
 harmless. Then
 [`packages/web/scripts/deploy-built.sh`](../../packages/web/scripts/deploy-built.sh)
-puts the database migration as late as it can:
+asks Neon for production's database URL and puts the migration as late as it
+can:
 
 1. Check production's migration history hasn't diverged from this commit.
 2. `wrangler versions upload`: upload the new version, serving no traffic.
    Cloudflare validates the bundle here.
-3. `pnpm db migrate --db prod`.
+3. `pnpm db migrate` on production.
 4. `wrangler versions deploy <id>@100%`: route all traffic to the new version.
 
 So everything that can fail without touching the database fails before step 3.
@@ -53,8 +58,10 @@ don't have to be backward-compatible: a migration can rename or drop what the
 old code uses, in one step with the code that stops using it. The site may
 break for the few seconds between the two steps, and that's accepted.
 
-`pnpm deploy:prod` runs the same script after building, for deploying from a
-laptop (with `DATABASE_URL_PROD` in `.env.local` and `wrangler login`).
+Scheduled workflows that use the production database (`scout.yml`,
+`export-duckdb.yml`) check out `production`, so they run the code that matches
+its schema. Their workflow files still come from `main`, so a change to how one
+calls that code has to work with what is on `production`.
 
 Versions don't carry routes, custom domains or cron triggers. If
 `wrangler.jsonc` gains any, apply changes to them with
@@ -72,16 +79,15 @@ The workflow uses the same `CLOUDFLARE_API_TOKEN` secret and
 
 ### GitHub
 
-The workflow finds production's database URL itself: it asks Neon, with the
-`NEON_API_KEY` secret and `NEON_PROJECT_ID` variable that PR previews use, for
-the direct (unpooled) URL of the project's default branch. That URL is only for
+The deploy script finds production's database URL itself: it asks Neon, with
+the `NEON_API_KEY` secret and `NEON_PROJECT_ID` variable that PR previews use,
+for the direct (unpooled) URL of the project's default branch. That URL is only for
 migrating; the Worker reads its pooled URL from its own `DATABASE_URL` secret,
 which new versions keep.
 
 Protect `production` with a ruleset that blocks force pushes and deletion.
 Don't restrict who can push or require PRs: the workflow pushes with the
-built-in `GITHUB_TOKEN`, which can't bypass branch rules. Anyone who can push
-to the repo can push `production` directly, and that push deploys.
+built-in `GITHUB_TOKEN`, which can't bypass branch rules.
 
 ## Configuration
 

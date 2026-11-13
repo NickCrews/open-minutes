@@ -1,4 +1,9 @@
 import { randomBytes } from "node:crypto";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { drizzle } from "drizzle-orm/postgres-js";
+import { migrate } from "drizzle-orm/postgres-js/migrator";
 import { afterEach, beforeAll, describe, expect, test } from "vite-plus/test";
 import postgres from "postgres";
 import { jurisdictionsTable } from "./schema";
@@ -17,7 +22,8 @@ import {
   type DataState,
   wipeDatabase,
 } from "./ensure";
-import { localMigrations } from "./migrations";
+import { compareMigrations } from "./migration-status";
+import { appliedMigrations, localMigrations } from "./migrations";
 
 // Integration tests for the harness against docker-compose's postgres. Each
 // test works in databases it names itself (om_test_ prefix) and drops them.
@@ -334,6 +340,58 @@ describe("ensureDatabase", () => {
     expect(await withAdmin(base, (admin) => databaseExists(admin, name))).toBe(
       true,
     );
+  });
+
+  // A migration merged after a newer one was deployed has an older timestamp
+  // than the newest applied migration. drizzle must still apply it.
+  test("drizzle applies a migration older than the newest applied one", async () => {
+    const name = freshName();
+    await withAdmin(base, (admin) => admin.unsafe(`CREATE DATABASE "${name}"`));
+    const folder = mkdtempSync(join(tmpdir(), "om-test-migrations-"));
+    const add = (migration: string, table: string) => {
+      mkdirSync(join(folder, migration));
+      writeFileSync(
+        join(folder, migration, "migration.sql"),
+        `CREATE TABLE "${table}" (id integer);`,
+      );
+    };
+    const tables = () =>
+      sqlFor(name, async (sql) =>
+        (
+          await sql<{ tablename: string }[]>`
+            SELECT tablename FROM pg_tables WHERE schemaname = 'public'
+            ORDER BY tablename`
+        ).map((r) => r.tablename),
+      );
+    const runMigrate = async () => {
+      const client = postgres(urlForDatabase(base, name), {
+        max: 1,
+        onnotice: () => {},
+      });
+      try {
+        await migrate(drizzle({ client }), { migrationsFolder: folder });
+      } finally {
+        await client.end();
+      }
+    };
+    try {
+      add("20000101000000_a", "a");
+      add("20000301000000_c", "c");
+      await runMigrate();
+      expect(await tables()).toEqual(["a", "c"]);
+
+      add("20000201000000_b", "b");
+      expect(
+        compareMigrations(
+          localMigrations(folder),
+          (await sqlFor(name, appliedMigrations)) ?? [],
+        ).pending,
+      ).toEqual(["20000201000000_b"]);
+      await runMigrate();
+      expect(await tables()).toEqual(["a", "b", "c"]);
+    } finally {
+      rmSync(folder, { recursive: true, force: true });
+    }
   });
 });
 

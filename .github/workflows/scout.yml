@@ -53,7 +53,12 @@ jobs:
       BLOB_STORE_ACCESS_KEY_ID: ${{ secrets.OBJECT_STORE_ACCESS_KEY_ID }}
       BLOB_STORE_SECRET_ACCESS_KEY: ${{ secrets.OBJECT_STORE_SECRET_ACCESS_KEY }}
     steps:
+      # The deployed code, which matches production's schema. This file still
+      # comes from main, so a change to how it calls that code has to work
+      # with what is on `production`.
       - uses: actions/checkout@v4
+        with:
+          ref: production
       - uses: ./.github/actions/setup
 
       # WARP's and Tor's .deb files, as in fetch-youtube-audio.yml.

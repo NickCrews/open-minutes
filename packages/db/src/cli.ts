@@ -124,7 +124,7 @@ const migrate = defineCommand({
   meta: {
     name: "migrate",
     description:
-      "Apply pending migrations, up to --schema-version. Never resets or seeds; errors if the history diverged. What `pnpm deploy:prod` runs.",
+      "Apply pending migrations, up to --schema-version. Never resets or seeds; errors if the history diverged. What a production deploy runs.",
   },
   args: { ...targetArg, ...schemaVersionArg },
   async run({ args }) {

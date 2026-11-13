@@ -7,7 +7,6 @@
     "dev": "vp dev --configLoader runner",
     "build": "vp build --configLoader runner",
     "preview": "vp preview --configLoader runner",
-    "deploy": "vp build --configLoader runner && ./scripts/deploy-built.sh",
     "deploy:built": "./scripts/deploy-built.sh",
     "cf-typegen": "wrangler types",
     "test": "vp test run",
