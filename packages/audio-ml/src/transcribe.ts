@@ -173,11 +173,12 @@ export async function transcribeAudio(
   console.error(
     `Transcribing ${typeof audio === "string" ? audio : "<waveform>"} (${duration.toFixed(1)}s): ${spans.length} voice activity span(s), ${TRANSCRIBE_PASSES} passes of ${passes[0]!.length} window(s)...`,
   );
-  const heard = await decodePasses(wave, spans, passes, options.tracing);
+  const heard = await decodePasses(wave, passes, options.tracing);
+  const words = voteSpans(spans, heard);
   const runs = spans.map((span, i) => ({
     start: span.start,
     end: span.end,
-    words: voteWords(heard.map((pass) => pass[i]!)),
+    words: words[i]!,
   }));
 
   const elapsed = (Date.now() - wallStart) / 1000;
@@ -234,19 +235,13 @@ export function planWindows(
   return windows;
 }
 
-/**
- * Decode every pass's windows, and hand each window's words to the spans
- * they fall in: [pass][span] → words, in time order. A word goes to the
- * latest span of its window whose start it has reached; one in a silence
- * between spans goes to the span before.
- */
+/** Each pass's words, in time order, with absolute onsets. */
 export async function decodePasses(
   wave: WaveForm,
-  spans: readonly Span[],
   passes: readonly (readonly DecodeWindow[])[],
   tracing?: TranscribeTracing,
-): Promise<PassWord[][][]> {
-  const heard = passes.map(() => spans.map((): PassWord[] => []));
+): Promise<PassWord[][]> {
+  const heard = passes.map((): PassWord[] => []);
   const jobs = passes.flatMap((windows, pass) =>
     windows.map((win, windowIndex) => ({ win, pass, windowIndex })),
   );
@@ -272,14 +267,12 @@ export async function decodePasses(
       );
       tracing?.onWindowEnd?.({ ...event, wallEndMs: Date.now() });
 
-      let s = win.first;
       for (const w of tokensToWords(
         result.tokens ?? [],
         result.timestamps ?? [],
       )) {
         const start = w.start + from / rate;
-        while (s < win.last && start >= spans[s + 1]!.start) s++;
-        heard[pass]![s]!.push({
+        heard[pass]!.push({
           text: w.text,
           start,
           edgeSecs: Math.min(start - from / rate, to / rate - start),
@@ -287,7 +280,71 @@ export async function decodePasses(
       }
     },
   );
+  for (const words of heard) words.sort((a, b) => a.start - b.start);
   return heard;
+}
+
+/**
+ * Pauses at least this long separate the stretches whose words are voted on
+ * together. A word's onset can land a second or more from the voice activity
+ * span it belongs to, and on different sides of a short pause in different
+ * passes, so passes are lined up across short pauses.
+ */
+const VOTE_PAUSE_SEC = 2;
+
+/** The longest stretch voted on together, so lining up words stays cheap. */
+const MAX_VOTE_SEC = 120;
+
+/**
+ * Vote on the passes' words (each pass's in time order) and hand the voted
+ * words to the voice activity spans they're nearest: [span] → words.
+ */
+export function voteSpans(
+  spans: readonly Span[],
+  passes: readonly (readonly PassWord[])[],
+): Word[][] {
+  const groups: { start: number; end: number; first: number; last: number }[] =
+    [];
+  spans.forEach((span, i) => {
+    const g = groups.at(-1);
+    if (
+      g &&
+      span.start - g.end < VOTE_PAUSE_SEC &&
+      span.end - g.start <= MAX_VOTE_SEC
+    ) {
+      g.end = span.end;
+      g.last = i;
+    } else groups.push({ start: span.start, end: span.end, first: i, last: i });
+  });
+  const byGroup = passes.map((words) => nearest(groups, words));
+  const out: Word[][] = spans.map(() => []);
+  groups.forEach((g, gi) => {
+    const voted = voteWords(byGroup.map((pass) => pass[gi]!));
+    const inGroup = spans.slice(g.first, g.last + 1);
+    nearest(inGroup, voted).forEach((ws, k) => (out[g.first + k] = ws));
+  });
+  return out;
+}
+
+/**
+ * Words (in time order) handed to the spans (in time order) they're
+ * nearest: one in a pause goes to the side of its midpoint it's on.
+ */
+function nearest<W extends Word>(
+  spans: readonly Span[],
+  words: readonly W[],
+): W[][] {
+  const out = spans.map((): W[] => []);
+  let s = 0;
+  for (const w of words) {
+    while (
+      s < spans.length - 1 &&
+      w.start >= (spans[s]!.end + spans[s + 1]!.start) / 2
+    )
+      s++;
+    out[s]?.push(w);
+  }
+  return out;
 }
 
 /** A voted word, how many passes heard it, and how many heard any word in its place. */

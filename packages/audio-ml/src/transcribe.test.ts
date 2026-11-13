@@ -20,6 +20,7 @@ import {
   TRANSCRIBE_VAD_OPTIONS,
   type TranscribeWindowEndEvent,
   vote,
+  voteSpans,
   voteWords,
   WINDOW_SEC,
 } from "./transcribe";
@@ -168,6 +169,37 @@ describe("voteWords", () => {
   });
 });
 
+describe("voteSpans", () => {
+  it("votes across a short pause, so a word's passes agree whichever side of it they put the word", () => {
+    // Both passes heard "the", one just before the second span starts and
+    // one just after.
+    const spans = [
+      { start: 0, end: 2 },
+      { start: 2.8, end: 5 },
+    ];
+    const words = voteSpans(spans, [
+      [pw2("on", 1.5), pw2("the", 2.3), pw2("perimeter", 3)],
+      [pw2("on", 1.5), pw2("the", 2.9), pw2("perimeter", 3.1)],
+      [pw2("on", 1.5), pw2("the", 2.7), pw2("perimeter", 3)],
+    ]);
+    expect(words.map((ws) => ws.map((w) => w.text))).toEqual([
+      ["on"],
+      ["the", "perimeter"],
+    ]);
+  });
+
+  it("gives a span no words where no pass heard any", () => {
+    const words = voteSpans(
+      [
+        { start: 0, end: 1 },
+        { start: 10, end: 11 },
+      ],
+      [[pw2("hi", 0.2)], [pw2("hi", 0.2)], [pw2("hi", 0.2)]],
+    );
+    expect(words.map((ws) => ws.length)).toEqual([1, 0]);
+  });
+});
+
 function pw2(text: string, start: number): PassWord {
   return { text, start, edgeSecs: 10 };
 }
@@ -216,12 +248,13 @@ describe("transcribe", () => {
       "country.",
     ]);
 
-    // Each segment's bounds are ordered and contain its words' onsets.
+    // Each segment's bounds are ordered and hold its words' onsets, give or
+    // take the model's timing.
     for (const s of segments) {
       expect(s.end).toBeGreaterThanOrEqual(s.start);
       for (const w of s.words) {
-        expect(w.start).toBeGreaterThanOrEqual(s.start);
-        expect(w.start).toBeLessThanOrEqual(s.end + 0.5); // small slack for model timing
+        expect(w.start).toBeGreaterThanOrEqual(s.start - 0.5);
+        expect(w.start).toBeLessThanOrEqual(s.end + 0.5);
       }
     }
 
