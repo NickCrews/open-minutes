@@ -8,6 +8,7 @@ import {
   type Finding,
   finding,
   isNumberWord,
+  MULTIPLIERS,
   numeral,
   rewrite,
   wordRule,
@@ -21,9 +22,19 @@ export type Money = WrittenForm<typeof code>;
 export const defaultSeverity = "error" satisfies Severity;
 
 /**
+ * Whether `amountWords` is only scale words, as in "several thousand dollars"
+ * or "a couple million dollar increase": no sum to write as "$...". "a million
+ * dollars" names one, so a leading "a" counts as a quantity.
+ */
+function onlyScale(amountWords: readonly string[]): boolean {
+  return amountWords.every((w) => core(w).toLowerCase() in MULTIPLIERS);
+}
+
+/**
  * Money: "$10", "$36,000", "$1.5 million", not "ten dollars" or "5,000
  * dollar". Reported from the amount's first word: "thirty six thousand
- * dollars".
+ * dollars". Scale words with no quantity, "several thousand dollars", are
+ * left alone.
  */
 function find(words: readonly string[]): Finding[] {
   const found: Finding[] = [];
@@ -31,6 +42,7 @@ function find(words: readonly string[]): Finding[] {
     const c = core(w).toLowerCase();
     if (/^dollars?$/.test(c) && endsAmount(words, i - 1)) {
       const start = amountStart(words, i - 1);
+      if (onlyScale(words.slice(start, i))) return;
       const value = amountValue(words.slice(start, i));
       const written = value === undefined ? undefined : amount(value);
       found.push(

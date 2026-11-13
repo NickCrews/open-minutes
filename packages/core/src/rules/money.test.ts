@@ -21,6 +21,11 @@ describe("money", () => {
       found("It costs $10, or $36,000, or $1.5 million, or 6 cents."),
     ).toEqual([]);
   });
+  it("leaves scale words with no quantity alone", () => {
+    expect(
+      found("several thousand dollars and a couple million dollar increases"),
+    ).toEqual([]);
+  });
   it("writes the sum as $10", () => {
     const fix = (s: string) => fixWith(money, s);
     expect(
