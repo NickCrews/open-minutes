@@ -30,11 +30,41 @@ export interface YtDlpInfo {
   /** When a stream or premiere started, in seconds since the epoch. */
   release_timestamp?: number | null;
   webpage_url?: string;
+  /**
+   * `is_upcoming`, `is_live` or `post_live` while a stream or premiere has no
+   * complete recording yet; `was_live` or `not_live` once it has.
+   */
+  live_status?: LiveStatus | null;
+}
+
+/** yt-dlp's `live_status`: whether, and how, a video is or was a stream. */
+export type LiveStatus =
+  | "is_upcoming"
+  | "is_live"
+  | "post_live"
+  | "was_live"
+  | "not_live";
+
+/** Live statuses whose video doesn't yet hold its whole recording. */
+const UNFINISHED_LIVE_STATUSES = new Set<LiveStatus>([
+  "is_upcoming",
+  "is_live",
+  "post_live",
+]);
+
+/**
+ * Whether yt-dlp's stderr says the video is a stream or premiere that hasn't
+ * started, so it has no formats yet (eg "This live event will begin in 91
+ * minutes.", "Premieres in 2 hours").
+ */
+export function isNotStartedYet(stderr: string): boolean {
+  return /live event will begin|Premieres in/i.test(stderr);
 }
 
 /**
  * The {@link RecordingMetadata} in a video's yt-dlp info JSON. It was
  * published when its stream or premiere started, else when it was uploaded.
+ * A stream or premiere that hasn't finished has no duration.
  */
 export function metadataFromYtDlpInfo(raw: YtDlpInfo): RecordingMetadata {
   const publishedSecs = raw.release_timestamp ?? raw.timestamp;
@@ -44,7 +74,10 @@ export function metadataFromYtDlpInfo(raw: YtDlpInfo): RecordingMetadata {
     channelId: raw.channel_id ?? "",
     title: raw.title ?? "",
     description: raw.description ?? "",
-    durationSecs: raw.duration ?? null,
+    durationSecs:
+      raw.live_status != null && UNFINISHED_LIVE_STATUSES.has(raw.live_status)
+        ? null
+        : (raw.duration ?? null),
     publishedAt: publishedSecs == null ? null : new Date(publishedSecs * 1000),
   };
 }
