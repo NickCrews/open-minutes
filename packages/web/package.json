@@ -17,6 +17,7 @@
     "@kobalte/core": "^0.13.12",
     "@neondatabase/serverless": "^1.1.0",
     "@open-minutes/blobstore": "workspace:*",
+    "@open-minutes/changeset-view": "workspace:*",
     "@open-minutes/core": "workspace:*",
     "@open-minutes/db": "workspace:*",
     "@tailwindcss/vite": "^4.3.3",

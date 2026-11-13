@@ -74,6 +74,11 @@ changes another meeting's segments, chapters or row.
   meeting rules, since a meeting partway through a cleanup breaks them in
   passing; `check`, or `pnpm transcript check` on the meeting, runs them when
   you want to know.
+- `view` runs it like `check`, a statement at a time, and shows what each
+  statement does as a page to review; see
+  [@open-minutes/changeset-view](../changeset-view/README.md), which holds
+  the `pnpm changeset` script. `checkChangeset` takes the statements as a
+  `trace` to do this.
 
 The SQL runs as the `changeset` role, inside `om.run`, so it can't change its
 role, and its `BEGIN`, `COMMIT` and `ROLLBACK` fail. The role reads every

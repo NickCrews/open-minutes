@@ -1,10 +1,10 @@
-#!/usr/bin/env vpx
-// Check and apply changesets, behind the root `pnpm changeset` script. See
-// this package's README.
+// The `check` and `apply` commands of the root `pnpm changeset` script, whose
+// entry point is @open-minutes/changeset-view's CLI. See this package's
+// README.
 import { readFileSync } from "node:fs";
 import process from "node:process";
-import { defineCommand, runMain } from "citty";
-import { dbArg, formatRows, withDb } from "./cli";
+import { defineCommand } from "citty";
+import { callerPath, dbArg, formatRows, withDb } from "./cli";
 import {
   applyChangeset,
   type Changeset,
@@ -15,7 +15,7 @@ import {
 import { findMeetingId } from "./meeting";
 import { formatIssue } from "./view";
 
-const HELP = `A changeset is a SQL file of changes and assertions to one meeting. It runs in
+export const HELP = `A changeset is a SQL file of changes and assertions to one meeting. It runs in
 one transaction holding the meeting's lock, as the changeset role, and fails,
 saving nothing, if a statement or assertion fails, or if it changes another
 meeting. "check" runs it, reports what it would change and the meeting rule
@@ -79,7 +79,7 @@ function runCommand(
     const changeset = {
       db,
       meetingId: await findMeetingId(db, meeting),
-      sql: readFileSync(file, "utf8"),
+      sql: readFileSync(callerPath(file), "utf8"),
     };
     try {
       report(await run(changeset));
@@ -91,7 +91,7 @@ function runCommand(
   });
 }
 
-const checkCmd = defineCommand({
+export const checkCmd = defineCommand({
   meta: {
     name: "check",
     description:
@@ -110,7 +110,7 @@ const checkCmd = defineCommand({
     }),
 });
 
-const applyCmd = defineCommand({
+export const applyCmd = defineCommand({
   meta: {
     name: "apply",
     description:
@@ -124,13 +124,3 @@ const applyCmd = defineCommand({
       );
     }),
 });
-
-const main = defineCommand({
-  meta: {
-    name: "changeset",
-    description: `Check and apply changesets.\n\n${HELP}`,
-  },
-  subCommands: { check: checkCmd, apply: applyCmd },
-});
-
-await runMain(main);

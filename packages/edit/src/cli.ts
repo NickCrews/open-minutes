@@ -1,4 +1,5 @@
 // What the `pnpm transcript` and `pnpm changeset` CLIs share.
+import { resolve } from "node:path";
 import process from "node:process";
 import { getDb } from "@open-minutes/db";
 import type { EditResult, RowCounts } from "./edit";
@@ -11,6 +12,15 @@ export const dbArg = {
       'Database: a name ("local", "prod", ...) or a postgres:// URL. Default: $DB, else "local".',
   },
 } as const;
+
+/**
+ * A path as the caller typed it, resolved against the directory they ran the
+ * root script from: `pnpm --filter` runs a package's script in the package's
+ * directory, and sets INIT_CWD to the caller's.
+ */
+export function callerPath(path: string): string {
+  return resolve(process.env.INIT_CWD ?? process.cwd(), path);
+}
 
 /** Run `fn` with a connection, and close it after. */
 export async function withDb<T>(

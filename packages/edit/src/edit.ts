@@ -34,6 +34,23 @@ export interface Changeset {
 /** Rows an edit changed, by table. Tables it didn't change are left out. */
 export type RowCounts = Record<string, Saved>;
 
+/**
+ * Runs a changeset one statement at a time, to see what each one does. The
+ * statements, in order, are the changeset's SQL; they run in the same
+ * transaction and role as the SQL would whole.
+ */
+export interface ChangesetTrace {
+  statements: readonly string[];
+  /** Called after each statement, with the meeting before and after it. */
+  onStatement: (step: {
+    index: number;
+    before: DbMeeting;
+    after: DbMeeting;
+    /** The rows this statement changed, net. */
+    rows: RowCounts;
+  }) => Promise<void> | void;
+}
+
 export interface EditResult {
   /** What the edit did. */
   notes: string[];
@@ -53,12 +70,14 @@ export interface EditResult {
 
 /**
  * A changeset that can't be applied: its SQL failed, failed an assertion
- * (`assertion`), or did something a changeset may not.
+ * (`assertion`), or did something a changeset may not. When it ran traced,
+ * `statement` is the index of the statement that failed.
  */
 export class ChangesetError extends Error {
   constructor(
     message: string,
     readonly assertion = false,
+    readonly statement?: number,
   ) {
     super(message);
   }
@@ -140,10 +159,14 @@ export function fixRules(
 /**
  * Run a changeset and roll it back, reporting the rows it would change and
  * the rule violations it would resolve and introduce. Throws a
- * {@link ChangesetError} where {@link applyChangeset} would.
+ * {@link ChangesetError} where {@link applyChangeset} would. With `trace`, it
+ * runs the changeset a statement at a time and reports each one.
  */
-export function checkChangeset(changeset: Changeset): Promise<EditResult> {
-  return runChangeset(changeset, { dryRun: true, rules: "report" });
+export function checkChangeset(
+  changeset: Changeset,
+  { trace }: { trace?: ChangesetTrace } = {},
+): Promise<EditResult> {
+  return runChangeset(changeset, { dryRun: true, rules: "report" }, trace);
 }
 
 /**
@@ -155,32 +178,54 @@ export function applyChangeset(changeset: Changeset): Promise<EditResult> {
   return runChangeset(changeset, { dryRun: false });
 }
 
-/** Run a changeset's SQL as the `changeset` role, inside om.run. */
+/**
+ * Run a changeset's SQL as the `changeset` role, inside om.run: whole, or a
+ * statement at a time with `trace`.
+ */
 function runChangeset(
   { db, meetingId, sql: changesetSql }: Changeset,
   { dryRun, rules }: Pick<EditMeeting, "dryRun" | "rules">,
+  trace?: ChangesetTrace,
 ): Promise<EditResult> {
   return editMeeting({
     db,
     meetingId,
     dryRun,
     rules,
-    edit: async (tx) => {
+    edit: async (tx, before) => {
       const objects = await changesetObjects(tx);
-      await tx.execute(sql`SET LOCAL ROLE changeset`);
-      try {
-        await tx.execute(sql`SELECT om.run(${changesetSql})`);
-      } catch (err) {
-        const pg = postgresError(err);
-        if (!pg) throw err;
-        throw new ChangesetError(
-          pg.code === ASSERTION_FAILED
-            ? `assertion failed: ${pg.message}`
-            : `the changeset failed: ${pg.message}`,
-          pg.code === ASSERTION_FAILED,
-        );
-      }
-      await tx.execute(sql`RESET ROLE`);
+      const run = async (statement: string, index?: number) => {
+        await tx.execute(sql`SET LOCAL ROLE changeset`);
+        try {
+          await tx.execute(sql`SELECT om.run(${statement})`);
+        } catch (err) {
+          const pg = postgresError(err);
+          if (!pg) throw err;
+          throw new ChangesetError(
+            pg.code === ASSERTION_FAILED
+              ? `assertion failed: ${pg.message}`
+              : `the changeset failed: ${pg.message}`,
+            pg.code === ASSERTION_FAILED,
+            index,
+          );
+        }
+        await tx.execute(sql`RESET ROLE`);
+      };
+      if (trace) {
+        let previous = before;
+        for (const [index, statement] of trace.statements.entries()) {
+          const seq = await lastLoggedChange(tx);
+          await run(statement, index);
+          const after = await loadMeeting(tx, meetingId);
+          await trace.onStatement({
+            index,
+            before: previous,
+            after,
+            rows: await loggedChanges(tx, seq),
+          });
+          previous = after;
+        }
+      } else await run(changesetSql);
       if ((await changesetObjects(tx)) !== objects)
         throw new ChangesetError(
           "the changeset created or altered a database object; it may only change rows",
@@ -283,8 +328,19 @@ async function changesetObjects(tx: Conn): Promise<string> {
   return row!.objects;
 }
 
-/** The rows the `changeset` role changed in this transaction, net, by table. */
-async function loggedChanges(tx: Conn): Promise<RowCounts> {
+/** The `seq` of the last change om.changes logged in this transaction, or 0. */
+async function lastLoggedChange(tx: Conn): Promise<number> {
+  const [row] = await tx.execute<{ seq: string }>(sql`
+    SELECT coalesce(max(seq), 0)::text AS seq FROM om.changes
+    WHERE xact = pg_current_xact_id()`);
+  return Number(row!.seq);
+}
+
+/**
+ * The rows the `changeset` role changed in this transaction, net, by table:
+ * all of them, or those logged after the change numbered `afterSeq`.
+ */
+async function loggedChanges(tx: Conn, afterSeq = 0): Promise<RowCounts> {
   const rows = await tx.execute<{
     tbl: string;
     updated: number;
@@ -299,7 +355,7 @@ async function loggedChanges(tx: Conn): Promise<RowCounts> {
       SELECT tbl, row_id,
         (array_agg(op ORDER BY seq))[1] AS first_op,
         (array_agg(op ORDER BY seq DESC))[1] AS last_op
-      FROM om.changes WHERE xact = pg_current_xact_id()
+      FROM om.changes WHERE xact = pg_current_xact_id() AND seq > ${afterSeq}
       GROUP BY tbl, row_id
     ) x
     GROUP BY tbl ORDER BY tbl`);
