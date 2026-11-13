@@ -37,14 +37,10 @@ const common = {
   },
 } as const;
 
-const editArgs = {
+const dryRunArg = {
   "dry-run": {
     type: "boolean",
     description: "Report what would change, and save nothing",
-  },
-  "allow-errors": {
-    type: "boolean",
-    description: "Save even if the edit adds rule errors",
   },
 } as const;
 
@@ -88,7 +84,7 @@ function report(result: EditResult): void {
     );
   } else if (result.added.some((i) => i.severity === "error")) {
     console.log(
-      `not saved (would change ${rows}): the edit adds errors. Fix them, or pass --allow-errors.`,
+      `not saved (would change ${rows}): the fixes add errors. Fix them, or pass --allow-errors.`,
     );
     process.exitCode = 1;
   } else console.log(`dry run, nothing saved: would change ${rows}`);
@@ -171,7 +167,14 @@ const fixCmd = defineCommand({
     description:
       "Apply the meeting rules' fixes: drop fillers and stutters, write numbers the house way, and so on",
   },
-  args: { ...common, ...editArgs },
+  args: {
+    ...common,
+    ...dryRunArg,
+    "allow-errors": {
+      type: "boolean",
+      description: "Save even if the fixes add rule errors",
+    },
+  },
   run: ({ args }) =>
     withDb(args.db, async (db) => {
       const id = await findMeetingId(db, args.meeting);
@@ -186,7 +189,8 @@ const fixCmd = defineCommand({
 
 const CHANGESET_HELP = `"run" runs a changeset: a SQL file of changes and assertions, in one
 transaction holding the meeting's lock, as the changeset role. It saves it only
-if it changes no other meeting and adds no rule error.
+if every statement succeeds and it changes no other meeting. It doesn't run the
+meeting rules: check the result with "pnpm transcript check" when you want to.
 
 The role reads every table, inserts, updates and deletes segments, and updates
 people (slug, name, bio) and meetings (slug, title). M is the meeting's slug or
@@ -221,7 +225,7 @@ const runCmd = defineCommand({
   meta: {
     name: "run",
     description:
-      "Run a changeset, a SQL file of changes and assertions, and save it if it adds no rule error. `pnpm transcript --help` lists the om functions.",
+      "Run a changeset, a SQL file of changes and assertions. It doesn't run the meeting rules; `check` does. `pnpm transcript --help` lists the om functions.",
   },
   args: {
     ...common,
@@ -230,7 +234,7 @@ const runCmd = defineCommand({
       required: true,
       description: "The changeset's SQL file",
     },
-    ...editArgs,
+    ...dryRunArg,
   },
   run: ({ args }) =>
     withDb(args.db, async (db) => {
@@ -239,7 +243,6 @@ const runCmd = defineCommand({
         report(
           await runChangeset(db, id, readFileSync(args.file, "utf8"), {
             dryRun: args["dry-run"],
-            allowErrors: args["allow-errors"],
           }),
         );
       } catch (err) {

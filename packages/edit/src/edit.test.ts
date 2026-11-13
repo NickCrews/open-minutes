@@ -108,7 +108,9 @@ describe("runChangeset", () => {
     expect(await bio(db)).toBe(before);
   });
 
-  test("doesn't save a changeset that adds a rule error", async ({ db }) => {
+  test("saves a changeset whatever the meeting rules would find", async ({
+    db,
+  }) => {
     const id = await findMeetingId(db, SLUG);
     const seg = (await loadMeeting(db, id)).segments[3]!;
     const result = await runChangeset(
@@ -116,9 +118,9 @@ describe("runChangeset", () => {
       id,
       `UPDATE segments SET words = jsonb_set(words, '{1,start}', '0') WHERE id = ${seg.id};`,
     );
-    expect(result.saved).toBe(false);
-    expect(result.added.map((i) => i.code)).toEqual(["word-out-of-order"]);
-    expect((await loadMeeting(db, id)).segments[3]!.words).toEqual(seg.words);
+    expect(result.saved).toBe(true);
+    expect(result.added).toEqual([]);
+    expect((await loadMeeting(db, id)).segments[3]!.words[1]!.start).toBe(0);
   });
 
   test("a failed assertion stops it, with its message", async ({ db }) => {

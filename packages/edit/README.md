@@ -62,12 +62,12 @@ SELECT om.assert(
 );
 ```
 
-`run` runs the file in one transaction that holds the meeting's row lock,
-then checks the result against the meeting rules. It reports the
-violations the changeset adds and how many rows it changed in each table, and
-saves it only if it adds no error (or `--allow-errors`); `--dry-run`
-saves nothing. It saves nothing if a statement fails, or if the changeset
-changes another meeting's segments, chapters or row.
+`run` runs the file in one transaction that holds the meeting's row lock, and
+reports how many rows it changed in each table; `--dry-run` saves nothing. It
+saves nothing if a statement fails, or if the changeset changes another
+meeting's segments, chapters or row. It doesn't run the meeting rules, since a
+meeting partway through a cleanup breaks them in passing; `check` runs them
+when you want to know.
 
 The SQL runs as the `changeset` role, inside `om.run`, so it can't change its
 role, and its `BEGIN`, `COMMIT` and `ROLLBACK` fail. The role reads every

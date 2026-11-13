@@ -1,6 +1,7 @@
 export {
   ChangesetError,
-  type EditOptions,
+  type FixOptions,
+  type RunOptions,
   type EditResult,
   fixRules,
   type RowCounts,

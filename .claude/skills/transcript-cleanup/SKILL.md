@@ -42,7 +42,8 @@ only name someone with a row in the database. Name people following the
 
 Make every other change in a changeset: one SQL file for the meeting, which
 `pnpm transcript run` runs in one transaction and saves only if every
-statement succeeds and it adds no rule error. `pnpm transcript --help` and
+statement succeeds. It doesn't check the rules: run `pnpm transcript check`
+when you want to see where the meeting stands. `pnpm transcript --help` and
 `packages/edit/README.md` describe the functions in full.
 
 - `SELECT om.split_segment(M, T, W, L);` makes the word `W` at onset `T`
