@@ -17,18 +17,19 @@ of applying it.
    give, and posts the SQL as v1.
 3. **CI checks it.** For each new or edited version,
    [`changeset-check.yml`](../../.github/workflows/changeset-check.yml) runs
-   it against production and rolls it back. It puts the review page on the
-   issue as the HTML
+   it against production and rolls it back. It publishes the diff on the
+   issue as the
    [issue artifact](https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/using-artifacts-with-issues)
-   "Changeset v2", which opens in a side panel on the issue, and comments
-   whether it would apply, what it would change, and the rule violations it
-   would resolve and introduce. CI only checks versions by people with write
+   "Changeset v2 diff", and comments whether it would apply, what it would
+   change, and the rule violations it would resolve and introduce, with a
+   link to the version's review page on the website,
+   `/changesets/<issue>?v=2`. CI only checks versions by people with write
    access. If GitHub refuses the artifact (issue artifacts are in preview),
    the page is the run's artifact instead, for 90 days, and the comment says
    so.
 4. **Review it.** A reviewer opens the review page, gives each statement a
-   verdict (accept, reject or question) and a note, and pastes the page's
-   "Copy review comment" into the issue. An agent posts a review with
+   verdict (accept, reject or question) and a note, copies the review
+   comment and posts it on the issue. An agent posts a review with
    `pnpm changeset review <issue> review.json`, which writes the same comment.
 5. **Revise it.** `pnpm changeset status <issue>` shows the versions, their
    checks and their reviews, and `pnpm changeset status <issue> --sql` prints
@@ -155,8 +156,8 @@ pnpm changeset propose <file> --title T [--body B | --body-file F]
 pnpm changeset revise <issue> <file> [--note N | --note-file F]
 pnpm changeset review <issue> <review.json> [--version N]
 pnpm changeset status <issue> [--json] [--sql [--version N]]
-pnpm changeset ci check <issue> --db D --out-dir DIR [--run-url U] [--force]
-pnpm changeset ci apply <issue> --db D --out-dir DIR [--run-url U]
+pnpm changeset ci check <issue> --db D --site-url S --out-dir DIR [--run-url U] [--force]
+pnpm changeset ci apply <issue> --db D --site-url S --out-dir DIR [--run-url U]
 ```
 
 `check` and `apply` are described in
@@ -166,7 +167,18 @@ workflows run.
 
 ## The review page
 
-`view` runs the changeset the way `check` does, in one transaction as the
+The website's `/changesets/<issue>?v=<n>` shows version `n` of a changeset
+issue (the latest without `v`): links to each version, CI's latest check of
+it, its reviews, marked stale where they saw another effect, and the review
+page for the diff CI published (`src/published.ts`). It shows the diff only
+if `github-actions[bot]` last wrote the artifact, and the diff is of the
+version's SQL, with the effect of CI's latest check of it. It reads the issue
+through GitHub's API, with the `GITHUB_READ_TOKEN` secret if set, and writes
+nothing: a reviewer copies the review comment and posts it on the issue
+themselves. GitHub's issue-artifact viewer runs no scripts, so the review
+page isn't an artifact itself.
+
+`view` writes the same page locally. It runs the changeset the way `check` does, in one transaction as the
 `changeset` role that is rolled back, but a statement at a time. It writes
 the page to the temp directory (`--out` to choose) and opens it; `--json`
 also writes the diff as JSON. With `--serve` it serves the page on
@@ -201,10 +213,10 @@ words of transcript to show around each change (default 8).
   - for an `om.assert`, that it held.
 - **A review form**: per statement, accept, reject or question, and a note;
   and a note on the whole changeset. "Copy review comment" copies the review
-  comment, or shows it to copy where the browser won't allow that, as in an
-  issue artifact's sandbox. Where the browser allows, the review is kept in
-  its localStorage, by issue and by each statement's SQL, so the verdicts of
-  statements a new version leaves unchanged carry over.
+  comment, or shows it to copy where the browser won't allow that. The
+  review is kept in the browser's localStorage, by issue and by each
+  statement's SQL, so the verdicts of statements a new version leaves
+  unchanged carry over.
 
 ## How it works
 
@@ -230,11 +242,13 @@ words of transcript to show around each change (default 8).
 4. The meeting rules run on each meeting in between, to say which violations
    each statement resolved and introduced.
 
-`renderPage` (in `.`) turns a diff into HTML, with no database or Node.
+`renderPage` and `renderReport` (in `.`) turn a diff into HTML, with no
+database or Node; the website renders with them too.
 `src/client.js` is the review form's script, a plain script inlined into the
 page; `pnpm changeset review` formats its comment with the same script.
-`src/comments.ts` writes CI's comments, `src/issue.ts` reads the issue's, and
-`src/github.ts` calls GitHub's REST API.
+`src/comments.ts` writes CI's comments, `src/issue.ts` reads the issue's,
+`src/published.ts` writes and checks the diff artifact, `src/hash.ts` holds
+the hashes, and `src/github.ts` calls GitHub's REST API.
 
 ## TODO
 

@@ -3,7 +3,7 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { sqlHash } from "./build";
+import { sqlHash } from "./hash";
 import { currentRepo, GitHub, parseIssueRef } from "./github";
 import { extractSql, pickVersion, readThread } from "./issue";
 import type { VersionRef } from "./types";

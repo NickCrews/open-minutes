@@ -354,7 +354,7 @@ describe("checkComment", () => {
       "- **introduces** warning `filler-word` seg 1 0:00:20.00: um",
     );
     expect(md).toContain(
-      "[Review page](https://page), in the issue's artifacts · [run](https://run)",
+      "**[Review page](https://page)** · [run](https://run)",
     );
     expect(md).toContain(
       "| 3 | 4 | `replace_all_words` | segments 2 updated |",
@@ -388,7 +388,7 @@ describe("checkComment", () => {
     ]);
     expect(md).toContain("fails at #2 (line 3)");
     expect(md).toContain(
-      "The review page couldn't be attached to the issue (GitHub said 404); it's in [the run](https://run)'s artifacts",
+      "The diff couldn't be published on the issue (GitHub said 404), so the review page is in [the run](https://run)'s artifacts",
     );
   });
 });

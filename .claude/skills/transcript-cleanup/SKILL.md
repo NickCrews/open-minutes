@@ -84,8 +84,8 @@ intend.
 
 Then propose it: `pnpm changeset propose` opens an issue labelled
 `changeset` with your description and the SQL as v1. CI checks each version
-against production, puts a review page on the issue, and comments with the
-result. If CI says production changed what a version does, read which
+against production and comments with the result and a link to its review
+page on the website. If CI says production changed what a version does, read which
 statements and why before answering. To answer a review, read it with `pnpm changeset status <issue>` (`--json` for the
 reviews' verdicts and notes by statement number, `--sql` for the latest
 version's SQL; skip reviews marked stale), fix the changeset, and post it with `pnpm changeset revise`,

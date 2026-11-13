@@ -64,10 +64,11 @@ jobs:
           echo "::add-mask::$db"
           mkdir -p "$RUNNER_TEMP/changeset"
           pnpm changeset ci apply "$ISSUE" --db "$db" \
-            --out-dir "$RUNNER_TEMP/changeset" --run-url "$RUN_URL"
+            --out-dir "$RUNNER_TEMP/changeset" --run-url "$RUN_URL" \
+            --site-url https://open-minutes.nickcrews.workers.dev
 
-      # A re-check's page, when production had changed and it couldn't be
-      # attached to the issue.
+      # A re-check's page, when production had changed and its diff couldn't
+      # be published on the issue.
       - name: Upload the review page
         if: always()
         uses: actions/upload-artifact@v7

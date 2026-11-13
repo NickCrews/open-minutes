@@ -8,9 +8,10 @@
 # the issue's latest version, unless CI already checked it as it stands.
 # Labelling the issue `changeset:recheck` checks it again, against production
 # as it is now (the run removes the label). Each check:
-#   - puts the review page on the issue as the HTML artifact
-#     "Changeset vN" (a new version of it on a re-check), or, if GitHub
-#     refuses, uploads it as this run's artifact, and
+#   - publishes the version's diff on the issue as the artifact
+#     "Changeset vN diff" (a new version of it on a re-check), which the
+#     website's review page, /changesets/<issue>?v=N, shows; if GitHub
+#     refuses, it uploads the page as this run's artifact instead, and
 #   - comments `<!-- changeset:check vN sha256=... effect=... ok|fails -->`
 #     with whether it would apply, what it would change, and a link to the
 #     page. changeset-apply.yml applies a version only if it still has the
@@ -76,9 +77,10 @@ jobs:
           echo "::add-mask::$db"
           mkdir -p "$RUNNER_TEMP/changeset"
           pnpm changeset ci check "$ISSUE" --db "$db" \
-            --out-dir "$RUNNER_TEMP/changeset" --run-url "$RUN_URL"
+            --out-dir "$RUNNER_TEMP/changeset" --run-url "$RUN_URL" \
+            --site-url https://open-minutes.nickcrews.workers.dev
 
-      # Only when the page couldn't be attached to the issue.
+      # Only when the diff couldn't be published on the issue.
       - name: Upload the review page
         uses: actions/upload-artifact@v7
         with:

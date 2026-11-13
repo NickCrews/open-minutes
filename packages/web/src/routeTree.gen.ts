@@ -17,6 +17,7 @@ import { Route as MeetingsRouteImport } from './routes/meetings'
 import { Route as PeopleRouteImport } from './routes/people'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as BodiesIdRouteImport } from './routes/bodies_.$id'
+import { Route as ChangesetsIssueRouteImport } from './routes/changesets_.$issue'
 import { Route as MeetingsIdRouteImport } from './routes/meetings_.$id'
 import { Route as PeopleIdRouteImport } from './routes/people_.$id'
 
@@ -60,6 +61,11 @@ const BodiesIdRoute = BodiesIdRouteImport.update({
   path: '/bodies/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ChangesetsIssueRoute = ChangesetsIssueRouteImport.update({
+  id: '/changesets_/$issue',
+  path: '/changesets/$issue',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MeetingsIdRoute = MeetingsIdRouteImport.update({
   id: '/meetings_/$id',
   path: '/meetings/$id',
@@ -80,6 +86,7 @@ export interface FileRoutesByFullPath {
   '/people': typeof PeopleRoute
   '/search': typeof SearchRoute
   '/bodies/$id': typeof BodiesIdRoute
+  '/changesets/$issue': typeof ChangesetsIssueRoute
   '/meetings/$id': typeof MeetingsIdRoute
   '/people/$id': typeof PeopleIdRoute
 }
@@ -92,6 +99,7 @@ export interface FileRoutesByTo {
   '/people': typeof PeopleRoute
   '/search': typeof SearchRoute
   '/bodies/$id': typeof BodiesIdRoute
+  '/changesets/$issue': typeof ChangesetsIssueRoute
   '/meetings/$id': typeof MeetingsIdRoute
   '/people/$id': typeof PeopleIdRoute
 }
@@ -105,6 +113,7 @@ export interface FileRoutesById {
   '/people': typeof PeopleRoute
   '/search': typeof SearchRoute
   '/bodies_/$id': typeof BodiesIdRoute
+  '/changesets_/$issue': typeof ChangesetsIssueRoute
   '/meetings_/$id': typeof MeetingsIdRoute
   '/people_/$id': typeof PeopleIdRoute
 }
@@ -119,6 +128,7 @@ export interface FileRouteTypes {
     | '/people'
     | '/search'
     | '/bodies/$id'
+    | '/changesets/$issue'
     | '/meetings/$id'
     | '/people/$id'
   fileRoutesByTo: FileRoutesByTo
@@ -131,6 +141,7 @@ export interface FileRouteTypes {
     | '/people'
     | '/search'
     | '/bodies/$id'
+    | '/changesets/$issue'
     | '/meetings/$id'
     | '/people/$id'
   id:
@@ -143,6 +154,7 @@ export interface FileRouteTypes {
     | '/people'
     | '/search'
     | '/bodies_/$id'
+    | '/changesets_/$issue'
     | '/meetings_/$id'
     | '/people_/$id'
   fileRoutesById: FileRoutesById
@@ -156,6 +168,7 @@ export interface RootRouteChildren {
   PeopleRoute: typeof PeopleRoute
   SearchRoute: typeof SearchRoute
   BodiesIdRoute: typeof BodiesIdRoute
+  ChangesetsIssueRoute: typeof ChangesetsIssueRoute
   MeetingsIdRoute: typeof MeetingsIdRoute
   PeopleIdRoute: typeof PeopleIdRoute
 }
@@ -218,6 +231,13 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof BodiesIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/changesets_/$issue': {
+      id: '/changesets_/$issue'
+      path: '/changesets/$issue'
+      fullPath: '/changesets/$issue'
+      preLoaderRoute: typeof ChangesetsIssueRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/meetings_/$id': {
       id: '/meetings_/$id'
       path: '/meetings/$id'
@@ -244,6 +264,7 @@ const rootRouteChildren: RootRouteChildren = {
   PeopleRoute: PeopleRoute,
   SearchRoute: SearchRoute,
   BodiesIdRoute: BodiesIdRoute,
+  ChangesetsIssueRoute: ChangesetsIssueRoute,
   MeetingsIdRoute: MeetingsIdRoute,
   PeopleIdRoute: PeopleIdRoute,
 }

@@ -36,6 +36,7 @@ import {
 } from "./issue";
 import { describeRows, renderPage } from "./render";
 import { loadSource, type Source } from "./source";
+import { diffArtifactBody, diffArtifactName } from "./published";
 import { splitStatements } from "./statements";
 import type { ChangesetDiff, VersionRef } from "./types";
 
@@ -631,13 +632,24 @@ const ciArgs = {
       "Where to write a review page that can't be attached to the issue, for the workflow to upload",
   },
   "run-url": { type: "string", description: "The workflow run, to link to" },
+  "site-url": {
+    type: "string",
+    required: true,
+    description:
+      "The website, whose /changesets/<issue>?v=<n> shows a version's review page",
+  },
 } as const;
+
+/** A version's review page on the website. */
+const reviewUrl = (siteUrl: string, issue: IssueRef, version: number) =>
+  `${siteUrl.replace(/\/$/, "")}/changesets/${issue.issue}?v=${version}`;
 
 /**
  * Check version `v` of a changeset issue against `db` and comment with the
- * result: build its diff, put its review page on the issue as the artifact
- * "Changeset v<n>" (a new version of it on a re-check), or, if that fails,
- * write the page to `outDir` for the workflow to upload, and post the check.
+ * result: build its diff, publish it on the issue as the artifact
+ * "Changeset v<n> diff" (a new version of it on a re-check), which the
+ * website's review page shows, and post the check. If the artifact can't be
+ * published, write the page to `outDir` for the workflow to upload instead.
  */
 async function checkAndComment(
   gh: GitHub,
@@ -647,9 +659,16 @@ async function checkAndComment(
   {
     outDir,
     runUrl,
+    siteUrl,
     why,
     previous,
-  }: { outDir: string; runUrl?: string; why?: string; previous?: Check },
+  }: {
+    outDir: string;
+    runUrl?: string;
+    siteUrl: string;
+    why?: string;
+    previous?: Check;
+  },
 ): Promise<ChangesetDiff> {
   const version: VersionRef = { ...issue, version: v.version, url: v.url };
   const diff = await buildChangesetDiff({
@@ -659,17 +678,19 @@ async function checkAndComment(
     source: v.url,
     version,
   });
-  const html = renderPage(diff, CLIENT_SCRIPT);
+  const url = reviewUrl(siteUrl, issue, v.version);
   let page: PageLink;
   try {
-    page = {
-      url: (await gh.putHtmlArtifact(issue, `Changeset v${v.version}`, html))
-        .html_url,
-    };
+    await gh.putArtifact(
+      issue,
+      diffArtifactName(v.version),
+      diffArtifactBody(diff, url),
+    );
+    page = { url };
   } catch (err) {
-    console.log(`couldn't attach the review page to the issue: ${err}`);
+    console.log(`couldn't publish the diff on the issue: ${err}`);
     const file = join(callerPath(outDir), pageName(diff));
-    writeFileSync(file, html);
+    writeFileSync(file, renderPage(diff, CLIENT_SCRIPT));
     const status = /: (\d{3}) /.exec(String(err))?.[1];
     page = { unattached: status ? `GitHub said ${status}` : "an error" };
   }
@@ -710,6 +731,7 @@ const ciCheckCmd = defineCommand({
       checkAndComment(gh, db as DB, issue, v, {
         outDir: args["out-dir"],
         runUrl: args["run-url"],
+        siteUrl: args["site-url"],
         why: checked
           ? "Checked again, against production as it is now."
           : undefined,
@@ -773,6 +795,7 @@ const ciApplyCmd = defineCommand({
         await checkAndComment(gh, db as DB, issue, v, {
           outDir: args["out-dir"],
           runUrl: args["run-url"],
+          siteUrl: args["site-url"],
           why: "Checked again, because applying it failed.",
           previous: check,
         });
@@ -785,6 +808,7 @@ const ciApplyCmd = defineCommand({
         await checkAndComment(gh, db as DB, issue, v, {
           outDir: args["out-dir"],
           runUrl: args["run-url"],
+          siteUrl: args["site-url"],
           why: "Checked again, because production changed since the approved check.",
           previous: check,
         });

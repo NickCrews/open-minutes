@@ -348,6 +348,9 @@ importers:
       '@open-minutes/blobstore':
         specifier: workspace:*
         version: link:../blobstore
+      '@open-minutes/changeset-review':
+        specifier: workspace:*
+        version: link:../changeset-review
       '@open-minutes/core':
         specifier: workspace:*
         version: link:../core

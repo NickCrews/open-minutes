@@ -170,7 +170,7 @@ export interface ChangesetDiff {
   /** The SHA-256 of `sql`, in hex, which reviews and checks cite. */
   sha256: string;
   /**
-   * The SHA-256 of what it does (build.ts's effectHash), which CI checks
+   * The SHA-256 of what it does (hash.ts's effectHash), which CI checks
    * again before applying it, so it applies only if it still does what was
    * reviewed.
    */

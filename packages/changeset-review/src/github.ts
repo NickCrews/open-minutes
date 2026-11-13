@@ -211,13 +211,13 @@ export class GitHub {
   }
 
   /**
-   * Put an HTML page on the issue as the artifact named `name`: a new one,
-   * or a new version of the one with that name.
+   * Put a Markdown document on the issue as the artifact named `name`: a new
+   * one, or a new version of the one with that name.
    */
-  async putHtmlArtifact(
+  async putArtifact(
     ref: IssueRef,
     name: string,
-    html: string,
+    body: string,
   ): Promise<IssueArtifact> {
     const path = `/repos/${ref.repo}/issues/${ref.issue}/artifacts`;
     const existing = (await this.artifacts(ref)).find((a) => a.name === name);
@@ -225,13 +225,13 @@ export class GitHub {
       ? await this.#request<IssueArtifact>(
           "PATCH",
           `${path}/${existing.number}`,
-          { body: html },
+          { body },
           ARTIFACTS_API,
         )
       : await this.#request<IssueArtifact>(
           "POST",
           path,
-          { type: "embedded_html", name, body: html },
+          { type: "generic", name, body },
           ARTIFACTS_API,
         );
     return data;

@@ -1,14 +1,14 @@
 // The comments CI posts on a changeset's issue: the check of a version, and
 // the result of applying it. Each starts with the marker issue.ts reads.
 
-import { statementEffects } from "./build";
+import { statementEffects } from "./hash";
 import type { Check } from "./issue";
 import { describeRows, meetingName, statementSummary } from "./render";
 import type { ChangesetDiff, VersionRef } from "./types";
 
 /**
- * Where a check's review page is: an artifact on the issue, or, when it
- * couldn't be attached, the run's artifacts, and why.
+ * Where a check's review page is: on the website, or, when the diff couldn't
+ * be published on the issue for it, in the run's artifacts, and why.
  */
 export type PageLink = { url: string } | { unattached: string };
 
@@ -76,9 +76,9 @@ export function checkComment(
   }
   const links =
     "url" in page
-      ? [`[Review page](${page.url}), in the issue's artifacts`]
+      ? [`**[Review page](${page.url})**`]
       : [
-          `The review page couldn't be attached to the issue (${page.unattached})${runUrl ? `; it's in [the run](${runUrl})'s artifacts` : ""}`,
+          `The diff couldn't be published on the issue (${page.unattached}), so the review page is ${runUrl ? `in [the run](${runUrl})'s artifacts` : "in the run's artifacts"}`,
         ];
   if (runUrl && "url" in page) links.push(`[run](${runUrl})`);
   lines.push("", links.join(" · "), "");

@@ -6,6 +6,9 @@
   "exports": {
     ".": "./src/index.ts",
     "./build": "./src/build.ts",
+    "./hash": "./src/hash.ts",
+    "./issue": "./src/issue.ts",
+    "./published": "./src/published.ts",
     "./client.js": "./src/client.js"
   },
   "scripts": {

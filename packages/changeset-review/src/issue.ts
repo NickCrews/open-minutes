@@ -57,9 +57,9 @@ export interface Version {
 export interface Check {
   version: number;
   sha256: string;
-  /** What the version did when CI checked it (build.ts's effectHash). */
+  /** What the version did when CI checked it (hash.ts's effectHash). */
   effect: string | null;
-  /** The first 12 hex digits of what each statement did (build.ts's statementEffects). */
+  /** The first 12 hex digits of what each statement did (hash.ts's statementEffects). */
   statements: string[] | null;
   ok: boolean;
   url: string;
@@ -104,7 +104,7 @@ const MARKER =
 
 /**
  * Read a changeset issue's comments. `hash` is the SHA-256 the flow cites a
- * version's SQL by (build.ts's sqlHash).
+ * version's SQL by (hash.ts's sqlHash).
  */
 export function readThread(
   comments: readonly IssueComment[],

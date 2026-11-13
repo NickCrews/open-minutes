@@ -285,7 +285,7 @@ One of the SQL files posted to a changeset issue, numbered from v1, and cited by
 _Avoid_: revision, draft, iteration
 
 **Review page**:
-The page `pnpm changeset view` writes, and CI links to from its check of each version: what each statement of a changeset does, with a form for a verdict and note on each.
+The page showing what each statement of a changeset does, with a form for a verdict and note on each: on the website at `/changesets/<issue>?v=<n>`, which CI's check of each version links to, or written locally by `pnpm changeset view`.
 _Avoid_: diff viewer, preview
 
 **Approve**:
