@@ -56,7 +56,8 @@ jobs:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           db=$(pnpm --silent dlx neonctl@2 connection-string \
-            --project-id "$NEON_PROJECT_ID" --no-analytics)
+            --project-id "$NEON_PROJECT_ID" --no-analytics \
+            --database-name neondb --role-name neondb_owner)
           if [[ "$db" != postgres* ]]; then
             echo "::error::neonctl didn't return a connection string for production."
             exit 1

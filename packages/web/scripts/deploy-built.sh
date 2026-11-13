@@ -25,7 +25,8 @@ message="production @ $(git rev-parse HEAD)"
 # given no branch. Unpooled (the default), for migrating.
 echo "==> Asking Neon for production's database URL"
 db=$(pnpm --silent dlx neonctl@2 connection-string \
-  --project-id "$NEON_PROJECT_ID" --no-analytics)
+  --project-id "$NEON_PROJECT_ID" --no-analytics \
+  --database-name neondb --role-name neondb_owner)
 if [[ "$db" != postgres* ]]; then
   echo "error: neonctl didn't return a connection string for production." >&2
   exit 1
