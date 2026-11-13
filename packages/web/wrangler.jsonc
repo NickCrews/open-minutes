@@ -16,5 +16,9 @@
     // .env.example). Excerpts play audio from it. It's the default in
     // @open-minutes/blobstore too, so keep the two the same.
     "BLOB_STORE_PUBLIC_URL": "https://pub-ac21478ae97547c5a797c710cdc9df3d.r2.dev",
+    // The repository whose issues propose changesets, which /changesets/<issue>
+    // reads with the ISSUES_READ_TOKEN secret: GitHub reads an issue's
+    // artifacts only with a token.
+    "GITHUB_REPOSITORY": "NickCrews/open-minutes",
   },
 }

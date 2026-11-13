@@ -4,6 +4,8 @@ export {
   type Changeset,
   type CheckedChangeset,
   ChangesetError,
+  ChangesetRefused,
+  type ChangesetTrace,
   checkChangeset,
   type Fix,
   type FixResult,
@@ -11,6 +13,7 @@ export {
   type MeetingCheck,
   type MeetingRef,
   type RowCounts,
+  type TracedStatement,
 } from "./edit";
 export { type Golden, toGolden, writeGolden } from "./export";
 export {
@@ -19,7 +22,15 @@ export {
   type DbSegment,
   findMeetingId,
   loadMeeting,
+  loadPeople,
   saveSegments,
 } from "./meeting";
 export { publishGolden, type VoiceprintSource } from "./publish";
-export { formatIssue, labelOf, meetingIssues, render, stats } from "./view";
+export {
+  formatIssue,
+  labelOf,
+  meetingIssues,
+  newIssues,
+  render,
+  stats,
+} from "./view";

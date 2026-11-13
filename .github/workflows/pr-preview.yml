@@ -118,14 +118,18 @@ jobs:
         env:
           DB_URL: ${{ steps.branch.outputs.db_url }}
           DB_URL_POOLED: ${{ steps.branch.outputs.db_url_pooled }}
+          ISSUES_READ_TOKEN: ${{ secrets.ISSUES_READ_TOKEN }}
         run: |
           echo "::add-mask::$DB_URL"
           echo "::add-mask::$DB_URL_POOLED"
           pnpm db migrate --db "$DB_URL"
           pnpm db status --db "$DB_URL" --check
-          # Hand the pooled URL (what the Worker uses) to the deploy step as a
-          # file, so it isn't repeated in another step's environment.
-          jq -n --arg url "$DB_URL_POOLED" '{DATABASE_URL: $url}' > "$RUNNER_TEMP/worker-secrets.json"
+          # Hand the pooled URL (what the Worker uses) and the token the
+          # changeset review page reads issues with to the deploy step as a
+          # file, so they aren't repeated in another step's environment.
+          jq -n --arg url "$DB_URL_POOLED" --arg token "$ISSUES_READ_TOKEN" \
+            '{DATABASE_URL: $url} + (if $token == "" then {} else {ISSUES_READ_TOKEN: $token} end)' \
+            > "$RUNNER_TEMP/worker-secrets.json"
 
       # The build never touches a database: vite.config.ts only resolves one
       # for the dev server, so dist/server/wrangler.json has no vars.

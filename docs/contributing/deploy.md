@@ -103,3 +103,8 @@ first page.
   the one it resolves to the Worker (`vite.config.ts`), PR previews upload
   theirs with `--secrets-file`, and production's is set once on the Worker,
   which new versions keep.
+- **`ISSUES_READ_TOKEN`**, a secret, is a fine-grained GitHub token with
+  read access to this repository's issues, which the changeset review page
+  (`/changesets/<issue>`) reads issues and their artifacts with. Set it once
+  on the production Worker (`wrangler secret put ISSUES_READ_TOKEN`), and as
+  the repository secret of the same name, which PR previews upload.

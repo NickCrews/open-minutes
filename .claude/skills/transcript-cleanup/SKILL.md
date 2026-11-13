@@ -8,8 +8,9 @@ description: Fix who-said-what, misheard words and people in an Open Minutes mee
 ## Tools
 
 `pnpm transcript` reads a meeting in the database and applies the rules'
-fixes to it, and `pnpm changeset` checks and applies changesets to it. `--db`
-names the database: `prod` for production.
+fixes to it, and `pnpm changeset` checks changesets against it, shows what
+they do, and proposes them for production. `--db` names the database: `prod`
+for production.
 
 ```sh
 pnpm transcript render <meeting> --from H:MM:SS --to H:MM:SS --db prod
@@ -19,7 +20,10 @@ pnpm transcript check <meeting> --db prod
 pnpm transcript fix <meeting> --dry-run --db prod
 pnpm transcript fix <meeting> --db prod
 pnpm changeset check changeset.sql --db prod
-pnpm changeset apply changeset.sql --db prod
+pnpm changeset view changeset.sql --db prod --no-open
+pnpm changeset propose changeset.sql --title "..." --body "..."
+pnpm changeset status <issue>
+pnpm changeset revise <issue> changeset.sql --note "..."
 ```
 
 `<meeting>` is a slug or an id. `render` shows the transcript a segment at a
@@ -40,13 +44,13 @@ only name someone with a row in the database. Name people following the
 
 ## Changesets
 
-Make every other change in a changeset: one SQL file.
+Make every other change in a changeset: one SQL file. Don't apply one to
+production yourself; propose it.
 `pnpm changeset check` runs it and rolls it back, reporting the rows it would
 change and, in each meeting it changes, the rule violations it would resolve
-and introduce. `pnpm
-changeset apply` runs it and saves it if every statement succeeds, without
-checking the rules. `pnpm changeset --help` and `packages/edit/README.md`
-describe the functions in full.
+and introduce. `pnpm changeset view` does the same a statement at a time and
+writes a page showing what each statement does. `pnpm changeset --help` and
+`packages/edit/README.md` describe the functions in full.
 
 - `SELECT om.split_segment(M, T, W, L);` makes the word `W` at onset `T`
   start a new segment spoken by `L`, running to the end of its segment. Split
@@ -74,8 +78,24 @@ describe the functions in full.
 Each edit takes the meeting `M` by slug or id, onsets as `render` and
 `words` print them, and speaker labels `L`, and merges neighbouring segments
 left with the same speaker. Put a `--` comment above each change with its
-evidence. Check the changeset until it changes the rows you expect and
-introduces no violations you didn't intend, then apply it.
+evidence: reviewers read it next to the statement. Check the changeset until
+it changes the rows you expect and introduces no violations you didn't
+intend.
+
+Then propose it: `pnpm changeset propose` opens an issue labelled
+`changeset` with your description and the SQL as v1. CI checks each version
+against production and comments with the result and a link to its review
+page on the website. If CI says production changed what a version does, read which
+statements and why before answering. To answer a review, read it with `pnpm changeset status <issue>` (`--json` for the
+reviews' verdicts and notes by statement number, `--sql` for the latest
+version's SQL; skip reviews marked stale), fix the changeset, and post it with `pnpm changeset revise`,
+saying in `--note` what changed and which review it answers. A maintainer
+approves the issue, and CI applies the latest version.
+`packages/changeset-review/README.md` describes the flow.
+
+To review a changeset someone else proposed, read its statements with
+`pnpm changeset view <issue> --db prod --json diff.json --no-open`, and post
+your verdicts with `pnpm changeset review <issue> review.json`.
 
 ## Rules
 
@@ -159,6 +179,6 @@ introduces no violations you didn't intend, then apply it.
 
 ## Report
 
-Give the changeset and what `pnpm changeset apply` reported. For each change,
+Give the issue's URL and what CI's check of the latest version reported. For each change,
 give the segment or person, the old label, the new label, and the evidence
 (quote the words). Then list what you left unresolved, and why.

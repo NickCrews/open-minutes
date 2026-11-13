@@ -21,6 +21,9 @@ importers:
 
   .:
     devDependencies:
+      '@open-minutes/changeset-review':
+        specifier: workspace:*
+        version: link:packages/changeset-review
       '@open-minutes/datasets':
         specifier: workspace:*
         version: link:packages/datasets
@@ -99,6 +102,34 @@ importers:
         specifier: ^1.0.20
         version: 1.0.20
     devDependencies:
+      vite-plus:
+        specifier: 'catalog:'
+        version: 1.4.0(@types/node@24.19.2)(@vitest/ui@5.0.5(vitest@5.0.5))(esbuild@0.28.2)(jiti@2.7.0)(typescript@5.9.3)
+
+  packages/changeset-review:
+    dependencies:
+      '@open-minutes/core':
+        specifier: workspace:*
+        version: link:../core
+      '@open-minutes/db':
+        specifier: workspace:*
+        version: link:../db
+      '@open-minutes/edit':
+        specifier: workspace:*
+        version: link:../edit
+      citty:
+        specifier: ^0.1.6
+        version: 0.1.6
+      drizzle-orm:
+        specifier: 1.0.0-beta.21
+        version: 1.0.0-beta.21(@neondatabase/serverless@1.2.0)(@types/mssql@9.1.11)(mssql@11.0.2)(postgres@3.4.9)(zod@4.6.7)
+    devDependencies:
+      '@open-minutes/seed':
+        specifier: workspace:*
+        version: link:../seed
+      '@types/node':
+        specifier: ^24
+        version: 24.19.2
       vite-plus:
         specifier: 'catalog:'
         version: 1.4.0(@types/node@24.19.2)(@vitest/ui@5.0.5(vitest@5.0.5))(esbuild@0.28.2)(jiti@2.7.0)(typescript@5.9.3)
@@ -317,6 +348,9 @@ importers:
       '@open-minutes/blobstore':
         specifier: workspace:*
         version: link:../blobstore
+      '@open-minutes/changeset-review':
+        specifier: workspace:*
+        version: link:../changeset-review
       '@open-minutes/core':
         specifier: workspace:*
         version: link:../core

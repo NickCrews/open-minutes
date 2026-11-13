@@ -18,8 +18,8 @@ are the exception, and are edited by hand.
 ## Correcting a golden meeting
 
 1. Clean up the meeting in production following the `transcript-cleanup`
-   skill, with `--db prod`. Name people following the `people-records`
-   skill.
+   skill: propose the changeset in an issue, and export once CI has applied
+   it. Name people following the `people-records` skill.
 2. Export it:
 
    ```sh
