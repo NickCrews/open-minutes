@@ -219,6 +219,11 @@ test("splits municipalities", async ({ testDb }) => {
 
 Use raw SQL: drizzle's table objects only describe the latest schema.
 
+The `changeset` role, which runs changesets (see
+[packages/edit](../../packages/edit/README.md#changesets)), can read a new
+table but not write it; grant it more in the migration if changesets should.
+The `om` schema's functions are hand-written in migrations too.
+
 Never edit a migration that's on `main`; add a new one. Editing an unmerged one
 is fine: `pnpm db up` notices and resets your branch's database.
 

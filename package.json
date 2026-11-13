@@ -22,6 +22,7 @@
     "datasets:fix": "pnpm --silent --filter @open-minutes/datasets run fix",
     "transcript": "pnpm --silent --filter @open-minutes/edit run transcript",
     "goldens": "pnpm --silent --filter @open-minutes/edit run goldens",
+    "changeset": "pnpm --silent --filter @open-minutes/edit run changeset",
     "deploy:prod": "pnpm --filter @open-minutes/web run deploy"
   },
   "devDependencies": {

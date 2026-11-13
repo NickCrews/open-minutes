@@ -1,11 +1,13 @@
 #!/usr/bin/env vpx
-// Read and edit a meeting's transcript in a database, behind the root
-// `pnpm transcript` script. See this package's README.
+// Read a meeting's transcript in a database, check it against the meeting
+// rules and apply their fixes, behind the root `pnpm transcript` script. See
+// this package's README.
 import process from "node:process";
 import { defineCommand, runMain } from "citty";
 import { parseClock } from "@open-minutes/core/clock";
-import { getDb } from "@open-minutes/db";
-import { type EditResult, fixRules } from "./edit";
+import { type getDb } from "@open-minutes/db";
+import { dbArg, reportFix, withDb } from "./cli";
+import { fixRules } from "./edit";
 import { findMeetingId, loadMeeting } from "./meeting";
 import { formatIssue, meetingIssues, render, stats, wordList } from "./view";
 
@@ -23,56 +25,18 @@ const common = {
     description: "The meeting: its slug, or its id",
     required: true,
   },
-  db: {
-    type: "string",
-    description:
-      'Database: a name ("local", "prod", ...) or a postgres:// URL. Default: $DB, else "local".',
-  },
+  ...dbArg,
 } as const;
 
-const editArgs = {
+const dryRunArg = {
   "dry-run": {
     type: "boolean",
     description: "Report what would change, and save nothing",
   },
-  "allow-errors": {
-    type: "boolean",
-    description: "Save even if the edit adds rule errors",
-  },
 } as const;
-
-/** Run `fn` with a connection, and close it after. */
-async function withDb<T>(
-  target: string | undefined,
-  fn: (db: ReturnType<typeof getDb>["db"]) => Promise<T>,
-): Promise<T> {
-  const { db, client } = getDb(target);
-  try {
-    return await fn(db);
-  } finally {
-    await client.end();
-  }
-}
 
 async function loadRef(db: ReturnType<typeof getDb>["db"], ref: string) {
   return loadMeeting(db, await findMeetingId(db, ref));
-}
-
-function report(result: EditResult): void {
-  for (const note of result.notes) console.log(note);
-  for (const issue of result.added)
-    console.log(`added ${formatIssue(issue, result.meeting)}`);
-  const { updated, inserted, deleted } = result.rows;
-  if (result.saved) {
-    console.log(
-      `saved: ${updated} segment(s) updated, ${inserted} inserted, ${deleted} deleted; ${result.meeting.segments.length} segments`,
-    );
-  } else if (result.added.some((i) => i.severity === "error")) {
-    console.log(
-      "not saved: the edit adds errors. Fix them, or pass --allow-errors.",
-    );
-    process.exitCode = 1;
-  } else console.log("dry run: nothing saved");
 }
 
 const renderCmd = defineCommand({
@@ -152,11 +116,18 @@ const fixCmd = defineCommand({
     description:
       "Apply the meeting rules' fixes: drop fillers and stutters, write numbers the house way, and so on",
   },
-  args: { ...common, ...editArgs },
+  args: {
+    ...common,
+    ...dryRunArg,
+    "allow-errors": {
+      type: "boolean",
+      description: "Save even if the fixes add rule errors",
+    },
+  },
   run: ({ args }) =>
     withDb(args.db, async (db) => {
       const id = await findMeetingId(db, args.meeting);
-      report(
+      reportFix(
         await fixRules(db, id, {
           dryRun: args["dry-run"],
           allowErrors: args["allow-errors"],
@@ -168,7 +139,8 @@ const fixCmd = defineCommand({
 const main = defineCommand({
   meta: {
     name: "transcript",
-    description: "Read and edit a meeting's transcript in a database",
+    description:
+      "Read a meeting's transcript in a database, check it against the meeting rules, and apply their fixes. `pnpm changeset` edits it.",
   },
   subCommands: {
     render: renderCmd,

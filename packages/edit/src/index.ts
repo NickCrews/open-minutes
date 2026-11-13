@@ -1,4 +1,13 @@
-export { type EditOptions, type EditResult, fixRules } from "./edit";
+export {
+  ChangesetError,
+  type FixOptions,
+  type EditResult,
+  fixRules,
+  type RowCounts,
+  applyChangeset,
+  type Changeset,
+  checkChangeset,
+} from "./edit";
 export { type Golden, toGolden, writeGolden } from "./export";
 export {
   type DbMeeting,

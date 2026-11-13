@@ -1,12 +1,15 @@
-// Editing a meeting in a database: apply the meeting rules' fixes, in one
-// transaction that holds the meeting's row lock, checked by the meeting rules
-// before anything is saved.
+// Editing a meeting in a database, in one transaction that holds the
+// meeting's row lock: apply the meeting rules' fixes, or check or apply a
+// changeset. Fixes are checked by the meeting rules before they are saved.
+// Checking a changeset reports the violations it fixes and introduces, and
+// saves nothing; applying one doesn't run the rules.
 
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { chaptersTable, type DB, meetingsTable } from "@open-minutes/db";
 import { fixMeeting, type MeetingIssue } from "@open-minutes/core/rules";
 import type { Segment } from "@open-minutes/core/transcript";
 import {
+  type Conn,
   type DbMeeting,
   loadMeeting,
   type Saved,
@@ -14,25 +17,55 @@ import {
 } from "./meeting";
 import { meetingIssues, newIssues, ruleMeeting, ruleSpecs } from "./view";
 
-export interface EditOptions {
+export interface FixOptions {
   /** Report what would change, and save nothing. */
   dryRun?: boolean;
-  /** Save even if the edit adds errors. */
+  /** Save even if the fixes add rule errors. */
   allowErrors?: boolean;
 }
 
-export interface EditResult {
-  /** What the fixes did. */
-  notes: string[];
-  /** The meeting as edited. */
-  meeting: DbMeeting;
-  /** Issues the edit added, errors and warnings. */
-  added: MeetingIssue[];
-  /** Whether it was saved: not on a dry run, or when it added errors. */
-  saved: boolean;
-  /** Rows changed; zeros when not saved. */
-  rows: Saved;
+/** A changeset's SQL, for one meeting in a database. */
+export interface Changeset {
+  db: DB;
+  meetingId: number;
+  sql: string;
 }
+
+/** Rows an edit changed, by table. Tables it didn't change are left out. */
+export type RowCounts = Record<string, Saved>;
+
+export interface EditResult {
+  /** What the edit did. */
+  notes: string[];
+  /** The meeting as it was, which `resolved` indexes into. */
+  before: DbMeeting;
+  /** The meeting as edited, which `added` indexes into. */
+  meeting: DbMeeting;
+  /** Violations the edit introduced; empty when the rules didn't run. */
+  added: MeetingIssue[];
+  /** Violations the edit resolved; empty when the rules didn't run. */
+  resolved: MeetingIssue[];
+  /** Whether it was saved: not on a dry run, or when fixes added errors. */
+  saved: boolean;
+  /** Rows the edit changed, whether or not it was saved. */
+  rows: RowCounts;
+}
+
+/**
+ * A changeset that can't be applied: its SQL failed, failed an assertion
+ * (`assertion`), or did something a changeset may not.
+ */
+export class ChangesetError extends Error {
+  constructor(
+    message: string,
+    readonly assertion = false,
+  ) {
+    super(message);
+  }
+}
+
+/** The SQLSTATE om.assert raises. */
+const ASSERTION_FAILED = "OM001";
 
 class Rollback extends Error {}
 
@@ -43,90 +76,247 @@ class Rollback extends Error {}
 export function fixRules(
   db: DB,
   meetingId: number,
-  options: EditOptions = {},
+  { dryRun = false, allowErrors = false }: FixOptions = {},
 ): Promise<EditResult> {
-  return editMeeting(db, meetingId, options, async (tx, before) => {
-    const { meeting: fixed, fixed: issues } = await fixMeeting(
-      { ...ruleMeeting(before), segments: stripIds(before.segments) },
-      ruleSpecs(before),
-    );
-    const chapters = (fixed.chapters ?? []).map((c, i) => ({
-      ...c,
-      id: before.chapters[i]!.id,
-    }));
-    if (fixed.title !== before.title)
-      await tx
-        .update(meetingsTable)
-        .set({ title: fixed.title })
-        .where(eq(meetingsTable.id, meetingId));
-    for (const [i, c] of chapters.entries()) {
-      const old = before.chapters[i]!;
-      if (
-        c.title !== old.title ||
-        c.summary !== old.summary ||
-        JSON.stringify(c.bullets) !== JSON.stringify(old.bullets)
-      )
+  return editMeeting({
+    db,
+    meetingId,
+    dryRun,
+    rules: "block",
+    allowErrors,
+    edit: async (tx, before) => {
+      const { meeting: fixed, fixed: issues } = await fixMeeting(
+        { ...ruleMeeting(before), segments: stripIds(before.segments) },
+        ruleSpecs(before),
+      );
+      const rows: RowCounts = {};
+      if (fixed.title !== before.title) {
         await tx
-          .update(chaptersTable)
-          .set({ title: c.title, summary: c.summary, bullets: [...c.bullets] })
-          .where(eq(chaptersTable.id, c.id));
-    }
-    return {
-      notes: issues.map((i) => `fixed ${i.code}: ${i.message}`),
-      meeting: {
-        ...before,
-        title: fixed.title ?? before.title,
-        segments: fixed.segments.map((s) => ({
-          speakerNumber: s.speakerNumber,
+          .update(meetingsTable)
+          .set({ title: fixed.title })
+          .where(eq(meetingsTable.id, meetingId));
+        rows.meetings = { updated: 1, inserted: 0, deleted: 0 };
+      }
+      let chapters = 0;
+      for (const [i, c] of (fixed.chapters ?? []).entries()) {
+        const old = before.chapters[i]!;
+        if (
+          c.title !== old.title ||
+          c.summary !== old.summary ||
+          JSON.stringify(c.bullets) !== JSON.stringify(old.bullets)
+        ) {
+          await tx
+            .update(chaptersTable)
+            .set({
+              title: c.title,
+              summary: c.summary,
+              bullets: [...c.bullets],
+            })
+            .where(eq(chaptersTable.id, old.id));
+          chapters++;
+        }
+      }
+      if (chapters)
+        rows.chapters = { updated: chapters, inserted: 0, deleted: 0 };
+      const segments = await saveSegments(
+        tx,
+        meetingId,
+        before.segments,
+        fixed.segments.map((s) => ({
+          ...s,
           person: s.person as number | null,
-          words: s.words,
-          id: 0,
         })),
-        chapters,
-      },
-    };
+      );
+      if (segments.updated || segments.inserted || segments.deleted)
+        rows.segments = segments;
+      return {
+        notes: issues.map((i) => `fixed ${i.code}: ${i.message}`),
+        rows,
+      };
+    },
   });
 }
 
-async function editMeeting(
-  db: DB,
-  meetingId: number,
-  { dryRun = false, allowErrors = false }: EditOptions,
-  edit: (
-    tx: Parameters<Parameters<DB["transaction"]>[0]>[0],
-    before: DbMeeting,
-  ) => Promise<{ notes: string[]; meeting: DbMeeting }>,
+/**
+ * Run a changeset and roll it back, reporting the rows it would change and
+ * the rule violations it would resolve and introduce. Throws a
+ * {@link ChangesetError} where {@link applyChangeset} would.
+ */
+export function checkChangeset(changeset: Changeset): Promise<EditResult> {
+  return runChangeset(changeset, { dryRun: true, rules: "report" });
+}
+
+/**
+ * Run a changeset and save it. It doesn't run the meeting rules. Throws a
+ * {@link ChangesetError}, saving nothing, if the SQL fails, creates or alters
+ * a database object, or changes another meeting's segments, chapters or row.
+ */
+export function applyChangeset(changeset: Changeset): Promise<EditResult> {
+  return runChangeset(changeset, { dryRun: false });
+}
+
+/** Run a changeset's SQL as the `changeset` role, inside om.run. */
+function runChangeset(
+  { db, meetingId, sql: changesetSql }: Changeset,
+  { dryRun, rules }: Pick<EditMeeting, "dryRun" | "rules">,
 ): Promise<EditResult> {
+  return editMeeting({
+    db,
+    meetingId,
+    dryRun,
+    rules,
+    edit: async (tx) => {
+      const objects = await changesetObjects(tx);
+      await tx.execute(sql`SET LOCAL ROLE changeset`);
+      try {
+        await tx.execute(sql`SELECT om.run(${changesetSql})`);
+      } catch (err) {
+        const pg = postgresError(err);
+        if (!pg) throw err;
+        throw new ChangesetError(
+          pg.code === ASSERTION_FAILED
+            ? `assertion failed: ${pg.message}`
+            : `the changeset failed: ${pg.message}`,
+          pg.code === ASSERTION_FAILED,
+        );
+      }
+      await tx.execute(sql`RESET ROLE`);
+      if ((await changesetObjects(tx)) !== objects)
+        throw new ChangesetError(
+          "the changeset created or altered a database object; it may only change rows",
+        );
+      const rows = await loggedChanges(tx);
+      const others = await tx.execute<{ ref: string }>(sql`
+      SELECT coalesce(m.slug, x.id::text) AS ref
+      FROM (SELECT DISTINCT unnest(meeting_ids) AS id FROM om.changes
+            WHERE xact = pg_current_xact_id()) x
+      LEFT JOIN meetings m ON m.id = x.id
+      WHERE x.id <> ${meetingId}
+      ORDER BY x.id`);
+      await tx.execute(
+        sql`DELETE FROM om.changes WHERE xact = pg_current_xact_id()`,
+      );
+      if (others.length)
+        throw new ChangesetError(
+          `the changeset changed other meetings: ${others.map((r) => r.ref).join(", ")}`,
+        );
+      return { notes: [], rows };
+    },
+  });
+}
+
+interface EditMeeting {
+  db: DB;
+  meetingId: number;
+  /** Roll back after reporting. */
+  dryRun: boolean;
+  /**
+   * Whether to run the meeting rules on the meeting before and after: to
+   * report what the edit resolved and introduced, or also to roll back if it
+   * introduced an error (unless `allowErrors`). Left out, they don't run.
+   */
+  rules?: "report" | "block";
+  allowErrors?: boolean;
+  /** The edit, given the meeting as it was. */
+  edit: (
+    tx: Conn,
+    before: DbMeeting,
+  ) => Promise<{ notes: string[]; rows: RowCounts }>;
+}
+
+/** Run an edit on a meeting in a transaction holding its lock. */
+async function editMeeting({
+  db,
+  meetingId,
+  dryRun,
+  rules,
+  allowErrors = false,
+  edit,
+}: EditMeeting): Promise<EditResult> {
   let result: EditResult | undefined;
   try {
     await db.transaction(async (tx) => {
       const before = await loadMeeting(tx, meetingId, { lock: true });
-      const { notes, meeting } = await edit(tx, before);
-      const added = newIssues(
-        await meetingIssues(before),
-        await meetingIssues(meeting),
-      );
-      const blocked = !allowErrors && added.some((i) => i.severity === "error");
+      const { notes, rows } = await edit(tx, before);
+      const meeting = await loadMeeting(tx, meetingId);
+      const issuesBefore = rules ? await meetingIssues(before) : [];
+      const issuesAfter = rules ? await meetingIssues(meeting) : [];
+      const added = newIssues(issuesBefore, issuesAfter);
+      const resolved = newIssues(issuesAfter, issuesBefore);
+      const blocked =
+        rules === "block" &&
+        !allowErrors &&
+        added.some((i) => i.severity === "error");
       result = {
         notes,
+        before,
         meeting,
         added,
-        saved: false,
-        rows: { updated: 0, inserted: 0, deleted: 0 },
+        resolved,
+        saved: !dryRun && !blocked,
+        rows,
       };
-      if (dryRun || blocked) throw new Rollback();
-      result.rows = await saveSegments(
-        tx,
-        meetingId,
-        before.segments,
-        meeting.segments,
-      );
-      result.saved = true;
+      if (!result.saved) throw new Rollback();
     });
   } catch (err) {
     if (!(err instanceof Rollback)) throw err;
   }
   return result!;
+}
+
+/**
+ * Everything the `changeset` role owns in this database, and om.run's
+ * definition, as one string, so a change to either shows.
+ */
+async function changesetObjects(tx: Conn): Promise<string> {
+  const [row] = await tx.execute<{ objects: string }>(sql`
+    SELECT concat(
+      (SELECT string_agg(classid::regclass || ' ' || objid, ',' ORDER BY classid, objid)
+       FROM pg_shdepend
+       WHERE refclassid = 'pg_authid'::regclass AND refobjid = 'changeset'::regrole
+         AND deptype = 'o'
+         AND dbid = (SELECT oid FROM pg_database WHERE datname = current_database())),
+      '|',
+      (SELECT concat_ws(' ', p.oid, p.proowner, p.prosecdef, p.prosrc, p.proconfig, p.proacl)
+       FROM pg_proc p WHERE p.oid = to_regprocedure('om.run(text)'))
+    ) AS objects`);
+  return row!.objects;
+}
+
+/** The rows the `changeset` role changed in this transaction, net, by table. */
+async function loggedChanges(tx: Conn): Promise<RowCounts> {
+  const rows = await tx.execute<{
+    tbl: string;
+    updated: number;
+    inserted: number;
+    deleted: number;
+  }>(sql`
+    SELECT tbl,
+      count(*) FILTER (WHERE first_op <> 'INSERT' AND last_op <> 'DELETE')::int AS updated,
+      count(*) FILTER (WHERE first_op = 'INSERT' AND last_op <> 'DELETE')::int AS inserted,
+      count(*) FILTER (WHERE first_op <> 'INSERT' AND last_op = 'DELETE')::int AS deleted
+    FROM (
+      SELECT tbl, row_id,
+        (array_agg(op ORDER BY seq))[1] AS first_op,
+        (array_agg(op ORDER BY seq DESC))[1] AS last_op
+      FROM om.changes WHERE xact = pg_current_xact_id()
+      GROUP BY tbl, row_id
+    ) x
+    GROUP BY tbl ORDER BY tbl`);
+  const counts: RowCounts = {};
+  for (const { tbl, updated, inserted, deleted } of rows)
+    if (updated || inserted || deleted)
+      counts[tbl] = { updated, inserted, deleted };
+  return counts;
+}
+
+/** The Postgres error behind `err`, which drizzle may wrap. */
+function postgresError(
+  err: unknown,
+): { code: string; message: string } | undefined {
+  for (let e = err; e instanceof Error; e = e.cause)
+    if (e.name === "PostgresError") return e as Error & { code: string };
+  return undefined;
 }
 
 function stripIds(segments: DbMeeting["segments"]): Segment<number>[] {

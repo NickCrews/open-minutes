@@ -8,7 +8,8 @@ description: Fix who-said-what, misheard words and people in an Open Minutes mee
 ## Tools
 
 `pnpm transcript` reads a meeting in the database and applies the rules'
-fixes to it. `--db` names the database: `prod` for production.
+fixes to it, and `pnpm changeset` checks and applies changesets to it. `--db`
+names the database: `prod` for production.
 
 ```sh
 pnpm transcript render <meeting> --from H:MM:SS --to H:MM:SS --db prod
@@ -17,6 +18,8 @@ pnpm transcript stats <meeting> --db prod
 pnpm transcript check <meeting> --db prod
 pnpm transcript fix <meeting> --dry-run --db prod
 pnpm transcript fix <meeting> --db prod
+pnpm changeset check changeset.sql --meeting <meeting> --db prod
+pnpm changeset apply changeset.sql --meeting <meeting> --db prod
 ```
 
 `<meeting>` is a slug or an id. `render` shows the transcript a segment at a
@@ -30,13 +33,48 @@ whether the data is right as it is. Transcripts carry no fillers ("um",
 with whatever else the rules can fix on their own, and doesn't save a fix
 that adds an error.
 
-These tools don't relabel speakers, split segments or change words. Work out
-those changes by the rules below, and give them in your report.
-
 A speaker label is `identified:<slug>` for a known person, `person:<id>` for
 a person with no slug yet, `segmented:spk-<n>` or `unlabeled`. A label can
 only name someone with a row in the database. Name people following the
 `people-records` skill.
+
+## Changesets
+
+Make every other change in a changeset: one SQL file for the meeting.
+`pnpm changeset check` runs it and rolls it back, reporting the rows it would
+change and the rule violations it would resolve and introduce. `pnpm
+changeset apply` runs it and saves it if every statement succeeds, without
+checking the rules. `pnpm changeset --help` and `packages/edit/README.md`
+describe the functions in full.
+
+- `SELECT om.split_segment(M, T, W, L);` makes the word `W` at onset `T`
+  start a new segment spoken by `L`, running to the end of its segment. Split
+  again where the previous speaker resumes to give the turn back. Splitting
+  in descending time order keeps a split from relabelling the segment an
+  earlier one made.
+- `SELECT om.relabel(M, T, L);` relabels the whole segment holding the word
+  at `T`.
+- `SELECT om.replace_words(M, T, 'good wood', 'Girdwood');` fixes misheard
+  words starting at `T`, which must read the old words exactly.
+- `SELECT om.insert_words(M, ARRAY['0:01:57.24 Are', '0:01:57.52 we'], L);`
+  adds missed words, as their own turn with `L`, or into the segment they
+  follow without it.
+- `SELECT om.replace_all_words(M, 'Gridwood', 'Girdwood');` fixes every
+  occurrence and returns the count. A common word ("Kelly") may match more
+  than one person.
+- Plain SQL sets people's slugs, names and bios, and the meeting's slug and
+  title: `UPDATE people SET slug = 'kyle-kelley', name = 'Kyle Kelley', bio
+  = '...' WHERE id = 57;`. Do it before the labels that use the slug.
+- `SELECT om.assert(condition, 'message');` stops the changeset unless the
+  condition holds. Assert what each change assumes: that a person still has
+  no slug, how many segments a voice has, how many words `replace_all_words`
+  replaced.
+
+Each edit takes the meeting `M` by slug or id, onsets as `render` and
+`words` print them, and speaker labels `L`, and merges neighbouring segments
+left with the same speaker. Put a `--` comment above each change with its
+evidence. Check the changeset until it changes the rows you expect and
+introduces no violations you didn't intend, then apply it.
 
 ## Rules
 
@@ -110,8 +148,9 @@ only name someone with a row in the database. Name people following the
    which `pnpm transcript check` applies; Anchorage's bodies write "AO
    2026-23", "AO 2025-144(S)", "AM 142-2026", "AMC 21.05.040G.2", "item
    10.B.1" and "R-4". Collapse a spoken number into one word with one
-   `replace` op per number ("twenty twenty six dash twenty" → "2026-20"),
-   and write only what was said: a number you can't make out stays as heard.
+   `om.replace_words` per number ("twenty twenty six dash twenty" →
+   "2026-20"), and write only what was said: a number you can't make out
+   stays as heard.
    The rules report the rest.
 10. **Keep chapter text in step with labels.** After relabelling, check that
     the meeting's chapter titles and summaries name the right people, and
@@ -119,6 +158,6 @@ only name someone with a row in the database. Name people following the
 
 ## Report
 
-For each change, give the segment or person, the old label, the new label,
-and the evidence (quote the words). Then list what you left unresolved, and
-why.
+Give the changeset and what `pnpm changeset apply` reported. For each change,
+give the segment or person, the old label, the new label, and the evidence
+(quote the words). Then list what you left unresolved, and why.

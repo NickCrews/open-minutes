@@ -9,6 +9,7 @@
   "scripts": {
     "transcript": "vpx src/transcript-cli.ts",
     "goldens": "vpx src/goldens-cli.ts",
+    "changeset": "vpx src/changeset-cli.ts",
     "test": "vp test run",
     "typecheck": "tsc --noEmit"
   },

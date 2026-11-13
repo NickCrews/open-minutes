@@ -14,9 +14,9 @@ import { bodyRuleCodes } from "@open-minutes/datasets/datums";
 import type { DbMeeting, DbPerson } from "./meeting";
 
 /**
- * A segment's speaker label, as ops write it: "identified:<slug>" for a known
- * person, "person:<id>" for one with no slug, else as the golden transcripts
- * write it.
+ * A segment's speaker label, as the om functions take it: "identified:<slug>"
+ * for a known person, "person:<id>" for one with no slug, else as the golden
+ * transcripts write it.
  */
 export function labelOf(
   seg: Pick<Segment<number>, "speakerNumber" | "person">,
