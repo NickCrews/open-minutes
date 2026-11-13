@@ -41,8 +41,8 @@ Built, in `packages/db` (the `om` schema and the `changeset` role, migration
   table, id and meetings, but not the row itself.
 - The edit lock, which every edit that saves takes.
 - In review ([#224](https://github.com/NickCrews/open-minutes/pull/224)): grants for chapters, chapter generations, meetings' date
-  and time, meeting bodies and deleting people, and
-  `om.transcript_fingerprint`.
+  and time, meeting bodies and deleting people. It drops chapter
+  generations' unused `transcript_fingerprint`.
 
 Not built yet, in the order of the [implementation plan](#implementation-plan):
 `changeset query`, row diffs, the `changesets` table and review, branches and playgrounds, and the
@@ -261,9 +261,8 @@ Applying is a check that commits, and takes about as long:
 If main changed since the check but the row diff still matches, the
 changeset applies: it does exactly what the reviewer approved. If the
 approval depended on rows the changeset doesn't change, the changeset says so
-in an assertion. For example, chapters written from a transcript assert that
-the meeting's transcript fingerprint is the one they were written from, and
-naming a voice asserts which segments that voice has.
+in an assertion. For example, naming a voice asserts which segments that
+voice has.
 
 A conflicted changeset goes back to its author to re-check, and then to
 review again.
@@ -355,16 +354,11 @@ In review ([#224](https://github.com/NickCrews/open-minutes/pull/224)):
 
 - `chapters`: insert, update and delete, but not `meeting_id`.
 - `chapter_generations`: insert, but not `reviewed_by_human`, which stays
-  false until a person sets it, nor `transcript_fingerprint`, which a
-  trigger sets from the meeting's transcript as it is when the changeset
-  runs.
+  false until a person sets it.
 - `meetings`: update `date` and `time` too.
 - `meeting_bodies`: insert and delete.
 - `people`: delete, to merge two people; segments' foreign key refuses
   deleting anyone whose segments are left.
-- `om.transcript_fingerprint(meeting)`, the fingerprint `transcriptFingerprint`
-  computes, for a changeset that asserts which transcript it was written
-  against.
 
 A changeset can insert a chapter generation with any `model`, `'human'`
 included; the `changesets` table records who wrote each changeset.
@@ -372,8 +366,7 @@ included; the `changesets` table records who wrote each changeset.
 ### Domain invariants
 
 Edits carry invariants that raw SQL can bypass: word onsets on split and
-merged segments, chapters pointing at a generation, the transcript
-fingerprint. Database constraints and the meeting rules on the after state
+merged segments, chapters pointing at a generation. Database constraints and the meeting rules on the after state
 catch most of these.
 
 Functions in the `om` schema make the common transcript edits, so an agent
@@ -529,8 +522,9 @@ Done:
    <file>` ([#206](https://github.com/NickCrews/open-minutes/pull/206)). A changeset may change any number of meetings, and edits
    that save take the edit lock ([#209](https://github.com/NickCrews/open-minutes/pull/209)).
 3. **Grants.** One migration: chapters, chapter generations, meetings'
-   `date` and `time`, meeting bodies, deleting people, and
-   `om.transcript_fingerprint`. Log triggers on each table it grants
+   `date` and `time`, meeting bodies and deleting people, and dropping
+   chapter generations' unused `transcript_fingerprint`. Log triggers on
+   each table it grants
    ([#224](https://github.com/NickCrews/open-minutes/pull/224), in review).
 
 Next:
