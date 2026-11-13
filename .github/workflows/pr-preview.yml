@@ -102,14 +102,17 @@ jobs:
             echo "diverged=false" >> "$GITHUB_OUTPUT"
           fi
 
+      # neonctl rather than neondatabase/reset-branch-action, which asks for a
+      # connection string without a role and fails when the branch has more
+      # than one (production also has `changeset`).
       - name: Reset the branch from production
         if: steps.diverged.outputs.diverged == 'true'
-        uses: neondatabase/reset-branch-action@v1
-        with:
-          project_id: ${{ vars.NEON_PROJECT_ID }}
-          api_key: ${{ secrets.NEON_API_KEY }}
-          branch: ${{ env.NEON_BRANCH }}
-          parent: true
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+        run: >-
+          pnpm --silent dlx neonctl@2 --project-id "$NEON_PROJECT_ID" --no-analytics
+          branches reset "$NEON_BRANCH" --parent > /dev/null
 
       - name: Migrate the branch
         env:
