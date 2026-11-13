@@ -33,7 +33,9 @@ The code is a pnpm workspace, roughly in layers from bottom to top:
 - **Editing** (`edit`): `pnpm transcript`, for reading a meeting in a
   database and applying the meeting rules' fixes to it; `pnpm changeset`, for
   checking and applying changesets to it; and `pnpm goldens`, for exporting
-  golden meetings from production into the datums.
+  golden meetings from production into the datums. `changeset-view` shows
+  what a changeset does, statement by statement, as a page to review
+  (`pnpm changeset view`).
 - **Website** (`web`): the public transcript browser.
 
 Postgres runs in Docker locally and on [Neon](https://neon.tech) in

@@ -6,6 +6,7 @@ export {
   type RowCounts,
   applyChangeset,
   type Changeset,
+  type ChangesetTrace,
   checkChangeset,
 } from "./edit";
 export { type Golden, toGolden, writeGolden } from "./export";
@@ -18,4 +19,11 @@ export {
   saveSegments,
 } from "./meeting";
 export { publishGolden, type VoiceprintSource } from "./publish";
-export { formatIssue, labelOf, meetingIssues, render, stats } from "./view";
+export {
+  formatIssue,
+  labelOf,
+  meetingIssues,
+  newIssues,
+  render,
+  stats,
+} from "./view";

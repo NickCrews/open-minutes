@@ -4,12 +4,13 @@
   "description": "Edit a meeting's transcript, people and chapters in a database, and move golden meetings between a database and the datums",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./changeset-commands": "./src/changeset-commands.ts",
+    "./cli": "./src/cli.ts"
   },
   "scripts": {
     "transcript": "vpx src/transcript-cli.ts",
     "goldens": "vpx src/goldens-cli.ts",
-    "changeset": "vpx src/changeset-cli.ts",
     "test": "vp test run",
     "typecheck": "tsc --noEmit"
   },
