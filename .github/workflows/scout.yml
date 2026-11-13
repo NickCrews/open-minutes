@@ -81,7 +81,8 @@ jobs:
           # From outside the checkout: npx refuses to run in a directory whose
           # package.json requires pnpm (devEngines).
           DB=$(cd "$RUNNER_TEMP" && npx --yes neonctl@2 connection-string \
-            --project-id "$NEON_PROJECT_ID" --no-analytics)
+            --project-id "$NEON_PROJECT_ID" --no-analytics \
+            --database-name neondb --role-name neondb_owner)
           echo "::add-mask::$DB"
           if [[ "$DB" != postgres* ]]; then
             echo "::error::neonctl didn't return a connection string for production."
