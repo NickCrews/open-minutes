@@ -24,7 +24,7 @@ import {
 } from "@open-minutes/datasets/datums";
 import { siteAdapter } from "@open-minutes/meeting-audio";
 import { transcriptFingerprint } from "@open-minutes/seed/transcript-fingerprint";
-import type { Conn } from "./meeting";
+import { type Conn, lockEdits } from "./meeting";
 
 /** Voiceprints for people the database doesn't have yet, by slug. */
 export type VoiceprintSource = (
@@ -88,6 +88,7 @@ export async function publishGolden(
   const notes: string[] = [];
   try {
     await db.transaction(async (tx) => {
+      await lockEdits(tx);
       const personIds = new Map<string, number>();
       for (const s of slugs) {
         const plan = plans.get(s)!;

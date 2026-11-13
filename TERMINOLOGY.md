@@ -261,3 +261,17 @@ _Avoid_: lint, validate
 **Fix**:
 A rule's rewrite of a meeting that removes its violations where the data alone says what the right rewrite is, such as dropping a filler word. A violation whose fix depends on what someone meant or which of several plausible changes is right, such as two segments whose words interleave, is left for a person or agent. Only some rules have one.
 _Avoid_: autofix, repair, correction
+
+### Editing the data
+
+**Changeset**:
+One SQL file of changes to the data, with assertions about it, such as relabelling segments, fixing misheard words or naming a person. It may change any number of meetings. Every edit an agent makes to the data is a changeset (see [packages/edit](packages/edit/README.md#changesets)).
+_Avoid_: migration (that changes the schema), patch, edit script, ops
+
+**Apply**:
+To run a changeset and save what it changes.
+_Avoid_: commit, merge, run, execute
+
+**Check a changeset**:
+To run a changeset in a transaction that always rolls back, and report the rows it would change and the violations it would resolve and introduce in each meeting it changes.
+_Avoid_: dry run, preview, test

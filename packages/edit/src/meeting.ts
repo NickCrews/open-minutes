@@ -79,18 +79,19 @@ export async function findMeetingId(db: Conn, ref: string): Promise<number> {
 }
 
 /**
- * Load a meeting whole. With `lock`, inside a transaction, also lock its row,
- * so two edits of one meeting can't interleave.
+ * Take the edit lock until the transaction ends. Every edit that saves takes
+ * it first: applying a changeset, applying the rules' fixes, publishing a
+ * golden meeting. So one edit can't read rows another is partway through
+ * changing, whichever meetings each touches.
  */
-export async function loadMeeting(
-  db: Conn,
-  id: number,
-  { lock = false } = {},
-): Promise<DbMeeting> {
-  if (lock)
-    await db.execute(
-      sql`SELECT 1 FROM ${meetingsTable} WHERE ${meetingsTable.id} = ${id} FOR UPDATE`,
-    );
+export async function lockEdits(tx: Conn): Promise<void> {
+  await tx.execute(
+    sql`SELECT pg_advisory_xact_lock(hashtext('open-minutes edit'))`,
+  );
+}
+
+/** Load a meeting whole. */
+export async function loadMeeting(db: Conn, id: number): Promise<DbMeeting> {
   const [meeting] = await db
     .select({
       id: meetingsTable.id,

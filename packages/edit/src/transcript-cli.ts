@@ -128,7 +128,9 @@ const fixCmd = defineCommand({
     withDb(args.db, async (db) => {
       const id = await findMeetingId(db, args.meeting);
       reportFix(
-        await fixRules(db, id, {
+        await fixRules({
+          db,
+          meetingId: id,
           dryRun: args["dry-run"],
           allowErrors: args["allow-errors"],
         }),
