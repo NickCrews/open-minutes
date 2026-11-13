@@ -16,11 +16,11 @@ meeting's `golden.psv`. Remove an item once it is resolved.
   thirty dots. zero five". Check the last digit against AO 2026-19.
 - **assembly-2026-03-03 1:22:15:** "appropriating 7,800. $188 is a transfer",
   probably one sum. Check against AR 2026-44.
-- **ced-2026-03-05 0:09:47:** "AO 2025-63", heard as "AO 22563". The B-3
+- **anc-econ-cmtee-2026-03-05 0:09:47:** "AO 2025-63", heard as "AO 22563". The B-3
   ordinance Volland and Brawley sponsored may be AO 2024-102.
-- **ced-2026-03-05 0:09:56:** "PZC cases 2026-35 and 2026-34", heard as "22
+- **anc-econ-cmtee-2026-03-05 0:09:56:** "PZC cases 2026-35 and 2026-34", heard as "22
   2635 and 2026 34".
-- **ced-2026-03-05 0:45:13:** "repeal 10.75", heard as "ten seventy five".
+- **anc-econ-cmtee-2026-03-05 0:45:13:** "repeal 10.75", heard as "ten seventy five".
   Which code chapter holds the fire inspection fees?
 - **gbos-2026-03-23 2:15:06:** "a $3,000 project". The minutes say $30K in
   total.
@@ -78,13 +78,13 @@ meeting's `golden.psv`. Remove an item once it is resolved.
 
 ### CED and PZC
 
-- **ced-2026-03-05 `spk-11`:** a presenter ("yeah Dave"). Who?
-- **ced-2026-03-05 1:03:24 `spk-12`:** the "Ms. Ross" the chair asks to put
+- **anc-econ-cmtee-2026-03-05 `spk-11`:** a presenter ("yeah Dave"). Who?
+- **anc-econ-cmtee-2026-03-05 1:03:24 `spk-12`:** the "Ms. Ross" the chair asks to put
   his question.
-- **pzc-2026-06-08 0:19:40 `spk-12`:** "Another option would be to expand the
+- **anc-p-z-2026-06-08 0:19:40 `spk-12`:** "Another option would be to expand the
   size of the house. That was my other question?" Commissioner McKee
   continuing?
-- **pzc-2026-06-08 0:47:03 and 0:58:40:** "seconded by Commissioner Abaza",
+- **anc-p-z-2026-06-08 0:47:03 and 0:58:40:** "seconded by Commissioner Abaza",
   who isn't in the roll call.
 
 ## Words the transcript may be missing
