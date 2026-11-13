@@ -11,18 +11,29 @@
 # validation, upload) fails before step 3. After it, only step 4 remains: a
 # routing change that is safe to retry by hand with the command it prints.
 #
-# .github/workflows/production.yml runs this, and so does `pnpm deploy:prod`
-# after building. It needs DATABASE_URL_PROD (the direct, unpooled URL) in the
-# environment or in .env.local, and Cloudflare credentials (CLOUDFLARE_API_TOKEN
-# or `wrangler login`). See docs/contributing/deploy.md.
+# .github/workflows/production.yml runs this, after building. It needs
+# NEON_API_KEY and NEON_PROJECT_ID, to ask Neon for production's database URL,
+# and Cloudflare credentials (CLOUDFLARE_API_TOKEN or `wrangler login`). See
+# docs/contributing/deploy.md.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
 message="production @ $(git rev-parse HEAD)"
 
+# Production is the Neon project's default branch, which neonctl uses when
+# given no branch. Unpooled (the default), for migrating.
+echo "==> Asking Neon for production's database URL"
+db=$(pnpm --silent dlx neonctl@2 connection-string \
+  --project-id "$NEON_PROJECT_ID" --no-analytics)
+if [[ "$db" != postgres* ]]; then
+  echo "error: neonctl didn't return a connection string for production." >&2
+  exit 1
+fi
+echo "::add-mask::$db"
+
 echo "==> Checking production's migration history"
-status=$(pnpm --silent -w run db status --db prod --json)
+status=$(pnpm --silent -w run db status --db "$db" --json)
 if node -e 'process.exit(JSON.parse(process.argv[1]).diverged ? 0 : 1)' "$status"; then
   echo "$status" >&2
   echo "error: production's migration history diverged from this checkout; refusing to deploy." >&2
@@ -45,7 +56,7 @@ version_id=$(node -e '
 echo "Uploaded version ${version_id}"
 
 echo "==> Migrating production"
-pnpm -w run db migrate --db prod
+pnpm -w run db migrate --db "$db"
 
 echo "==> Routing all traffic to version ${version_id}"
 deploy=(pnpm exec wrangler versions deploy "${version_id}@100%" --yes --message "$message")

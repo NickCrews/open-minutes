@@ -52,7 +52,12 @@ jobs:
       # CLIs send by default; S3 itself accepts either.
       AWS_REQUEST_CHECKSUM_CALCULATION: when_required
     steps:
+      # The deployed code, which matches production's schema. This file still
+      # comes from main, so a change to how it calls that code has to work
+      # with what is on `production`.
       - uses: actions/checkout@v4
+        with:
+          ref: production
 
       - name: Install the DuckDB CLI
         run: pipx install duckdb-cli==1.5.6
