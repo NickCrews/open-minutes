@@ -1,7 +1,8 @@
 # @open-minutes/edit
 
-Reads a meeting in a database, applies the meeting rules' fixes to it, runs
-changesets on it, and moves golden meetings between a database and the
+Reads a meeting in a database, applies the meeting rules' fixes to it, checks
+and applies changesets to it, and moves golden meetings between a database and
+the
 [datums](../datasets/README.md).
 
 A meeting lives in a database. The golden meetings in
@@ -42,8 +43,8 @@ what, misheard words, people's slugs, names and bios, and the meeting's slug
 and title.
 
 ```sh
-pnpm transcript apply gbos-2026-03-23 changeset.sql --dry-run --db prod
-pnpm transcript apply gbos-2026-03-23 changeset.sql --db prod
+pnpm changeset check changeset.sql --meeting gbos-2026-03-23 --db prod
+pnpm changeset apply changeset.sql --meeting gbos-2026-03-23 --db prod
 ```
 
 ```sql
@@ -62,12 +63,17 @@ SELECT om.assert(
 );
 ```
 
-`apply` runs the file in one transaction that holds the meeting's row lock, and
-reports how many rows it changed in each table; `--dry-run` saves nothing. It
-saves nothing if a statement fails, or if the changeset changes another
-meeting's segments, chapters or row. It doesn't run the meeting rules, since a
-meeting partway through a cleanup breaks them in passing; `check` runs them
-when you want to know.
+Both run the file in one transaction that holds the meeting's row lock, and
+fail, saving nothing, if a statement or assertion fails, or if the changeset
+changes another meeting's segments, chapters or row.
+
+- `check` reports how many rows the changeset would change in each table, and
+  the meeting rule violations it would resolve and introduce, then rolls it
+  back.
+- `apply` saves it and reports the rows it changed. It doesn't run the
+  meeting rules, since a meeting partway through a cleanup breaks them in
+  passing; `check`, or `pnpm transcript check` on the meeting, runs them when
+  you want to know.
 
 The SQL runs as the `changeset` role, inside `om.run`, so it can't change its
 role, and its `BEGIN`, `COMMIT` and `ROLLBACK` fail. The role reads every
@@ -91,7 +97,7 @@ the reverse.
 | `om.replace_words(meeting, at, old, new)`      | Replaces the words starting at `at`, which must read `old`, with `new`, which may have more or fewer words; `''` deletes. A new word takes the onset of the old word in its place, or of the last old word.             |
 | `om.insert_words(meeting, words, speaker)`     | Adds words the transcript is missing, an array of `'H:MM:SS.ss word'`. With `speaker`, they are their own segment and the words after them go back to whoever was speaking; without, they join the segment they follow. |
 | `om.replace_all_words(meeting, old, new)`      | Replaces every occurrence of `old`, ignoring case and trailing punctuation and keeping the last old word's, and returns the count.                                                                                      |
-| `om.assert(condition, message)`                | Raises `message`, with SQLSTATE `OM001`, unless `condition` is true. `apply` reports it as a failed assertion.                                                                                                          |
+| `om.assert(condition, message)`                | Raises `message`, with SQLSTATE `OM001`, unless `condition` is true. `check` and `apply` report it as a failed assertion.                                                                                               |
 
 An onset that matches no word raises an error that lists the words near it.
 Plain SQL works too: an `UPDATE` of `segments.words` or `person_id`, say. The

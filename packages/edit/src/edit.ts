@@ -1,7 +1,8 @@
-// Editing a meeting in a database: apply the meeting rules' fixes, or run a
-// changeset, in one transaction that holds the meeting's row lock. Fixes are
-// checked by the meeting rules before they are saved; changesets aren't, and
-// `pnpm transcript check` checks them when asked.
+// Editing a meeting in a database, in one transaction that holds the
+// meeting's row lock: apply the meeting rules' fixes, or check or apply a
+// changeset. Fixes are checked by the meeting rules before they are saved.
+// Checking a changeset reports the violations it fixes and introduces, and
+// saves nothing; applying one doesn't run the rules.
 
 import { eq, sql } from "drizzle-orm";
 import { chaptersTable, type DB, meetingsTable } from "@open-minutes/db";
@@ -16,14 +17,18 @@ import {
 } from "./meeting";
 import { meetingIssues, newIssues, ruleMeeting, ruleSpecs } from "./view";
 
-export interface ApplyOptions {
+export interface FixOptions {
   /** Report what would change, and save nothing. */
   dryRun?: boolean;
-}
-
-export interface FixOptions extends ApplyOptions {
   /** Save even if the fixes add rule errors. */
   allowErrors?: boolean;
+}
+
+/** A changeset's SQL, for one meeting in a database. */
+export interface Changeset {
+  db: DB;
+  meetingId: number;
+  sql: string;
 }
 
 /** Rows an edit changed, by table. Tables it didn't change are left out. */
@@ -32,10 +37,14 @@ export type RowCounts = Record<string, Saved>;
 export interface EditResult {
   /** What the edit did. */
   notes: string[];
-  /** The meeting as edited. */
+  /** The meeting as it was, which `resolved` indexes into. */
+  before: DbMeeting;
+  /** The meeting as edited, which `added` indexes into. */
   meeting: DbMeeting;
-  /** Issues fixes added, errors and warnings; empty for a changeset. */
+  /** Violations the edit introduced; empty when the rules didn't run. */
   added: MeetingIssue[];
+  /** Violations the edit resolved; empty when the rules didn't run. */
+  resolved: MeetingIssue[];
   /** Whether it was saved: not on a dry run, or when fixes added errors. */
   saved: boolean;
   /** Rows the edit changed, whether or not it was saved. */
@@ -73,7 +82,8 @@ export function fixRules(
     db,
     meetingId,
     dryRun,
-    check: { allowErrors },
+    rules: "block",
+    allowErrors,
     edit: async (tx, before) => {
       const { meeting: fixed, fixed: issues } = await fixMeeting(
         { ...ruleMeeting(before), segments: stripIds(before.segments) },
@@ -128,21 +138,33 @@ export function fixRules(
 }
 
 /**
- * Run a changeset's SQL on the meeting, as the `changeset` role, inside
- * om.run. Throws a {@link ChangesetError}, saving nothing, if the SQL fails,
- * creates or alters a database object, or changes another meeting's
- * segments, chapters or row.
+ * Run a changeset and roll it back, reporting the rows it would change and
+ * the rule violations it would resolve and introduce. Throws a
+ * {@link ChangesetError} where {@link applyChangeset} would.
  */
-export function applyChangeset(
-  db: DB,
-  meetingId: number,
-  changesetSql: string,
-  { dryRun = false }: ApplyOptions = {},
+export function checkChangeset(changeset: Changeset): Promise<EditResult> {
+  return runChangeset(changeset, { dryRun: true, rules: "report" });
+}
+
+/**
+ * Run a changeset and save it. It doesn't run the meeting rules. Throws a
+ * {@link ChangesetError}, saving nothing, if the SQL fails, creates or alters
+ * a database object, or changes another meeting's segments, chapters or row.
+ */
+export function applyChangeset(changeset: Changeset): Promise<EditResult> {
+  return runChangeset(changeset, { dryRun: false });
+}
+
+/** Run a changeset's SQL as the `changeset` role, inside om.run. */
+function runChangeset(
+  { db, meetingId, sql: changesetSql }: Changeset,
+  { dryRun, rules }: Pick<EditMeeting, "dryRun" | "rules">,
 ): Promise<EditResult> {
   return editMeeting({
     db,
     meetingId,
     dryRun,
+    rules,
     edit: async (tx) => {
       const objects = await changesetObjects(tx);
       await tx.execute(sql`SET LOCAL ROLE changeset`);
@@ -189,10 +211,12 @@ interface EditMeeting {
   /** Roll back after reporting. */
   dryRun: boolean;
   /**
-   * Run the meeting rules on the result, and roll back if it adds an error
-   * (unless `allowErrors`). Left out, the rules don't run.
+   * Whether to run the meeting rules on the meeting before and after: to
+   * report what the edit resolved and introduced, or also to roll back if it
+   * introduced an error (unless `allowErrors`). Left out, they don't run.
    */
-  check?: { allowErrors: boolean };
+  rules?: "report" | "block";
+  allowErrors?: boolean;
   /** The edit, given the meeting as it was. */
   edit: (
     tx: Conn,
@@ -205,7 +229,8 @@ async function editMeeting({
   db,
   meetingId,
   dryRun,
-  check,
+  rules,
+  allowErrors = false,
   edit,
 }: EditMeeting): Promise<EditResult> {
   let result: EditResult | undefined;
@@ -214,14 +239,23 @@ async function editMeeting({
       const before = await loadMeeting(tx, meetingId, { lock: true });
       const { notes, rows } = await edit(tx, before);
       const meeting = await loadMeeting(tx, meetingId);
-      const added = check
-        ? newIssues(await meetingIssues(before), await meetingIssues(meeting))
-        : [];
+      const issuesBefore = rules ? await meetingIssues(before) : [];
+      const issuesAfter = rules ? await meetingIssues(meeting) : [];
+      const added = newIssues(issuesBefore, issuesAfter);
+      const resolved = newIssues(issuesAfter, issuesBefore);
       const blocked =
-        check !== undefined &&
-        !check.allowErrors &&
+        rules === "block" &&
+        !allowErrors &&
         added.some((i) => i.severity === "error");
-      result = { notes, meeting, added, saved: !dryRun && !blocked, rows };
+      result = {
+        notes,
+        before,
+        meeting,
+        added,
+        resolved,
+        saved: !dryRun && !blocked,
+        rows,
+      };
       if (!result.saved) throw new Rollback();
     });
   } catch (err) {

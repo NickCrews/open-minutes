@@ -7,9 +7,9 @@ description: Fix who-said-what, misheard words and people in an Open Minutes mee
 
 ## Tools
 
-`pnpm transcript` reads a meeting in the database, applies the rules' fixes
-to it, and runs changesets on it. `--db` names the database: `prod` for
-production.
+`pnpm transcript` reads a meeting in the database and applies the rules'
+fixes to it, and `pnpm changeset` checks and applies changesets to it. `--db`
+names the database: `prod` for production.
 
 ```sh
 pnpm transcript render <meeting> --from H:MM:SS --to H:MM:SS --db prod
@@ -18,8 +18,8 @@ pnpm transcript stats <meeting> --db prod
 pnpm transcript check <meeting> --db prod
 pnpm transcript fix <meeting> --dry-run --db prod
 pnpm transcript fix <meeting> --db prod
-pnpm transcript apply <meeting> changeset.sql --dry-run --db prod
-pnpm transcript apply <meeting> changeset.sql --db prod
+pnpm changeset check changeset.sql --meeting <meeting> --db prod
+pnpm changeset apply changeset.sql --meeting <meeting> --db prod
 ```
 
 `<meeting>` is a slug or an id. `render` shows the transcript a segment at a
@@ -40,11 +40,12 @@ only name someone with a row in the database. Name people following the
 
 ## Changesets
 
-Make every other change in a changeset: one SQL file for the meeting, which
-`pnpm transcript apply` runs in one transaction and saves only if every
-statement succeeds. It doesn't check the rules: run `pnpm transcript check`
-when you want to see where the meeting stands. `pnpm transcript --help` and
-`packages/edit/README.md` describe the functions in full.
+Make every other change in a changeset: one SQL file for the meeting.
+`pnpm changeset check` runs it and rolls it back, reporting the rows it would
+change and the rule violations it would resolve and introduce. `pnpm
+changeset apply` runs it and saves it if every statement succeeds, without
+checking the rules. `pnpm changeset --help` and `packages/edit/README.md`
+describe the functions in full.
 
 - `SELECT om.split_segment(M, T, W, L);` makes the word `W` at onset `T`
   start a new segment spoken by `L`, running to the end of its segment. Split
@@ -72,9 +73,8 @@ when you want to see where the meeting stands. `pnpm transcript --help` and
 Each edit takes the meeting `M` by slug or id, onsets as `render` and
 `words` print them, and speaker labels `L`, and merges neighbouring segments
 left with the same speaker. Put a `--` comment above each change with its
-evidence. Apply the changeset with `--dry-run` until it reports the rows you
-expect, then apply it without, and check the meeting with
-`pnpm transcript check`.
+evidence. Check the changeset until it changes the rows you expect and
+introduces no violations you didn't intend, then apply it.
 
 ## Rules
 
@@ -158,6 +158,6 @@ expect, then apply it without, and check the meeting with
 
 ## Report
 
-Give the changeset and what `pnpm transcript apply` reported. For each change,
+Give the changeset and what `pnpm changeset apply` reported. For each change,
 give the segment or person, the old label, the new label, and the evidence
 (quote the words). Then list what you left unresolved, and why.

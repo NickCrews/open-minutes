@@ -4,7 +4,12 @@ import { type DB, segmentsTable } from "@open-minutes/db";
 import { dbTest } from "@open-minutes/db/testing/vitest";
 import { datasetState } from "@open-minutes/seed";
 import { formatClock } from "@open-minutes/core/clock";
-import { ChangesetError, fixRules, applyChangeset } from "./edit";
+import {
+  applyChangeset,
+  ChangesetError,
+  checkChangeset,
+  fixRules,
+} from "./edit";
 import { findMeetingId, loadMeeting, saveSegments } from "./meeting";
 import { labelOf, render } from "./view";
 
@@ -54,7 +59,7 @@ describe("fixRules", () => {
   });
 });
 
-describe("applyChangeset", () => {
+describe("changesets", () => {
   /** A changeset fixing the fourth segment's first word, and Kyle's bio. */
   async function changeset(db: DB, id: number): Promise<string> {
     const word = (await loadMeeting(db, id)).segments[3]!.words[0]!;
@@ -77,7 +82,11 @@ describe("applyChangeset", () => {
 
   test("saves a changeset, and counts the rows it changed", async ({ db }) => {
     const id = await findMeetingId(db, SLUG);
-    const result = await applyChangeset(db, id, await changeset(db, id));
+    const result = await applyChangeset({
+      db,
+      meetingId: id,
+      sql: await changeset(db, id),
+    });
     expect(result.saved).toBe(true);
     expect(result.added).toEqual([]);
     expect(result.rows).toEqual({
@@ -89,11 +98,13 @@ describe("applyChangeset", () => {
     expect(await bio(db)).toBe("A new bio.");
   });
 
-  test("a dry run saves nothing", async ({ db }) => {
+  test("checking one saves nothing", async ({ db }) => {
     const id = await findMeetingId(db, SLUG);
     const before = await bio(db);
-    const result = await applyChangeset(db, id, await changeset(db, id), {
-      dryRun: true,
+    const result = await checkChangeset({
+      db,
+      meetingId: id,
+      sql: await changeset(db, id),
     });
     expect(result.saved).toBe(false);
     expect(result.rows.segments).toEqual({
@@ -113,25 +124,44 @@ describe("applyChangeset", () => {
   }) => {
     const id = await findMeetingId(db, SLUG);
     const seg = (await loadMeeting(db, id)).segments[3]!;
-    const result = await applyChangeset(
+    const result = await applyChangeset({
       db,
-      id,
-      `UPDATE segments SET words = jsonb_set(words, '{1,start}', '0') WHERE id = ${seg.id};`,
-    );
+      meetingId: id,
+      sql: `UPDATE segments SET words = jsonb_set(words, '{1,start}', '0') WHERE id = ${seg.id};`,
+    });
     expect(result.saved).toBe(true);
     expect(result.added).toEqual([]);
     expect((await loadMeeting(db, id)).segments[3]!.words[1]!.start).toBe(0);
   });
 
+  test("checking one reports the violations it introduces and resolves", async ({
+    db,
+  }) => {
+    const id = await findMeetingId(db, SLUG);
+    const seg = (await loadMeeting(db, id)).segments[3]!;
+    const breaks = `UPDATE segments SET words = jsonb_set(words, '{1,start}', '0') WHERE id = ${seg.id};`;
+    const introduced = await checkChangeset({ db, meetingId: id, sql: breaks });
+    expect(introduced.added.map((i) => i.code)).toEqual(["word-out-of-order"]);
+    expect(introduced.resolved).toEqual([]);
+    await applyChangeset({ db, meetingId: id, sql: breaks });
+    const resolved = await checkChangeset({
+      db,
+      meetingId: id,
+      sql: `UPDATE segments SET words = $w$${JSON.stringify(seg.words)}$w$ WHERE id = ${seg.id};`,
+    });
+    expect(resolved.resolved.map((i) => i.code)).toEqual(["word-out-of-order"]);
+    expect(resolved.added).toEqual([]);
+  });
+
   test("a failed assertion stops it, with its message", async ({ db }) => {
     const id = await findMeetingId(db, SLUG);
     const before = await bio(db);
-    const applied = applyChangeset(
+    const applied = applyChangeset({
       db,
-      id,
-      `UPDATE people SET bio = 'x' WHERE slug = 'kyle-kelley';
+      meetingId: id,
+      sql: `UPDATE people SET bio = 'x' WHERE slug = 'kyle-kelley';
        SELECT om.assert(false, 'Kyle has no slug');`,
-    );
+    });
     await expect(applied).rejects.toThrow(
       new ChangesetError("assertion failed: Kyle has no slug", true),
     );
@@ -142,18 +172,18 @@ describe("applyChangeset", () => {
   test("refuses a changeset that changes another meeting", async ({ db }) => {
     const id = await findMeetingId(db, SLUG);
     await expect(
-      applyChangeset(
+      applyChangeset({
         db,
-        id,
-        `UPDATE meetings SET title = 'x' WHERE slug = 'gbos-2026-05-18';`,
-      ),
+        meetingId: id,
+        sql: `UPDATE meetings SET title = 'x' WHERE slug = 'gbos-2026-05-18';`,
+      }),
     ).rejects.toThrow("the changeset changed other meetings: gbos-2026-05-18");
     await expect(
-      applyChangeset(
+      applyChangeset({
         db,
-        id,
-        `DELETE FROM segments WHERE id = (SELECT min(id) FROM segments WHERE meeting_id <> ${id});`,
-      ),
+        meetingId: id,
+        sql: `DELETE FROM segments WHERE id = (SELECT min(id) FROM segments WHERE meeting_id <> ${id});`,
+      }),
     ).rejects.toThrow(/^the changeset changed other meetings: /);
   });
 
@@ -180,7 +210,7 @@ describe("applyChangeset", () => {
     };
     for (const [statement, error] of Object.entries(refused))
       await expect(
-        applyChangeset(db, id, statement),
+        applyChangeset({ db, meetingId: id, sql: statement }),
         statement,
       ).rejects.toThrow(error);
   });
