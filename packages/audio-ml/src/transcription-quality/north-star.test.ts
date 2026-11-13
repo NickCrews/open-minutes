@@ -13,11 +13,13 @@ import { compareTranscripts } from "@open-minutes/core/transcription";
 //
 // What we actually care about is how many words of a meeting we get right and
 // how long it takes: word error rate against the hand-corrected goldens, and
-// runtime as a fraction of the audio's length. Every other transcription test
+// runtime as a fraction of the audio's length. Second to those, how well each
+// word's confidence says whether it is right: the Brier score, which a change
+// may improve only if WER and runtime don't get worse. Every other transcription test
 // (parakeet.characterization.test.ts, @open-minutes/audio-ml's unit tests) is
 // scaffolding in support of these two numbers. When a change to transcribeAudio
 // is in question, this is the test that decides it: run it before and after
-// (`pnpm test:slow north-star`) and compare the logged WER and RTF.
+// (`pnpm test:slow north-star`) and compare the logged WER, RTF and Brier.
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const RUNS_DIR = join(HERE, "..", "..", "test-runs");
@@ -29,6 +31,9 @@ const MAX_WER = 0.15;
 const MAX_TIMESTAMP_ERROR_SEC = 0.5;
 // Wall-clock seconds per second of audio. ~0.04 on a 4-core machine.
 const MAX_REAL_TIME_FACTOR = 0.2;
+// Mean squared error of word confidences against which words are right. A
+// constant confidence equal to the fraction of right words (~0.9) scores ~0.09.
+const MAX_BRIER_SCORE = 0.1;
 
 describe("transcribe", () => {
   const meetingSlugs = [
@@ -65,7 +70,7 @@ describe("transcribe", () => {
         const cmp = compareTranscripts(refWords, transcribedWords);
         console.log(
           `[${slug}] WER=${cmp.wer.toFixed(4)} (sub=${cmp.substitutions} del=${cmp.deletions} ins=${cmp.insertions} of ${cmp.refWordCount}); ` +
-            `p95 start=${cmp.p95StartError.toFixed(3)}s; RTF=${rtf.toFixed(3)}; ${speechRuns.length} segments`,
+            `p95 start=${cmp.p95StartError.toFixed(3)}s; RTF=${rtf.toFixed(3)}; Brier=${cmp.brierScore?.toFixed(4)}; ${speechRuns.length} segments`,
         );
         // First: confirm the check actually has teeth. With strict thresholds the
         // current transcribe output should never pass, so the assertion below MUST
@@ -81,6 +86,8 @@ describe("transcribe", () => {
           maxTimestampError: MAX_TIMESTAMP_ERROR_SEC,
         });
         expect(rtf).toBeLessThan(MAX_REAL_TIME_FACTOR);
+        expect(cmp.brierScore).not.toBeNull();
+        expect(cmp.brierScore!).toBeLessThan(MAX_BRIER_SCORE);
       },
     );
   }

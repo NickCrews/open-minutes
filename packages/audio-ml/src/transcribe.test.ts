@@ -12,12 +12,16 @@ import {
 import {
   ensureModelFiles,
   loadTranscriptionModels,
-  MERGE_WINDOW_SEC,
+  planWindows,
+  type PassWord,
   tokensToWords,
   transcribeAudio,
   transcribeRange,
   TRANSCRIBE_VAD_OPTIONS,
   type TranscribeWindowEndEvent,
+  vote,
+  voteWords,
+  WINDOW_SEC,
 } from "./transcribe";
 import { type Word } from "@open-minutes/core/transcript";
 import { MAX_WORD_SEC } from "@open-minutes/core/transcription";
@@ -60,6 +64,113 @@ describe("tokensToWords", () => {
     expect(tokensToWords([], [])).toEqual([]);
   });
 });
+
+describe("planWindows", () => {
+  const spans = [
+    { start: 1, end: 5 },
+    { start: 8, end: 12 },
+    { start: 14, end: 20 },
+    { start: 31, end: 33 },
+  ];
+
+  it("groups the spans starting in each cell of the grid", () => {
+    const windows = planWindows(spans, {
+      windowSec: 10,
+      gridOffsetSec: 0,
+      leadSec: 0,
+    });
+    expect(windows).toEqual([
+      { start: 1, end: 12, first: 0, last: 1 },
+      { start: 14, end: 20, first: 2, last: 2 },
+      { start: 31, end: 33, first: 3, last: 3 },
+    ]);
+  });
+
+  it("cuts at other silences when the grid is offset", () => {
+    const windows = planWindows(spans, {
+      windowSec: 10,
+      gridOffsetSec: 5,
+      leadSec: 0,
+    });
+    expect(windows.map((w) => [w.first, w.last])).toEqual([
+      [0, 0],
+      [1, 2],
+      [3, 3],
+    ]);
+  });
+
+  it("starts each window early by the lead, but not before the audio", () => {
+    const windows = planWindows(spans, {
+      windowSec: 10,
+      gridOffsetSec: 0,
+      leadSec: 2,
+    });
+    expect(windows.map((w) => w.start)).toEqual([0, 12, 29]);
+  });
+});
+
+describe("vote", () => {
+  const pw = (text: string, start: number, edgeSecs = 10): PassWord => ({
+    text,
+    start,
+    edgeSecs,
+  });
+
+  it("takes the word most passes heard", () => {
+    const votes = vote([
+      [pw("brown", 0), pw("fox", 1)],
+      [pw("clown", 0), pw("lox", 1)],
+      [pw("brown", 0.02), pw("fox", 1)],
+    ]);
+    expect(votes.map((v) => [v.word.text, v.agree, v.heard])).toEqual([
+      ["brown", 2, 3],
+      ["fox", 2, 3],
+    ]);
+    expect(votes[0]!.word.start).toBeCloseTo(0.01);
+  });
+
+  it("keeps words only one pass heard where the others heard nothing", () => {
+    const votes = vote([
+      [pw("yes", 0), pw("then", 5)],
+      [pw("yes", 0), pw("one", 2), pw("ninety", 3), pw("then", 5)],
+      [pw("yes", 0), pw("then", 5)],
+    ]);
+    expect(votes.map((v) => [v.word.text, v.agree, v.heard])).toEqual([
+      ["yes", 3, 3],
+      ["one", 1, 1],
+      ["ninety", 1, 1],
+      ["then", 3, 3],
+    ]);
+  });
+
+  it("breaks a tie with the word heard farthest from a window edge", () => {
+    const votes = vote([
+      [pw("brown", 0, 0.1)],
+      [pw("Brown.", 0, 5)],
+      [pw("clown", 0, 2)],
+    ]);
+    expect(votes[0]!.word.text).toBe("Brown.");
+    expect(votes[0]!.agree).toBe(2);
+    const tie = vote([[pw("brown", 0, 0.1)], [pw("clown", 0, 5)]]);
+    expect(tie[0]!.word.text).toBe("clown");
+  });
+});
+
+describe("voteWords", () => {
+  it("gives words their confidence, higher when more passes agree", () => {
+    const words = voteWords([
+      [pw2("all", 0), pw2("agree", 1)],
+      [pw2("all", 0), pw2("argue", 1)],
+      [pw2("all", 0), pw2("agree", 1)],
+    ]);
+    expect(words.map((w) => w.text)).toEqual(["all", "agree"]);
+    expect(words[0]!.confidence).toBeGreaterThan(words[1]!.confidence!);
+  });
+});
+
+function pw2(text: string, start: number): PassWord {
+  return { text, start, edgeSecs: 10 };
+}
 
 describe("TRANSCRIBE_VAD_OPTIONS.minSilenceSecs", () => {
   // The whole safety argument for deriving word ends from onsets rests on this
@@ -122,11 +233,11 @@ describe("transcribe", () => {
 
   it("processes speech runs in parallel", async () => {
     // Build audio with several speech runs separated by long silence. The gap must
-    // exceed MERGE_WINDOW_SEC so each run lands in its own decode window (otherwise
+    // exceed WINDOW_SEC so each run lands in its own decode window (otherwise
     // they'd merge into one window and decode serially); the silence itself is never
     // decoded — each window slices only its own run — so this stays cheap.
     const sr = sample.sampleRate;
-    const silence = new Float32Array(Math.round((MERGE_WINDOW_SEC + 1) * sr));
+    const silence = new Float32Array(Math.round((WINDOW_SEC + 1) * sr));
     const parts = [
       sample.samples,
       silence,

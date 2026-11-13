@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { alignWords, computeWER } from "./wer";
+import { alignWords, compareTranscripts, computeWER } from "./wer";
 import type { Word } from "../transcript";
 
 function w(text: string, start = 0): Word {
@@ -140,5 +140,34 @@ describe("alignWords", () => {
 
   it("returns an empty alignment for two empty inputs", () => {
     expect(alignWords([], [])).toEqual([]);
+  });
+});
+
+describe("compareTranscripts brierScore", () => {
+  const c = (text: string, confidence: number): Word => ({
+    text,
+    start: 0,
+    confidence,
+  });
+
+  it("is 0 when right words have confidence 1 and wrong ones 0", () => {
+    const ref = [w("the"), w("quick"), w("fox")];
+    const hyp = [c("the", 1), c("quick", 1), c("box", 0)];
+    expect(compareTranscripts(ref, hyp).brierScore).toBe(0);
+  });
+
+  it("averages the squared error over the hypothesis's words", () => {
+    // "the" right at 0.5 → 0.25; "box" wrong at 0.5 → 0.25; "and" inserted at 0.9 → 0.81.
+    const ref = [w("the"), w("fox")];
+    const hyp = [c("the", 0.5), c("box", 0.5), c("and", 0.9)];
+    expect(compareTranscripts(ref, hyp).brierScore).toBeCloseTo(
+      (0.25 + 0.25 + 0.81) / 3,
+    );
+  });
+
+  it("is null when a hypothesis word has no confidence", () => {
+    expect(
+      compareTranscripts([w("a")], [c("a", 1), w("b")]).brierScore,
+    ).toBeNull();
   });
 });

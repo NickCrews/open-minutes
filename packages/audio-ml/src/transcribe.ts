@@ -20,7 +20,12 @@ import sherpa_onnx, {
   type OfflineRecognizerResult,
 } from "sherpa-onnx-node";
 import type { Word } from "@open-minutes/core/transcript";
-import type { SpeechRun } from "@open-minutes/core/transcription";
+import {
+  alignHypotheses,
+  normalizeToken,
+  type SpeechRun,
+} from "@open-minutes/core/transcription";
+import type { Span } from "@open-minutes/core/span";
 
 export const TRANSCRIPTION_MODEL_SPEC = {
   // I chose this model based on how it is the highest accuracy with still a >3000x real-time facto
@@ -51,21 +56,27 @@ export const TRANSCRIPTION_MODEL_SPEC = {
 // @open-minutes/youtube's audio download produces that; we assert rather than
 // resample.
 
-// Parakeet TDT processes audio in a single pass. Its encoder uses a learned
-// positional embedding (~5000 positions at the encoder's ~12.5 frames/sec output
-// rate), so one pass tops out around ~400s of audio; beyond that ONNX throws a
-// (catchable, non-fatal) broadcast error — verified empirically, it does NOT
-// crash or OOM. Rather than slicing on fixed time boundaries — which cut words
-// mid-utterance — we use Silero VAD to split the audio at silences. VAD picks the
-// cut points (never mid-word); we then merge consecutive voice activity spans into windows of
-// up to MERGE_WINDOW_SEC (see below) so each decode gets real context, keeping
-// every pass well under the ~400s cap.
+// Parakeet TDT decodes a window of audio in a single pass. Its encoder uses a
+// learned positional embedding (~5000 positions at the encoder's ~12.5
+// frames/sec output rate), so one pass tops out around ~400s of audio; beyond
+// that ONNX throws a (catchable, non-fatal) broadcast error. Rather than slicing
+// on fixed time boundaries, which cut words mid-utterance, we use Silero VAD to
+// split the audio at silences, and decode windows of consecutive voice activity
+// spans, cut only at silences.
+//
+// One pass over the audio is not enough. How Parakeet hears a stretch depends
+// on the whole window around it, down to where the window's 80 ms frames fall,
+// and now and then it decodes seconds of clear speech as nothing (see
+// transcription-quality/parakeet.characterization.test.ts). So transcribeAudio
+// decodes the audio TRANSCRIBE_PASSES times, each pass with its windows cut at
+// different silences and its frames offset, lines up the passes' words in each
+// voice activity span (alignHypotheses) and votes on each word.
 
 /**
  * The VAD settings transcribeAudio cuts the audio with. `MAX_WORD_SEC` in core
  * must stay below `minSilenceSecs`, so a derived word end can't reach across a
  * pause into the next speaker's turn. `maxSpeechSecs` force-splits any span
- * longer than 5 min (preferring the last silence), so no span alone exceeds
+ * longer than 5 min (preferring the last silence), so no window exceeds
  * Parakeet's ~400 s cap.
  */
 export const TRANSCRIBE_VAD_OPTIONS = {
@@ -74,24 +85,48 @@ export const TRANSCRIBE_VAD_OPTIONS = {
   maxSpeechSecs: 300,
 } as const satisfies VoiceActivityOptions;
 
-// VAD splits at every silence, so a meeting yields ~1000 spans, many under 0.5s.
-// Decoding each span alone starves Parakeet of context (hurting accuracy) and pays
-// the per-decode overhead ~1000×. So we coalesce consecutive spans into windows of
-// up to this many seconds and decode each in one pass — comfortably under the
-// ~400s cap, but large enough to give the model real surrounding context. The
-// window is a contiguous slice (inter-span silences included, so timestamps stay
-// linear); a single span longer than this still becomes its own window
-// (≤ TRANSCRIBE_VAD_OPTIONS.maxSpeechSecs).
-export const MERGE_WINDOW_SEC = 120;
+/** How many times transcribeAudio decodes the audio. */
+export const TRANSCRIBE_PASSES = 3;
 
-// Transcribe speech runs in parallel, but bounded: a long meeting produces ~1000
-// runs and each concurrent decode holds a chunk of native onnxruntime memory, so
-// an unbounded pool blows up RAM. Cap concurrency to keep peak memory in check
-// while still using multiple cores. (Even sequential is RTF ~0.04 here, so a
-// small cap costs little.)
+/**
+ * The period of each pass's window grid. A window holds the voice activity
+ * spans that start in one cell of its pass's grid, so it runs from a silence
+ * to a silence and is about this long, or longer when its last span is. Each
+ * pass's grid is offset from the last by WINDOW_SEC / TRANSCRIBE_PASSES, so a
+ * stretch near one pass's window edge is well inside another's.
+ */
+export const WINDOW_SEC = 45;
+
+/**
+ * The encoder's frame length. Each pass starts its windows earlier by another
+ * FRAME_SEC / TRANSCRIBE_PASSES, so the passes' frames fall at different
+ * places.
+ */
+const FRAME_SEC = 0.08;
+
+/**
+ * The probability that a voted word is right, by how many passes heard that
+ * word (`agree`) and how many heard any word in its slot (`heard`), indexed
+ * [agree - 1][heard - 1]. Measured for TRANSCRIBE_PASSES passes on the golden
+ * meetings, after cleanSpeechRuns, as the fraction of such words that match
+ * the golden.
+ */
+const CONFIDENCE: readonly (readonly number[])[] = [
+  [0.5, 0.5, 0.5],
+  [NaN, 0.8, 0.8],
+  [NaN, NaN, 0.95],
+];
+
+/** Words less likely than this to be right are left out of the transcript. */
+const MIN_CONFIDENCE = 0.5;
+
+// Decode windows in parallel, but bounded: each concurrent decode holds a chunk
+// of native onnxruntime memory, so an unbounded pool blows up RAM. Cap
+// concurrency to keep peak memory in check while still using multiple cores.
 const TRANSCRIBE_CONCURRENCY = Math.max(1, Math.min(4, availableParallelism()));
 
 export interface TranscribeWindowEvent {
+  pass: number;
   windowIndex: number;
   windowStart: number;
   windowEnd: number;
@@ -113,12 +148,9 @@ export interface TranscribeOptions {
 }
 
 /**
- * Transcribe audio into speech runs. Silero VAD splits the audio at silences
- * (never mid-word); consecutive voice activity spans are merged into windows of up to
- * MERGE_WINDOW_SEC that are each decoded in one pass (so the model gets context),
- * then each window's words are redistributed back to the spans they fall in.
- * The result is one {@link SpeechRun} per voice activity span, with absolute word
- * timestamps, in time order. Returns [] for silence. Input must be 16 kHz mono.
+ * Transcribe audio into speech runs: one {@link SpeechRun} per voice activity
+ * span Silero VAD finds, with absolute word onsets, in time order. Each word
+ * carries its confidence. Returns [] for silence. Input must be 16 kHz mono.
  */
 export async function transcribeAudio(
   audio: AudioInput,
@@ -128,62 +160,198 @@ export async function transcribeAudio(
   const wave = await ensureWaveForm(audio);
   assertSampleRate(wave.sampleRate);
   const duration = wave.samples.length / wave.sampleRate;
-  const { tracing } = options;
 
-  // detectVoiceActivity gives seconds; windows are sliced from the waveform by
-  // sample index.
-  const voiceSpans: SampleSpan[] = (
-    await detectVoiceActivity(wave, TRANSCRIBE_VAD_OPTIONS)
-  ).map((span) => ({
-    startSample: Math.round(span.start * wave.sampleRate),
-    endSample: Math.round(span.end * wave.sampleRate),
-  }));
-  const windows = packWindows(voiceSpans, wave.sampleRate);
+  const spans = await detectVoiceActivity(wave, TRANSCRIBE_VAD_OPTIONS);
+  const passes = Array.from({ length: TRANSCRIBE_PASSES }, (_, p) =>
+    planWindows(spans, {
+      windowSec: WINDOW_SEC,
+      gridOffsetSec: (p * WINDOW_SEC) / TRANSCRIBE_PASSES,
+      leadSec: (p * FRAME_SEC) / TRANSCRIBE_PASSES,
+    }),
+  );
   // Progress goes to stderr so callers' stdout stays machine-readable.
   console.error(
-    `Transcribing ${typeof audio === "string" ? audio : "<waveform>"} (${duration.toFixed(1)}s) in ${windows.length} window(s) merged from ${voiceSpans.length} voice activity span(s)...`,
+    `Transcribing ${typeof audio === "string" ? audio : "<waveform>"} (${duration.toFixed(1)}s): ${spans.length} voice activity span(s), ${TRANSCRIBE_PASSES} passes of ${passes[0]!.length} window(s)...`,
   );
-
-  const windowSegments = await mapWithConcurrency(
-    windows,
-    TRANSCRIBE_CONCURRENCY,
-    async (win, i): Promise<SpeechRun[]> => {
-      const start = win.startSample / wave.sampleRate;
-      const end = win.endSample / wave.sampleRate;
-      // Zero-copy view into the original waveform — never copy the window's samples
-      // (copying every window would duplicate the audio).
-      const samples = wave.samples.subarray(win.startSample, win.endSample);
-
-      const wallStartMs = Date.now();
-      tracing?.onWindowStart?.({
-        windowIndex: i,
-        windowStart: start,
-        windowEnd: end,
-        wallStartMs,
-      });
-      const result = await transcribeSamples(samples, wave.sampleRate);
-      tracing?.onWindowEnd?.({
-        windowIndex: i,
-        windowStart: start,
-        windowEnd: end,
-        wallStartMs,
-        wallEndMs: Date.now(),
-      });
-
-      const words = tokensToWords(
-        result.tokens ?? [],
-        result.timestamps ?? [],
-      ).map((w) => ({ ...w, start: w.start + start }));
-      return splitWordsIntoRuns(win.spans, words, wave.sampleRate);
-    },
-  );
+  const heard = await decodePasses(wave, spans, passes, options.tracing);
+  const runs = spans.map((span, i) => ({
+    start: span.start,
+    end: span.end,
+    words: voteWords(heard.map((pass) => pass[i]!)),
+  }));
 
   const elapsed = (Date.now() - wallStart) / 1000;
   console.error(
     `Done: ${duration.toFixed(1)}s audio in ${elapsed.toFixed(1)}s (RTF=${(elapsed / duration).toFixed(2)})`,
   );
+  return runs;
+}
 
-  return windowSegments.flat();
+/** A word one pass heard, and how far its onset is from its window's nearer edge. */
+export interface PassWord extends Word {
+  edgeSecs: number;
+}
+
+/** A stretch of audio decoded in one pass: voice activity spans `first` to `last`, inclusive. */
+export interface DecodeWindow {
+  start: number;
+  end: number;
+  first: number;
+  last: number;
+}
+
+/**
+ * One pass's decode windows over `spans`. A window holds the consecutive
+ * spans whose starts fall in one cell of a grid of period `windowSec`,
+ * offset by `gridOffsetSec`, and starts `leadSec` before its first span.
+ */
+export function planWindows(
+  spans: readonly Span[],
+  {
+    windowSec,
+    gridOffsetSec,
+    leadSec,
+  }: { windowSec: number; gridOffsetSec: number; leadSec: number },
+): DecodeWindow[] {
+  const windows: DecodeWindow[] = [];
+  let cell = NaN;
+  spans.forEach((span, i) => {
+    const c = Math.floor((span.start - gridOffsetSec) / windowSec);
+    const last = windows.at(-1);
+    if (last && c === cell) {
+      last.end = span.end;
+      last.last = i;
+    } else {
+      windows.push({
+        start: Math.max(0, span.start - leadSec),
+        end: span.end,
+        first: i,
+        last: i,
+      });
+    }
+    cell = c;
+  });
+  return windows;
+}
+
+/**
+ * Decode every pass's windows, and hand each window's words to the spans
+ * they fall in: [pass][span] → words, in time order. A word goes to the
+ * latest span of its window whose start it has reached; one in a silence
+ * between spans goes to the span before.
+ */
+export async function decodePasses(
+  wave: WaveForm,
+  spans: readonly Span[],
+  passes: readonly (readonly DecodeWindow[])[],
+  tracing?: TranscribeTracing,
+): Promise<PassWord[][][]> {
+  const heard = passes.map(() => spans.map((): PassWord[] => []));
+  const jobs = passes.flatMap((windows, pass) =>
+    windows.map((win, windowIndex) => ({ win, pass, windowIndex })),
+  );
+  const rate = wave.sampleRate;
+  await mapWithConcurrency(
+    jobs,
+    TRANSCRIBE_CONCURRENCY,
+    async ({ win, pass, windowIndex }) => {
+      const from = Math.round(win.start * rate);
+      const to = Math.min(wave.samples.length, Math.round(win.end * rate));
+      const event = {
+        pass,
+        windowIndex,
+        windowStart: from / rate,
+        windowEnd: to / rate,
+        wallStartMs: Date.now(),
+      };
+      tracing?.onWindowStart?.(event);
+      // A view into the waveform, not a copy: every pass covers all of it.
+      const result = await transcribeSamples(
+        wave.samples.subarray(from, to),
+        rate,
+      );
+      tracing?.onWindowEnd?.({ ...event, wallEndMs: Date.now() });
+
+      let s = win.first;
+      for (const w of tokensToWords(
+        result.tokens ?? [],
+        result.timestamps ?? [],
+      )) {
+        const start = w.start + from / rate;
+        while (s < win.last && start >= spans[s + 1]!.start) s++;
+        heard[pass]![s]!.push({
+          text: w.text,
+          start,
+          edgeSecs: Math.min(start - from / rate, to / rate - start),
+        });
+      }
+    },
+  );
+  return heard;
+}
+
+/** A voted word, how many passes heard it, and how many heard any word in its place. */
+export interface Vote {
+  word: PassWord;
+  agree: number;
+  heard: number;
+}
+
+/**
+ * Vote on several passes' words for the same audio. In each slot of
+ * {@link alignHypotheses}, the word most passes heard wins, ties going to
+ * the one heard farthest from a window edge, where the recognizer does best.
+ * The winner takes the text of that farthest copy and the mean onset of all
+ * its copies. A slot wins a word even when most passes heard nothing there:
+ * the recognizer skips speech far more often than it invents it, and
+ * {@link CONFIDENCE} says how often such a word is right.
+ */
+export function vote(passes: readonly (readonly PassWord[])[]): Vote[] {
+  return alignHypotheses(passes).map((slot) => {
+    const groups = new Map<string, PassWord[]>();
+    for (const w of slot) {
+      if (!w) continue;
+      const key = normalizeToken(w.text);
+      groups.set(key, [...(groups.get(key) ?? []), w]);
+    }
+    const farthest = (ws: PassWord[]) =>
+      ws.reduce((a, b) => (b.edgeSecs > a.edgeSecs ? b : a));
+    let best: PassWord[] = [];
+    for (const g of groups.values())
+      if (
+        g.length > best.length ||
+        (g.length === best.length &&
+          farthest(g).edgeSecs > farthest(best).edgeSecs)
+      )
+        best = g;
+    const rep = farthest(best);
+    return {
+      word: {
+        text: rep.text,
+        start: best.reduce((s, w) => s + w.start, 0) / best.length,
+        edgeSecs: rep.edgeSecs,
+      },
+      agree: best.length,
+      heard: slot.filter((w) => w !== null).length,
+    };
+  });
+}
+
+/**
+ * The words of {@link vote} that are at least {@link MIN_CONFIDENCE} likely
+ * to be right, with their confidence. Assumes TRANSCRIBE_PASSES passes.
+ */
+export function voteWords(passes: readonly (readonly PassWord[])[]): Word[] {
+  const words: Word[] = [];
+  for (const { word, agree, heard } of vote(passes)) {
+    const confidence = CONFIDENCE[agree - 1]![heard - 1]!;
+    if (confidence < MIN_CONFIDENCE) continue;
+    // Mean onsets can step back a little where neighbouring slots were
+    // heard by different passes; keep them in order.
+    const start = Math.max(word.start, words.at(-1)?.start ?? -Infinity);
+    words.push({ text: word.text, start, confidence });
+  }
+  return words;
 }
 
 /**
@@ -220,76 +388,6 @@ export async function transcribeRange(
   return tokensToWords(result.tokens ?? [], result.timestamps ?? [])
     .map((w) => ({ ...w, start: w.start + offset }))
     .filter((w) => w.start >= start && w.start < end);
-}
-
-/** A span as half-open sample-index bounds into the source waveform. */
-interface SampleSpan {
-  startSample: number;
-  endSample: number;
-}
-
-/** A merged decode window: a contiguous span covering one or more voice activity spans. */
-interface DecodeWindow {
-  startSample: number;
-  endSample: number;
-  spans: SampleSpan[];
-}
-
-/**
- * Pack consecutive voice activity spans into decode windows of up to
- * MERGE_WINDOW_SEC. A span is appended to the current window while the window
- * stays within the cap; otherwise it opens a new window. Unlike core's
- * mergeSpans, which joins spans by the gap between them, this caps each
- * window's length and keeps the spans inside it. A single span longer than the cap (up to
- * TRANSCRIBE_VAD_OPTIONS.maxSpeechSecs) becomes its own window — still under Parakeet's ~400s limit.
- */
-function packWindows(
-  spans: readonly SampleSpan[],
-  sampleRate: number,
-): DecodeWindow[] {
-  const maxSamples = MERGE_WINDOW_SEC * sampleRate;
-  const windows: DecodeWindow[] = [];
-  for (const span of spans) {
-    const last = windows.at(-1);
-    if (last && span.endSample - last.startSample <= maxSamples) {
-      last.endSample = span.endSample;
-      last.spans.push(span);
-    } else {
-      windows.push({
-        startSample: span.startSample,
-        endSample: span.endSample,
-        spans: [span],
-      });
-    }
-  }
-  return windows;
-}
-
-/**
- * Distribute a window's recognized words (absolute timestamps, in time order)
- * back to the voice activity spans they fall in, yielding one SpeechRun per span
- * so the output still marks exactly where VAD cut. Each word is assigned to the
- * latest span whose start it has reached; a word landing in an inter-span
- * silence attaches to the preceding span. Spans with no words yield an empty
- * SpeechRun.
- */
-function splitWordsIntoRuns(
-  spans: readonly SampleSpan[],
-  words: readonly Word[],
-  sampleRate: number,
-): SpeechRun[] {
-  const segments: SpeechRun[] = spans.map((span) => ({
-    start: span.startSample / sampleRate,
-    end: span.endSample / sampleRate,
-    words: [],
-  }));
-  let ri = 0;
-  for (const word of words) {
-    while (ri < segments.length - 1 && word.start >= segments[ri + 1]!.start)
-      ri++;
-    segments[ri]!.words.push(word);
-  }
-  return segments;
 }
 
 /** Map over items with a bounded number of in-flight async calls, preserving input order. */

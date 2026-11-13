@@ -31,7 +31,8 @@ function normalizeForWER(text: string): string[] {
     .filter(Boolean);
 }
 
-function normalizeToken(text: string): string {
+/** A word as WER compares it: lowercase, without punctuation. */
+export function normalizeToken(text: string): string {
   return text.toLowerCase().replace(/[^\p{L}\p{N}']/gu, "");
 }
 
@@ -299,6 +300,15 @@ export interface TranscriptComparison extends WERResult {
   maxStartError: number;
   // 95th-percentile absolute error — robust to a handful of outliers.
   p95StartError: number;
+  /**
+   * How well the hypothesis's word confidences predict which of its words
+   * are right (a match in the alignment): the mean of (confidence − 1)² over
+   * right words and confidence² over wrong ones. 0 is perfect, and it falls
+   * toward 0 as transcription improves and confidence rises with it. Null if
+   * any hypothesis word has no confidence. Words the hypothesis missed have
+   * no confidence to score; WER counts them.
+   */
+  brierScore: number | null;
 }
 
 export function compareTranscripts(
@@ -318,6 +328,15 @@ export function compareTranscripts(
     startErrs.push(Math.abs(r.start - h.start));
   }
 
+  let brierScore: number | null = null;
+  if (hyp.every((w) => w.confidence !== undefined)) {
+    const right = new Uint8Array(hypWordCount);
+    for (const op of ops) if (op.op === "match") right[op.hypIdx] = 1;
+    let sum = 0;
+    hyp.forEach((w, i) => (sum += (w.confidence! - right[i]!) ** 2));
+    brierScore = hypWordCount === 0 ? 0 : sum / hypWordCount;
+  }
+
   return {
     wer: wordErrorRate(edits, refWordCount, hypWordCount),
     matches,
@@ -328,6 +347,7 @@ export function compareTranscripts(
     meanStartError: mean(startErrs),
     maxStartError: max(startErrs),
     p95StartError: percentile(startErrs, 0.95),
+    brierScore,
   };
 }
 

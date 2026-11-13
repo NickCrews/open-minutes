@@ -7,13 +7,22 @@ way it is. The tests here form a hierarchy:
    error rate against the hand-corrected golden meetings, and runtime as a
    fraction of the audio's length. These two numbers decide every change to
    transcription. A change that lowers WER without slowing us down much is
-   good, however it gets there.
+   good, however it gets there. Second, the Brier score of the words'
+   confidences: the mean of (confidence − 1)² over the words that match the
+   golden and confidence² over those that don't. It rewards confidences that
+   mean what they say (of words at 0.8, about 80% are right) and that
+   separate right words from wrong ones, and it falls toward 0 as
+   transcription improves. It can't see words the transcriber missed, which
+   have no confidence; WER counts those. So a change may improve the Brier
+   score only if it doesn't make WER or runtime worse.
 
 2. **[parakeet.characterization.test.ts](parakeet.characterization.test.ts):
    what the model does.** Facts about the recognizer that the implementation
    leans on: that a repeated decode gives the same words, that moving a window
    10 ms rewrites ~5% of them, how much lead-in and lead-out a window needs,
    that a long pass can drop seconds of speech, where a single pass tops out.
+   They're why `transcribeAudio` decodes the audio several times, with
+   windows cut at different places, and votes on the words.
    They're here so nobody has to measure them again, and so a model upgrade
    that changes one is noticed. They are not requirements: if a change
    improves the north star and breaks one of these, update or delete the
@@ -27,8 +36,8 @@ way it is. The tests here form a hierarchy:
 Everything here is tagged `slow`: it needs the models and the meetings' audio,
 which `getMeetingAudio` (`@open-minutes/datasets/audio`) downloads into a
 per-machine cache. Run it with `pnpm test:slow transcription-quality`, or just
-the north star with `pnpm test:slow north-star`, and compare the logged `WER=`
-and `RTF=` lines before and after a change.
+the north star with `pnpm test:slow north-star`, and compare the logged `WER=`,
+`RTF=` and `Brier=` before and after a change.
 
 The goldens are the reference, so a word the goldens are missing counts
 against a transcriber that hears it. When the north star shows a stretch the

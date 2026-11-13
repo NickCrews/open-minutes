@@ -10,6 +10,13 @@
 export interface Word {
   text: string;
   start: number;
+  /**
+   * The recognizer's estimate of the probability that this word is right:
+   * of the words it gave this confidence, about this fraction match a
+   * hand-corrected transcript. Absent where nothing estimated it, eg a word
+   * a person typed.
+   */
+  confidence?: number;
 }
 
 /**
