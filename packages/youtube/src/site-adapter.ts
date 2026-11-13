@@ -9,12 +9,14 @@ import {
   type Egress,
   EgressError,
   type EgressOptions,
+  YtDlpError,
   egress,
   ensureYtDlpInstalled,
 } from "@open-minutes/ytdlp";
 import { decodeOpusWebm, encodeOpusWebm } from "@open-minutes/codecs";
 import {
   type YtDlpInfo,
+  isNotStartedYet,
   metadataFromYtDlpInfo,
   videoId,
   videoUrl,
@@ -61,11 +63,20 @@ async function getMetadata(
   options: YouTubeOptions,
   videoIdOrUrl: string,
 ): Promise<RecordingMetadata> {
-  const { stdout } = await ytDlp(options, [
-    "--skip-download",
-    "-J",
-    videoUrl(videoIdOrUrl),
-  ]);
+  const args = ["--skip-download", "-J", videoUrl(videoIdOrUrl)];
+  let stdout: string;
+  try {
+    ({ stdout } = await ytDlp(options, args));
+  } catch (error) {
+    if (!(error instanceof YtDlpError && isNotStartedYet(error.stderr))) {
+      throw error;
+    }
+    // A stream or premiere that hasn't started has no formats, which yt-dlp
+    // treats as an error. Told to ignore that, it gives the metadata. Only
+    // here, because it would also hide YouTube's bot check, which egress
+    // needs as an error to try the next route.
+    ({ stdout } = await ytDlp(options, ["--ignore-no-formats-error", ...args]));
+  }
   return metadataFromYtDlpInfo(JSON.parse(stdout) as YtDlpInfo);
 }
 
