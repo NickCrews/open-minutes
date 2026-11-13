@@ -4,7 +4,8 @@
 // comment starts with a marker, an HTML comment GitHub doesn't show:
 //
 //   <!-- changeset:version 2 -->                   a version, in a ```sql block
-//   <!-- changeset:check v2 sha256=<hex> ok -->    CI checked it (ok or fails)
+//   <!-- changeset:check v2 sha256=<hex> effect=<hex> ok -->
+//                                                  CI checked it (ok or fails)
 //   <!-- changeset:review v2 sha256=<hex> -->      a review, with JSON
 //   <!-- changeset:applied v2 sha256=<hex> -->     CI applied it
 //
@@ -18,6 +19,8 @@ export const LABELS = {
   proposal: "changeset",
   /** A maintainer approved the latest version; CI applies it. */
   approved: "changeset:approved",
+  /** Anyone asked CI to check the latest version again. */
+  recheck: "changeset:recheck",
   /** CI applied it. */
   applied: "changeset:applied",
 } as const;
@@ -54,6 +57,10 @@ export interface Version {
 export interface Check {
   version: number;
   sha256: string;
+  /** What the version did when CI checked it (build.ts's effectHash). */
+  effect: string | null;
+  /** The first 12 hex digits of what each statement did (build.ts's statementEffects). */
+  statements: string[] | null;
   ok: boolean;
   url: string;
   createdAt: string;
@@ -61,6 +68,8 @@ export interface Check {
 
 export interface PostedReview {
   review: Review;
+  /** The effect of the check the reviewer's page showed, if the comment says. */
+  effect: string | null;
   author: string;
   /** Whether the reviewer has write access to the repository. */
   trusted: boolean;
@@ -85,6 +94,10 @@ export interface Thread {
   /** Comments that look like part of the flow but can't be read, and why. */
   problems: string[];
 }
+
+/** The line of a check comment giving each statement's effect. */
+export const EFFECTS =
+  /^<!-- changeset:effects ((?:[0-9a-f]{12}\s*)*?)\s*-->$/m;
 
 const MARKER =
   /^\s*<!--\s*changeset:(version|check|review|applied)\s+([^>]*?)\s*-->/;
@@ -140,7 +153,10 @@ export function readThread(
       });
       continue;
     }
-    const ref = /^v(\d+)\s+sha256=([0-9a-f]{64})(?:\s+(ok|fails))?$/.exec(args);
+    const ref =
+      /^v(\d+)\s+sha256=([0-9a-f]{64})(?:\s+effect=([0-9a-f]{64}))?(?:\s+(ok|fails))?$/.exec(
+        args,
+      );
     if (!ref) {
       problem(`can't read the ${kind} marker`);
       continue;
@@ -153,7 +169,10 @@ export function readThread(
         thread.checks.push({
           version,
           sha256,
-          ok: ref[3] === "ok",
+          effect: ref[3] ?? null,
+          statements:
+            EFFECTS.exec(body)?.[1]?.split(/\s+/).filter(Boolean) ?? null,
+          ok: ref[4] === "ok",
           url: c.html_url,
           createdAt: c.created_at,
         });
@@ -173,6 +192,7 @@ export function readThread(
     }
     thread.reviews.push({
       review: { ...review, version, sha256 },
+      effect: ref[3] ?? null,
       author,
       trusted: TRUSTED.has(c.author_association),
       url: c.html_url,
@@ -201,14 +221,16 @@ export function checkOf(thread: Thread, v: Version): Check | undefined {
 }
 
 /**
- * The version an approval at `approvedAt` covers: the latest one, as it
- * stood then, that CI checked and found would apply. Returns why not
- * otherwise.
+ * The version an approval at `approvedAt` covers, and the check of it the
+ * approver saw: the latest version, as it stood then, and CI's latest check
+ * of it before then, which found it would apply. Returns why not otherwise.
  */
 export function approvedVersion(
   thread: Thread,
   approvedAt: string,
-): { version: Version } | { refused: string } {
+):
+  | { version: Version; check: Check & { effect: string } }
+  | { refused: string } {
   const latest = thread.versions.at(-1);
   if (!latest) return { refused: "the issue has no changeset version" };
   if (latest.createdAt > approvedAt)
@@ -219,10 +241,17 @@ export function approvedVersion(
     return {
       refused: `v${latest.version} was edited after the approval; review it and approve again`,
     };
-  const check = checkOf(thread, latest);
-  if (!check)
+  const check = [...thread.checks]
+    .reverse()
+    .find(
+      (c) =>
+        c.version === latest.version &&
+        c.sha256 === latest.sha256 &&
+        c.createdAt <= approvedAt,
+    );
+  if (!check?.effect)
     return {
-      refused: `CI hasn't checked v${latest.version} as it stands; wait for the check, then approve again`,
+      refused: `CI hadn't checked v${latest.version} as it stands when it was approved; wait for the check, then approve again`,
     };
   if (!check.ok)
     return {
@@ -230,7 +259,7 @@ export function approvedVersion(
     };
   if (thread.applied.some((a) => a.sha256 === latest.sha256))
     return { refused: `v${latest.version} was already applied` };
-  return { version: latest };
+  return { version: latest, check: { ...check, effect: check.effect } };
 }
 
 /**
@@ -384,6 +413,12 @@ export function summarize(issue: IssueInfo, thread: Thread) {
           author: r.author,
           trusted: r.trusted,
           url: r.url,
+          // CI's latest check found the version does something other than
+          // what the reviewer saw.
+          stale:
+            r.effect !== null &&
+            checkOf(thread, v)?.effect != null &&
+            checkOf(thread, v)!.effect !== r.effect,
           overall: r.review.overall,
           statements: r.review.statements,
         })),

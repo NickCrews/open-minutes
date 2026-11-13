@@ -69,6 +69,7 @@ export class GitHub {
     method: string,
     path: string,
     body?: unknown,
+    apiVersion = "2022-11-28",
   ): Promise<{ data: T; next: string | null }> {
     const url = path.startsWith("http") ? path : `${this.#api}${path}`;
     const res = await fetch(url, {
@@ -76,7 +77,7 @@ export class GitHub {
       headers: {
         accept: "application/vnd.github+json",
         authorization: `Bearer ${this.#token}`,
-        "x-github-api-version": "2022-11-28",
+        "x-github-api-version": apiVersion,
         ...(body === undefined ? {} : { "content-type": "application/json" }),
       },
       body: body === undefined ? undefined : JSON.stringify(body),
@@ -196,4 +197,54 @@ export class GitHub {
     }>("GET", `/repos/${repo}/collaborators/${login}/permission`);
     return data.role_name ?? data.permission;
   }
+
+  /** The issue's artifacts, by number. */
+  async artifacts({ repo, issue }: IssueRef): Promise<IssueArtifact[]> {
+    return (
+      await this.#request<IssueArtifact[]>(
+        "GET",
+        `/repos/${repo}/issues/${issue}/artifacts?per_page=100`,
+        undefined,
+        ARTIFACTS_API,
+      )
+    ).data;
+  }
+
+  /**
+   * Put an HTML page on the issue as the artifact named `name`: a new one,
+   * or a new version of the one with that name.
+   */
+  async putHtmlArtifact(
+    ref: IssueRef,
+    name: string,
+    html: string,
+  ): Promise<IssueArtifact> {
+    const path = `/repos/${ref.repo}/issues/${ref.issue}/artifacts`;
+    const existing = (await this.artifacts(ref)).find((a) => a.name === name);
+    const { data } = existing
+      ? await this.#request<IssueArtifact>(
+          "PATCH",
+          `${path}/${existing.number}`,
+          { body: html },
+          ARTIFACTS_API,
+        )
+      : await this.#request<IssueArtifact>(
+          "POST",
+          path,
+          { type: "embedded_html", name, body: html },
+          ARTIFACTS_API,
+        );
+    return data;
+  }
+}
+
+/** Issue artifacts are in the REST API from this version. */
+const ARTIFACTS_API = "2026-03-10";
+
+/** An issue artifact, as GitHub's REST API gives it. */
+export interface IssueArtifact {
+  number: number;
+  name: string;
+  type: string;
+  html_url: string;
 }

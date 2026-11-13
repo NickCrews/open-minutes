@@ -16,6 +16,7 @@
  * @typedef {{
  *   version: { repo: string, issue: number, version: number } | null,
  *   sha256: string,
+ *   effect: string | null,
  *   base: { db: string, ranAt: string } | null,
  *   source: string | null,
  *   error: { message: string, statement: number | null } | null,
@@ -54,7 +55,7 @@ function reviewComment(diff, statements, review) {
   const lines = [];
   if (v)
     lines.push(
-      `<!-- changeset:review v${v.version} sha256=${diff.sha256} -->`,
+      `<!-- changeset:review v${v.version} sha256=${diff.sha256}${diff.effect ? ` effect=${diff.effect}` : ""} -->`,
       `### Review of changeset v${v.version}`,
       "",
     );

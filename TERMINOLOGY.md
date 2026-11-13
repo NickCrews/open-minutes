@@ -289,5 +289,9 @@ The page `pnpm changeset view` writes, and CI links to from its check of each ve
 _Avoid_: diff viewer, preview
 
 **Approve**:
-To add the label `changeset:approved` to a changeset issue, which only an admin or maintainer may do. CI then applies its latest version, if CI checked it and found it would apply.
+To add the label `changeset:approved` to a changeset issue, which only an admin or maintainer may do. CI then applies its latest version, if CI checked it and found it would apply, and only if it still has that check's effect.
 _Avoid_: merge, accept (a reviewer accepts a statement)
+
+**Effect** (of a changeset):
+What a changeset does: for each statement, the rows it changes and its changes to words, speakers, segment boundaries and fields, with their old values. CI records it with each check, and applies a version only if its effect is still the approved check's (see [packages/changeset-review](packages/changeset-review/README.md#when-production-changes)).
+_Avoid_: result, outcome, diff (a diff also shows the words around each change)

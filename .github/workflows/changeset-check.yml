@@ -5,19 +5,27 @@
 # `pnpm changeset propose` or `revise`, on an issue labelled `changeset`, by
 # someone with write access: their SQL runs against production, as the
 # changeset role, in a transaction that is always rolled back. The run checks
-# the issue's latest version, unless CI already checked it as it stands, and:
-#   - uploads the review page as an artifact (one HTML file, not zipped), and
-#   - comments `<!-- changeset:check vN sha256=... ok|fails -->` with whether
-#     it would apply, what it would change, and a link to the page.
+# the issue's latest version, unless CI already checked it as it stands.
+# Labelling the issue `changeset:recheck` checks it again, against production
+# as it is now (the run removes the label). Each check:
+#   - puts the review page on the issue as the HTML artifact
+#     "Changeset vN" (a new version of it on a re-check), or, if GitHub
+#     refuses, uploads it as this run's artifact, and
+#   - comments `<!-- changeset:check vN sha256=... effect=... ok|fails -->`
+#     with whether it would apply, what it would change, and a link to the
+#     page. changeset-apply.yml applies a version only if it still has the
+#     effect its approved check recorded.
 #
-# issue_comment runs this file from the default branch, so an issue can't
-# change what it does. Needs NEON_API_KEY and NEON_PROJECT_ID (see
-# production.yml).
+# issue_comment and issues run this file from the default branch, so an
+# issue can't change what it does. Needs NEON_API_KEY and NEON_PROJECT_ID
+# (see production.yml).
 name: changeset-check
 
 on:
   issue_comment:
     types: [created, edited]
+  issues:
+    types: [labeled]
 
 concurrency:
   group: changeset-${{ github.event.issue.number }}
@@ -31,8 +39,12 @@ jobs:
       vars.NEON_PROJECT_ID != ''
       && !github.event.issue.pull_request
       && contains(github.event.issue.labels.*.name, 'changeset')
-      && startsWith(github.event.comment.body, '<!-- changeset:version')
-      && contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association)
+      && (
+        (github.event_name == 'issue_comment'
+          && startsWith(github.event.comment.body, '<!-- changeset:version')
+          && contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association))
+        || (github.event_name == 'issues' && github.event.label.name == 'changeset:recheck')
+      )
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -50,7 +62,6 @@ jobs:
       # Production is the Neon project's default branch, which neonctl uses
       # when given no branch.
       - name: Check the latest version
-        id: check
         env:
           NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
           NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
@@ -67,24 +78,11 @@ jobs:
           pnpm changeset ci check "$ISSUE" --db "$db" \
             --out-dir "$RUNNER_TEMP/changeset" --run-url "$RUN_URL"
 
+      # Only when the page couldn't be attached to the issue.
       - name: Upload the review page
-        id: upload
-        if: steps.check.outputs.page != ''
         uses: actions/upload-artifact@v7
         with:
-          path: ${{ steps.check.outputs.page }}
+          path: ${{ runner.temp }}/changeset/*.html
           archive: false
           retention-days: 90
-          if-no-files-found: error
-
-      - name: Comment with the result
-        if: steps.check.outputs.comment != ''
-        env:
-          COMMENT: ${{ steps.check.outputs.comment }}
-          PAGE_URL: ${{ steps.upload.outputs.artifact-url }}
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          body=$(cat "$COMMENT")
-          body=${body//'{{review_url}}'/$PAGE_URL}
-          printf '%s\n' "$body" > "$COMMENT"
-          gh issue comment "$ISSUE" --repo "$GITHUB_REPOSITORY" --body-file "$COMMENT"
+          if-no-files-found: ignore

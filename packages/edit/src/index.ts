@@ -4,6 +4,7 @@ export {
   type Changeset,
   type CheckedChangeset,
   ChangesetError,
+  ChangesetRefused,
   type ChangesetTrace,
   checkChangeset,
   type Fix,

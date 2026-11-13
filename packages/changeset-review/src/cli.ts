@@ -2,7 +2,7 @@
 // The root `pnpm changeset` script: check, apply and view changesets, and
 // propose, revise, review and apply them through GitHub issues. See this
 // package's README.
-import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -19,8 +19,8 @@ import {
   type MeetingRef,
 } from "@open-minutes/edit";
 import { dbArg, formatRows, withDb } from "@open-minutes/edit/cli";
-import { buildChangesetDiff, sqlHash } from "./build";
-import { appliedComment, checkComment } from "./comments";
+import { applyIfUnchanged, buildChangesetDiff, sqlHash } from "./build";
+import { appliedComment, checkComment, type PageLink } from "./comments";
 import { currentRepo, GitHub, type IssueRef, parseIssueRef } from "./github";
 import {
   approvedVersion,
@@ -30,6 +30,8 @@ import {
   pickVersion,
   readThread,
   summarize,
+  type Check,
+  type Version,
   versionComment,
 } from "./issue";
 import { describeRows, renderPage } from "./render";
@@ -516,8 +518,17 @@ const reviewCmd = defineCommand({
       if (s.note) state.notes[statement.sql] = s.note;
     }
     const version: VersionRef = { ...issue, version: v.version, url: v.url };
+    // The review covers what CI's latest check of the version says it does.
+    const effect = checkOf(thread, v)?.effect ?? null;
     const body = reviewComment(
-      { version, sha256: v.sha256, base: null, source: v.url, error: null },
+      {
+        version,
+        sha256: v.sha256,
+        effect,
+        base: null,
+        source: v.url,
+        error: null,
+      },
       statements.map((s, index) => ({
         index,
         line: s.line,
@@ -596,7 +607,7 @@ const statusCmd = defineCommand({
         const counts = { accept: 0, reject: 0, question: 0 };
         for (const s of r.statements) if (s.verdict) counts[s.verdict]++;
         console.log(
-          `  review by ${r.author}${r.trusted ? "" : " (no write access)"}: ${counts.accept} accepted, ${counts.reject} rejected, ${counts.question} questioned ${r.url}`,
+          `  review by ${r.author}${r.trusted ? "" : " (no write access)"}${r.stale ? " (stale: CI's latest check found it does something different from what this review saw)" : ""}: ${counts.accept} accepted, ${counts.reject} rejected, ${counts.question} questioned ${r.url}`,
         );
         if (r.overall) console.log(r.overall.replace(/^/gm, "    "));
         for (const s of r.statements)
@@ -610,64 +621,101 @@ const statusCmd = defineCommand({
   },
 });
 
-/** Set a step output, when running in GitHub Actions. */
-function output(name: string, value: string): void {
-  if (process.env.GITHUB_OUTPUT)
-    appendFileSync(process.env.GITHUB_OUTPUT, `${name}=${value}\n`);
+const ciArgs = {
+  issue: { type: "positional", required: true, description: "The issue" },
+  ...dbArg,
+  "out-dir": {
+    type: "string",
+    required: true,
+    description:
+      "Where to write a review page that can't be attached to the issue, for the workflow to upload",
+  },
+  "run-url": { type: "string", description: "The workflow run, to link to" },
+} as const;
+
+/**
+ * Check version `v` of a changeset issue against `db` and comment with the
+ * result: build its diff, put its review page on the issue as the artifact
+ * "Changeset v<n>" (a new version of it on a re-check), or, if that fails,
+ * write the page to `outDir` for the workflow to upload, and post the check.
+ */
+async function checkAndComment(
+  gh: GitHub,
+  db: DB,
+  issue: IssueRef,
+  v: Version,
+  {
+    outDir,
+    runUrl,
+    why,
+    previous,
+  }: { outDir: string; runUrl?: string; why?: string; previous?: Check },
+): Promise<ChangesetDiff> {
+  const version: VersionRef = { ...issue, version: v.version, url: v.url };
+  const diff = await buildChangesetDiff({
+    db,
+    sql: v.sql,
+    base: "production",
+    source: v.url,
+    version,
+  });
+  const html = renderPage(diff, CLIENT_SCRIPT);
+  let page: PageLink;
+  try {
+    page = {
+      url: (await gh.putHtmlArtifact(issue, `Changeset v${v.version}`, html))
+        .html_url,
+    };
+  } catch (err) {
+    console.log(`couldn't attach the review page to the issue: ${err}`);
+    const file = join(callerPath(outDir), pageName(diff));
+    writeFileSync(file, html);
+    const status = /: (\d{3}) /.exec(String(err))?.[1];
+    page = { unattached: status ? `GitHub said ${status}` : "an error" };
+  }
+  await gh.comment(
+    issue,
+    checkComment({ ...diff, version }, { page, runUrl, why, previous }),
+  );
+  console.log(`v${v.version}: ${describeDiff(diff)}`);
+  return diff;
 }
 
 const ciCheckCmd = defineCommand({
   meta: {
     name: "check",
-    description:
-      "For CI: check the latest version of a changeset issue, unless CI already checked it as it stands, and write its review page and the comment reporting the check. Sets the step outputs `page` and `comment`, the files' paths, or `skip`.",
+    description: `For CI: check the latest version of a changeset issue and comment with the result and a review page, unless CI already checked it as it stands. With --force, or when the issue is labelled ${LABELS.recheck} (which it removes), check it again: production may have changed.`,
   },
   args: {
-    issue: { type: "positional", required: true, description: "The issue" },
-    ...dbArg,
-    "out-dir": {
-      type: "string",
-      required: true,
-      description: "Where to write the page and the comment",
-    },
-    "run-url": {
-      type: "string",
-      description: "The workflow run, to link to",
+    ...ciArgs,
+    force: {
+      type: "boolean",
+      description: "Check it even if CI already checked it",
     },
   },
   run: async ({ args }) => {
     const issue = issueArg(args.issue);
     const gh = new GitHub();
+    const info = await gh.issue(issue);
+    const recheck = args.force || info.labels.includes(LABELS.recheck);
+    if (info.labels.includes(LABELS.recheck))
+      await gh.removeLabel(issue, LABELS.recheck);
     const thread = readThread(await gh.comments(issue), sqlHash);
     const v = thread.versions.at(-1);
-    if (!v || checkOf(thread, v)) {
-      console.log(
-        v ? `v${v.version} is already checked` : "no version to check",
-      );
-      output("skip", "true");
-      return;
-    }
-    await withDb(args.db, async (db) => {
-      const version: VersionRef = { ...issue, version: v.version, url: v.url };
-      const diff = await buildChangesetDiff({
-        db: db as DB,
-        sql: v.sql,
-        base: "production",
-        source: v.url,
-        version,
-      });
-      const dir = callerPath(args["out-dir"]);
-      const page = join(dir, pageName(diff));
-      const comment = join(dir, "comment.md");
-      writeFileSync(page, renderPage(diff, CLIENT_SCRIPT));
-      writeFileSync(
-        comment,
-        checkComment({ ...diff, version }, { runUrl: args["run-url"] }),
-      );
-      console.log(`v${v.version}: ${describeDiff(diff)}`);
-      output("page", page);
-      output("comment", comment);
-    });
+    if (!v) return console.log("no version to check");
+    const checked = checkOf(thread, v);
+    if (checked && !recheck)
+      return console.log(`v${v.version} is already checked`);
+    await withDb(args.db, (db) =>
+      checkAndComment(gh, db as DB, issue, v, {
+        outDir: args["out-dir"],
+        runUrl: args["run-url"],
+        why: checked
+          ? "Checked again, against production as it is now."
+          : undefined,
+        previous: checked,
+      }),
+    );
   },
 });
 
@@ -677,12 +725,9 @@ const APPROVERS = new Set(["admin", "maintain"]);
 const ciApplyCmd = defineCommand({
   meta: {
     name: "apply",
-    description: `For CI: apply the version of a changeset issue that labelling it ${LABELS.approved} approved, if an admin or maintainer did, then comment, label it ${LABELS.applied} and close it. On any refusal or failure, it comments why and removes ${LABELS.approved}.`,
+    description: `For CI: apply the version of a changeset issue that labelling it ${LABELS.approved} approved, if an admin or maintainer did and it still does what CI's check of it said, then comment, label it ${LABELS.applied} and close it. On any refusal or failure it comments why and removes ${LABELS.approved}, saving nothing; if production changed what the version does, it also checks it again.`,
   },
-  args: {
-    issue: { type: "positional", required: true, description: "The issue" },
-    ...dbArg,
-  },
+  args: ciArgs,
   run: async ({ args }) => {
     const issue = issueArg(args.issue);
     const gh = new GitHub();
@@ -710,25 +755,48 @@ const ciApplyCmd = defineCommand({
     const thread = readThread(await gh.comments(issue), sqlHash);
     const approved = approvedVersion(thread, approval.created_at);
     if ("refused" in approved) return refuse(approved.refused);
-    const v = approved.version;
+    const { version: v, check } = approved;
     const version: VersionRef = { ...issue, version: v.version, url: v.url };
     await withDb(args.db, async (db) => {
       let result;
       try {
-        result = await applyChangeset({ db, sql: v.sql });
+        result = await applyIfUnchanged({
+          db: db as DB,
+          sql: v.sql,
+          effect: check.effect,
+        });
       } catch (err) {
         if (!(err instanceof ChangesetError)) throw err;
-        return refuse(
-          `v${v.version} failed, and nothing was saved: ${err.message}`,
+        await refuse(
+          `v${v.version} failed, and nothing was saved: ${err.message}. CI checked it again below`,
         );
+        await checkAndComment(gh, db as DB, issue, v, {
+          outDir: args["out-dir"],
+          runUrl: args["run-url"],
+          why: "Checked again, because applying it failed.",
+          previous: check,
+        });
+        return;
       }
-      const rows = formatRows(result.rows);
+      if ("changed" in result) {
+        await refuse(
+          `production changed since [CI's check](${check.url}), and v${v.version} no longer does what it said, so nothing was saved. CI checked it again below; review what it does now, and approve again`,
+        );
+        await checkAndComment(gh, db as DB, issue, v, {
+          outDir: args["out-dir"],
+          runUrl: args["run-url"],
+          why: "Checked again, because production changed since the approved check.",
+          previous: check,
+        });
+        return;
+      }
+      const rows = formatRows(result.applied.rows);
       console.log(`applied v${v.version}: ${rows}`);
       await gh.comment(
         issue,
         appliedComment(version, v.sha256, {
           rows,
-          meetings: result.meetings.map(ref),
+          meetings: result.applied.meetings.map(ref),
           approver,
         }),
       );

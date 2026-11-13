@@ -4,8 +4,13 @@ import type { DB } from "@open-minutes/db";
 import { dbTest } from "@open-minutes/db/testing/vitest";
 import { datasetState } from "@open-minutes/seed";
 import { formatClock } from "@open-minutes/core/clock";
-import { findMeetingId, labelOf, loadMeeting } from "@open-minutes/edit";
-import { buildChangesetDiff } from "./build";
+import {
+  applyChangeset,
+  findMeetingId,
+  labelOf,
+  loadMeeting,
+} from "@open-minutes/edit";
+import { applyIfUnchanged, buildChangesetDiff } from "./build";
 import type { StatementDiff } from "./types";
 
 const test = dbTest({ data: datasetState("all") });
@@ -228,5 +233,101 @@ SELECT om.relabel('${SLUG}', '${formatClock(first.start)}', 'unlabeled');
     ]);
     expect(diff.statements[0]!.meetings[0]!.changes).toHaveLength(1);
     expect(diff.outcomes).toEqual([]);
+  });
+});
+
+describe("applyIfUnchanged", () => {
+  /** A changeset fixing the fourth segment's first word and Kyle's bio, and its checked effect. */
+  async function checked(db: DB) {
+    const { id, first } = await landmarks(db);
+    const changeset = `
+SELECT om.replace_words('${SLUG}', '${formatClock(first.start)}', '${first.text}', 'Fixed');
+UPDATE people SET bio = 'A new bio.' WHERE slug = 'kyle-kelley';
+`;
+    const diff = await buildChangesetDiff({ db, sql: changeset, base: "test" });
+    expect(diff.error).toBeNull();
+    return { id, changeset, effect: diff.effect, first };
+  }
+
+  const fourthWord = async (db: DB, id: number) =>
+    (await loadMeeting(db, id)).segments[3]!.words[0]!.text;
+
+  test("a changeset's effect is the same from run to run", async ({ db }) => {
+    const { changeset, effect } = await checked(db);
+    const again = await buildChangesetDiff({
+      db,
+      sql: changeset,
+      base: "test",
+    });
+    expect(again.effect).toBe(effect);
+  });
+
+  test("applies it when it does what was checked, despite other edits", async ({
+    db,
+  }) => {
+    const { id, changeset, effect } = await checked(db);
+    // Another edit to the same meeting, away from what the changeset changes.
+    const far = (await loadMeeting(db, id)).segments.at(-1)!.words.at(-1)!;
+    await applyChangeset({
+      db,
+      sql: `SELECT om.replace_words('${SLUG}', '${formatClock(far.start)}', '${far.text.replaceAll("'", "''")}', 'Elsewhere');`,
+    });
+    const result = await applyIfUnchanged({ db, sql: changeset, effect });
+    expect(result).toMatchObject({
+      applied: {
+        rows: {
+          people: { updated: 1, inserted: 0, deleted: 0 },
+          segments: { updated: 1, inserted: 0, deleted: 0 },
+        },
+      },
+    });
+    expect(await fourthWord(db, id)).toBe("Fixed");
+    expect(await bio(db)).toBe("A new bio.");
+  });
+
+  test("saves nothing when production changed what it does", async ({ db }) => {
+    const { id, changeset, effect, first } = await checked(db);
+    // Someone else changes Kyle's bio first: the changeset would now
+    // overwrite their bio, not the one it was checked against.
+    await db.execute(
+      sql`UPDATE people SET bio = 'Changed meanwhile.' WHERE slug = 'kyle-kelley'`,
+    );
+    expect(await applyIfUnchanged({ db, sql: changeset, effect })).toEqual({
+      changed: true,
+    });
+    expect(await bio(db)).toBe("Changed meanwhile.");
+    expect(await fourthWord(db, id)).toBe(first.text);
+  });
+
+  test("saves nothing when a relabel would now cover other words", async ({
+    db,
+  }) => {
+    const { id, meeting, first, nextLabel } = await landmarks(db);
+    const relabel = `SELECT om.relabel('${SLUG}', '${formatClock(first.start)}', 'unlabeled');`;
+    const { effect } = await buildChangesetDiff({
+      db,
+      sql: relabel,
+      base: "test",
+    });
+    // Meanwhile the segment's second half goes to the next speaker, so the
+    // relabel now covers only its first half; it reads the same as a change
+    // at the segment's first word.
+    const words = meeting.segments[3]!.words;
+    const middle = words[Math.floor(words.length / 2)]!;
+    await applyChangeset({
+      db,
+      sql: `SELECT om.split_segment('${SLUG}', '${formatClock(middle.start)}', NULL, '${nextLabel}');`,
+    });
+    const now = await buildChangesetDiff({ db, sql: relabel, base: "test" });
+    expect(now.statements[0]!.meetings[0]!.changes).toEqual(
+      (await buildChangesetDiff({ db, sql: relabel, base: "test" }))
+        .statements[0]!.meetings[0]!.changes,
+    );
+    expect(await applyIfUnchanged({ db, sql: relabel, effect })).toEqual({
+      changed: true,
+    });
+    expect(
+      labelOf((await loadMeeting(db, id)).segments[3]!, meeting.people),
+    ).not.toBe("unlabeled");
   });
 });

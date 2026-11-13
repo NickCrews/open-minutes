@@ -1,8 +1,9 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, test } from "vite-plus/test";
 import { sqlHash } from "./build";
-import { checkComment, REVIEW_URL } from "./comments";
-import { type IssueComment, readThread } from "./issue";
+import { statementEffects } from "./build";
+import { checkComment, sinceLast } from "./comments";
+import { type Check, type IssueComment, readThread } from "./issue";
 import { renderPage } from "./render";
 import type { ChangesetDiff, MeetingDiff, StatementDiff } from "./types";
 
@@ -37,6 +38,7 @@ function meetingDiff(over: Partial<MeetingDiff>): MeetingDiff {
     changes: [],
     hunks: [],
     fields: [],
+    relabelled: "",
     resolved: [],
     introduced: [],
     ...over,
@@ -44,6 +46,7 @@ function meetingDiff(over: Partial<MeetingDiff>): MeetingDiff {
 }
 
 const SHA = "a".repeat(64);
+const EFFECT = "e".repeat(64);
 const diff: ChangesetDiff = {
   meetings: [
     { id: 5, slug: null, title: "Assembly <Regular>", date: "2026-03-24" },
@@ -59,6 +62,7 @@ const diff: ChangesetDiff = {
   },
   sql: "",
   sha256: SHA,
+  effect: EFFECT,
   error: null,
   statements: [
     statement({
@@ -264,7 +268,7 @@ describe("reviewComment", () => {
 
   test("lists rejections, questions and notes, then the accepted", () => {
     expect(md.split("<details>")[0]).toBe(
-      `<!-- changeset:review v2 sha256=${SHA} -->
+      `<!-- changeset:review v2 sha256=${SHA} effect=${EFFECT} -->
 ### Review of changeset v2
 
 Checked against \`local\` at 2026-11-13T00:00:00.000Z: 2 accepted, 1 rejected, 0 with a question, 1 not reviewed.
@@ -324,6 +328,7 @@ Close, one fix.
             },
           ],
         },
+        effect: EFFECT,
         author: "someone",
         trusted: false,
         url: comment.html_url,
@@ -337,10 +342,10 @@ describe("checkComment", () => {
   test("reports the result, the violations introduced and each statement", () => {
     const md = checkComment(
       { ...diff, version: diff.version! },
-      { runUrl: "https://run" },
+      { page: { url: "https://page" }, runUrl: "https://run" },
     );
     expect(md.split("\n")[0]).toBe(
-      `<!-- changeset:check v2 sha256=${SHA} ok -->`,
+      `<!-- changeset:check v2 sha256=${SHA} effect=${EFFECT} ok -->`,
     );
     expect(md).toContain(
       "### ✅ [v2](https://github.com/o/r/issues/1#issuecomment-9) would apply",
@@ -348,21 +353,78 @@ describe("checkComment", () => {
     expect(md).toContain(
       "- **introduces** warning `filler-word` seg 1 0:00:20.00: um",
     );
-    expect(md).toContain(`[Review page](${REVIEW_URL})`);
+    expect(md).toContain(
+      "[Review page](https://page), in the issue's artifacts · [run](https://run)",
+    );
     expect(md).toContain(
       "| 3 | 4 | `replace_all_words` | segments 2 updated |",
     );
   });
 
   test("says where a failing version stops", () => {
-    const md = checkComment({
-      ...diff,
-      version: diff.version!,
-      error: { statement: 1, message: "assertion failed: x", assertion: true },
-    });
-    expect(md.split("\n")[0]).toBe(
-      `<!-- changeset:check v2 sha256=${SHA} fails -->`,
+    const md = checkComment(
+      {
+        ...diff,
+        version: diff.version!,
+        error: {
+          statement: 1,
+          message: "assertion failed: x",
+          assertion: true,
+        },
+      },
+      {
+        page: { unattached: "GitHub said 404" },
+        runUrl: "https://run",
+        why: "Checked again.",
+      },
     );
+    expect(md.split("\n").slice(0, 4)).toEqual([
+      `<!-- changeset:check v2 sha256=${SHA} effect=${EFFECT} fails -->`,
+      expect.stringMatching(
+        /^<!-- changeset:effects [0-9a-f]{12} [0-9a-f]{12} [0-9a-f]{12} -->$/,
+      ),
+      "_Checked again._",
+      "",
+    ]);
     expect(md).toContain("fails at #2 (line 3)");
+    expect(md).toContain(
+      "The review page couldn't be attached to the issue (GitHub said 404); it's in [the run](https://run)'s artifacts",
+    );
+  });
+});
+
+describe("sinceLast", () => {
+  const effects = statementEffects(diff).map((e) => e.slice(0, 12));
+  const last: Check = {
+    version: 2,
+    sha256: SHA,
+    effect: EFFECT,
+    statements: effects,
+    ok: true,
+    url: "https://last",
+    createdAt: "2026-11-13T00:00:00Z",
+  };
+  const failure = { statement: 0, message: "x", assertion: false };
+
+  test("says when it now fails, or now applies", () => {
+    expect(sinceLast(last, { ...diff, error: failure }, effects)).toBe(
+      "Applied at [the last check](https://last); fails now.",
+    );
+    expect(sinceLast({ ...last, ok: false }, diff, effects)).toBe(
+      "Failed at [the last check](https://last); applies now.",
+    );
+  });
+
+  test("says when it does the same", () => {
+    expect(sinceLast(last, diff, effects)).toBe(
+      "Does what it did at [the last check](https://last): production changed nothing it changes.",
+    );
+  });
+
+  test("names the statements that do something different", () => {
+    const now = [effects[0]!, "0".repeat(12), "1".repeat(12)];
+    expect(sinceLast(last, { ...diff, effect: "f".repeat(64) }, now)).toBe(
+      "Does something different from [the last check](https://last): #2, #3 now change other data. Reviews of the last check don't cover them.",
+    );
   });
 });

@@ -1,26 +1,42 @@
 // The comments CI posts on a changeset's issue: the check of a version, and
 // the result of applying it. Each starts with the marker issue.ts reads.
 
+import { statementEffects } from "./build";
+import type { Check } from "./issue";
 import { describeRows, meetingName, statementSummary } from "./render";
 import type { ChangesetDiff, VersionRef } from "./types";
 
-/** Stands for the review page's URL until the workflow has uploaded it. */
-export const REVIEW_URL = "{{review_url}}";
+/**
+ * Where a check's review page is: an artifact on the issue, or, when it
+ * couldn't be attached, the run's artifacts, and why.
+ */
+export type PageLink = { url: string } | { unattached: string };
 
 /**
  * The check of a version: whether it would apply, what it would change and
  * which rule violations it would resolve and introduce, each statement's
- * changes in a line, and links to the review page and the run.
+ * changes in a line, and links to the review page and the run. `why` says
+ * why CI checked it again, and `previous`, CI's last check of the same
+ * version, what changed since.
  */
 export function checkComment(
   diff: ChangesetDiff & { version: VersionRef },
-  { runUrl }: { runUrl?: string } = {},
+  {
+    page,
+    runUrl,
+    why,
+    previous,
+  }: { page: PageLink; runUrl?: string; why?: string; previous?: Check },
 ): string {
   const v = diff.version.version;
   const meetings = new Map(diff.meetings.map((m) => [m.id, m]));
+  const effects = statementEffects(diff).map((e) => e.slice(0, 12));
   const lines = [
-    `<!-- changeset:check v${v} sha256=${diff.sha256} ${diff.error ? "fails" : "ok"} -->`,
+    `<!-- changeset:check v${v} sha256=${diff.sha256} effect=${diff.effect} ${diff.error ? "fails" : "ok"} -->`,
+    `<!-- changeset:effects ${effects.join(" ")} -->`,
   ];
+  if (why) lines.push(`_${why}_`, "");
+  if (previous) lines.push(`_${sinceLast(previous, diff, effects)}_`, "");
   if (diff.error) {
     const at =
       diff.error.statement === null
@@ -58,8 +74,13 @@ export function checkComment(
         );
     }
   }
-  const links = [`[Review page](${REVIEW_URL}) (download and open it)`];
-  if (runUrl) links.push(`[run](${runUrl})`);
+  const links =
+    "url" in page
+      ? [`[Review page](${page.url}), in the issue's artifacts`]
+      : [
+          `The review page couldn't be attached to the issue (${page.unattached})${runUrl ? `; it's in [the run](${runUrl})'s artifacts` : ""}`,
+        ];
+  if (runUrl && "url" in page) links.push(`[run](${runUrl})`);
   lines.push("", links.join(" · "), "");
 
   const rows = diff.statements.map((s) => {
@@ -83,6 +104,30 @@ export function checkComment(
     "",
   );
   return lines.join("\n");
+}
+
+/**
+ * What changed since CI's last check of the same version: whether it now
+ * fails or applies, and which statements do something else.
+ */
+export function sinceLast(
+  previous: Check,
+  diff: Pick<ChangesetDiff, "effect" | "error">,
+  effects: string[],
+): string {
+  const last = `[the last check](${previous.url})`;
+  if (previous.ok && diff.error) return `Applied at ${last}; fails now.`;
+  if (!previous.ok && !diff.error) return `Failed at ${last}; applies now.`;
+  if (previous.effect === diff.effect)
+    return `Does what it did at ${last}: production changed nothing it changes.`;
+  const changed = previous.statements
+    ? effects
+        .map((e, i) => (previous.statements![i] === e ? null : `#${i + 1}`))
+        .filter((n) => n !== null)
+    : [];
+  return changed.length
+    ? `Does something different from ${last}: ${changed.join(", ")} now ${changed.length === 1 ? "changes" : "change"} other data. Reviews of the last check don't cover ${changed.length === 1 ? "it" : "them"}.`
+    : `Does something different from ${last}. Reviews of the last check don't cover it.`;
 }
 
 /** The result of applying a version. */

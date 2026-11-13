@@ -112,9 +112,18 @@ describe("diffTranscripts", () => {
   test("shows a relabelled segment without marking its words", () => {
     const before = transcript("a: one two | b: three four five six | a: seven");
     const after = transcript("a: one two | c: three four five six | a: seven");
-    const { changes, hunks } = diffTranscripts(before, after, { context: 1 });
+    const { changes, hunks, relabelled } = diffTranscripts(before, after, {
+      context: 1,
+    });
     expect(changes).toEqual([
       { kind: "speaker", start: 2, old: "b", new: "c" },
+    ]);
+    // Every word the new speaker covers, which the one change doesn't say.
+    expect(relabelled.map(([, text]) => text)).toEqual([
+      "three",
+      "four",
+      "five",
+      "six",
     ]);
     expect(hunks[0]!.after[1]).toMatchObject({
       speaker: { label: "c" },
@@ -152,6 +161,10 @@ describe("diffTranscripts", () => {
 
   test("finds nothing in an unchanged transcript", () => {
     const t = transcript("a: one two | b: three");
-    expect(diffTranscripts(t, t)).toEqual({ changes: [], hunks: [] });
+    expect(diffTranscripts(t, t)).toEqual({
+      changes: [],
+      hunks: [],
+      relabelled: [],
+    });
   });
 });

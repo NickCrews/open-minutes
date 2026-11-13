@@ -3,6 +3,7 @@ import { sqlHash } from "./build";
 import { parseIssueRef } from "./github";
 import {
   approvedVersion,
+  summarize,
   CI_LOGIN,
   extractSql,
   type IssueComment,
@@ -30,8 +31,8 @@ function comment(body: string, over: Partial<IssueComment> = {}): IssueComment {
 
 const at = (second: number) =>
   `2026-11-13T00:00:${String(second).padStart(2, "0")}Z`;
-const check = (version: number, sql: string, ok = true) =>
-  `<!-- changeset:check v${version} sha256=${sqlHash(sql)} ${ok ? "ok" : "fails"} -->\n### checked`;
+const check = (version: number, sql: string, ok = true, effect = "e") =>
+  `<!-- changeset:check v${version} sha256=${sqlHash(sql)} effect=${effect.repeat(64)} ${ok ? "ok" : "fails"} -->\n### checked`;
 
 describe("versions", () => {
   test("a version comment reads back as its SQL and note, whatever the SQL holds", () => {
@@ -103,6 +104,21 @@ describe("approvedVersion", () => {
     const thread = readThread([v1, v1Check, v2, v2Check], sqlHash);
     expect(approvedVersion(thread, at(5))).toMatchObject({
       version: { version: 2, sql: SQL_2 },
+      check: { effect: "e".repeat(64) },
+    });
+  });
+
+  test("binds to the latest check before the approval, not a re-check after it", () => {
+    const recheck = comment(check(2, SQL_2, true, "f"), {
+      user: { login: CI_LOGIN },
+      created_at: at(6),
+    });
+    const thread = readThread([v1, v1Check, v2, v2Check, recheck], sqlHash);
+    expect(approvedVersion(thread, at(5))).toMatchObject({
+      check: { effect: "e".repeat(64), url: v2Check.html_url },
+    });
+    expect(approvedVersion(thread, at(7))).toMatchObject({
+      check: { effect: "f".repeat(64), url: recheck.html_url },
     });
   });
 
@@ -123,7 +139,7 @@ describe("approvedVersion", () => {
   test("refuses a version CI hasn't checked as it stands, or found fails", () => {
     expect(
       approvedVersion(readThread([v1, v1Check, v2], sqlHash), at(5)),
-    ).toMatchObject({ refused: expect.stringContaining("hasn't checked v2") });
+    ).toMatchObject({ refused: expect.stringContaining("hadn't checked v2") });
     // An edit after the check changes the SQL, so the check no longer covers it.
     const v2Edited = {
       ...v2,
@@ -135,7 +151,7 @@ describe("approvedVersion", () => {
         readThread([v1, v1Check, v2Edited, v2Check], sqlHash),
         at(5),
       ),
-    ).toMatchObject({ refused: expect.stringContaining("hasn't checked v2") });
+    ).toMatchObject({ refused: expect.stringContaining("hadn't checked v2") });
     const failing = comment(check(2, SQL_2, false), {
       user: { login: CI_LOGIN },
       created_at: at(4),
@@ -169,5 +185,33 @@ describe("parseIssueRef", () => {
     ).toEqual({ repo: "a/b.c", issue: 3 });
     expect(parseIssueRef("12")).toBeNull();
     expect(parseIssueRef("changeset.sql", "o/r")).toBeNull();
+  });
+});
+
+describe("summarize", () => {
+  test("marks a review stale when CI's latest check found a different effect", () => {
+    const sha = sqlHash(SQL_1);
+    const review = (effect: string) =>
+      comment(
+        `<!-- changeset:review v1 sha256=${sha} effect=${effect.repeat(64)} -->\n\n\`\`\`json\n{"overall": "", "statements": []}\n\`\`\``,
+      );
+    const thread = readThread(
+      [
+        comment(versionComment(1, SQL_1)),
+        comment(check(1, SQL_1, true, "e"), { user: { login: CI_LOGIN } }),
+        review("e"),
+        comment(check(1, SQL_1, true, "f"), { user: { login: CI_LOGIN } }),
+        review("f"),
+      ],
+      sqlHash,
+    );
+    const status = summarize(
+      { number: 1, title: "t", state: "open", html_url: "u", labels: [] },
+      thread,
+    );
+    expect(status.versions[0]!.reviews.map((r) => r.stale)).toEqual([
+      true,
+      false,
+    ]);
   });
 });

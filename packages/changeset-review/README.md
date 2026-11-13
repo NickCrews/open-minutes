@@ -17,11 +17,15 @@ of applying it.
    give, and posts the SQL as v1.
 3. **CI checks it.** For each new or edited version,
    [`changeset-check.yml`](../../.github/workflows/changeset-check.yml) runs
-   it against production and rolls it back. It comments whether it would
-   apply, what it would change, and the rule violations it would resolve and
-   introduce, with a link to the review page (one HTML file, kept as a
-   workflow artifact for 90 days). CI only checks versions by people with
-   write access.
+   it against production and rolls it back. It puts the review page on the
+   issue as the HTML
+   [issue artifact](https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/using-artifacts-with-issues)
+   "Changeset v2", which opens in a side panel on the issue, and comments
+   whether it would apply, what it would change, and the rule violations it
+   would resolve and introduce. CI only checks versions by people with write
+   access. If GitHub refuses the artifact (issue artifacts are in preview),
+   the page is the run's artifact instead, for 90 days, and the comment says
+   so.
 4. **Review it.** A reviewer opens the review page, gives each statement a
    verdict (accept, reject or question) and a note, and pastes the page's
    "Copy review comment" into the issue. An agent posts a review with
@@ -35,25 +39,69 @@ of applying it.
    `changeset:approved`.
 7. **CI applies it.**
    [`changeset-apply.yml`](../../.github/workflows/changeset-apply.yml)
-   applies the latest version to production, comments with what it saved,
-   swaps the label for `changeset:applied`, and closes the issue. If it can't,
-   it comments why, removes `changeset:approved` and saves nothing.
+   applies the latest version to production, if it still does what the
+   approved check said (see below), comments with what it saved, swaps the
+   label for `changeset:applied`, and closes the issue. If it can't, it
+   comments why, removes `changeset:approved` and saves nothing.
 
 An approval covers the latest version as it stood when the label was added,
-and only if CI checked that version, as it stands, and found it would apply.
-CI refuses an approval:
+and CI's latest check of that version, as it stands, before then. CI refuses
+an approval:
 
 - by anyone but an admin or maintainer (anyone with triage access can add
   labels);
 - when a version was posted, or the latest edited, after the label was
   added;
-- when CI hasn't checked the latest version, or found it fails;
+- when CI hadn't checked the latest version by then, or found it fails;
 - of a version already applied.
 
 To approve again after a refusal, add the label again.
 
-Create the three labels in the repository: `changeset`, `changeset:approved`
-and `changeset:applied`.
+Create the four labels in the repository: `changeset`, `changeset:approved`,
+`changeset:applied` and `changeset:recheck`.
+
+## When production changes
+
+Production moves on while a changeset waits: other changesets are applied,
+`pnpm transcript fix` and `pnpm goldens publish` save, and scout adds
+meetings. So a check, and the review of its page, describes production as it
+was. Each check records the changeset's **effect**: for each statement, the
+rows it changes, and in each meeting and person it changes, its changes to
+words, speakers (every word a new speaker covers), segment boundaries and
+fields, with their old values (`effectHash` in `src/build.ts`). The words
+around a change and the rule violations aren't part of it, so edits
+elsewhere in a meeting leave it alone.
+
+CI checks a version again when someone labels the issue `changeset:recheck`
+(and removes the label), and when applying it fails or finds a different
+effect. A check of a version CI checked before says how it compares:
+
+| Last check | This check                | The comment says                                                 |
+| ---------- | ------------------------- | ---------------------------------------------------------------- |
+| fails      | applies                   | it applies now; it can be approved                               |
+| applies    | fails                     | it fails now; approving it is refused, so post a new version     |
+| applies    | applies, same effect      | production changed nothing it changes                            |
+| applies    | applies, different effect | which statements now change other data; reviews don't cover them |
+
+Reviews record the effect of the check their page showed, and
+`pnpm changeset status` marks a review stale when CI's latest check of the
+version found a different one.
+
+Applying runs the version a statement at a time inside the transaction that
+saves it, holding the edit lock, and saves it only if its effect is the
+approved check's:
+
+- **Same effect**: it saves, even if other parts of the meetings changed.
+- **Different effect**: it saves nothing, comments that production changed,
+  and checks it again; the new check names the statements that changed. A
+  maintainer reviews the new page and approves again, which covers the new
+  check.
+- **It fails** (words a statement expects are gone, an assertion no longer
+  holds): it saves nothing, comments the error, and checks it again.
+
+So what is saved is always what the approved check said: the same changes to
+the same data. Two changesets approved for the same meeting apply one at a
+time, and the second is refused if the first changed what it does.
 
 ## The issue's comments
 
@@ -61,12 +109,12 @@ Each comment of the flow starts with a marker, an HTML comment GitHub doesn't
 show, which `src/issue.ts` reads. A version is cited by its number and the
 SHA-256 of its SQL, so an edit to a version is seen as a different version.
 
-| Comment | Marker                                        | Posted by                                      | Holds                                                                                         |
-| ------- | --------------------------------------------- | ---------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| Version | `<!-- changeset:version 2 -->`                | `propose`, `revise`; someone with write access | the SQL in a ` ```sql ` block, and a note: what changed since the last version, and why       |
-| Check   | `<!-- changeset:check v2 sha256=<hex> ok -->` | CI (`ok` or `fails`)                           | the result, rows and rule violations, each statement's changes, and a link to the review page |
-| Review  | `<!-- changeset:review v2 sha256=<hex> -->`   | anyone                                         | the review in Markdown, and as JSON in a ` ```json ` block                                    |
-| Applied | `<!-- changeset:applied v2 sha256=<hex> -->`  | CI                                             | the rows and meetings it changed, and who approved it                                         |
+| Comment | Marker                                                     | Posted by                                      | Holds                                                                                                                                                     |
+| ------- | ---------------------------------------------------------- | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Version | `<!-- changeset:version 2 -->`                             | `propose`, `revise`; someone with write access | the SQL in a ` ```sql ` block, and a note: what changed since the last version, and why                                                                   |
+| Check   | `<!-- changeset:check v2 sha256=<hex> effect=<hex> ok -->` | CI (`ok` or `fails`)                           | each statement's effect (`<!-- changeset:effects ... -->`), the result, rows and rule violations, each statement's changes, and a link to the review page |
+| Review  | `<!-- changeset:review v2 sha256=<hex> effect=<hex> -->`   | anyone                                         | the review in Markdown, and as JSON in a ` ```json ` block                                                                                                |
+| Applied | `<!-- changeset:applied v2 sha256=<hex> -->`               | CI                                             | the rows and meetings it changed, and who approved it                                                                                                     |
 
 Versions come only from people with write access, and checks and applied
 results only from `github-actions[bot]`. A review by someone without write
@@ -107,8 +155,8 @@ pnpm changeset propose <file> --title T [--body B | --body-file F]
 pnpm changeset revise <issue> <file> [--note N | --note-file F]
 pnpm changeset review <issue> <review.json> [--version N]
 pnpm changeset status <issue> [--json] [--sql [--version N]]
-pnpm changeset ci check <issue> --db D --out-dir DIR [--run-url U]
-pnpm changeset ci apply <issue> --db D
+pnpm changeset ci check <issue> --db D --out-dir DIR [--run-url U] [--force]
+pnpm changeset ci apply <issue> --db D --out-dir DIR [--run-url U]
 ```
 
 `check` and `apply` are described in
@@ -153,9 +201,10 @@ words of transcript to show around each change (default 8).
   - for an `om.assert`, that it held.
 - **A review form**: per statement, accept, reject or question, and a note;
   and a note on the whole changeset. "Copy review comment" copies the review
-  comment. The review is kept in the browser's localStorage, by issue and by
-  each statement's SQL, so the verdicts of statements a new version leaves
-  unchanged carry over.
+  comment, or shows it to copy where the browser won't allow that, as in an
+  issue artifact's sandbox. Where the browser allows, the review is kept in
+  its localStorage, by issue and by each statement's SQL, so the verdicts of
+  statements a new version leaves unchanged carry over.
 
 ## How it works
 
@@ -171,7 +220,9 @@ words of transcript to show around each change (default 8).
    and person it changed, before and after it. The first time a statement
    changes a meeting or person, it rolls the statement back to a savepoint,
    loads them, and runs it again. It still makes every check `check` makes,
-   and rolls back.
+   and rolls back. `applyChangeset` takes the same trace, and an `accept`
+   that can refuse to save; `applyIfUnchanged` uses them to apply a
+   changeset only if its effect is the same.
 3. `diffTranscripts` diffs each meeting's transcripts word by word (Myers'
    diff on each word's text and onset to the hundredth), notes where a
    segment starts on one side only or with another speaker, and groups the
@@ -191,5 +242,5 @@ page; `pnpm changeset review` formats its comment with the same script.
   against after the last, as well as each statement's.
 - Comment on a single word or segment of a hunk, not only on a statement.
 - Link each onset to that moment in the meeting's recording on the website.
-- Serve the review page from the website rather than as an artifact, which
-  only people logged in to GitHub can download.
+- Check open changeset issues again on a schedule, so their checks don't go
+  stale while they wait.

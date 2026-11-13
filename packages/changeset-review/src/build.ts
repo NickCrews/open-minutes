@@ -6,7 +6,11 @@ import { createHash } from "node:crypto";
 import type { DB } from "@open-minutes/db";
 import type { MeetingIssue } from "@open-minutes/core/rules";
 import {
+  type AppliedChangeset,
+  applyChangeset,
   ChangesetError,
+  ChangesetRefused,
+  type ChangesetTrace,
   checkChangeset,
   type DbMeeting,
   type DbPerson,
@@ -60,6 +64,121 @@ export async function buildChangesetDiff({
   version = null,
   context,
 }: BuildOptions): Promise<ChangesetDiff> {
+  const tracer = diffTracer(sql, { context, rules: true });
+  const diff: ChangesetDiff = {
+    meetings: [],
+    base: { db: base, ranAt: new Date().toISOString() },
+    source,
+    version,
+    sql,
+    sha256: sqlHash(sql),
+    effect: "",
+    error: null,
+    statements: tracer.statements,
+    rows: {},
+    outcomes: [],
+  };
+  try {
+    const result = await checkChangeset({ db, sql }, { trace: tracer.trace });
+    diff.rows = result.rows;
+    diff.outcomes = result.meetings.map((m) => {
+      tracer.note(m.after);
+      return {
+        meeting: m.after.id,
+        resolved: m.resolved.map((i) => issueView(i, m.before)),
+        introduced: m.added.map((i) => issueView(i, m.after)),
+      };
+    });
+  } catch (err) {
+    if (!(err instanceof ChangesetError)) throw err;
+    diff.error = tracer.failed(err);
+  }
+  diff.meetings = tracer.meetings();
+  diff.effect = effectHash(diff);
+  return diff;
+}
+
+/**
+ * Apply a changeset only if it does what `effect` (a diff's
+ * {@link ChangesetDiff.effect}) says it did: run it a statement at a time,
+ * holding the edit lock, and save it only if its effect is the same. Throws
+ * a {@link ChangesetError} where applyChangeset would.
+ */
+export async function applyIfUnchanged({
+  db,
+  sql,
+  effect,
+}: {
+  db: DB;
+  sql: string;
+  effect: string;
+}): Promise<{ applied: AppliedChangeset } | { changed: true }> {
+  const tracer = diffTracer(sql, { rules: false });
+  try {
+    const applied = await applyChangeset(
+      { db, sql },
+      {
+        trace: tracer.trace,
+        accept: () =>
+          effectHash({ statements: tracer.statements, error: null }) === effect,
+      },
+    );
+    return { applied };
+  } catch (err) {
+    if (err instanceof ChangesetRefused) return { changed: true };
+    throw err;
+  }
+}
+
+/**
+ * The SHA-256 of what a changeset does: each statement's effect
+ * ({@link statementEffects}), and the error it fails with.
+ */
+export function effectHash(
+  diff: Pick<ChangesetDiff, "statements" | "error">,
+): string {
+  return sqlHash(
+    JSON.stringify({ error: diff.error, statements: statementEffects(diff) }),
+  );
+}
+
+/**
+ * The SHA-256 of what each statement does: whether it ran, its rows, and in
+ * each meeting and person it changes, its changes to words, speakers (every
+ * word a new speaker covers), segment boundaries and fields, with their old
+ * values. Two runs of a statement have the same effect if they make the same
+ * changes to the same data, whatever else in the meetings differs, so its
+ * hunks and the rule violations aren't part of it.
+ */
+export function statementEffects(
+  diff: Pick<ChangesetDiff, "statements">,
+): string[] {
+  return diff.statements.map((s) =>
+    sqlHash(
+      JSON.stringify({
+        status: s.status,
+        rows: s.rows,
+        meetings: s.meetings.map((m) => ({
+          meeting: m.meeting,
+          changes: m.changes,
+          relabelled: m.relabelled,
+          fields: m.fields,
+        })),
+        people: s.people,
+      }),
+    ),
+  );
+}
+
+/**
+ * The trace that fills in a diff's statements as a changeset runs, the
+ * meetings it changed, and the error it failed with. Without `rules`, it
+ * doesn't run the meeting rules on each statement.
+ */
+function diffTracer(
+  sql: string,
+  { context, rules }: { context?: number; rules: boolean },
+) {
   const statements: StatementDiff[] = splitStatements(sql).map((s, index) => ({
     index,
     ...s,
@@ -68,7 +187,6 @@ export async function buildChangesetDiff({
     meetings: [],
     people: [],
   }));
-
   const issues = new WeakMap<DbMeeting, Promise<MeetingIssue[]>>();
   const issuesOf = (m: DbMeeting) => {
     let found = issues.get(m);
@@ -83,82 +201,57 @@ export async function buildChangesetDiff({
       title: m.title,
       date: m.date,
     });
-
-  const diff: ChangesetDiff = {
-    meetings: [],
-    base: { db: base, ranAt: new Date().toISOString() },
-    source,
-    version,
-    sql,
-    sha256: sqlHash(sql),
-    error: null,
-    statements,
-    rows: {},
-    outcomes: [],
+  const trace: ChangesetTrace = {
+    statements: statements.map((s) => s.sql),
+    onStatement: async (step) => {
+      const view = statements[step.index]!;
+      view.status = "ok";
+      view.rows = step.rows;
+      for (const { before, after } of step.meetings) {
+        note(after);
+        const { changes, hunks, relabelled } = diffTranscripts(
+          transcript(before),
+          transcript(after),
+          { context },
+        );
+        const [issuesBefore, issuesAfter] = rules
+          ? await Promise.all([issuesOf(before), issuesOf(after)])
+          : [[], []];
+        view.meetings.push({
+          meeting: after.id,
+          changes,
+          hunks,
+          fields: meetingFields(before, after),
+          relabelled: sqlHash(JSON.stringify(relabelled)),
+          resolved: newIssues(issuesAfter, issuesBefore).map((i) =>
+            issueView(i, before),
+          ),
+          introduced: newIssues(issuesBefore, issuesAfter).map((i) =>
+            issueView(i, after),
+          ),
+        });
+      }
+      view.people = step.people.flatMap(({ before, after }) =>
+        personFields(before, after),
+      );
+    },
   };
-
-  try {
-    const result = await checkChangeset(
-      { db, sql },
-      {
-        trace: {
-          statements: statements.map((s) => s.sql),
-          onStatement: async (step) => {
-            const view = statements[step.index]!;
-            view.status = "ok";
-            view.rows = step.rows;
-            for (const { before, after } of step.meetings) {
-              note(after);
-              const { changes, hunks } = diffTranscripts(
-                transcript(before),
-                transcript(after),
-                { context },
-              );
-              const [issuesBefore, issuesAfter] = await Promise.all([
-                issuesOf(before),
-                issuesOf(after),
-              ]);
-              view.meetings.push({
-                meeting: after.id,
-                changes,
-                hunks,
-                fields: meetingFields(before, after),
-                resolved: newIssues(issuesAfter, issuesBefore).map((i) =>
-                  issueView(i, before),
-                ),
-                introduced: newIssues(issuesBefore, issuesAfter).map((i) =>
-                  issueView(i, after),
-                ),
-              });
-            }
-            view.people = step.people.flatMap(({ before, after }) =>
-              personFields(before, after),
-            );
-          },
-        },
-      },
-    );
-    diff.rows = result.rows;
-    diff.outcomes = result.meetings.map((m) => {
-      note(m.after);
+  return {
+    statements,
+    trace,
+    note,
+    meetings: () => [...meetings.values()].sort((a, b) => a.id - b.id),
+    /** The diff's error for `err`, marking the statement that failed. */
+    failed: (err: ChangesetError): NonNullable<ChangesetDiff["error"]> => {
+      const failed = err.statement ?? null;
+      if (failed !== null) statements[failed]!.status = "failed";
       return {
-        meeting: m.after.id,
-        resolved: m.resolved.map((i) => issueView(i, m.before)),
-        introduced: m.added.map((i) => issueView(i, m.after)),
+        statement: failed,
+        message: err.message,
+        assertion: err.assertion,
       };
-    });
-  } catch (err) {
-    if (!(err instanceof ChangesetError)) throw err;
-    const failed = err.statement ?? null;
-    diff.error = {
-      statement: failed,
-      message: err.message,
-      assertion: err.assertion,
-    };
-    if (failed !== null) statements[failed]!.status = "failed";
-  }
-  diff.meetings = [...meetings.values()].sort((a, b) => a.id - b.id);
-  return diff;
+    },
+  };
 }
 
 /** A meeting's transcript, as the diff compares it. */

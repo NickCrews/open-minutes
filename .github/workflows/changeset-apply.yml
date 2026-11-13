@@ -3,13 +3,16 @@
 # packages/changeset-review/README.md.
 #
 # `pnpm changeset ci apply` decides what the approval covers: the issue's
-# latest version, as it stood when the label was added, which CI checked as it
-# stands and found would apply. It refuses an approval from anyone else, a
-# version posted or edited after the approval, or one CI hasn't checked or
-# found fails. Then it applies it in one transaction, comments
-# `<!-- changeset:applied vN sha256=... -->`, labels the issue
-# `changeset:applied` and closes it. On any refusal or failure it comments why
-# and removes `changeset:approved`, saving nothing.
+# latest version, as it stood when the label was added, and CI's latest check
+# of it before then, which must have found it would apply. It refuses an
+# approval from anyone else, a version posted or edited after the approval,
+# or one CI hadn't checked or found fails. Then it runs the version a
+# statement at a time, holding the edit lock, and saves it only if it does
+# exactly what that check recorded (its `effect`); if production changed
+# what it does, it saves nothing and checks it again. When it saves, it
+# comments `<!-- changeset:applied vN sha256=... -->`, labels the issue
+# `changeset:applied` and closes it. On any refusal or failure it comments
+# why and removes `changeset:approved`.
 #
 # issues runs this file from the default branch. Needs NEON_API_KEY and
 # NEON_PROJECT_ID (see production.yml).
@@ -50,6 +53,7 @@ jobs:
         env:
           NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
           NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           db=$(pnpm --silent dlx neonctl@2 connection-string \
             --project-id "$NEON_PROJECT_ID" --no-analytics)
@@ -58,4 +62,17 @@ jobs:
             exit 1
           fi
           echo "::add-mask::$db"
-          pnpm changeset ci apply "$ISSUE" --db "$db"
+          mkdir -p "$RUNNER_TEMP/changeset"
+          pnpm changeset ci apply "$ISSUE" --db "$db" \
+            --out-dir "$RUNNER_TEMP/changeset" --run-url "$RUN_URL"
+
+      # A re-check's page, when production had changed and it couldn't be
+      # attached to the issue.
+      - name: Upload the review page
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          path: ${{ runner.temp }}/changeset/*.html
+          archive: false
+          retention-days: 90
+          if-no-files-found: ignore

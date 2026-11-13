@@ -116,6 +116,9 @@ interface Row {
   changed: boolean;
 }
 
+/** A word whose speaker changed: its onset, text, and old and new labels. */
+export type Relabel = [start: number, text: string, old: string, new: string];
+
 /**
  * What changed between two transcripts of a meeting: each change, and hunks
  * showing the segments around them, with up to `context` words on either
@@ -125,7 +128,7 @@ export function diffTranscripts(
   before: Transcript,
   after: Transcript,
   { context = 8 }: { context?: number } = {},
-): { changes: Change[]; hunks: Hunk[] } {
+): { changes: Change[]; hunks: Hunk[]; relabelled: Relabel[] } {
   const ta = tokens(before);
   const tb = tokens(after);
   const label = (t: Transcript, tok: Token) =>
@@ -134,6 +137,7 @@ export function diffTranscripts(
 
   const rows: Row[] = [];
   const changes: Change[] = [];
+  const relabelled: Relabel[] = [];
   let run: { old: string[]; new: string[]; start: number } | null = null;
   const endRun = () => {
     if (run)
@@ -154,6 +158,7 @@ export function diffTranscripts(
       const startsB = b.pos === 0;
       const la = label(before, a);
       const lb = label(after, b);
+      if (la !== lb) relabelled.push([a.start, a.text, la, lb]);
       const changed =
         (startsA || startsB) && (startsA !== startsB || la !== lb);
       if (changed) {
@@ -251,5 +256,5 @@ export function diffTranscripts(
       ),
     };
   });
-  return { changes, hunks };
+  return { changes, hunks, relabelled };
 }

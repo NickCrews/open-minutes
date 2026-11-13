@@ -102,6 +102,12 @@ export interface MeetingDiff {
   hunks: Hunk[];
   /** Its slug and title, if the statement changed them. */
   fields: FieldChange[];
+  /**
+   * The SHA-256 of every word whose speaker it changed, with its onset, text
+   * and old and new labels: what `changes` leaves out, how far a new speaker
+   * runs.
+   */
+  relabelled: string;
   /** Violations of the meeting rules it resolved and introduced. */
   resolved: IssueView[];
   introduced: IssueView[];
@@ -163,6 +169,12 @@ export interface ChangesetDiff {
   sql: string;
   /** The SHA-256 of `sql`, in hex, which reviews and checks cite. */
   sha256: string;
+  /**
+   * The SHA-256 of what it does (build.ts's effectHash), which CI checks
+   * again before applying it, so it applies only if it still does what was
+   * reviewed.
+   */
+  effect: string;
   /** Null when every statement ran. */
   error: {
     /** The index of the statement that failed; null if the whole changeset was refused. */

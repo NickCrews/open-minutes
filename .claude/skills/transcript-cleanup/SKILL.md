@@ -84,10 +84,11 @@ intend.
 
 Then propose it: `pnpm changeset propose` opens an issue labelled
 `changeset` with your description and the SQL as v1. CI checks each version
-against production and comments with the result and a review page. To answer
-a review, read it with `pnpm changeset status <issue>` (`--json` for the
+against production, puts a review page on the issue, and comments with the
+result. If CI says production changed what a version does, read which
+statements and why before answering. To answer a review, read it with `pnpm changeset status <issue>` (`--json` for the
 reviews' verdicts and notes by statement number, `--sql` for the latest
-version's SQL), fix the changeset, and post it with `pnpm changeset revise`,
+version's SQL; skip reviews marked stale), fix the changeset, and post it with `pnpm changeset revise`,
 saying in `--note` what changed and which review it answers. A maintainer
 approves the issue, and CI applies the latest version.
 `packages/changeset-review/README.md` describes the flow.

@@ -125,6 +125,13 @@ export class ChangesetError extends Error {
   }
 }
 
+/** {@link applyChangeset}'s `accept` refused the changeset, so nothing was saved. */
+export class ChangesetRefused extends Error {
+  constructor() {
+    super("refused, so nothing was saved");
+  }
+}
+
 /** The SQLSTATE om.assert raises. */
 const ASSERTION_FAILED = "OM001";
 
@@ -264,15 +271,21 @@ export async function checkChangeset(
 /**
  * Run a changeset and save it, holding the edit lock. It doesn't run the
  * meeting rules. Throws a {@link ChangesetError}, saving nothing, if the SQL
- * fails or creates or alters a database object.
+ * fails or creates or alters a database object. With `trace`, it runs the
+ * changeset a statement at a time and reports each one; then, if `accept`
+ * returns false, it saves nothing and throws a {@link ChangesetRefused}.
  */
-export function applyChangeset({
-  db,
-  sql: changesetSql,
-}: Changeset): Promise<AppliedChangeset> {
+export async function applyChangeset(
+  { db, sql: changesetSql }: Changeset,
+  {
+    trace,
+    accept,
+  }: { trace?: ChangesetTrace; accept?: () => boolean | Promise<boolean> } = {},
+): Promise<AppliedChangeset> {
   return db.transaction(async (tx) => {
     await lockEdits(tx);
-    const { rows, meetingIds } = await runAsChangeset(tx, changesetSql);
+    const { rows, meetingIds } = await runAsChangeset(tx, changesetSql, trace);
+    if (accept && !(await accept())) throw new ChangesetRefused();
     const meetings = meetingIds.length
       ? await tx
           .select({ id: meetingsTable.id, slug: meetingsTable.slug })
