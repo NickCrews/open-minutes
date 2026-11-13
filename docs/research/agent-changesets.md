@@ -40,10 +40,12 @@ Built, in `packages/db` (the `om` schema and the `changeset` role, migration
   its grants; the change log, `om.changes`, which records each changed row's
   table, id and meetings, but not the row itself.
 - The edit lock, which every edit that saves takes.
+- In review ([#224](https://github.com/NickCrews/open-minutes/pull/224)): grants for chapters, chapter generations, meetings' date
+  and time, meeting bodies and deleting people, and
+  `om.transcript_fingerprint`.
 
 Not built yet, in the order of the [implementation plan](#implementation-plan):
-grants for chapters and the other tables agents edit, `changeset query`, row
-diffs, the `changesets` table and review, branches and playgrounds, and the
+`changeset query`, row diffs, the `changesets` table and review, branches and playgrounds, and the
 agent harness. Each section below says where what's built differs from what's
 proposed.
 
@@ -98,19 +100,21 @@ connected to it, the check stays on main.
 Every table the `changeset` role writes has an `AFTER INSERT OR UPDATE OR
 DELETE ... FOR EACH ROW` trigger that appends to `om.changes`:
 
-| column        | content                                                       |
-| ------------- | ------------------------------------------------------------- |
-| `seq`         | order of the change                                           |
-| `xact`        | the transaction that made the change                          |
-| `tbl`         | table name                                                    |
-| `op`          | `INSERT`, `UPDATE` or `DELETE`                                |
-| `row_id`      | the row's `id`                                                |
-| `meeting_ids` | the meetings the row belonged to before and after             |
-| `old`         | proposed: the row before, as `to_jsonb(OLD)`; null on insert  |
-| `new`         | proposed: the row after, as `to_jsonb(NEW)`; null on delete   |
+| column        | content                                                      |
+| ------------- | ------------------------------------------------------------ |
+| `seq`         | order of the change                                          |
+| `xact`        | the transaction that made the change                         |
+| `tbl`         | table name                                                   |
+| `op`          | `INSERT`, `UPDATE` or `DELETE`                               |
+| `row_key`     | the row's primary key, as a JSON object of its columns       |
+| `meeting_ids` | the meetings the row belonged to before and after            |
+| `old`         | proposed: the row before, as `to_jsonb(OLD)`; null on insert |
+| `new`         | proposed: the row after, as `to_jsonb(NEW)`; null on delete  |
 
 Built: the log has every column but `old` and `new`, on `segments`,
-`chapters`, `meetings` and `people`. It counts the rows a changeset changed,
+`chapters`, `meetings` and `people`, and on `chapter_generations` and
+`meeting_bodies` in [#224](https://github.com/NickCrews/open-minutes/pull/224), which also replaces `row_id` with `row_key`, since
+`meeting_bodies` has no `id`. It counts the rows a changeset changed,
 and names the meetings it changed.
 
 The trigger records only when `current_user` is `changeset`. The changeset's
@@ -347,11 +351,20 @@ Built, the role's writes:
 - `meetings`: update `slug` and `title`.
 - Execute the `om` functions.
 
-Proposed next: insert, update and delete `chapters`; insert
-`chapter_generations`, but not `reviewed_by_human`; update meetings' `date`
-and `time`; insert and delete `meeting_bodies`; delete `people`, to merge
-two people. A changeset that writes chapters needs the transcript
-fingerprint in SQL, as `om.transcript_fingerprint(meeting)`.
+In review ([#224](https://github.com/NickCrews/open-minutes/pull/224)):
+
+- `chapters`: insert, update and delete, but not `meeting_id`.
+- `chapter_generations`: insert, but not `reviewed_by_human`, which stays
+  false until a person sets it.
+- `meetings`: update `date` and `time` too.
+- `meeting_bodies`: insert and delete.
+- `people`: delete, to merge two people; segments' foreign key refuses
+  deleting anyone whose segments are left.
+- `om.transcript_fingerprint(meeting)`, the fingerprint `transcriptFingerprint`
+  computes, for a changeset that adds a chapter generation.
+
+A changeset can insert a chapter generation with any `model`, `'human'`
+included; the `changesets` table records who wrote each changeset.
 
 ### Domain invariants
 
@@ -512,12 +525,13 @@ Done:
    change log; `pnpm changeset check <file>` and `pnpm changeset apply
    <file>` ([#206](https://github.com/NickCrews/open-minutes/pull/206)). A changeset may change any number of meetings, and edits
    that save take the edit lock ([#209](https://github.com/NickCrews/open-minutes/pull/209)).
+3. **Grants.** One migration: chapters, chapter generations, meetings'
+   `date` and `time`, meeting bodies, deleting people, and
+   `om.transcript_fingerprint`. Log triggers on each table it grants
+   ([#224](https://github.com/NickCrews/open-minutes/pull/224), in review).
 
 Next:
 
-3. **Grants.** One migration: chapters, chapter generations, meetings'
-   `date` and `time`, meeting bodies, deleting people, and
-   `om.transcript_fingerprint`. Log triggers on each table it grants.
 4. **`pnpm changeset query <file> '<sql>'`.** Runs the changeset, then the
    query as `changeset` on after, in the same rolled-back transaction.
 5. **Row diffs.** `old` and `new` in `om.changes`; `check` prints the row
