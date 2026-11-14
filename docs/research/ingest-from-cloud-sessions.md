@@ -95,6 +95,18 @@ reach it only from CI.
    Neon's HTTP SQL endpoint takes the password in a `Neon-Connection-String`
    header, a name the credential form doesn't accept. It would also give an
    agent unreviewed write access to all of production. Rejected.
+4. **A changeset that inserts the meeting.** A session can already propose
+   changesets, which reach production after an admin's approval. But the
+   `changeset` role may insert `segments` and not `meetings`,
+   `meeting_bodies` or `people`, and CI reads a version's SQL from one issue
+   comment, at most 65,536 characters. `gbos-2026-03-23` has 25,791 words,
+   whose `golden.psv` is 573 KB, so one meeting would take ten or more
+   changesets, each reviewed and approved. The review would be of 25,000
+   inserted words, which nobody can check by reading. Granting the inserts
+   and splitting a meeting across changesets would work with no new
+   workflow, but the session would still need option 1's audio, and
+   approving would be busywork. Changesets stay the way to clean a meeting
+   up once it exists.
 
 ### Running time
 
