@@ -39,8 +39,9 @@ Speakers are shown as labels: `unlabeled`, `segmented:spk-<n>`,
 ## Changesets
 
 A changeset is a SQL file of changes and assertions: who said what, misheard
-words, people's slugs, names and bios, and meetings' slugs and titles. It may
-change any number of meetings.
+words, people's slugs, names and bios, merging two people, chapters, and
+meetings' slugs, titles, dates, times and bodies. It may change any number of
+meetings.
 
 ```sh
 pnpm changeset check changeset.sql --db prod
@@ -91,11 +92,38 @@ commits, so edits run one at a time whichever meetings they touch.
 
 The SQL runs as the `changeset` role, inside `om.run`, so it can't change its
 role, and its `BEGIN`, `COMMIT` and `ROLLBACK` fail. The role reads every
-table, inserts, updates and deletes segments, updates people's `slug`, `name`
-and `bio` and meetings' `slug` and `title`, and calls the `om` functions. It
-can't create or alter tables or other objects, and `apply` saves nothing that
-creates a temporary one. Whoever runs the migrations is a member of the role;
-`apply` needs to connect as a member.
+table and calls the `om` functions. It writes:
+
+| Table                 | What the role may do                                                                                                                   |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `segments`            | Insert, update and delete: `meeting_id`, `person_id`, `speaker_number`, `words`.                                                       |
+| `people`              | Update `slug`, `name` and `bio`; delete, to merge two people. Segments' foreign key refuses deleting a person whose segments are left. |
+| `meetings`            | Update `slug`, `title`, `date` and `time`.                                                                                             |
+| `meeting_bodies`      | Insert and delete.                                                                                                                     |
+| `chapter_generations` | Insert `meeting_id`, `model` and `prompt_version`. Not `reviewed_by_human`, which stays false until a person sets it.                  |
+| `chapters`            | Insert, update and delete, but not move a chapter to another meeting.                                                                  |
+
+It can't create or alter tables or other objects, and `apply` saves nothing
+that creates a temporary one. Whoever runs the migrations is a member of the
+role; `apply` needs to connect as a member.
+
+To replace a meeting's chapters, delete them, then add a generation and its
+chapters:
+
+```sql
+DELETE FROM chapters WHERE meeting_id = om.meeting_id('gbos-2026-03-23');
+WITH g AS (
+  INSERT INTO chapter_generations (meeting_id, model, prompt_version)
+  VALUES (om.meeting_id('gbos-2026-03-23'), 'human', 'none')
+  RETURNING id, meeting_id
+)
+INSERT INTO chapters (meeting_id, generation_id, start_secs, end_secs, title, summary, bullets)
+SELECT meeting_id, id, '0 seconds', '412 seconds', 'Call to order',
+  'The chair opens the meeting and the board approves the agenda.', '{}'
+FROM g;
+```
+
+`om.meeting_id(meeting)` is a meeting's id, from its slug or id.
 
 The `om` functions edit a meeting's segments. Each takes the meeting by slug
 or id, a word by its onset as `render` and `words` print it (`H:MM:SS.ss`,

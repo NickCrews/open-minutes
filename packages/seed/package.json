@@ -5,8 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./audio-voiceprints": "./src/audio-voiceprints.ts",
-    "./transcript-fingerprint": "./src/transcript-fingerprint.ts"
+    "./audio-voiceprints": "./src/audio-voiceprints.ts"
   },
   "scripts": {
     "test": "vp test run",
