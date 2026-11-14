@@ -70,6 +70,10 @@ writes a page showing what each statement does. `pnpm changeset --help` and
 - Plain SQL sets people's slugs, names and bios, and the meeting's slug and
   title: `UPDATE people SET slug = 'kyle-kelley', name = 'Kyle Kelley', bio
   = '...' WHERE id = 57;`. Do it before the labels that use the slug.
+- To merge two people who turn out to be the same person, move one's
+  segments to the other, in every meeting, then delete them: `UPDATE
+  segments SET person_id = 12 WHERE person_id = 57; DELETE FROM people WHERE
+  id = 57;`.
 - `SELECT om.assert(condition, 'message');` stops the changeset unless the
   condition holds. Assert what each change assumes: that a person still has
   no slug, how many segments a voice has, how many words `replace_all_words`

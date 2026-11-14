@@ -23,7 +23,6 @@ import {
   loadPeople as loadGoldenPeople,
 } from "@open-minutes/datasets/datums";
 import { siteAdapter } from "@open-minutes/meeting-audio";
-import { transcriptFingerprint } from "@open-minutes/seed/transcript-fingerprint";
 import { type Conn, lockEdits } from "./meeting";
 
 /** Voiceprints for people the database doesn't have yet, by slug. */
@@ -149,7 +148,6 @@ export async function publishGolden(
           .values({
             meeting_id: meetingId,
             ...golden.chapters.generation,
-            transcript_fingerprint: transcriptFingerprint(golden.segments),
           })
           .returning({ id: chapterGenerationsTable.id });
         await tx.insert(chaptersTable).values(

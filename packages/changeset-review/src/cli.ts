@@ -75,10 +75,12 @@ ${LABELS.approved}.
 A source is a SQL file, - for stdin, or an issue ("123", "owner/name#123" or
 its URL), whose latest version, or --version, it takes.
 
-The role reads every table, inserts, updates and deletes segments, and updates
-people (slug, name, bio) and meetings (slug, title). M is the meeting's slug or
-id, T an onset "H:MM:SS.ss" as "pnpm transcript render" and "words" print it,
-L a speaker label:
+The role reads every table. It inserts, updates and deletes segments,
+chapters and meeting bodies, inserts chapter generations, updates people
+(slug, name, bio) and meetings (slug, title, date, time), and deletes people;
+packages/edit/README.md has the details. om.meeting_id(M) is a meeting's id.
+M is the meeting's slug or id, T an onset "H:MM:SS.ss" as "pnpm transcript
+render" and "words" print it, L a speaker label:
   SELECT om.split_segment(M, T, W, L);
       The word W (or any word, if null) at T starts a new segment spoken by L,
       running to the end of its segment. To give the turn back, split again

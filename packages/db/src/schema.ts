@@ -354,10 +354,6 @@ export const chapterGenerationsTable = pgTable(
     // What wrote the chapters: a model id, or "human" for hand-written ones.
     model: varchar().notNull(),
     prompt_version: varchar().notNull(),
-    // Hash of the transcript the chapters were written from, so a later
-    // re-transcription can be detected as making them stale. Speaker relabels
-    // don't change it: chapter speakers are derived, never stored.
-    transcript_fingerprint: varchar().notNull(),
     generated_at: timestamp().notNull().defaultNow(),
     reviewed_by_human: boolean().notNull().default(false),
   },

@@ -13,7 +13,6 @@ import {
   segmentsTable,
 } from "@open-minutes/db";
 import { siteAdapter } from "@open-minutes/meeting-audio";
-import { transcriptFingerprint } from "./transcript-fingerprint";
 import {
   getMeetingData,
   loadBodies,
@@ -166,7 +165,6 @@ export async function seedDataset(
       id: generationId,
       meeting_id: i + 1,
       ...m.chapters.generation,
-      transcript_fingerprint: transcriptFingerprint(m.segments),
     });
     for (const c of m.chapters.chapters) {
       chapters.push({

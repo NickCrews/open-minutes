@@ -408,7 +408,7 @@ async function touched(
     SELECT
       (SELECT array_agg(DISTINCT id ORDER BY id) FROM om.changes, unnest(meeting_ids) id
        WHERE xact = pg_current_xact_id() AND seq > ${afterSeq}) AS meeting_ids,
-      (SELECT array_agg(DISTINCT row_id ORDER BY row_id) FROM om.changes
+      (SELECT array_agg(DISTINCT (row_key->>'id')::int ORDER BY (row_key->>'id')::int) FROM om.changes
        WHERE xact = pg_current_xact_id() AND seq > ${afterSeq} AND tbl = 'people') AS person_ids`);
   return {
     meetingIds: row!.meeting_ids ?? [],
@@ -459,11 +459,11 @@ async function loggedChanges(tx: Conn, afterSeq = 0): Promise<RowCounts> {
       count(*) FILTER (WHERE first_op = 'INSERT' AND last_op <> 'DELETE')::int AS inserted,
       count(*) FILTER (WHERE first_op <> 'INSERT' AND last_op = 'DELETE')::int AS deleted
     FROM (
-      SELECT tbl, row_id,
+      SELECT tbl, row_key,
         (array_agg(op ORDER BY seq))[1] AS first_op,
         (array_agg(op ORDER BY seq DESC))[1] AS last_op
       FROM om.changes WHERE xact = pg_current_xact_id() AND seq > ${afterSeq}
-      GROUP BY tbl, row_id
+      GROUP BY tbl, row_key
     ) x
     GROUP BY tbl ORDER BY tbl`);
   const counts: RowCounts = {};
