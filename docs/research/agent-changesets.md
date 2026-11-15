@@ -26,8 +26,8 @@ was steered.
 
 ## Status
 
-Built, in `packages/db` (the `om` schema and the `changeset` role, migration
-`20261108080315_changesets`) and `packages/edit`:
+Built, in `packages/db` (the `om` schema and the `changeset` role),
+`packages/edit` and `packages/changeset-review`:
 
 - Golden meetings are exported from the database (`pnpm goldens export`), and
   `pnpm transcript render|words|stats|check|fix` reads a meeting in a database
@@ -35,19 +35,25 @@ Built, in `packages/db` (the `om` schema and the `changeset` role, migration
 - `pnpm changeset check <file>` runs a changeset in a transaction that always
   rolls back, and reports the rows it would change and the rule violations it
   would resolve and introduce in each meeting it changes. `pnpm changeset
-  apply <file>` runs it and saves it, without running the rules or any review.
+  apply <file>` runs it and saves it, without running the rules.
 - The `om` edit functions, `om.assert` and `om.run`; the `changeset` role and
-  its grants; the change log, `om.changes`, which records each changed row's
-  table, id and meetings, but not the row itself.
+  its grants, including chapters, chapter generations, meetings' date, time
+  and bodies, and deleting people; the change log, `om.changes`, which
+  records each changed row's table, primary key and meetings, but not the
+  row itself.
 - The edit lock, which every edit that saves takes.
-- In review ([#224](https://github.com/NickCrews/open-minutes/pull/224)): grants for chapters, chapter generations, meetings' date
-  and time, meeting bodies and deleting people. It drops chapter
-  generations' unused `transcript_fingerprint`.
+- Review and apply through GitHub issues ([#226](https://github.com/NickCrews/open-minutes/pull/226), `packages/changeset-review`):
+  a changeset is proposed and revised as versions on an issue labelled
+  `changeset`; CI checks each version against production, rolled back, and
+  records its **effect**; reviews are issue comments; a maintainer approves
+  with a label, and CI applies the latest version only if its effect still
+  matches the approved check. In review ([#231](https://github.com/NickCrews/open-minutes/pull/231)): the effect covers
+  deleted people and a meeting's date, time, bodies, chapters and chapter
+  generation.
 
 Not built yet, in the order of the [implementation plan](#implementation-plan):
-`changeset query`, row diffs, the `changesets` table and review, branches and playgrounds, and the
-agent harness. Each section below says where what's built differs from what's
-proposed.
+`changeset query`, branches and playgrounds, and the agent harness. Each
+section below says where what's built differs from what's proposed.
 
 ## Proposal
 
@@ -225,6 +231,12 @@ and review judges what this one does.
 
 ### Review
 
+Built differently ([#226](https://github.com/NickCrews/open-minutes/pull/226)): a changeset is reviewed on a GitHub issue, from
+a review page CI builds for each version (`packages/changeset-review/README.md`).
+The page shows each statement's effect in domain terms; a review marks each
+statement accept, reject or question, with notes, and records the effect it
+saw. What follows is the original proposal.
+
 The reviewer, human or agent, reads the row diff, shown in domain terms (eg a
 transcript with relabelled segments highlighted) rather than as SQL, alongside
 the change in rule violations and the rationale. Approving applies the changeset
@@ -273,7 +285,14 @@ transcript fix`, `pnpm goldens publish`. Edits that save run one at a time,
 whichever meetings they touch, so an apply's assertions can't read rows
 another edit is partway through changing. Checks don't take it.
 
-Built: steps 1, 3 and 5, by `pnpm changeset apply <file>`, with no review.
+Built differently ([#226](https://github.com/NickCrews/open-minutes/pull/226)): CI applies an approved version from its
+issue. It runs the SQL a statement at a time in the transaction that saves
+it, holding the edit lock, and saves it only if each statement's effect
+matches the approved check's: per statement, its rows and, in each meeting
+and person it changes, its changes to words, speakers, segment boundaries
+and fields. The effect stands in for the row diff. The issue's labels, not a
+key in a table, stop a second apply. `pnpm changeset apply <file>` still
+saves a changeset directly, for local databases.
 
 ### Assertions
 
@@ -389,8 +408,11 @@ the database through changesets.
 
 draft → proposed → applied. A proposed changeset goes back to draft when the
 reviewer asks for changes or it conflicts on apply. It can instead end
-rejected or superseded. Proposed changesets live in a `changesets` table in
-main, not in files reviewed in GitHub pull requests.
+rejected or superseded.
+
+Built ([#226](https://github.com/NickCrews/open-minutes/pull/226)): proposed changesets live in GitHub issues, not in a table in
+main: each version is an issue comment, and labels (`changeset:approved`,
+`changeset:applied`, `changeset:recheck`) carry the state.
 
 ### Harness
 
@@ -519,33 +541,21 @@ Done:
    between a database and the datums ([#203](https://github.com/NickCrews/open-minutes/pull/203)).
 2. **Changesets for people.** The `om` schema, the `changeset` role and the
    change log; `pnpm changeset check <file>` and `pnpm changeset apply
-   <file>` ([#206](https://github.com/NickCrews/open-minutes/pull/206)). A changeset may change any number of meetings, and edits
-   that save take the edit lock ([#209](https://github.com/NickCrews/open-minutes/pull/209)).
-3. **Grants.** One migration: chapters, chapter generations, meetings'
-   `date` and `time`, meeting bodies and deleting people, and dropping
-   chapter generations' unused `transcript_fingerprint`. Log triggers on
-   each table it grants
-   ([#224](https://github.com/NickCrews/open-minutes/pull/224), in review).
+   <file>` ([#206](https://github.com/NickCrews/open-minutes/pull/206)). A changeset may change any number of meetings, and
+   edits that save take the edit lock ([#209](https://github.com/NickCrews/open-minutes/pull/209)).
+3. **Review and apply.** Changesets proposed, checked by CI, reviewed and
+   applied through GitHub issues, with each version's effect recorded and
+   compared at apply ([#226](https://github.com/NickCrews/open-minutes/pull/226)).
+4. **Grants.** Chapters, chapter generations, meetings' `date`, `time` and
+   bodies, and deleting people; chapter generations' unused
+   `transcript_fingerprint` dropped ([#224](https://github.com/NickCrews/open-minutes/pull/224)). The effect covers them in
+   [#231](https://github.com/NickCrews/open-minutes/pull/231), in review.
 
 Next:
 
-4. **`pnpm changeset query <file> '<sql>'`.** Runs the changeset, then the
+5. **`pnpm changeset query <file> '<sql>'`.** Runs the changeset, then the
    query as `changeset` on after, in the same rolled-back transaction.
-5. **Row diffs.** `old` and `new` in `om.changes`; `check` prints the row
-   diff by table and row, with segments as transcript lines; canonicalizing
-   and matching two row diffs; and confirming that a run drew one sequence
-   value per inserted row.
-6. **The `changesets` table.** A changeset's SQL, rationale, row diff and
-   status, and `pnpm changeset propose`, `list` and `show`. `apply <id>`
-   replays the SQL and commits only if the row diff matches the proposed one,
-   and the table's key makes a second apply fail. `apply <file>` stops
-   saving on its own: a person proposes and approves too.
-7. **Review.** Approve, reject or request changes on a whole changeset, with
-   comments on single changes; revisions and a round limit, after which
-   disputed changes move to a changeset for a person; a person's approval
-   for names, bios and large deletes; and a role the reviewer reads with,
-   which can't apply.
-8. **Branches package.** Move branching out of `packages/db` into
+6. **Branches package.** Move branching out of `packages/db` into
    `packages/dbranch` (the name its CLI and `dbranch.config.ts` already use),
    behind one interface: make a branch from main or from another branch,
    get its connection URL, reset it, delete it, list branches by prefix. Two
@@ -556,18 +566,19 @@ Next:
    through the CLI instead of inline `neonctl`. Then playgrounds (`playground
    new|reset|diff|list|rm`, with a login role per playground) and check
    branches.
-9. **Agent harness.** `packages/agent`: the pi session, the just-bash
-   sandbox, the custom commands, the web tools, budgets, teardown and
-   `propose`. Runs against the local backend first, as
-   `pnpm agent run --meeting <slug>`. The reviewer is a second session on it.
-10. **Production.** A workflow that runs sessions against Neon within the
-    branch budget, manually dispatched at first; the cleanup job for
-    `agent/*` branches; applying on approval with the apply role's
-    credentials; and a tested restore from backup before the first apply.
+7. **Agent harness.** `packages/agent`: the pi session, the just-bash
+   sandbox, the custom commands, the web tools, budgets, teardown, and
+   `pnpm changeset propose` as the session's product. Runs against the local
+   backend first, as `pnpm agent run --meeting <slug>`. The reviewer is a
+   second session on it, with read access and `pnpm changeset review`.
+8. **Production.** A workflow that runs sessions against Neon within the
+   branch budget, manually dispatched at first; the cleanup job for
+   `agent/*` branches; and a tested restore from backup before the first
+   apply.
 
-Steps 3 to 7 build on each other in order; step 8 depends on none of them.
-Step 9 needs 7 and 8. Later, `transcript check` and `fix` may move under
-`pnpm meeting`, and `fix` may write a changeset instead of saving directly.
+Step 6 depends on none of the others; step 7 needs 6. Later, `transcript
+check` and `fix` may move under `pnpm meeting`, and `fix` may write a
+changeset instead of saving directly.
 
 ## Row identity research
 
