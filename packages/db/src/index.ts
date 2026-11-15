@@ -18,6 +18,7 @@ export function getDb(target?: string) {
 export type DB = ReturnType<typeof getDb>["db"];
 
 export { type Branch, type Branches, localBranches } from "./branches";
+export { neonBranches, type NeonOptions } from "./neon-branches";
 export { resolveDatabaseUrl } from "./resolve";
 export * from "./schema";
 export { ianaTimezoneError } from "./timezone";
