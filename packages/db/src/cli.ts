@@ -7,6 +7,7 @@ import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import process from "node:process";
 import { defineCommand, runMain } from "citty";
+import { type Branches, localBranches } from "./branches";
 import { assertSafeName, isLocalUrl, withAdmin } from "./cluster";
 import { type DbConfig, loadConfig } from "./config";
 import {
@@ -395,6 +396,105 @@ function pruneReason(name: string): string {
   return "its git branch is gone";
 }
 
+/** The branches of the database `target` names, which must be local. */
+function branchesOf(target: string | undefined): Branches {
+  const main = resolveDatabaseUrl(target);
+  if (!isLocalUrl(main))
+    throw new Error(
+      `Branches work only on local databases: ${redact(main)} isn't one`,
+    );
+  return localBranches({ main });
+}
+
+const branchName = {
+  name: {
+    type: "positional",
+    required: true,
+    description:
+      'The branch: lowercase letters and digits, in parts joined by "-" or "/"',
+  },
+} as const;
+
+const branchNew = defineCommand({
+  meta: {
+    name: "new",
+    description:
+      "Make a branch: a copy of the database, or of another branch with --from",
+  },
+  args: {
+    ...branchName,
+    from: {
+      type: "string",
+      description: "The branch to copy. Default: the database itself",
+    },
+    ...targetArg,
+  },
+  async run({ args }) {
+    const branches = branchesOf(args.db);
+    await branches.create({ name: args.name, from: args.from });
+    console.log(redact(await branches.url(args.name)));
+  },
+});
+
+const branchReset = defineCommand({
+  meta: {
+    name: "reset",
+    description: "Put a branch back as the database or branch it copies is now",
+  },
+  args: { ...branchName, ...targetArg },
+  async run({ args }) {
+    await branchesOf(args.db).reset(args.name);
+  },
+});
+
+const branchRm = defineCommand({
+  meta: { name: "rm", description: "Delete a branch, closing its connections" },
+  args: { ...branchName, ...targetArg },
+  async run({ args }) {
+    await branchesOf(args.db).remove(args.name);
+  },
+});
+
+const branchUrl = defineCommand({
+  meta: { name: "url", description: "Print a branch's connection URL" },
+  args: { ...branchName, ...targetArg },
+  async run({ args }) {
+    console.log(await branchesOf(args.db).url(args.name));
+  },
+});
+
+const branchList = defineCommand({
+  meta: { name: "list", description: "List branches, with what each copies" },
+  args: {
+    prefix: {
+      type: "string",
+      description: "Only branches whose names start with this",
+    },
+    ...targetArg,
+  },
+  async run({ args }) {
+    for (const b of await branchesOf(args.db).list({ prefix: args.prefix }))
+      console.log(
+        `${b.name}  (from ${b.parent ?? "the database"}, ${b.createdAt})`,
+      );
+  },
+});
+
+const branch = defineCommand({
+  meta: {
+    name: "branch",
+    description:
+      "Make, reset, list and delete branches: throwaway copies of a local database",
+  },
+  subCommands: {
+    new: branchNew,
+    reset: branchReset,
+    rm: branchRm,
+    url: branchUrl,
+    list: branchList,
+  },
+});
+
 const main = defineCommand({
   meta: {
     name: "db",
@@ -406,6 +506,7 @@ const main = defineCommand({
     wipe,
     status,
     prune,
+    branch,
     generate,
     check,
     studio,

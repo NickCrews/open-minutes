@@ -17,6 +17,7 @@ export function getDb(target?: string) {
 
 export type DB = ReturnType<typeof getDb>["db"];
 
+export { type Branch, type Branches, localBranches } from "./branches";
 export { resolveDatabaseUrl } from "./resolve";
 export * from "./schema";
 export { ianaTimezoneError } from "./timezone";
