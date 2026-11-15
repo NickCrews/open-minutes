@@ -233,10 +233,22 @@ describe("changesets", () => {
       "ALTER TABLE segments ADD COLUMN x int":
         "must be owner of table segments",
       "UPDATE bodies SET name = 'x'": "permission denied for table bodies",
-      "DELETE FROM chapters": "permission denied for table chapters",
       "UPDATE people SET created_at = now()":
         "permission denied for table people",
-      "UPDATE meetings SET date = NULL": "permission denied for table meetings",
+      "INSERT INTO people (name, voice_embedding) SELECT 'x', voice_embedding FROM people LIMIT 1":
+        "permission denied for table people",
+      "UPDATE meetings SET timezone = 'UTC'":
+        "permission denied for table meetings",
+      "DELETE FROM meetings": "permission denied for table meetings",
+      "UPDATE chapter_generations SET reviewed_by_human = true":
+        "permission denied for table chapter_generations",
+      "DELETE FROM chapter_generations":
+        "permission denied for table chapter_generations",
+      [`INSERT INTO chapter_generations (meeting_id, model, prompt_version, reviewed_by_human)
+        SELECT id, 'm', 'v', true FROM meetings LIMIT 1`]:
+        "permission denied for table chapter_generations",
+      "UPDATE chapters SET meeting_id = meeting_id":
+        "permission denied for table chapters",
       "TRUNCATE segments": "permission denied for table segments",
       "RESET ROLE":
         'cannot set parameter "role" within security-definer function',
@@ -250,6 +262,84 @@ describe("changesets", () => {
         applyChangeset({ db, sql: statement }),
         statement,
       ).rejects.toThrow(error);
+  });
+});
+
+describe("what a changeset may write", () => {
+  test("replaces a meeting's chapters with a new generation", async ({
+    db,
+  }) => {
+    const id = await findMeetingId(db, SLUG);
+    const before = await loadMeeting(db, id);
+    const changeset = `
+      DELETE FROM chapters WHERE meeting_id = om.meeting_id('${SLUG}');
+      WITH g AS (
+        INSERT INTO chapter_generations (meeting_id, model, prompt_version)
+        VALUES (om.meeting_id('${SLUG}'), 'human', 'none')
+        RETURNING id, meeting_id
+      )
+      INSERT INTO chapters (meeting_id, generation_id, start_secs, end_secs, title, summary)
+      SELECT meeting_id, id, '0 seconds', '600 seconds', 'Opening', 'The meeting opens.' FROM g;
+    `;
+    const checked = await checkChangeset({ db, sql: changeset });
+    expect(checked.rows).toEqual({
+      chapter_generations: { updated: 0, inserted: 1, deleted: 0 },
+      chapters: {
+        updated: 0,
+        inserted: 1,
+        deleted: before.chapters.length,
+      },
+    });
+    expect(checked.meetings.map((m) => m.after.id)).toEqual([id]);
+    await applyChangeset({ db, sql: changeset });
+    const after = await loadMeeting(db, id);
+    expect(after.chapters.map((c) => c.title)).toEqual(["Opening"]);
+    expect(after.generation).toMatchObject({
+      model: "human",
+      reviewed_by_human: false,
+    });
+  });
+
+  test("merges two people", async ({ db }) => {
+    const id = await findMeetingId(db, SLUG);
+    const { segments } = await loadMeeting(db, id);
+    const [keep, drop] = [
+      ...new Set(
+        segments.flatMap((s) => (s.person === null ? [] : [s.person])),
+      ),
+    ];
+    const changeset = `
+      UPDATE segments SET person_id = ${keep} WHERE person_id = ${drop};
+      DELETE FROM people WHERE id = ${drop};
+    `;
+    const { rows } = await applyChangeset({ db, sql: changeset });
+    expect(rows.people).toEqual({ updated: 0, inserted: 0, deleted: 1 });
+    const after = await loadMeeting(db, id);
+    expect(after.people.has(drop!)).toBe(false);
+    await expect(
+      applyChangeset({ db, sql: `DELETE FROM people WHERE id = ${keep};` }),
+    ).rejects.toThrow("violates foreign key constraint");
+  });
+
+  test("sets a meeting's date, time and bodies", async ({ db }) => {
+    const id = await findMeetingId(db, SLUG);
+    const changeset = `
+      UPDATE meetings SET date = '2026-03-24', time = '18:30' WHERE slug = '${SLUG}';
+      INSERT INTO meeting_bodies (meeting_id, body_id)
+      SELECT om.meeting_id('${SLUG}'), id FROM bodies WHERE slug = 'luc';
+    `;
+    const { rows, meetings } = await applyChangeset({ db, sql: changeset });
+    expect(rows).toEqual({
+      meeting_bodies: { updated: 0, inserted: 1, deleted: 0 },
+      meetings: { updated: 1, inserted: 0, deleted: 0 },
+    });
+    expect(meetings.map((m) => m.id)).toEqual([id]);
+    const after = await loadMeeting(db, id);
+    expect(after).toMatchObject({
+      date: "2026-03-24",
+      time: "18:30:00",
+      bodySlugs: ["gbos", "luc"],
+    });
   });
 });
 
