@@ -117,26 +117,26 @@ const DROPPED_STRETCH_WORDS = 8;
  * word and how many heard any word in its slot ("agree/heard"), and, for a
  * word not every pass heard, whether it is in a dropped stretch (see
  * {@link DROPPED_STRETCH_WORDS}): [elsewhere, in a dropped stretch].
- * Measured for 3 passes of 45 s windows on the golden meetings, after
+ * Measured for 3 passes of 120 s windows on golden meetings, after
  * cleanSpeechRuns, as the fraction of such words that match the golden.
- * About 93% of words are 3/3.
+ * About 90% of words are 3/3.
  */
 const CONFIDENCE: Readonly<Record<string, readonly [number, number]>> = {
-  "3/3": [0.97, 0.97],
-  "2/3": [0.55, 0.55],
-  "1/3": [0.22, 0.22],
-  "2/2": [0.6, 0.83],
-  "1/2": [0.23, 0.3],
-  "1/1": [0.31, 0.59],
+  "3/3": [0.98, 0.98],
+  "2/3": [0.57, 0.57],
+  "1/3": [0.21, 0.21],
+  "2/2": [0.68, 0.96],
+  "1/2": [0.28, 0.44],
+  "1/1": [0.36, 0.8],
 };
 
 /** Words less likely than this to be right are left out of the transcript. */
 const MIN_CONFIDENCE = 0.5;
 
-// Decode windows in parallel, but bounded: each concurrent decode holds a chunk
-// of native onnxruntime memory, so an unbounded pool blows up RAM. Cap
-// concurrency to keep peak memory in check while still using multiple cores.
-const TRANSCRIBE_CONCURRENCY = Math.max(1, Math.min(4, availableParallelism()));
+// Decode windows in parallel, but bounded: onnxruntime keeps the memory each
+// concurrent decode of a 120 s window used, several GB, so four at once come
+// close to filling a 16 GB machine.
+const TRANSCRIBE_CONCURRENCY = Math.max(1, Math.min(2, availableParallelism()));
 
 export interface TranscribeWindowEvent {
   pass: number;

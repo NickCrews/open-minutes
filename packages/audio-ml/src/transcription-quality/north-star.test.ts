@@ -29,11 +29,11 @@ const RUNS_DIR = join(HERE, "..", "..", "test-runs");
 const MAX_WER = 0.15;
 // Matched-word p95 onset error.
 const MAX_TIMESTAMP_ERROR_SEC = 0.5;
-// Wall-clock seconds per second of audio. ~0.15 on a 4-core machine.
-const MAX_REAL_TIME_FACTOR = 0.2;
+// Wall-clock seconds per second of audio. ~0.25 on a 4-core machine.
+const MAX_REAL_TIME_FACTOR = 0.35;
 // Mean squared error of word confidences against which words are right. A
 // constant confidence at the fraction of words that are right (~0.93) scores
-// ~0.065; the goldens score 0.03-0.05.
+// ~0.065; the goldens score 0.03-0.045.
 const MAX_BRIER_SCORE = 0.06;
 
 describe("transcribe", () => {
