@@ -359,7 +359,7 @@ body:has(> .cv) { margin: 0; background: #fff; }
 .cv .gap { color: var(--muted); font-size: 0.8em; font-style: italic; }
 .cv .gap::before { content: "["; } .cv .gap::after { content: "]"; }
 .cv .fields { border-collapse: collapse; margin: 8px 0; font-size: 0.9em; }
-.cv .fields td, .cv .fields th { border: 1px solid var(--line); padding: 2px 6px; text-align: left; vertical-align: top; }
+.cv .fields td, .cv .fields th { border: 1px solid var(--line); padding: 2px 6px; text-align: left; vertical-align: top; white-space: pre-wrap; }
 .cv .fields .old { background: var(--del-bg); color: var(--del-fg); }
 .cv .fields .new { background: var(--ins-bg); color: var(--ins-fg); }
 .cv .issues { margin: 6px 0; font-size: 0.9em; }
