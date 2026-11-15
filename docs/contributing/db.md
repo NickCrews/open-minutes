@@ -133,6 +133,33 @@ transcript reseeds only the datasets that include that meeting.
 
 `migrate`, `wipe`, `status`, `studio` and `up` all take `--db`.
 
+## Branches
+
+A branch is a throwaway copy of a database that can be reset to its parent's
+current state: agents' playgrounds and changeset checks will use them.
+`pnpm db branch` makes them on the local server, as `CREATE DATABASE ...
+TEMPLATE` copies named `dbranch__<name>`; Neon branches are made with
+`neonctl` for now (see [Neon branches](#neon-branches)).
+
+```sh
+pnpm db branch new agent/s1/proposal            # a copy of your local database
+pnpm db branch new agent/s1/try --from agent/s1/proposal
+pnpm db branch url agent/s1/proposal            # its connection URL
+pnpm db branch reset agent/s1/proposal          # as the database is now
+pnpm db branch list --prefix agent/s1
+pnpm db branch rm agent/s1/proposal
+```
+
+A name is lowercase letters and digits, in parts joined by `-` or `/`. Each
+command takes `--db` for the database branches copy, which must be local.
+Postgres copies a database only while nothing else is connected to it, so
+stop `pnpm dev` before branching your local database; `new` and `reset` fail
+after about five seconds otherwise, and `reset` then leaves the branch as it
+was. `pnpm db prune` doesn't touch branches.
+
+`localBranches({ main })` in `packages/db/src/branches.ts` does the same from
+code, behind the `Branches` interface a Neon backend will also implement.
+
 ## Remote databases
 
 - `pnpm db up`, `pnpm dev` and `om` only check a remote database's schema, and
