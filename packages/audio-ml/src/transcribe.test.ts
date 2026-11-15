@@ -169,6 +169,26 @@ describe("voteWords", () => {
   });
 });
 
+describe("voteWords dropped stretches", () => {
+  const said = (n: number, from: number) =>
+    Array.from({ length: n }, (_, i) => pw2(`w${i}`, from + i * 0.3));
+  const around = (inner: PassWord[]) => [
+    pw2("before", 0),
+    ...inner,
+    pw2("after", 10),
+  ];
+
+  it("keeps a long stretch only one pass heard", () => {
+    const words = voteWords([around([]), around(said(10, 1)), around([])]);
+    expect(words).toHaveLength(12);
+  });
+
+  it("drops a word or two only one pass heard", () => {
+    const words = voteWords([around([]), around(said(2, 1)), around([])]);
+    expect(words.map((w) => w.text)).toEqual(["before", "after"]);
+  });
+});
+
 describe("voteSpans", () => {
   it("votes across a short pause, so a word's passes agree whichever side of it they put the word", () => {
     // Both passes heard "the", one just before the second span starts and

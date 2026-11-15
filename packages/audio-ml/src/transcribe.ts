@@ -105,17 +105,29 @@ export const WINDOW_SEC = 45;
 const FRAME_SEC = 0.08;
 
 /**
- * The probability that a voted word is right, by how many passes heard that
- * word (`agree`) and how many heard any word in its slot (`heard`), indexed
- * [agree - 1][heard - 1]. Measured for TRANSCRIBE_PASSES passes on the golden
- * meetings, after cleanSpeechRuns, as the fraction of such words that match
- * the golden.
+ * Words that not every pass heard, in a row at least this long, are taken
+ * as a stretch some pass dropped, not as words some pass invented: they are
+ * right more often (see {@link CONFIDENCE}).
  */
-const CONFIDENCE: readonly (readonly number[])[] = [
-  [0.5, 0.5, 0.5],
-  [NaN, 0.8, 0.8],
-  [NaN, NaN, 0.95],
-];
+const DROPPED_STRETCH_WORDS = 8;
+
+/**
+ * The probability that a voted word is right, by how many passes heard that
+ * word and how many heard any word in its slot ("agree/heard"), and, for a
+ * word not every pass heard, whether it is in a dropped stretch (see
+ * {@link DROPPED_STRETCH_WORDS}): [elsewhere, in a dropped stretch].
+ * Measured for 3 passes of 45 s windows on the golden meetings, after
+ * cleanSpeechRuns, as the fraction of such words that match the golden.
+ * About 93% of words are 3/3.
+ */
+const CONFIDENCE: Readonly<Record<string, readonly [number, number]>> = {
+  "3/3": [0.97, 0.97],
+  "2/3": [0.55, 0.55],
+  "1/3": [0.22, 0.22],
+  "2/2": [0.6, 0.83],
+  "1/2": [0.23, 0.3],
+  "1/1": [0.31, 0.59],
+};
 
 /** Words less likely than this to be right are left out of the transcript. */
 const MIN_CONFIDENCE = 0.5;
@@ -396,18 +408,27 @@ export function vote(passes: readonly (readonly PassWord[])[]): Vote[] {
 
 /**
  * The words of {@link vote} that are at least {@link MIN_CONFIDENCE} likely
- * to be right, with their confidence. Assumes TRANSCRIBE_PASSES passes.
+ * to be right, with their confidence. {@link CONFIDENCE} is measured for
+ * TRANSCRIBE_PASSES passes.
  */
 export function voteWords(passes: readonly (readonly PassWord[])[]): Word[] {
+  const votes = vote(passes);
+  const dropped = votes.map(() => false);
+  for (let i = 0; i < votes.length;) {
+    let j = i;
+    while (j < votes.length && votes[j]!.heard < passes.length) j++;
+    if (j - i >= DROPPED_STRETCH_WORDS) dropped.fill(true, i, j);
+    i = Math.max(j, i + 1);
+  }
   const words: Word[] = [];
-  for (const { word, agree, heard } of vote(passes)) {
-    const confidence = CONFIDENCE[agree - 1]![heard - 1]!;
-    if (confidence < MIN_CONFIDENCE) continue;
+  votes.forEach(({ word, agree, heard }, i) => {
+    const confidence = CONFIDENCE[`${agree}/${heard}`]![dropped[i] ? 1 : 0];
+    if (confidence < MIN_CONFIDENCE) return;
     // Mean onsets can step back a little where neighbouring slots were
     // heard by different passes; keep them in order.
     const start = Math.max(word.start, words.at(-1)?.start ?? -Infinity);
     words.push({ text: word.text, start, confidence });
-  }
+  });
   return words;
 }
 
