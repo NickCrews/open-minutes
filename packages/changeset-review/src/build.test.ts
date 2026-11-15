@@ -154,6 +154,72 @@ UPDATE people SET bio = 'A newer bio.' WHERE slug = 'kyle-kelley';`,
     ]);
   });
 
+  test("shows a person a statement deletes", async ({ db }) => {
+    const { meeting } = await landmarks(db);
+    const [keep, drop] = [
+      ...new Set(
+        meeting.segments.flatMap((s) => (s.person === null ? [] : [s.person])),
+      ),
+    ];
+    const dropped = meeting.people.get(drop!)!;
+    const diff = await buildChangesetDiff({
+      db,
+      sql: `UPDATE segments SET person_id = ${keep} WHERE person_id = ${drop};
+DELETE FROM people WHERE id = ${drop};`,
+      base: "test",
+    });
+    expect(diff.error).toBeNull();
+    expect(diff.statements[1]!.people).toEqual([
+      {
+        row: `person ${drop}`,
+        field: "deleted",
+        old: [dropped.name ?? "no name", dropped.slug && `(${dropped.slug})`]
+          .filter(Boolean)
+          .join(" "),
+        new: null,
+      },
+    ]);
+  });
+
+  test("shows a meeting's date, time, bodies and chapters", async ({ db }) => {
+    const { meeting } = await landmarks(db);
+    const diff = await buildChangesetDiff({
+      db,
+      sql: `UPDATE meetings SET date = '2026-03-24', time = '18:30' WHERE slug = '${SLUG}';
+INSERT INTO meeting_bodies (meeting_id, body_id) SELECT om.meeting_id('${SLUG}'), id FROM bodies WHERE slug = 'luc';
+DELETE FROM chapters WHERE meeting_id = om.meeting_id('${SLUG}');
+WITH g AS (
+  INSERT INTO chapter_generations (meeting_id, model, prompt_version)
+  VALUES (om.meeting_id('${SLUG}'), 'human', 'none') RETURNING id, meeting_id
+)
+INSERT INTO chapters (meeting_id, generation_id, start_secs, end_secs, title, summary, bullets)
+SELECT meeting_id, id, '0 seconds', '600 seconds', 'Opening', 'The meeting opens.', '{"Roll call."}' FROM g;`,
+      base: "test",
+    });
+    expect(diff.error).toBeNull();
+    const fields = diff.statements.map((s) =>
+      s.meetings.flatMap((m) => m.fields).map((f) => [f.field, f.new]),
+    );
+    expect(fields[0]).toEqual([
+      ["date", "2026-03-24"],
+      ["time", "18:30:00"],
+    ]);
+    expect(fields[1]).toEqual([
+      ["bodies", [...meeting.bodySlugs, "luc"].join(", ")],
+    ]);
+    expect(fields[2]).toEqual([
+      ["chapters", null],
+      ["chapter generation", null],
+    ]);
+    expect(fields[3]).toEqual([
+      [
+        "chapters",
+        "0:00:00.00-0:10:00.00 Opening: The meeting opens.\n  - Roll call.",
+      ],
+      ["chapter generation", 'human, prompt "none"'],
+    ]);
+  });
+
   test("follows each meeting a statement changes, from the first statement that changes it", async ({
     db,
   }) => {

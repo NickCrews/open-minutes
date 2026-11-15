@@ -3,6 +3,7 @@
 // before and after it, and roll it all back.
 
 import type { DB } from "@open-minutes/db";
+import { formatClock } from "@open-minutes/core/clock";
 import type { MeetingIssue } from "@open-minutes/core/rules";
 import {
   type AppliedChangeset,
@@ -227,20 +228,54 @@ export function transcript(meeting: DbMeeting): Transcript {
   };
 }
 
-/** The meeting's slug and title, where they changed. */
+/**
+ * The meeting's fields a changeset may change, other than its transcript,
+ * where they changed: its slug, title, date, time and bodies, its chapters,
+ * and the generation they come from.
+ */
 function meetingFields(before: DbMeeting, after: DbMeeting): FieldChange[] {
-  return (["slug", "title"] as const)
-    .filter((field) => before[field] !== after[field])
-    .map((field) => ({
-      row: "meeting",
-      field,
-      old: before[field],
-      new: after[field],
-    }));
+  const fields: Record<string, (m: DbMeeting) => string | null> = {
+    slug: (m) => m.slug,
+    title: (m) => m.title,
+    date: (m) => m.date,
+    time: (m) => m.time,
+    bodies: (m) => m.bodySlugs.join(", "),
+    chapters: (m) => chaptersText(m) || null,
+    "chapter generation": (m) =>
+      m.generation &&
+      `${m.generation.model}, prompt ${JSON.stringify(m.generation.prompt_version)}${m.generation.reviewed_by_human ? ", reviewed by a person" : ""}`,
+  };
+  return Object.entries(fields).flatMap(([field, value]) => {
+    const [old, now] = [value(before), value(after)];
+    return old === now ? [] : [{ row: "meeting", field, old, new: now }];
+  });
 }
 
-/** A person's slug, name and bio, where they changed. */
-function personFields(before: DbPerson, after: DbPerson): FieldChange[] {
+/** A meeting's chapters, one per line, each with its bullets below it. */
+function chaptersText(m: DbMeeting): string {
+  return m.chapters
+    .map((c) =>
+      [
+        `${formatClock(c.start)}-${formatClock(c.end)} ${c.title}: ${c.summary}`,
+        ...c.bullets.map((b) => `  - ${b}`),
+      ].join("\n"),
+    )
+    .join("\n");
+}
+
+/** A person's slug, name and bio, where they changed, or their deletion. */
+function personFields(before: DbPerson, after: DbPerson | null): FieldChange[] {
+  if (!after)
+    return [
+      {
+        row: `person ${before.id}`,
+        field: "deleted",
+        old: [before.name ?? "no name", before.slug && `(${before.slug})`]
+          .filter(Boolean)
+          .join(" "),
+        new: null,
+      },
+    ];
   return (["slug", "name", "bio"] as const)
     .filter((field) => before[field] !== after[field])
     .map((field) => ({

@@ -95,8 +95,8 @@ export interface TracedStatement {
   rows: RowCounts;
   /** Each meeting whose row, segments or chapters it changed, before and after it, by id. */
   meetings: { before: DbMeeting; after: DbMeeting }[];
-  /** Each person it changed, before and after it, by id. */
-  people: { before: DbPerson; after: DbPerson }[];
+  /** Each person it changed, before and after it (null if it deleted them), by id. */
+  people: { before: DbPerson; after: DbPerson | null }[];
 }
 
 /**
@@ -385,9 +385,10 @@ async function runTraced(
     }
     const afterPeople = await loadPeople(tx, changed.personIds);
     for (const id of changed.personIds) {
-      const after = afterPeople.get(id)!;
+      const after = afterPeople.get(id) ?? null;
       step.people.push({ before: people.get(id)!, after });
-      people.set(id, after);
+      if (after) people.set(id, after);
+      else people.delete(id);
     }
     await onStatement(step);
   }

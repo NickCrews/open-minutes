@@ -206,11 +206,13 @@ words of transcript to show around each change (default 8).
       side, with each segment's speaker (name and label), onset and index,
       deleted words struck out in red and inserted words in green, and a
       segment that starts differently on one side marked;
-    - the meeting's slug and title, if it changed them;
+    - the meeting's slug, title, date, time, bodies, chapters and chapter
+      generation, where it changed them;
     - the rule violations it resolved and introduced, comparing the meeting
       just before and just after it. A violation one statement introduces, a
       later one may resolve;
-  - the slug, name and bio of each person it changed;
+  - the slug, name and bio of each person it changed, and each person it
+    deleted;
   - for an `om.assert`, that it held.
 - **A review form**: per statement, accept, reject or question, and a note;
   and a note on the whole changeset. "Copy review comment" copies the review

@@ -100,7 +100,7 @@ export interface MeetingDiff {
   meeting: number;
   changes: Change[];
   hunks: Hunk[];
-  /** Its slug and title, if the statement changed them. */
+  /** Its slug, title, date, time, bodies, chapters and chapter generation, where the statement changed them. */
   fields: FieldChange[];
   /**
    * The SHA-256 of every word whose speaker it changed, with its onset, text
@@ -131,7 +131,7 @@ export interface StatementDiff {
   rows: Record<string, RowCount>;
   /** Each meeting it changed, in order of id. */
   meetings: MeetingDiff[];
-  /** The slug, name and bio of people it changed. */
+  /** The slug, name and bio of people it changed, and the people it deleted. */
   people: FieldChange[];
 }
 
