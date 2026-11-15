@@ -13,6 +13,7 @@
   },
   "scripts": {
     "changeset": "vpx src/cli.ts",
+    "samples": "vpx --watch src/samples-serve.ts",
     "test": "vp test run",
     "typecheck": "tsc --noEmit"
   },

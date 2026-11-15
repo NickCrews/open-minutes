@@ -222,6 +222,24 @@ words of transcript to show around each change (default 8).
   statement's SQL, so the verdicts of statements a new version leaves
   unchanged carry over.
 
+### Working on the review page
+
+`src/samples.ts` holds made-up changesets, built from small made-up
+transcripts without a database: a cleanup with every kind of statement and
+change that applies, one that fails at an assertion, one refused as a whole,
+one from a local file that changes nothing, and a long one. To see them:
+
+```sh
+pnpm --filter @open-minutes/changeset-review samples [--port 4401]
+```
+
+It serves an index of the samples at `http://localhost:4401/`, each as the
+page `view` writes, and each as JSON at `/<name>.json`. It restarts when
+`render.ts`, `samples.ts` or anything else it imports changes, and the pages
+reload themselves then, or when `client.js` changes. `src/samples.test.ts`
+renders every sample, so a sample that no longer fits `ChangesetDiff` fails
+the tests. Add a sample there for a case the page should show.
+
 ## How it works
 
 `buildChangesetDiff` (in `./build`) runs a changeset and returns a
