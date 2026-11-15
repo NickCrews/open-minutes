@@ -89,13 +89,14 @@ export const TRANSCRIBE_VAD_OPTIONS = {
 export const TRANSCRIBE_PASSES = 3;
 
 /**
- * The period of each pass's window grid. A window holds the voice activity
- * spans that start in one cell of its pass's grid, so it runs from a silence
- * to a silence and is about this long, or longer when its last span is. Each
- * pass's grid is offset from the last by WINDOW_SEC / TRANSCRIBE_PASSES, so a
- * stretch near one pass's window edge is well inside another's.
+ * The longest decode window. A window runs from a silence to a silence, so
+ * most are a little shorter. Each pass's first window is shorter than the
+ * last pass's by WINDOW_SEC / TRANSCRIBE_PASSES, so the passes cut at
+ * different silences, and a stretch near one pass's window edge is well
+ * inside another's. A single span longer than this (up to
+ * TRANSCRIBE_VAD_OPTIONS.maxSpeechSecs) is its own window.
  */
-export const WINDOW_SEC = 45;
+export const WINDOW_SEC = 120;
 
 /**
  * The encoder's frame length. Each pass starts its windows earlier by another
@@ -176,8 +177,8 @@ export async function transcribeAudio(
   const spans = await detectVoiceActivity(wave, TRANSCRIBE_VAD_OPTIONS);
   const passes = Array.from({ length: TRANSCRIBE_PASSES }, (_, p) =>
     planWindows(spans, {
-      windowSec: WINDOW_SEC,
-      gridOffsetSec: (p * WINDOW_SEC) / TRANSCRIBE_PASSES,
+      maxSec: WINDOW_SEC,
+      firstMaxSec: WINDOW_SEC - (p * WINDOW_SEC) / TRANSCRIBE_PASSES,
       leadSec: (p * FRAME_SEC) / TRANSCRIBE_PASSES,
     }),
   );
@@ -214,24 +215,24 @@ export interface DecodeWindow {
 }
 
 /**
- * One pass's decode windows over `spans`. A window holds the consecutive
- * spans whose starts fall in one cell of a grid of period `windowSec`,
- * offset by `gridOffsetSec`, and starts `leadSec` before its first span.
+ * One pass's decode windows over `spans`. Consecutive spans are packed into a
+ * window while it stays within `maxSec`, the first window within
+ * `firstMaxSec`, so passes with different first windows cut at different
+ * silences. Each window starts `leadSec` before its first span.
  */
 export function planWindows(
   spans: readonly Span[],
   {
-    windowSec,
-    gridOffsetSec,
+    maxSec,
+    firstMaxSec,
     leadSec,
-  }: { windowSec: number; gridOffsetSec: number; leadSec: number },
+  }: { maxSec: number; firstMaxSec: number; leadSec: number },
 ): DecodeWindow[] {
   const windows: DecodeWindow[] = [];
-  let cell = NaN;
   spans.forEach((span, i) => {
-    const c = Math.floor((span.start - gridOffsetSec) / windowSec);
     const last = windows.at(-1);
-    if (last && c === cell) {
+    const cap = windows.length === 1 ? firstMaxSec : maxSec;
+    if (last && span.end - last.start <= cap + leadSec) {
       last.end = span.end;
       last.last = i;
     } else {
@@ -242,7 +243,6 @@ export function planWindows(
         last: i,
       });
     }
-    cell = c;
   });
   return windows;
 }
@@ -252,6 +252,7 @@ export async function decodePasses(
   wave: WaveForm,
   passes: readonly (readonly DecodeWindow[])[],
   tracing?: TranscribeTracing,
+  concurrency = TRANSCRIBE_CONCURRENCY,
 ): Promise<PassWord[][]> {
   const heard = passes.map((): PassWord[] => []);
   const jobs = passes.flatMap((windows, pass) =>
@@ -260,7 +261,7 @@ export async function decodePasses(
   const rate = wave.sampleRate;
   await mapWithConcurrency(
     jobs,
-    TRANSCRIBE_CONCURRENCY,
+    concurrency,
     async ({ win, pass, windowIndex }) => {
       const from = Math.round(win.start * rate);
       const to = Math.min(wave.samples.length, Math.round(win.end * rate));

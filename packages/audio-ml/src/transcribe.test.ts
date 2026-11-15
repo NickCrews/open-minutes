@@ -74,10 +74,10 @@ describe("planWindows", () => {
     { start: 31, end: 33 },
   ];
 
-  it("groups the spans starting in each cell of the grid", () => {
+  it("packs consecutive spans into windows up to the cap", () => {
     const windows = planWindows(spans, {
-      windowSec: 10,
-      gridOffsetSec: 0,
+      maxSec: 12,
+      firstMaxSec: 12,
       leadSec: 0,
     });
     expect(windows).toEqual([
@@ -87,10 +87,10 @@ describe("planWindows", () => {
     ]);
   });
 
-  it("cuts at other silences when the grid is offset", () => {
+  it("cuts at other silences when the first window is shorter", () => {
     const windows = planWindows(spans, {
-      windowSec: 10,
-      gridOffsetSec: 5,
+      maxSec: 12,
+      firstMaxSec: 5,
       leadSec: 0,
     });
     expect(windows.map((w) => [w.first, w.last])).toEqual([
@@ -102,8 +102,8 @@ describe("planWindows", () => {
 
   it("starts each window early by the lead, but not before the audio", () => {
     const windows = planWindows(spans, {
-      windowSec: 10,
-      gridOffsetSec: 0,
+      maxSec: 12,
+      firstMaxSec: 12,
       leadSec: 2,
     });
     expect(windows.map((w) => w.start)).toEqual([0, 12, 29]);
