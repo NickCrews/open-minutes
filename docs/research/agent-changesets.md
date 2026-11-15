@@ -52,13 +52,12 @@ Built, in `packages/db` (the `om` schema and the `changeset` role),
   generation ([#231](https://github.com/NickCrews/open-minutes/pull/231)).
 - `pnpm changeset query <source> '<sql>'` ([#232](https://github.com/NickCrews/open-minutes/pull/232)), which runs a query,
   read-only, on the data as a changeset leaves it.
-- In review ([#234](https://github.com/NickCrews/open-minutes/pull/234)): `pnpm db branch new|reset|rm|url|list`, branches of a
-  local database, behind a `Branches` interface the Neon backend will also
-  implement.
+- `pnpm db branch new|reset|rm|url|list`: branches of a local database
+  ([#234](https://github.com/NickCrews/open-minutes/pull/234)), behind a `Branches` interface. In review ([#235](https://github.com/NickCrews/open-minutes/pull/235)): `--neon`,
+  branches of Neon production through Neon's API.
 
 Not built yet, in the order of the [implementation plan](#implementation-plan):
-the Neon branches backend, playgrounds and the branch service, and the agent
-harness. Each
+playgrounds and the branch service, and the agent harness. Each
 section below says where what's built differs from what's proposed.
 
 ## Proposal
@@ -565,10 +564,13 @@ Next:
 6. **Branches.** Each step its own PR:
    1. `pnpm db branch new|reset|rm|url|list` and the `Branches` interface,
       with a local backend: `CREATE DATABASE ... TEMPLATE` copies on the
-      docker-compose server ([#234](https://github.com/NickCrews/open-minutes/pull/234), in review). It lives in
-      `packages/db`, since `dbranch` already names `pnpm db`'s CLI.
-   2. A Neon backend, through Neon's API with a project-scoped key, and the
-      PR preview workflow using it instead of inline `neonctl`.
+      docker-compose server ([#234](https://github.com/NickCrews/open-minutes/pull/234)). It lives in `packages/db`, since
+      `dbranch` already names `pnpm db`'s CLI.
+   2. A Neon backend, through Neon's API with a project-scoped key
+      ([#235](https://github.com/NickCrews/open-minutes/pull/235), in review); then the PR preview workflow using it instead
+      of inline `neonctl`, which needs an expiry option. Neon resets a
+      branch that has or had branches of its own only by keeping its old
+      state as another branch, so a reset refuses while it has some.
    3. Playgrounds: `pnpm playground new|reset|rm|list`, as
       `agent/<session>/<name>` branches, each with a login role of its own
       that can't open main. No `playground diff`: an agent sees what its SQL
