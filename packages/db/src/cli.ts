@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import process from "node:process";
 import { defineCommand, runMain } from "citty";
 import { type Branches, localBranches } from "./branches";
+import { neonBranches } from "./neon-branches";
 import { assertSafeName, isLocalUrl, withAdmin } from "./cluster";
 import { type DbConfig, loadConfig } from "./config";
 import {
@@ -396,15 +397,34 @@ function pruneReason(name: string): string {
   return "its git branch is gone";
 }
 
-/** The branches of the database `target` names, which must be local. */
-function branchesOf(target: string | undefined): Branches {
-  const main = resolveDatabaseUrl(target);
+/**
+ * With `neon`, the branches of the Neon project $NEON_PROJECT_ID's default
+ * branch, through its API with $NEON_API_KEY. Else the branches of the
+ * database `db` names, which must be local.
+ */
+function branchesOf({ db, neon }: { db?: string; neon?: boolean }): Branches {
+  if (neon) {
+    const { NEON_API_KEY: apiKey, NEON_PROJECT_ID: projectId } = process.env;
+    if (!apiKey || !projectId)
+      throw new Error("--neon needs NEON_API_KEY and NEON_PROJECT_ID");
+    return neonBranches({ apiKey, projectId });
+  }
+  const main = resolveDatabaseUrl(db);
   if (!isLocalUrl(main))
     throw new Error(
       `Branches work only on local databases: ${redact(main)} isn't one`,
     );
   return localBranches({ main });
 }
+
+const branchTarget = {
+  ...targetArg,
+  neon: {
+    type: "boolean",
+    description:
+      "Branch the default branch of the Neon project $NEON_PROJECT_ID, with $NEON_API_KEY, instead of a local database",
+  },
+} as const;
 
 const branchName = {
   name: {
@@ -427,10 +447,10 @@ const branchNew = defineCommand({
       type: "string",
       description: "The branch to copy. Default: the database itself",
     },
-    ...targetArg,
+    ...branchTarget,
   },
   async run({ args }) {
-    const branches = branchesOf(args.db);
+    const branches = branchesOf(args);
     await branches.create({ name: args.name, from: args.from });
     console.log(redact(await branches.url(args.name)));
   },
@@ -441,25 +461,25 @@ const branchReset = defineCommand({
     name: "reset",
     description: "Put a branch back as the database or branch it copies is now",
   },
-  args: { ...branchName, ...targetArg },
+  args: { ...branchName, ...branchTarget },
   async run({ args }) {
-    await branchesOf(args.db).reset(args.name);
+    await branchesOf(args).reset(args.name);
   },
 });
 
 const branchRm = defineCommand({
   meta: { name: "rm", description: "Delete a branch, closing its connections" },
-  args: { ...branchName, ...targetArg },
+  args: { ...branchName, ...branchTarget },
   async run({ args }) {
-    await branchesOf(args.db).remove(args.name);
+    await branchesOf(args).remove(args.name);
   },
 });
 
 const branchUrl = defineCommand({
   meta: { name: "url", description: "Print a branch's connection URL" },
-  args: { ...branchName, ...targetArg },
+  args: { ...branchName, ...branchTarget },
   async run({ args }) {
-    console.log(await branchesOf(args.db).url(args.name));
+    console.log(await branchesOf(args).url(args.name));
   },
 });
 
@@ -470,10 +490,10 @@ const branchList = defineCommand({
       type: "string",
       description: "Only branches whose names start with this",
     },
-    ...targetArg,
+    ...branchTarget,
   },
   async run({ args }) {
-    for (const b of await branchesOf(args.db).list({ prefix: args.prefix }))
+    for (const b of await branchesOf(args).list({ prefix: args.prefix }))
       console.log(
         `${b.name}  (from ${b.parent ?? "the database"}, ${b.createdAt})`,
       );

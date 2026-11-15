@@ -138,8 +138,8 @@ transcript reseeds only the datasets that include that meeting.
 A branch is a throwaway copy of a database that can be reset to its parent's
 current state: agents' playgrounds and changeset checks will use them.
 `pnpm db branch` makes them on the local server, as `CREATE DATABASE ...
-TEMPLATE` copies named `dbranch__<name>`; Neon branches are made with
-`neonctl` for now (see [Neon branches](#neon-branches)).
+TEMPLATE` copies named `dbranch__<name>`, or, with `--neon`, as branches of
+production in Neon.
 
 ```sh
 pnpm db branch new agent/s1/proposal            # a copy of your local database
@@ -150,15 +150,26 @@ pnpm db branch list --prefix agent/s1
 pnpm db branch rm agent/s1/proposal
 ```
 
-A name is lowercase letters and digits, in parts joined by `-` or `/`. Each
-command takes `--db` for the database branches copy, which must be local.
+A name is lowercase letters and digits, in parts joined by `-` or `/`.
+Without `--neon`, each command takes `--db` for the database branches copy,
+which must be local.
 Postgres copies a database only while nothing else is connected to it, so
 stop `pnpm dev` before branching your local database; `new` and `reset` fail
 after about five seconds otherwise, and `reset` then leaves the branch as it
 was. `pnpm db prune` doesn't touch branches.
 
-`localBranches({ main })` in `packages/db/src/branches.ts` does the same from
-code, behind the `Branches` interface a Neon backend will also implement.
+With `--neon`, they are branches of the Neon project's default branch,
+production, through Neon's API, with `NEON_API_KEY` (a key scoped to the
+project) and `NEON_PROJECT_ID` set. A Neon branch is copy-on-write: it takes
+seconds whatever production's size, and production may be in use. Its URL
+connects as production's owner role, which Neon gives every branch with the
+same password, so it opens production too: hand it to nothing that
+shouldn't. Neon resets a branch only while no branch is made from it, and
+`--neon` never deletes production.
+
+`localBranches({ main })` (`packages/db/src/branches.ts`) and
+`neonBranches({ apiKey, projectId })` (`packages/db/src/neon-branches.ts`) do
+the same from code, behind one `Branches` interface.
 
 ## Remote databases
 
