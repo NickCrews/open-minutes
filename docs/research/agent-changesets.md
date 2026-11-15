@@ -47,12 +47,14 @@ Built, in `packages/db` (the `om` schema and the `changeset` role),
   `changeset`; CI checks each version against production, rolled back, and
   records its **effect**; reviews are issue comments; a maintainer approves
   with a label, and CI applies the latest version only if its effect still
-  matches the approved check. In review ([#231](https://github.com/NickCrews/open-minutes/pull/231)): the effect covers
+  matches the approved check. The effect covers
   deleted people and a meeting's date, time, bodies, chapters and chapter
-  generation.
+  generation ([#231](https://github.com/NickCrews/open-minutes/pull/231)).
+- In review ([#232](https://github.com/NickCrews/open-minutes/pull/232)): `pnpm changeset query <source> '<sql>'`, which runs
+  a query, read-only, on the data as a changeset leaves it.
 
 Not built yet, in the order of the [implementation plan](#implementation-plan):
-`changeset query`, branches and playgrounds, and the agent harness. Each
+branches and playgrounds, and the agent harness. Each
 section below says where what's built differs from what's proposed.
 
 ## Proposal
@@ -548,13 +550,14 @@ Done:
    compared at apply ([#226](https://github.com/NickCrews/open-minutes/pull/226)).
 4. **Grants.** Chapters, chapter generations, meetings' `date`, `time` and
    bodies, and deleting people; chapter generations' unused
-   `transcript_fingerprint` dropped ([#224](https://github.com/NickCrews/open-minutes/pull/224)). The effect covers them in
-   [#231](https://github.com/NickCrews/open-minutes/pull/231), in review.
+   `transcript_fingerprint` dropped ([#224](https://github.com/NickCrews/open-minutes/pull/224)). The effect covers them
+   ([#231](https://github.com/NickCrews/open-minutes/pull/231)).
 
 Next:
 
-5. **`pnpm changeset query <file> '<sql>'`.** Runs the changeset, then the
-   query as `changeset` on after, in the same rolled-back transaction.
+5. **`pnpm changeset query <source> '<sql>'`.** Runs the changeset, then the
+   query, read-only and as `changeset`, on after, in the same rolled-back
+   transaction ([#232](https://github.com/NickCrews/open-minutes/pull/232), in review).
 6. **Branches package.** Move branching out of `packages/db` into
    `packages/dbranch` (the name its CLI and `dbranch.config.ts` already use),
    behind one interface: make a branch from main or from another branch,
