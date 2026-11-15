@@ -9,6 +9,7 @@ import {
   ChangesetError,
   checkChangeset,
   fixRules,
+  queryChangeset,
 } from "./edit";
 import { findMeetingId, loadMeeting, lockEdits, saveSegments } from "./meeting";
 import { labelOf, render } from "./view";
@@ -262,6 +263,63 @@ describe("changesets", () => {
         applyChangeset({ db, sql: statement }),
         statement,
       ).rejects.toThrow(error);
+  });
+});
+
+describe("queryChangeset", () => {
+  const RENAME = `UPDATE people SET name = 'Renamed' WHERE slug = 'kyle-kelley';`;
+
+  test("queries the data as the changeset leaves it, and saves nothing", async ({
+    db,
+  }) => {
+    const result = await queryChangeset({
+      db,
+      sql: RENAME,
+      query: "SELECT slug, name FROM people WHERE slug = 'kyle-kelley'",
+    });
+    expect(result).toEqual({
+      columns: ["slug", "name"],
+      rows: [{ slug: "kyle-kelley", name: "Renamed" }],
+    });
+    const [kyle] = await db.execute<{ name: string }>(
+      sql`SELECT name FROM people WHERE slug = 'kyle-kelley'`,
+    );
+    expect(kyle!.name).not.toBe("Renamed");
+  });
+
+  test("refuses a query that writes, or changes its role back", async ({
+    db,
+  }) => {
+    await expect(
+      queryChangeset({
+        db,
+        sql: RENAME,
+        query: "UPDATE people SET bio = 'x'",
+      }),
+    ).rejects.toThrow(
+      new ChangesetError(
+        "the query failed: cannot execute UPDATE in a read-only transaction",
+      ),
+    );
+    await expect(
+      queryChangeset({
+        db,
+        sql: RENAME,
+        query: "SET TRANSACTION READ WRITE",
+      }),
+    ).rejects.toThrow(
+      "transaction read-write mode must be set before any query",
+    );
+  });
+
+  test("fails where the changeset fails", async ({ db }) => {
+    await expect(
+      queryChangeset({
+        db,
+        sql: "SELECT om.assert(false, 'nope');",
+        query: "SELECT 1",
+      }),
+    ).rejects.toMatchObject({ assertion: true });
   });
 });
 

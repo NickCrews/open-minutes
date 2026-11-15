@@ -16,6 +16,8 @@ import {
   ChangesetError,
   checkChangeset,
   formatIssue,
+  queryChangeset,
+  type QueryResult,
   type MeetingRef,
 } from "@open-minutes/edit";
 import { dbArg, formatRows, withDb } from "@open-minutes/edit/cli";
@@ -63,8 +65,9 @@ transaction, as the changeset role, and fails, saving nothing, if a statement
 or assertion fails. "check" runs it, reports the rows it would change and, in
 each meeting it would change, the meeting rule violations it would resolve and
 introduce, and rolls it back. "view" does the same a statement at a time, and
-writes a page showing what each statement does. "apply" runs it and saves it,
-without running the rules.
+writes a page showing what each statement does. "query" runs it, then a query
+of yours on the data as it leaves it, and rolls both back. "apply" runs it and
+saves it, without running the rules.
 
 To change production, propose the changeset in a GitHub issue instead of
 applying it: "propose" opens the issue with v1, "revise" posts the next
@@ -211,6 +214,55 @@ const applyCmd = defineCommand({
         `saved: ${formatRows(rows)}${meetings.length ? `; meetings changed: ${meetings.map(ref).join(", ")}` : ""}`,
       );
     }),
+});
+
+/** A query's result as a table, one row per line, columns aligned. */
+function formatTable({ columns, rows }: QueryResult): string {
+  const cell = (v: unknown) =>
+    v === null || v === undefined
+      ? "NULL"
+      : typeof v === "object" && !(v instanceof Date)
+        ? JSON.stringify(v)
+        : String(v);
+  const cells = rows.map((r) => columns.map((c) => cell(r[c])));
+  const widths = columns.map((c, i) =>
+    Math.max(c.length, ...cells.map((r) => r[i]!.length)),
+  );
+  const line = (r: string[]) =>
+    r
+      .map((v, i) => v.padEnd(widths[i]!))
+      .join(" | ")
+      .trimEnd();
+  return [
+    line(columns),
+    widths.map((w) => "-".repeat(w)).join("-+-"),
+    ...cells.map(line),
+    `(${rows.length} row${rows.length === 1 ? "" : "s"})`,
+  ].join("\n");
+}
+
+const queryCmd = defineCommand({
+  meta: {
+    name: "query",
+    description:
+      "Run a changeset, then a query on the data as it leaves it, and roll both back. The query runs read-only, as the changeset role.",
+  },
+  args: {
+    ...sourceArgs,
+    query: {
+      type: "positional",
+      required: true,
+      description:
+        "One SQL statement, eg 'SELECT slug, name FROM people WHERE id = 57'",
+    },
+    ...dbArg,
+  },
+  run: ({ args }) =>
+    runCommand(
+      args,
+      (changeset) => queryChangeset({ ...changeset, query: args.query }),
+      (result) => console.log(formatTable(result)),
+    ),
 });
 
 /**
@@ -850,6 +902,7 @@ const main = defineCommand({
   subCommands: {
     check: checkCmd,
     apply: applyCmd,
+    query: queryCmd,
     view: viewCmd,
     propose: proposeCmd,
     revise: reviseCmd,

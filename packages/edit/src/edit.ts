@@ -56,6 +56,18 @@ export interface Changeset {
   sql: string;
 }
 
+/** A query to run on the data as a changeset leaves it. */
+export interface ChangesetQuery extends Changeset {
+  /** One SQL statement. */
+  query: string;
+}
+
+/** A query's result: its columns, in order, and its rows. */
+export interface QueryResult {
+  columns: string[];
+  rows: Record<string, unknown>[];
+}
+
 /** A meeting by id, and its slug if it has one. */
 export interface MeetingRef {
   id: number;
@@ -258,6 +270,46 @@ export async function checkChangeset(
           });
         }
         result = { rows, meetings };
+        throw new Rollback();
+      },
+      { isolationLevel: "repeatable read" },
+    );
+  } catch (err) {
+    if (!(err instanceof Rollback)) throw err;
+  }
+  return result!;
+}
+
+/**
+ * Run a changeset, then `query` on the data as it leaves it, and roll both
+ * back. The query runs as the `changeset` role, in a transaction made read
+ * only after the changeset, so it can't change anything. Throws a
+ * {@link ChangesetError} if the changeset or the query fails.
+ */
+export async function queryChangeset({
+  db,
+  sql: changesetSql,
+  query,
+}: ChangesetQuery): Promise<QueryResult> {
+  let result: QueryResult | undefined;
+  try {
+    await db.transaction(
+      async (tx) => {
+        await runAsChangeset(tx, changesetSql);
+        await tx.execute(sql`SET TRANSACTION READ ONLY`);
+        await tx.execute(sql`SET LOCAL ROLE changeset`);
+        let found;
+        try {
+          found = await tx.execute(sql.raw(query));
+        } catch (err) {
+          const pg = postgresError(err);
+          if (!pg) throw err;
+          throw new ChangesetError(`the query failed: ${pg.message}`);
+        }
+        const columns = (
+          (found as { columns?: { name: string }[] }).columns ?? []
+        ).map((c) => c.name);
+        result = { columns, rows: [...found] as Record<string, unknown>[] };
         throw new Rollback();
       },
       { isolationLevel: "repeatable read" },

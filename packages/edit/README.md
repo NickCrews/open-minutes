@@ -70,7 +70,7 @@ SELECT om.assert(
 );
 ```
 
-Both run the file in one transaction, and fail, saving nothing, if a
+Each runs the file in one transaction, and fails, saving nothing, if a
 statement or assertion fails.
 
 - `check` reports how many rows the changeset would change in each table,
@@ -78,6 +78,11 @@ statement or assertion fails.
   meeting rule violations it would resolve and introduce. Then it rolls the
   changeset back. It reads one snapshot of the database throughout and takes
   no lock.
+- `query` runs it, then one SQL statement of yours on the data as the
+  changeset leaves it, prints the result as a table, and rolls both back.
+  The query runs as the `changeset` role, in a transaction made read-only
+  after the changeset, so it can't change anything:
+  `pnpm changeset query changeset.sql "SELECT id, slug, name FROM people WHERE id IN (12, 57)" --db prod`.
 - `apply` saves it and reports the rows and meetings it changed. It doesn't
   run the meeting rules, since a meeting partway through a cleanup breaks them
   in passing; `check`, or `pnpm transcript check` on the meeting, runs them
