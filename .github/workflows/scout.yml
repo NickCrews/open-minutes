@@ -25,7 +25,7 @@ on:
       max_audio:
         description: Store at most this many recordings' audio
         required: false
-        default: "20"
+        default: "50"
       dry_run:
         description: List what the run would do, and write nothing
         type: boolean
