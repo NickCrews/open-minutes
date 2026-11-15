@@ -50,11 +50,15 @@ Built, in `packages/db` (the `om` schema and the `changeset` role),
   matches the approved check. The effect covers
   deleted people and a meeting's date, time, bodies, chapters and chapter
   generation ([#231](https://github.com/NickCrews/open-minutes/pull/231)).
-- In review ([#232](https://github.com/NickCrews/open-minutes/pull/232)): `pnpm changeset query <source> '<sql>'`, which runs
-  a query, read-only, on the data as a changeset leaves it.
+- `pnpm changeset query <source> '<sql>'` ([#232](https://github.com/NickCrews/open-minutes/pull/232)), which runs a query,
+  read-only, on the data as a changeset leaves it.
+- In review ([#234](https://github.com/NickCrews/open-minutes/pull/234)): `pnpm db branch new|reset|rm|url|list`, branches of a
+  local database, behind a `Branches` interface the Neon backend will also
+  implement.
 
 Not built yet, in the order of the [implementation plan](#implementation-plan):
-branches and playgrounds, and the agent harness. Each
+the Neon branches backend, playgrounds and the branch service, and the agent
+harness. Each
 section below says where what's built differs from what's proposed.
 
 ## Proposal
@@ -557,18 +561,27 @@ Next:
 
 5. **`pnpm changeset query <source> '<sql>'`.** Runs the changeset, then the
    query, read-only and as `changeset`, on after, in the same rolled-back
-   transaction ([#232](https://github.com/NickCrews/open-minutes/pull/232), in review).
-6. **Branches package.** Move branching out of `packages/db` into
-   `packages/dbranch` (the name its CLI and `dbranch.config.ts` already use),
-   behind one interface: make a branch from main or from another branch,
-   get its connection URL, reset it, delete it, list branches by prefix. Two
-   backends: local (`CREATE DATABASE ... TEMPLATE` on the docker-compose
-   server, as `ensure.ts` and `testing/` do today) and Neon (its API, with a
-   project-scoped key). Move test databases and per-git-branch databases onto
-   the local backend, and the PR preview workflow onto the Neon backend
-   through the CLI instead of inline `neonctl`. Then playgrounds (`playground
-   new|reset|diff|list|rm`, with a login role per playground) and check
-   branches.
+   transaction ([#232](https://github.com/NickCrews/open-minutes/pull/232)).
+6. **Branches.** Each step its own PR:
+   1. `pnpm db branch new|reset|rm|url|list` and the `Branches` interface,
+      with a local backend: `CREATE DATABASE ... TEMPLATE` copies on the
+      docker-compose server ([#234](https://github.com/NickCrews/open-minutes/pull/234), in review). It lives in
+      `packages/db`, since `dbranch` already names `pnpm db`'s CLI.
+   2. A Neon backend, through Neon's API with a project-scoped key, and the
+      PR preview workflow using it instead of inline `neonctl`.
+   3. Playgrounds: `pnpm playground new|reset|rm|list`, as
+      `agent/<session>/<name>` branches, each with a login role of its own
+      that can't open main. No `playground diff`: an agent sees what its SQL
+      does with `changeset check`, `view` and `query`.
+   4. A branch service: an HTTP service that holds the Neon key, makes and
+      deletes playgrounds on request, and hands out only each playground's
+      own login role, so an agent's harness never holds the key.
+   5. Check branches: `changeset check` and `query` against production run
+      on a fresh branch of it.
+
+   Moving test databases and per-git-branch databases onto `Branches` is
+   left for later.
+
 7. **Agent harness.** `packages/agent`: the pi session, the just-bash
    sandbox, the custom commands, the web tools, budgets, teardown, and
    `pnpm changeset propose` as the session's product. Runs against the local
@@ -579,7 +592,7 @@ Next:
    `agent/*` branches; and a tested restore from backup before the first
    apply.
 
-Step 6 depends on none of the others; step 7 needs 6. Later, `transcript
+Step 6 depends on none of the others; step 7 needs 6.3 and 6.4. Later, `transcript
 check` and `fix` may move under `pnpm meeting`, and `fix` may write a
 changeset instead of saving directly.
 
