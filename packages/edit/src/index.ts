@@ -12,6 +12,9 @@ export {
   fixRules,
   type MeetingCheck,
   type MeetingRef,
+  type ChangesetQuery,
+  queryChangeset,
+  type QueryResult,
   type RowCounts,
   type TracedStatement,
 } from "./edit";

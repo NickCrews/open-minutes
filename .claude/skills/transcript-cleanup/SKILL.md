@@ -21,6 +21,7 @@ pnpm transcript fix <meeting> --dry-run --db prod
 pnpm transcript fix <meeting> --db prod
 pnpm changeset check changeset.sql --db prod
 pnpm changeset view changeset.sql --db prod --no-open
+pnpm changeset query changeset.sql "SELECT ..." --db prod
 pnpm changeset propose changeset.sql --title "..." --body "..."
 pnpm changeset status <issue>
 pnpm changeset revise <issue> changeset.sql --note "..."
@@ -49,7 +50,9 @@ production yourself; propose it.
 `pnpm changeset check` runs it and rolls it back, reporting the rows it would
 change and, in each meeting it changes, the rule violations it would resolve
 and introduce. `pnpm changeset view` does the same a statement at a time and
-writes a page showing what each statement does. `pnpm changeset --help` and
+writes a page showing what each statement does. `pnpm changeset query` runs
+it and then a query on the data as it leaves it, to confirm the result: who
+a person's segments now belong to, say. `pnpm changeset --help` and
 `packages/edit/README.md` describe the functions in full.
 
 - `SELECT om.split_segment(M, T, W, L);` makes the word `W` at onset `T`

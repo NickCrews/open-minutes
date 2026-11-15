@@ -151,6 +151,7 @@ repository of this checkout's `origin`.
 ```sh
 pnpm changeset check <source> [--db D]
 pnpm changeset view <source> [--db D] [--out page.html] [--json diff.json] [--serve] [--no-open]
+pnpm changeset query <source> '<sql>' [--db D]
 pnpm changeset apply <source> [--db D]
 pnpm changeset propose <file> --title T [--body B | --body-file F]
 pnpm changeset revise <issue> <file> [--note N | --note-file F]
@@ -160,7 +161,7 @@ pnpm changeset ci check <issue> --db D --site-url S --out-dir DIR [--run-url U] 
 pnpm changeset ci apply <issue> --db D --site-url S --out-dir DIR [--run-url U]
 ```
 
-`check` and `apply` are described in
+`check`, `query` and `apply` are described in
 [@open-minutes/edit](../edit/README.md#changesets). Apply to production
 through an issue, not with `apply`. `ci check` and `ci apply` are what the
 workflows run.
